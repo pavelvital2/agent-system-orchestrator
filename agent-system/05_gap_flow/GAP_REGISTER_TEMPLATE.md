@@ -1,0 +1,20 @@
+# GAP_REGISTER
+
+## Active gaps
+
+```text
+GAP_ID:
+STATUS: open | answered | closed
+SOURCE_ROLE:
+SOURCE_TASK:
+TYPE:
+BLOCKS:
+QUESTION_TO_OWNER:
+RECOMMENDED_OPTIONS:
+OWNER_ANSWER:
+RESOLUTION_TASK:
+```
+
+## Closed gaps
+
+- NONE

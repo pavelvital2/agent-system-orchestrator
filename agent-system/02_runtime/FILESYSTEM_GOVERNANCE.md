@@ -1,0 +1,443 @@
+# FILESYSTEM_GOVERNANCE
+
+## Назначение
+
+Этот документ определяет правила работы агентов с файловой системой проекта.
+
+Цель — предотвратить:
+- хаотичное создание файлов;
+- смешение runtime state и проектной документации;
+- использование deprecated-документов;
+- расползание source-of-truth;
+- случайное изменение файлов не той ролью;
+- рост giant-doc architecture.
+
+Документ не задаёт полную структуру конкретного проекта заранее. Структура проекта формируется по этапам.
+
+---
+
+## Базовый принцип
+
+Файловая система проекта делится на два уровня:
+
+1. Bootstrap filesystem — минимальная структура, существующая до работы проектировщика.
+2. Project filesystem — структура, создаваемая проектировщиком и далее развиваемая агентами по bounded tasks.
+
+Ни один агент не имеет права создавать или менять файлы вне своего scope.
+
+---
+
+## Bootstrap filesystem
+
+Bootstrap filesystem существует до проектировщика.
+
+Минимально ожидаемая структура:
+
+```text
+agent-system/
+project-input/
+project-runtime/
+project-archive/
+```
+
+### agent-system/
+
+Назначение:
+- универсальные инструкции для агентов;
+- role instructions;
+- runtime rules;
+- templates;
+- governance documents.
+
+Кто может менять:
+- владелец проекта;
+- вручную назначенный агент только по отдельной bounded-задаче на изменение universal package.
+
+Обычные проектные агенты не имеют права менять `agent-system/`.
+
+---
+
+### project-input/
+
+Назначение:
+- входное ТЗ проекта;
+- дополнительные входные материалы владельца проекта;
+- исходные файлы, которые должны быть переданы проектировщику.
+
+Пример:
+
+```text
+project-input/TZ.md
+```
+
+Кто может менять:
+- владелец проекта;
+- агент только по отдельной задаче подготовки/нормализации входных материалов.
+
+Проектировщик читает `project-input/`, но не должен переписывать исходное ТЗ.
+
+---
+
+### project-runtime/
+
+Назначение:
+- operational state pipeline;
+- runtime state оркестратора;
+- текущие gates;
+- next action;
+- agent handoff files;
+- agent result logs;
+- GAP register.
+
+Примеры:
+
+```text
+project-runtime/PROJECT_STATE.md
+project-runtime/CURRENT_GATE.md
+project-runtime/NEXT_ACTION.md
+project-runtime/GAP_REGISTER.md
+project-runtime/AGENT_RESULTS_LOG.md
+```
+
+Кто может менять:
+- оркестратор;
+- владелец проекта вручную при emergency correction.
+
+Обычные агенты не имеют права менять `project-runtime/`.
+
+Агенты могут читать runtime-файлы только если они явно переданы в REQUIRED_DOCS.
+
+---
+
+### project-archive/
+
+Назначение:
+- deprecated documents;
+- superseded docs;
+- old execution plans;
+- старые task packets, которые больше не являются source-of-truth;
+- исторические материалы, исключённые из pipeline.
+
+Пример:
+
+```text
+project-archive/deprecated-docs/
+```
+
+Кто может менять:
+- оркестратор при cleanup;
+- техрайтер или проектировщик только по отдельной bounded-задаче;
+- владелец проекта вручную.
+
+Документы в `project-archive/` не являются active source-of-truth.
+
+---
+
+## Project filesystem
+
+Project filesystem появляется после работы проектировщика.
+
+Проектировщик обязан определить bounded project structure в рамках `ACTIVE_DOC_ROOT`.
+
+По умолчанию рекомендуемый active documentation root:
+
+```text
+project-docs/
+```
+
+Если проектировщик предлагает другой root, он должен явно зафиксировать это в runtime state и пройти audit.
+
+---
+
+## ACTIVE_DOC_ROOT
+
+`ACTIVE_DOC_ROOT` — единственный активный корень проектной документации.
+
+Пример:
+
+```text
+ACTIVE_DOC_ROOT:
+project-docs/
+```
+
+Правила:
+
+- все active task packets должны находиться внутри ACTIVE_DOC_ROOT;
+- все active project docs должны находиться внутри ACTIVE_DOC_ROOT;
+- deprecated docs не могут быть ACTIVE_DOC_ROOT;
+- агенты не должны использовать документы вне ACTIVE_DOC_ROOT, если они не указаны явно в REQUIRED_DOCS;
+- при смене ACTIVE_DOC_ROOT обязателен audit.
+
+---
+
+## Рекомендуемая bounded-doc структура
+
+Проектировщик может использовать базовую структуру:
+
+```text
+project-docs/
+  00_project/
+  01_architecture/
+  02_stages/
+  03_tasks/
+  04_audits/
+  05_testing/
+  06_runtime/
+  07_reports/
+  08_user_docs/
+```
+
+Эта структура не обязана существовать до проектировщика.
+
+Проектировщик создаёт только те папки, которые нужны проекту.
+
+---
+
+## Права ролей на изменение файлов
+
+### Orchestrator
+
+Может изменять:
+- `project-runtime/`
+- `project-archive/` при cleanup
+- handoff/result tracking files
+
+Не может изменять:
+- код проекта;
+- проектную документацию внутри ACTIVE_DOC_ROOT;
+- task packets по содержанию;
+- universal instructions без отдельной задачи владельца проекта.
+
+---
+
+### Designer
+
+Может изменять:
+- проектную документацию внутри ACTIVE_DOC_ROOT;
+- task packets;
+- stage docs;
+- architecture docs;
+- audit/testing/writer flow docs.
+
+Не может изменять:
+- код проекта;
+- `project-runtime/`;
+- `agent-system/`;
+- deprecated docs без отдельной cleanup-задачи;
+- исходное ТЗ в `project-input/`.
+
+---
+
+### Developer
+
+Может изменять:
+- только implementation files, разрешённые task packet;
+- новые implementation files, если они входят в scope задачи.
+
+Не может изменять:
+- `agent-system/`;
+- `project-runtime/`;
+- `project-input/`;
+- `project-archive/`;
+- task packets;
+- architecture docs;
+- audit/testing docs;
+- user docs, если это не указано отдельной задачей.
+
+---
+
+### Auditor
+
+По умолчанию не изменяет файлы.
+
+Может читать:
+- task packet;
+- RESULT проверяемого агента;
+- REQUIRED_DOCS для аудита;
+- файлы, которые нужно проверить по audit scope.
+
+Не может изменять:
+- код;
+- проектную документацию;
+- task packets;
+- runtime state;
+- universal instructions.
+
+---
+
+### Tester
+
+По умолчанию не изменяет файлы.
+
+Может создавать временные тестовые данные, если это нужно для testing task и не меняет исходный код.
+
+Не может изменять:
+- код;
+- project docs;
+- task packets;
+- runtime state;
+- universal instructions;
+- archive docs.
+
+---
+
+### Technical Writer
+
+Может изменять:
+- user-facing docs;
+- run docs;
+- usage docs;
+- accepted documentation files, явно указанные в documentation task.
+
+Рекомендуемая папка:
+
+```text
+project-docs/08_user_docs/
+```
+
+Не может изменять:
+- код;
+- task packets;
+- runtime state;
+- source architecture docs, если task packet не разрешает это явно;
+- project scope docs для размещения user manual;
+- deprecated docs без отдельной задачи.
+
+---
+
+## Deprecated documents
+
+Документ считается deprecated, если:
+- он заменён bounded-doc structure;
+- его больше нельзя использовать как source-of-truth;
+- он перемещён в `project-archive/`;
+- или явно помечен заголовком `# DEPRECATED`.
+
+Каждый deprecated документ должен начинаться с блока:
+
+```md
+# DEPRECATED
+
+Этот документ больше не является source-of-truth.
+Не использовать для новых task packets и audit flow.
+```
+
+Запрещено:
+- включать deprecated docs в REQUIRED_DOCS;
+- использовать deprecated docs для audit;
+- использовать deprecated docs для developer handoff;
+- ссылаться на deprecated docs из active task packets.
+
+---
+
+## Task packet lifecycle
+
+Каждая bounded-задача должна иметь отдельный task packet.
+
+Task packets должны находиться внутри ACTIVE_DOC_ROOT.
+
+Рекомендуемая папка:
+
+```text
+project-docs/03_tasks/
+```
+
+Task packet может быть:
+- active;
+- completed;
+- superseded;
+- deprecated.
+
+Если task packet заменён новым:
+- старый task packet должен быть помечен superseded/deprecated;
+- новый task packet должен иметь новый TASK_ID;
+- pipeline не должен использовать оба task packets как active одновременно.
+
+---
+
+## Result files and logs
+
+RESULT агента является operational evidence.
+
+RESULT должен быть:
+- зафиксирован оркестратором;
+- добавлен в agent result log;
+- доступен следующему агенту только если он входит в REQUIRED_DOCS или явно передан в handoff.
+
+Рекомендуемая папка для журналов:
+
+```text
+project-runtime/
+```
+
+Обычные агенты не должны самостоятельно редактировать result logs.
+
+---
+
+## Runtime state
+
+Runtime state — это operational source-of-truth для оркестратора.
+
+Минимальные runtime files:
+
+```text
+project-runtime/PROJECT_STATE.md
+project-runtime/CURRENT_GATE.md
+project-runtime/NEXT_ACTION.md
+project-runtime/GAP_REGISTER.md
+```
+
+Правила:
+- runtime state обновляет оркестратор;
+- агенты не меняют runtime state;
+- runtime state не заменяет project docs;
+- project docs не заменяют runtime state.
+
+---
+
+## Terminal project state
+
+Проект считается завершённым только после orchestrator finalization.
+
+Ни один профильный агент не имеет права самостоятельно объявить проект завершённым.
+
+Terminal state допустим только если:
+- implementation tasks завершены;
+- обязательные audit gates пройдены;
+- обязательное testing завершено;
+- required documentation tasks завершены;
+- active GAP отсутствуют;
+- active blockers отсутствуют;
+- `NEXT_ACTION` переведён в `stop`;
+- `CURRENT_PHASE` переведён в `completed`.
+
+---
+
+## Запрещённые действия
+
+Запрещено:
+
+- создавать giant execution documents для средних и крупных проектов;
+- хранить все задачи в одном общем документе;
+- смешивать runtime state и project docs;
+- использовать старые документы как source-of-truth;
+- передавать агенту весь проект вместо REQUIRED_DOCS;
+- изменять файлы вне scope;
+- использовать project-archive как active source;
+- менять universal instructions внутри обычного project pipeline;
+- создавать новые папки без связи с task packet или role responsibility.
+
+---
+
+## Correction flow
+
+Если агент изменил файл вне разрешённой зоны:
+- оркестратор фиксирует workflow violation;
+- pipeline не продолжается;
+- результат возвращается на correction flow;
+- при необходимости вызывается аудитор или проектировщик.
+
+Если task packet требует изменить файл вне обычных прав роли:
+- это должно быть явно указано в scope IN;
+- должно пройти audit;
+- должно быть отражено в RESULT.
