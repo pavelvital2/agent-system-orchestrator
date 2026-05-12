@@ -224,8 +224,8 @@ Instead, when governance freeze is active, the orchestrator must validate that `
 - `correction`;
 - `wait_for_owner`;
 - governed `update_state`;
-- governed `stop`;
-- bounded package-governance correction when permitted by `STATE_TRANSITION_RULES.md`.
+- governed `stop` when stop invariants allow it;
+- `create_agent` only for an explicitly bounded package-governance correction task when permitted by `STATE_TRANSITION_RULES.md`.
 
 Normal project `create_agent`, `route_result`, and `finalize` actions are not freeze-safe.
 
@@ -238,17 +238,18 @@ If governance freeze is active:
 ```text
 PROJECT_STATUS: blocked
 CURRENT_PHASE: correction | blocked
-NEXT_ACTION.ACTION_TYPE: correction | wait_for_owner | update_state | stop
+NEXT_ACTION.ACTION_TYPE: correction | wait_for_owner | update_state | stop | create_agent
 ```
 
 During governance freeze, normal project `create_agent` dispatch is forbidden.
 
 The orchestrator may only:
 
+- enter correction flow;
 - update runtime state into correction/wait/stop through governed `update_state`;
 - request owner input;
-- route an explicitly bounded package-governance correction task when transition rules permit it;
-- stop through governed `stop`;
+- dispatch an explicitly bounded package-governance correction task through `create_agent` when transition rules permit it;
+- stop through governed `stop` when stop invariants allow it;
 - reread and revalidate runtime files.
 
 ## Post-update validation

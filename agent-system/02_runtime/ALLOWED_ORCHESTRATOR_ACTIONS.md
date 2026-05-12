@@ -33,8 +33,10 @@
 - validate full runtime state tuple;
 - validate NEXT_ACTION against state transition rules;
 - detect governance freeze conditions;
-- stop dispatch when governance freeze is active;
-- set NEXT_ACTION to correction, wait_for_owner, finalize, or stop when required by governance;
+- stop normal project dispatch when governance freeze is active;
+- set NEXT_ACTION to correction, wait_for_owner, governed update_state, finalize, or stop when required by governance;
+- set NEXT_ACTION to create_agent during governance freeze only for an explicitly bounded package-governance correction task;
+- dispatch an explicitly bounded package-governance correction task during governance freeze only when governance, filesystem, lifecycle, and transition validation permit it;
 - create `AGENT_RESULTS_LOG.md` from template during bootstrap if missing;
 - log failed, blocked, gap, and violation results before routing recovery.
 
@@ -63,7 +65,8 @@
 - treat agent `NEXT_REQUIRED_ACTION` as authoritative without validation;
 - dispatch a superseded or deprecated task packet;
 - dispatch while runtime schema is invalid;
-- dispatch while governance freeze is active;
+- dispatch while governance freeze is active, except for an explicitly bounded package-governance correction `create_agent` task permitted by governance;
+- dispatch normal project `create_agent` while governance freeze is active;
 - infer missing runtime fields from memory;
 - silently repair schema/template mismatch;
 - mark project completed before orchestrator finalization invariants pass;

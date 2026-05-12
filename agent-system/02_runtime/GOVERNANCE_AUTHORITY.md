@@ -69,8 +69,16 @@ During freeze:
 ```text
 PROJECT_STATUS: blocked
 CURRENT_PHASE: correction | blocked
-NEXT_ACTION.ACTION_TYPE: correction | wait_for_owner | stop
+NEXT_ACTION.ACTION_TYPE: correction | wait_for_owner | update_state | stop | create_agent
 ```
+
+Allowed freeze-safe actions are limited to:
+
+- `correction`;
+- `wait_for_owner`;
+- governed `update_state`;
+- `stop` when stop invariants allow it;
+- `create_agent` only for an explicitly bounded package-governance correction task.
 
 No normal project `create_agent` dispatch is allowed.
 
