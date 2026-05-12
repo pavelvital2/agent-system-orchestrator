@@ -52,25 +52,33 @@
 2. Создать черновик handoff-файла:
    - `project-runtime/HANDOFF_DESIGNER_BOOTSTRAP.md`
 
-3. В `NEXT_ACTION.md` выставить:
+3. Классифицировать причину отсутствия файла по взаимоисключающим правилам.
+
+Если отсутствует или недоступно ТЗ проекта, предоставляемое владельцем:
 
 ```text
-ACTION_TYPE:
-wait_for_owner
-
-TARGET_ROLE:
-project_owner
-
-DEPENDENCY_STATUS:
-blocked
-
-BLOCKED_BY:
-missing_bootstrap_input
+ACTION_TYPE: wait_for_owner
+TARGET_ROLE: project_owner
+DEPENDENCY_STATUS: blocked
+BLOCKED_BY: missing_bootstrap_input
 ```
 
-4. В handoff-файле явно указать, какие файлы отсутствуют.
+Если отсутствует или недоступен обязательный файл пакета `agent-system/`,
+включая `agent-system/01_roles/DESIGNER.md` или
+`agent-system/03_templates/AGENT_RESULT_TEMPLATE.md`:
 
-5. Остановить dispatch проектировщика до появления недостающих файлов.
+```text
+ACTION_TYPE: correction
+TARGET_ROLE: orchestrator
+DEPENDENCY_STATUS: blocked
+BLOCKED_BY: invalid_or_missing_package_file
+```
+
+4. В `NEXT_ACTION.md` выставить только одну из этих веток.
+
+5. В handoff-файле явно указать, какие файлы отсутствуют.
+
+6. Остановить dispatch проектировщика до устранения причины bootstrap failure.
 
 ---
 
@@ -117,9 +125,11 @@ missing_bootstrap_input
 
 `назначить проектировщика для анализа ТЗ и подготовки проектной исполнительной документации`.
 
-Если обязательные bootstrap-файлы отсутствуют, следующий шаг:
+Если обязательные bootstrap-файлы отсутствуют, следующий шаг определяется
+взаимоисключающей классификацией bootstrap failure:
 
-`wait_for_owner`.
+- отсутствует owner-provided bootstrap input -> `wait_for_owner`;
+- отсутствует обязательный файл `agent-system/` -> `correction`.
 
 ## Bootstrap validation
 
@@ -131,14 +141,47 @@ Before dispatching the first profile agent, the orchestrator must verify that:
 - `NEXT_ACTION.md` contains exactly one allowed next action;
 - no governance freeze condition is active.
 
-If bootstrap validation fails, the orchestrator must not dispatch the first agent.
-It must set:
+If bootstrap validation fails, the orchestrator must not dispatch the first profile agent.
+It must route the failure through exactly one deterministic branch.
+
+`NEXT_ACTION.md` must contain exactly one action. It must not contain alternative
+`ACTION_TYPE`, `TARGET_ROLE`, or `DEPENDENCY_STATUS` values.
+
+If validation fails because owner-provided bootstrap input is missing or inaccessible,
+the orchestrator must set:
 
 ```text
-ACTION_TYPE: wait_for_owner | correction
-TARGET_ROLE: project_owner | orchestrator
+ACTION_TYPE: wait_for_owner
+TARGET_ROLE: project_owner
 DEPENDENCY_STATUS: blocked
+BLOCKED_BY: missing_bootstrap_input
 ```
+
+If validation fails because a required `agent-system/` package, runtime,
+template, or governance file is missing, inaccessible, malformed, or internally
+invalid, the orchestrator must set:
+
+```text
+ACTION_TYPE: correction
+TARGET_ROLE: orchestrator
+DEPENDENCY_STATUS: blocked
+BLOCKED_BY: invalid_or_missing_package_file
+```
+
+If validation fails because runtime file creation, runtime schema validation,
+template parity validation, governance validation, `NEXT_ACTION.md` validation,
+or governance freeze state validation failed after required package files were
+available,
+the orchestrator must set:
+
+```text
+ACTION_TYPE: correction
+TARGET_ROLE: orchestrator
+DEPENDENCY_STATUS: blocked
+BLOCKED_BY: invalid_bootstrap_state
+```
+
+The first profile-agent dispatch remains forbidden until bootstrap validation passes.
 
 ---
 
