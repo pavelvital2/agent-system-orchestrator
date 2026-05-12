@@ -3,12 +3,13 @@
 ## Назначение
 
 Этот документ определяет обязательную схему runtime state файлов проекта.
+This document defines runtime state structure only.
 
 Цель:
 - предотвратить drift runtime state;
 - сделать orchestration deterministic;
 - исключить хранение состояния проекта только в контексте оркестратора;
-- стандартизировать переходы между агентами;
+- стандартизировать структуру runtime state файлов;
 - отделить operational state от проектной документации.
 
 Runtime state не является проектной документацией. Runtime state — это operational source-of-truth для оркестратора.
@@ -548,139 +549,24 @@ agent-system/06_logs/AGENT_RESULTS_LOG_TEMPLATE.md
 
 If schema and templates conflict, bootstrap is invalid and governance freeze applies.
 
-# Runtime transition rules
+# Transition authority
 
-## designer pass
+This document defines runtime state structure only.
 
-Если designer возвращает `STATUS: pass`:
-
-```text
-NEXT_ACTION:
-ACTION_TYPE: create_agent
-TARGET_ROLE: auditor
-```
-
-Designer не может напрямую вести к developer.
-
----
-
-## developer pass
-
-Если developer возвращает `STATUS: pass`:
+Authoritative runtime transition rules, forbidden transitions, terminal completion rules, and invalid-state detection are defined in:
 
 ```text
-NEXT_ACTION:
-ACTION_TYPE: create_agent
-TARGET_ROLE: auditor
+agent-system/02_runtime/STATE_TRANSITION_RULES.md
 ```
 
-Developer не может напрямую вести к tester или technical_writer.
+Structural runtime state validation in this schema does not authorize role, phase, gate, action, terminal, GAP, blocker, or workflow transitions.
 
----
-
-## auditor pass
-
-Если auditor возвращает `STATUS: pass`, следующий шаг определяется audited task packet:
-
-- после design audit → следующий planned implementation/correction task;
-- после implementation audit → tester, если testing required;
-- иначе next task согласно task packet.
-
----
-
-## tester pass
-
-Если tester возвращает `STATUS: pass`:
-
-- если documentation required → technical_writer;
-- если documentation not required → orchestrator finalization.
-
----
-
-## technical_writer pass
-
-Если technical_writer возвращает `STATUS: pass`:
+If runtime state is structurally invalid, or if a runtime state tuple is incompatible with authoritative transition rules, recovery routing is governed by:
 
 ```text
-NEXT_ACTION:
-ACTION_TYPE: finalize
-TARGET_ROLE: orchestrator
+agent-system/02_runtime/STATE_TRANSITION_RULES.md
+agent-system/02_runtime/VIOLATION_RECOVERY.md
 ```
-
-Technical writer не переводит проект в completed самостоятельно.
-
----
-
-## blocked
-
-Если агент возвращает `STATUS: blocked`:
-
-- runtime/environment blocker → designer;
-- technical blocker → designer или developer correction task;
-- missing owner input → project_owner;
-- missing file/instruction → project_owner или correction flow.
-
----
-
-## gap
-
-Если агент возвращает `STATUS: gap`:
-
-- GAP фиксируется в `GAP_REGISTER.md`;
-- зависимая ветка переводится в blocked;
-- независимые ветки могут продолжаться, если они явно есть в `NEXT_ACTION.md` или runtime state.
-
----
-
-# Terminal state rules
-
-Проект может получить:
-
-```text
-CURRENT_PHASE: completed
-PROJECT_STATUS: completed
-```
-
-только после orchestrator finalization.
-
-Перед finalization оркестратор обязан проверить:
-
-- нет active GAP;
-- нет active blockers;
-- все mandatory audit gates passed;
-- mandatory testing passed;
-- mandatory documentation completed;
-- NEXT_ACTION может быть safely set to stop;
-- CURRENT_GATE может быть set to terminal/passed.
-
-Ни один профильный агент не имеет права выставлять project completed.
-
----
-
-# Workflow violation
-
-Если runtime state нарушает schema или mandatory workflow:
-
-```text
-CURRENT_PHASE: correction
-PROJECT_STATUS: blocked
-NEXT_ACTION:
-ACTION_TYPE: correction
-TARGET_ROLE: orchestrator
-```
-
-Оркестратор обязан остановить dispatch новых агентов до correction.
-
-Примеры workflow violation:
-
-- designer → developer без audit;
-- developer → tester без audit;
-- task packet вне ACTIVE_DOC_ROOT;
-- REQUIRED_DOCS содержит deprecated docs;
-- обычный агент изменил `project-runtime/`;
-- technical_writer объявил project completed;
-- tester изменил код;
-- auditor изменил проверяемый код.
 
 ---
 
