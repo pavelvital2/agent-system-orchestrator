@@ -499,7 +499,8 @@ NEXT_REQUIRED_ACTION:
 ## Правила
 
 - каждая завершённая agent task должна иметь запись;
-- failed, blocked, gap, and violation results must be logged before recovery routing;
+- failed, blocked, gap, and orchestrator-classified violation entries must be logged before recovery routing;
+- Profile-agent RESULT STATUS remains limited to pass | fail | blocked | gap; violation is a log/recovery classification only.
 - RESULT_REF должен ссылаться на место хранения полного RESULT или содержать краткий RESULT, если он небольшой;
 - log не должен заменять project docs;
 - log не должен становиться giant execution document.
