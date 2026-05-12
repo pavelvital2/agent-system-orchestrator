@@ -142,5 +142,5 @@ MIGRATION_REQUIRED: yes
 MIGRATION_NOTE: Active package/governance versions changed to 1.1.0 while runtime schema remains 1.0.0; existing runtime states must be checked for package/governance version compatibility, RESULT logging, deterministic NEXT_ACTION routing, and correction metadata compatibility before normal dispatch. No project-runtime files were changed by this package update task set.
 AUTHORIZED_BY: project_owner
 AUDIT_REQUIRED: yes
-STATUS: proposed
+STATUS: accepted
 ```
