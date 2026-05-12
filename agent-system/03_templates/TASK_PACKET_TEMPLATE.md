@@ -80,18 +80,34 @@ Rules:
 <TASK_ID | RESULT_REF | NONE>
 ```
 
+## SOURCE_RESULT_REF
+
+```text
+<RESULT_REF | NONE>
+```
+
 ## ATTEMPT_NO
 
 ```text
 <number | NONE>
 ```
 
+## FAILURE_TYPE
+
+```text
+governance | workflow | filesystem | runtime_state | audit | testing | gap | blocked | none
+```
+
 Rules:
 
 - correction must be a bounded task;
 - correction must use a fresh agent context;
-- correction must not expand scope unless designer creates a new bounded task;
-- correction must follow mandatory audit/testing/documentation path.
+- correction must not silently expand scope unless designer creates a new bounded task;
+- correction must follow mandatory audit/testing/documentation path;
+- SOURCE_RESULT_REF must reference the result or violation that triggered correction when applicable;
+- SOURCE_RESULT_REF must be `NONE` only when no triggering result or violation applies;
+- FAILURE_TYPE must classify the correction trigger;
+- FAILURE_TYPE must be `none` only when the task is not a correction or no correction trigger applies.
 
 ---
 
