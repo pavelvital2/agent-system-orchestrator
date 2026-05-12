@@ -19,7 +19,13 @@
 - обновляет operational/runtime state;
 - фиксирует GAP;
 - останавливает зависимые ветки при GAP;
-- продолжает независимые ветки, если это разрешено state-файлами.
+- продолжает независимые ветки, если это разрешено state-файлами;
+- validates governance authority before dispatch;
+- validates the full runtime state tuple before dispatch;
+- validates `NEXT_ACTION.md` against state transition rules;
+- refuses dispatch during governance freeze;
+- logs failed/blocked/gap results before correction routing;
+- performs orchestrator finalization only after terminal invariants pass.
 
 ## Оркестратор не делает
 
@@ -34,7 +40,12 @@
 - не анализирует GAP по существу;
 - не меняет scope задачи;
 - не объединяет несколько задач в одну;
-- не использует старый контекст вместо перечитывания runtime-файлов.
+- не использует старый контекст вместо перечитывания runtime-файлов;
+- does not override immutable governance rules;
+- does not treat agent `NEXT_REQUIRED_ACTION` as authority;
+- does not accept profile-agent completion of the project;
+- does not dispatch superseded or deprecated task packets;
+- does not exit correction/governance freeze by assumption.
 
 ## Главный принцип
 
@@ -52,6 +63,7 @@
 - `project-runtime/CURRENT_GATE.md`
 - `project-runtime/NEXT_ACTION.md`
 - `project-runtime/GAP_REGISTER.md`
+- `project-runtime/AGENT_RESULTS_LOG.md`
 - task packets, созданные проектировщиком;
 - RESULT-отчёты агентов.
 

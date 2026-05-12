@@ -2,30 +2,42 @@
 
 ## Current gate
 
+```text
 GATE_ID:
-<gate id>
-
 GATE_NAME:
-<name>
-
-STATUS:
-open | passed | failed | blocked
-
-OWNER_ROLE:
-orchestrator | designer | developer | auditor | tester | technical_writer | project_owner
+GATE_TYPE: bootstrap | design | audit | implementation | testing | documentation | correction | finalization | terminal
+STATUS: open | passed | failed | blocked | skipped
+OWNER_ROLE: orchestrator | designer | developer | auditor | tester | technical_writer | project_owner
+TASK_ID:
+TASK_PACKET:
+```
 
 ## Entry criteria
 
-- <criterion>
+```text
+- NONE
+```
 
 ## Exit criteria
 
-- <criterion>
+```text
+- NONE
+```
 
 ## Required next role
 
-<role>
+```text
+designer | developer | auditor | tester | technical_writer | orchestrator | project_owner | none
+```
+
+## Gate evidence
+
+```text
+- NONE
+```
 
 ## Notes
 
+```text
 - NONE
+```

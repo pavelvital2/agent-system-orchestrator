@@ -12,14 +12,20 @@
 
 1. Перечитать:
    - `agent-system/01_roles/ORCHESTRATOR.md`
+   - `agent-system/PACKAGE_VERSIONING.md`
    - `agent-system/02_runtime/ORCHESTRATOR_RUNTIME_LOOP.md`
    - `agent-system/02_runtime/ALLOWED_ORCHESTRATOR_ACTIONS.md`
    - `agent-system/02_runtime/FILESYSTEM_GOVERNANCE.md`
+   - `agent-system/02_runtime/GOVERNANCE_AUTHORITY.md`
+   - `agent-system/02_runtime/STATE_TRANSITION_RULES.md`
+   - `agent-system/02_runtime/VIOLATION_RECOVERY.md`
+   - `agent-system/02_runtime/ACCEPTED_STATE_LOCKING.md`
    - `agent-system/04_state/RUNTIME_STATE_SCHEMA.md`
    - `project-runtime/PROJECT_STATE.md`
    - `project-runtime/CURRENT_GATE.md`
    - `project-runtime/NEXT_ACTION.md`
    - `project-runtime/GAP_REGISTER.md`
+   - `project-runtime/AGENT_RESULTS_LOG.md`
 
 
 2. Определить следующий шаг только из `NEXT_ACTION.md`.
@@ -133,6 +139,58 @@ tester(gap) → orchestrator
    - при необходимости `GAP_REGISTER.md`
 
 13. Повторить цикл перед следующим действием.
+
+## Mandatory validation order
+
+Before any `create_agent`, `route_result`, `update_state`, `correction`, `finalize`, or `stop` action, the orchestrator must validate in this order:
+
+1. universal package files exist;
+2. package version / governance ruleset / runtime schema are compatible;
+3. mandatory runtime files exist;
+4. runtime state matches `RUNTIME_STATE_SCHEMA.md`;
+5. full runtime state tuple is valid under `STATE_TRANSITION_RULES.md`;
+6. `NEXT_ACTION.md` contains exactly one action;
+7. `NEXT_ACTION.md` does not conflict with `GOVERNANCE_AUTHORITY.md`;
+8. target task packet is active, not superseded, not deprecated;
+9. target task packet is inside `ACTIVE_DOC_ROOT`;
+10. REQUIRED_DOCS do not include deprecated/archive documents;
+11. role/file permissions match `FILESYSTEM_GOVERNANCE.md`;
+12. no governance freeze condition is active.
+
+If any validation fails, dispatch is forbidden.
+
+## Governance freeze behavior
+
+If governance freeze is active:
+
+```text
+PROJECT_STATUS: blocked
+CURRENT_PHASE: correction | blocked
+NEXT_ACTION.ACTION_TYPE: correction | wait_for_owner | stop
+```
+
+During governance freeze, normal project `create_agent` dispatch is forbidden.
+
+The orchestrator may only:
+
+- update runtime state into correction/wait/stop;
+- request owner input;
+- route a bounded correction/package-governance task;
+- reread and revalidate runtime files.
+
+## Post-update validation
+
+After updating any runtime state file, the orchestrator must reread:
+
+- `PROJECT_STATE.md`
+- `CURRENT_GATE.md`
+- `NEXT_ACTION.md`
+- `GAP_REGISTER.md`
+- `AGENT_RESULTS_LOG.md`
+
+Then it must validate the updated runtime state tuple before the next dispatch.
+
+The orchestrator must not continue from memory after writing runtime state.
 
 ## Запрет
 

@@ -28,4 +28,26 @@
 - шаблон RESULT;
 - шаблоны runtime state;
 - GAP flow;
-- журнал результатов.
+- журнал результатов;
+- governance authority;
+- state transition rules;
+- violation recovery rules;
+- accepted-state locking;
+- package versioning policy;
+- governance changelog.
+
+## Governance hardening layer
+
+The package includes a minimal governance/state-machine hardening layer:
+
+```text
+agent-system/PACKAGE_VERSIONING.md
+agent-system/GOVERNANCE_CHANGELOG.md
+agent-system/02_runtime/GOVERNANCE_AUTHORITY.md
+agent-system/02_runtime/STATE_TRANSITION_RULES.md
+agent-system/02_runtime/VIOLATION_RECOVERY.md
+agent-system/02_runtime/ACCEPTED_STATE_LOCKING.md
+```
+
+These documents do not introduce a new orchestration model.
+They formalize authority, transitions, recovery, accepted-state locking, and package governance for the existing deterministic filesystem-based runtime.

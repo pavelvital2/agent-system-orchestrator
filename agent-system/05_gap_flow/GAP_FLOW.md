@@ -47,3 +47,16 @@ GAPS:
 - выбирать вариант ответа за владельца проекта;
 - просить разработчика обойти GAP;
 - продолжать зависимую ветку до закрытия GAP.
+
+## GAP closure rule
+
+A GAP is not closed merely because an owner/designer answer exists.
+
+A GAP may be closed only when its resolution is reflected in accepted source-of-truth:
+
+- updated accepted project documentation;
+- updated active task packet;
+- corrected runtime state;
+- or explicit owner decision recorded through governed flow.
+
+If the GAP changes architecture, scope, acceptance criteria, or task packet content, the resolution must go through designer/audit or bounded correction flow before dependent dispatch continues.

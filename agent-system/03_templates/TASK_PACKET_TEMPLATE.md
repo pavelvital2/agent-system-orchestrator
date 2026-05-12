@@ -38,6 +38,63 @@ TASK_DEV_APP_001
 
 ---
 
+## TASK_STATUS
+
+```text
+active | completed | superseded | deprecated
+```
+
+Rules:
+
+- only `active` task packets may be selected by `NEXT_ACTION`;
+- `completed` task packets are historical accepted/completed records;
+- `superseded` task packets cannot be dispatched;
+- `deprecated` task packets cannot be used as source-of-truth.
+
+---
+
+## SUPERSEDES
+
+```text
+<TASK_ID | NONE>
+```
+
+## SUPERSEDED_BY
+
+```text
+<TASK_ID | NONE>
+```
+
+Rules:
+
+- replacing a task requires a new `TASK_ID`;
+- old and new task packets cannot both be active;
+- superseded task packets must not appear in `NEXT_ACTION`;
+- superseded task packets must not be included in `REQUIRED_DOCS` for new work.
+
+---
+
+## CORRECTION_OF
+
+```text
+<TASK_ID | RESULT_REF | NONE>
+```
+
+## ATTEMPT_NO
+
+```text
+<number | NONE>
+```
+
+Rules:
+
+- correction must be a bounded task;
+- correction must use a fresh agent context;
+- correction must not expand scope unless designer creates a new bounded task;
+- correction must follow mandatory audit/testing/documentation path.
+
+---
+
 ## TASK_TITLE
 
 Краткое название bounded-задачи.
@@ -424,6 +481,15 @@ Task packet не должен:
 
 Task packet обязан быть совместим с:
 `agent-system/04_state/RUNTIME_STATE_SCHEMA.md`
+
+Task packet must also be compatible with:
+
+```text
+agent-system/02_runtime/GOVERNANCE_AUTHORITY.md
+agent-system/02_runtime/STATE_TRANSITION_RULES.md
+agent-system/02_runtime/VIOLATION_RECOVERY.md
+agent-system/02_runtime/ACCEPTED_STATE_LOCKING.md
+```
 
 ---
 

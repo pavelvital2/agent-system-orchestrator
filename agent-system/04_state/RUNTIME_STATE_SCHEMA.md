@@ -13,6 +13,16 @@
 
 Runtime state не является проектной документацией. Runtime state — это operational source-of-truth для оркестратора.
 
+Runtime state validation must also comply with:
+
+```text
+agent-system/02_runtime/GOVERNANCE_AUTHORITY.md
+agent-system/02_runtime/STATE_TRANSITION_RULES.md
+agent-system/02_runtime/VIOLATION_RECOVERY.md
+agent-system/02_runtime/ACCEPTED_STATE_LOCKING.md
+agent-system/PACKAGE_VERSIONING.md
+```
+
 ---
 
 ## Обязательные runtime files
@@ -65,6 +75,9 @@ PROJECT_NAME:
 PROJECT_ROOT:
 TZ_PATH:
 ACTIVE_DOC_ROOT:
+PACKAGE_VERSION:
+GOVERNANCE_RULESET_VERSION:
+RUNTIME_SCHEMA_VERSION:
 CURRENT_PHASE:
 PROJECT_STATUS:
 ```
@@ -485,11 +498,55 @@ NEXT_REQUIRED_ACTION:
 ## Правила
 
 - каждая завершённая agent task должна иметь запись;
+- failed, blocked, gap, and violation results must be logged before recovery routing;
 - RESULT_REF должен ссылаться на место хранения полного RESULT или содержать краткий RESULT, если он небольшой;
 - log не должен заменять project docs;
 - log не должен становиться giant execution document.
 
 ---
+
+## Runtime state tuple validation
+
+The orchestrator must validate the combined runtime state tuple before dispatch:
+
+```text
+PROJECT_STATE.CURRENT_PHASE
+PROJECT_STATE.PROJECT_STATUS
+PROJECT_STATE.ACTIVE_DOC_ROOT
+PROJECT_STATE.PACKAGE_VERSION
+PROJECT_STATE.GOVERNANCE_RULESET_VERSION
+PROJECT_STATE.RUNTIME_SCHEMA_VERSION
+CURRENT_GATE.GATE_TYPE
+CURRENT_GATE.STATUS
+CURRENT_GATE.OWNER_ROLE
+CURRENT_GATE.TASK_ID
+CURRENT_GATE.TASK_PACKET
+NEXT_ACTION.ACTION_TYPE
+NEXT_ACTION.TARGET_ROLE
+NEXT_ACTION.TASK_ID
+NEXT_ACTION.TASK_PACKET
+NEXT_ACTION.DEPENDENCY_STATUS
+GAP_REGISTER.active_gaps
+PROJECT_STATE.active_blockers
+PROJECT_STATE.active_branches
+```
+
+A set of runtime files can be locally valid but globally invalid.
+If tuple validation fails, the orchestrator must enter correction flow.
+
+## Schema/template parity
+
+The following templates must be compatible with this schema:
+
+```text
+agent-system/04_state/PROJECT_STATE_TEMPLATE.md
+agent-system/04_state/CURRENT_GATE_TEMPLATE.md
+agent-system/04_state/NEXT_ACTION_TEMPLATE.md
+agent-system/05_gap_flow/GAP_REGISTER_TEMPLATE.md
+agent-system/06_logs/AGENT_RESULTS_LOG_TEMPLATE.md
+```
+
+If schema and templates conflict, bootstrap is invalid and governance freeze applies.
 
 # Runtime transition rules
 

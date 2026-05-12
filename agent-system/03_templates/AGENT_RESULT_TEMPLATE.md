@@ -32,7 +32,7 @@ BLOCKERS:
 
 GAPS:
 - GAP_ID: <id> | NONE
-  TYPE: <business | functional | technical | documentation | acceptance>
+  TYPE: <business | functional | technical | documentation | acceptance | runtime>
   BLOCKS: <what is blocked>
   QUESTION_TO_OWNER: <question>
   RECOMMENDED_OPTIONS:
@@ -52,3 +52,17 @@ NEXT_REQUIRED_ACTION:
 GAPS:
 - NONE
 ```
+
+## Result authority rule
+
+`NEXT_REQUIRED_ACTION` is advisory.
+
+The orchestrator must validate it against:
+
+- runtime state schema;
+- state transition rules;
+- governance authority;
+- filesystem governance;
+- active task packet lifecycle.
+
+Agent RESULT cannot directly override governance or mark the project completed.

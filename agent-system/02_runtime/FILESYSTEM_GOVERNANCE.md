@@ -348,10 +348,22 @@ Task packet может быть:
 - superseded;
 - deprecated.
 
+Each task packet must explicitly declare:
+
+```text
+TASK_STATUS: active | completed | superseded | deprecated
+SUPERSEDES: <TASK_ID | NONE>
+SUPERSEDED_BY: <TASK_ID | NONE>
+```
+
+Only `TASK_STATUS: active` task packets may be selected by `NEXT_ACTION`.
+
 Если task packet заменён новым:
 - старый task packet должен быть помечен superseded/deprecated;
 - новый task packet должен иметь новый TASK_ID;
 - pipeline не должен использовать оба task packets как active одновременно.
+- the superseded task packet must not be used in `NEXT_ACTION`;
+- the superseded task packet must not be used as source-of-truth for new agent dispatch.
 
 ---
 
@@ -385,6 +397,7 @@ project-runtime/PROJECT_STATE.md
 project-runtime/CURRENT_GATE.md
 project-runtime/NEXT_ACTION.md
 project-runtime/GAP_REGISTER.md
+project-runtime/AGENT_RESULTS_LOG.md
 ```
 
 Правила:
@@ -392,6 +405,27 @@ project-runtime/GAP_REGISTER.md
 - агенты не меняют runtime state;
 - runtime state не заменяет project docs;
 - project docs не заменяют runtime state.
+
+---
+
+## Accepted state locking
+
+Accepted state is governed by:
+
+```text
+agent-system/02_runtime/ACCEPTED_STATE_LOCKING.md
+```
+
+Rules:
+
+- designer output is accepted only after design audit pass;
+- developer output is accepted only after implementation audit pass;
+- tested behavior is accepted only after tester pass when testing is required;
+- technical writer output cannot redefine unverified implementation behavior;
+- accepted source-of-truth artifacts cannot be changed in place by unrelated tasks;
+- changing accepted artifacts requires a new bounded task and required audit path.
+
+Any modification of an accepted artifact outside governed task scope is a workflow violation.
 
 ---
 

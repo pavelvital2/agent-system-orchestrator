@@ -2,47 +2,67 @@
 
 ## Project
 
+```text
 PROJECT_NAME:
-<name>
-
 PROJECT_ROOT:
-<path>
-
 TZ_PATH:
-<path>
-
-CURRENT_PHASE:
-<bootstrap | design | design_audit | implementation | implementation_audit | testing | docs | deployment | completed>
+ACTIVE_DOC_ROOT:
+PACKAGE_VERSION:
+GOVERNANCE_RULESET_VERSION:
+RUNTIME_SCHEMA_VERSION:
+CURRENT_PHASE: bootstrap | design | design_audit | implementation | implementation_audit | testing | documentation | correction | blocked | finalization | completed
+PROJECT_STATUS: active | blocked | completed | archived
+```
 
 ## Active branches
 
+If active branches exist:
+
 ```text
 BRANCH_ID:
-STATUS: active | blocked | completed
+STATUS: active | blocked | completed | archived
 CURRENT_TASK:
 CURRENT_AGENT_ROLE:
 DEPENDENCIES:
+BLOCKED_BY:
+```
+
+If no active branches exist:
+
+```text
+NONE
 ```
 
 ## Completed milestones
 
-- NONE
+```text
+NONE
+```
 
 ## Active risks
 
-- NONE
+```text
+NONE
+```
 
 ## Active blockers
 
-- NONE
+```text
+NONE
+```
 
 ## Active gaps
 
-- NONE
+```text
+NONE
+```
 
 ## Last accepted result
 
+```text
 ROLE:
 TASK:
 DATE:
 STATUS:
+RESULT_REF:
+```

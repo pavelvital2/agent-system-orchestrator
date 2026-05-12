@@ -47,6 +47,7 @@
    - `project-runtime/CURRENT_GATE.md`
    - `project-runtime/NEXT_ACTION.md`
    - `project-runtime/GAP_REGISTER.md`
+   - `project-runtime/AGENT_RESULTS_LOG.md`
 
 2. Создать черновик handoff-файла:
    - `project-runtime/HANDOFF_DESIGNER_BOOTSTRAP.md`
@@ -78,15 +79,25 @@ missing_bootstrap_input
 Оркестратор обязан прочитать:
 
 1. `agent-system/01_roles/ORCHESTRATOR.md`
-2. `agent-system/02_runtime/ORCHESTRATOR_RUNTIME_LOOP.md`
-3. `agent-system/02_runtime/ALLOWED_ORCHESTRATOR_ACTIONS.md`
-4. `agent-system/02_runtime/AGENT_LIFECYCLE.md`
-5. `agent-system/03_templates/ORCHESTRATOR_TASK_HANDOFF_TEMPLATE.md`
-6. `agent-system/03_templates/AGENT_RESULT_TEMPLATE.md`
-7. `agent-system/04_state/PROJECT_STATE_TEMPLATE.md`
-8. `agent-system/04_state/CURRENT_GATE_TEMPLATE.md`
-9. `agent-system/04_state/NEXT_ACTION_TEMPLATE.md`
-10. `agent-system/05_gap_flow/GAP_FLOW.md`
+2. `agent-system/PACKAGE_VERSIONING.md`
+3. `agent-system/GOVERNANCE_CHANGELOG.md`
+4. `agent-system/02_runtime/ORCHESTRATOR_RUNTIME_LOOP.md`
+5. `agent-system/02_runtime/ALLOWED_ORCHESTRATOR_ACTIONS.md`
+6. `agent-system/02_runtime/AGENT_LIFECYCLE.md`
+7. `agent-system/02_runtime/FILESYSTEM_GOVERNANCE.md`
+8. `agent-system/02_runtime/GOVERNANCE_AUTHORITY.md`
+9. `agent-system/02_runtime/STATE_TRANSITION_RULES.md`
+10. `agent-system/02_runtime/VIOLATION_RECOVERY.md`
+11. `agent-system/02_runtime/ACCEPTED_STATE_LOCKING.md`
+12. `agent-system/03_templates/ORCHESTRATOR_TASK_HANDOFF_TEMPLATE.md`
+13. `agent-system/03_templates/AGENT_RESULT_TEMPLATE.md`
+14. `agent-system/04_state/RUNTIME_STATE_SCHEMA.md`
+15. `agent-system/04_state/PROJECT_STATE_TEMPLATE.md`
+16. `agent-system/04_state/CURRENT_GATE_TEMPLATE.md`
+17. `agent-system/04_state/NEXT_ACTION_TEMPLATE.md`
+18. `agent-system/05_gap_flow/GAP_FLOW.md`
+19. `agent-system/05_gap_flow/GAP_REGISTER_TEMPLATE.md`
+20. `agent-system/06_logs/AGENT_RESULTS_LOG_TEMPLATE.md`
 
 ---
 
@@ -98,6 +109,7 @@ missing_bootstrap_input
 - `project-runtime/CURRENT_GATE.md`
 - `project-runtime/NEXT_ACTION.md`
 - `project-runtime/GAP_REGISTER.md`
+- `project-runtime/AGENT_RESULTS_LOG.md`
 
 После создания runtime state-файлов оркестратор может подготовить первый bounded-шаг только если все обязательные bootstrap-файлы существуют.
 
@@ -108,6 +120,25 @@ missing_bootstrap_input
 Если обязательные bootstrap-файлы отсутствуют, следующий шаг:
 
 `wait_for_owner`.
+
+## Bootstrap validation
+
+Before dispatching the first profile agent, the orchestrator must verify that:
+
+- all mandatory runtime files exist;
+- runtime templates match `RUNTIME_STATE_SCHEMA.md`;
+- governance/runtime documents are present;
+- `NEXT_ACTION.md` contains exactly one allowed next action;
+- no governance freeze condition is active.
+
+If bootstrap validation fails, the orchestrator must not dispatch the first agent.
+It must set:
+
+```text
+ACTION_TYPE: wait_for_owner | correction
+TARGET_ROLE: project_owner | orchestrator
+DEPENDENCY_STATUS: blocked
+```
 
 ---
 

@@ -35,3 +35,19 @@
 - сохранять контекст агента как источник истины;
 - принимать неструктурированный RESULT;
 - продолжать pipeline без RESULT.
+
+## Correction and retry lifecycle
+
+Correction is a new bounded task.
+
+A failed, blocked, or violating agent result must not be retried in the same agent context.
+
+For correction:
+
+- create a new task or correction task packet;
+- create a fresh agent;
+- pass only REQUIRED_DOCS;
+- preserve normal audit/testing/documentation requirements;
+- do not expand correction scope unless designer creates a new bounded task.
+
+Agent `NEXT_REQUIRED_ACTION` is advisory. The orchestrator must validate it against governance, runtime schema, transition rules, and filesystem governance before updating `NEXT_ACTION.md`.

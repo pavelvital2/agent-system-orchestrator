@@ -2,36 +2,43 @@
 
 ## Next action
 
+```text
 ACTION_ID:
-<id>
-
-ACTION_TYPE:
-create_agent | wait_for_owner | update_state | route_result | stop
-
-TARGET_ROLE:
-<designer | developer | auditor | tester | technical_writer | project_owner | none>
-
+ACTION_TYPE: create_agent | route_result | update_state | wait_for_owner | correction | finalize | stop
+TARGET_ROLE: designer | developer | auditor | tester | technical_writer | orchestrator | project_owner | none
 TASK_ID:
-<task id>
-
 TASK_PACKET:
-<path or none>
-
-REQUIRED_UNIVERSAL_DOCS:
-- <path>
-
-REQUIRED_PROJECT_DOCS:
-- <path>
-
-DEPENDENCY_STATUS:
-ready | blocked
-
+DEPENDENCY_STATUS: ready | blocked | completed | not_applicable
 BLOCKED_BY:
-<GAP_ID | task | none>
+```
 
-EXPECTED_RESULT:
-Use `agent-system/03_templates/AGENT_RESULT_TEMPLATE.md`.
+## REQUIRED_UNIVERSAL_DOCS
+
+```text
+- NONE
+```
+
+## REQUIRED_PROJECT_DOCS
+
+```text
+- NONE
+```
+
+## EXPECTED_RESULT
+
+```text
+- agent-system/03_templates/AGENT_RESULT_TEMPLATE.md
+```
 
 ## Instruction for orchestrator
 
-<one precise instruction>
+```text
+One instruction only.
+```
+
+## Rules
+
+- `NEXT_ACTION.md` must contain exactly one next action.
+- It must not contain hidden subtasks.
+- It must not override governance authority, state transition rules, filesystem governance, or role instructions.
+- If multiple actions are needed, each action must become a separate `NEXT_ACTION.md` update after the previous one completes.

@@ -26,7 +26,17 @@
 - фиксировать список изменённых файлов из отчёта агента;
 - передавать задачу аудитору после проектировщика или разработчика;
 - передавать задачу тестировщику, если это указано в task packet;
-- передавать задачу техрайтеру, если это указано в task packet.
+- передавать задачу техрайтеру, если это указано в task packet;
+- read governance authority documents;
+- read package versioning policy;
+- validate package/schema/template compatibility;
+- validate full runtime state tuple;
+- validate NEXT_ACTION against state transition rules;
+- detect governance freeze conditions;
+- stop dispatch when governance freeze is active;
+- set NEXT_ACTION to correction, wait_for_owner, finalize, or stop when required by governance;
+- create `AGENT_RESULTS_LOG.md` from template during bootstrap if missing;
+- log failed, blocked, gap, and violation results before routing recovery.
 
 ## Запрещено
 
@@ -48,4 +58,13 @@
 - объединять несколько bounded-задач в одну;
 - пропускать обязательный аудит;
 - менять проектную документацию вместо техрайтера или проектировщика;
-- продолжать зависимую ветку при активном GAP.
+- продолжать зависимую ветку при активном GAP;
+- bypass `STATE_TRANSITION_RULES.md`;
+- treat agent `NEXT_REQUIRED_ACTION` as authoritative without validation;
+- dispatch a superseded or deprecated task packet;
+- dispatch while runtime schema is invalid;
+- dispatch while governance freeze is active;
+- infer missing runtime fields from memory;
+- silently repair schema/template mismatch;
+- mark project completed before orchestrator finalization invariants pass;
+- accept forbidden file changes as valid output.
