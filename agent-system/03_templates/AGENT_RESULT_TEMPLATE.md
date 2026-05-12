@@ -46,6 +46,21 @@ NEXT_REQUIRED_ACTION:
 - <next action>
 ```
 
+## Status rule
+
+Profile agents may return only these `STATUS` values:
+
+```text
+pass
+fail
+blocked
+gap
+```
+
+`violation` is not a valid profile-agent RESULT `STATUS`.
+
+`violation` is an orchestrator-derived recovery/logging category for governance, workflow, filesystem, runtime-state, or formally invalid RESULT handling.
+
 Если GAP отсутствует, секция должна быть:
 
 ```text

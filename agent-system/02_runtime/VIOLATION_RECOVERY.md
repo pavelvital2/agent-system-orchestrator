@@ -17,6 +17,25 @@ NEXT_ACTION.TARGET_ROLE: orchestrator
 
 No new normal project agent dispatch is allowed until the state validates again.
 
+## Violation classification
+
+Profile-agent RESULT `STATUS` is limited to:
+
+```text
+pass
+fail
+blocked
+gap
+```
+
+`violation` is not a valid profile-agent RESULT `STATUS`.
+
+`violation` is an orchestrator-derived recovery/logging category for governance, workflow, filesystem, runtime-state, forbidden file change, or formally invalid RESULT handling.
+
+When a RESULT is formally invalid, including a missing mandatory field or a `STATUS` outside the profile-agent enum, the orchestrator must not route by RESULT `STATUS`.
+
+Before recovery/reformat routing, the orchestrator must log the invalid RESULT as an orchestrator-classified `violation` entry using the deterministic fallback from `AGENT_RESULTS_LOG_TEMPLATE.md`.
+
 ## Recovery table
 
 | Violation | Recovery |
@@ -29,7 +48,7 @@ No new normal project agent dispatch is allowed until the state validates again.
 | Forbidden file change | Log RESULT; mark workflow violation; route correction; do not accept. |
 | Deprecated doc in REQUIRED_DOCS | Task packet invalid; route to designer/correction. |
 | Superseded task selected | Stop dispatch; route to replacing task or correction. |
-| Agent RESULT format invalid | Do not route by status; request governed correction/reformat. |
+| Agent RESULT format invalid | Log deterministic `violation` entry; do not route by status; request governed correction/reformat. |
 | Agent STATUS gap | Register GAP; block dependent branch; route by GAP type. |
 | Agent STATUS blocked | Route by blocker type; do not continue dependent branch. |
 | Auditor fail | Checked result not accepted; correction to checked role/designer. |

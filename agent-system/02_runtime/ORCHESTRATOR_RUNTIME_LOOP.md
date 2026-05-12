@@ -167,7 +167,20 @@ GAPS
 NEXT_REQUIRED_ACTION
 ```
 
-Если RESULT format invalid, оркестратор не имеет права route by status. Он должен зафиксировать violation result и перейти к governed correction/reformat согласно `VIOLATION_RECOVERY.md`.
+Допустимые profile-agent `STATUS` values:
+
+```text
+pass
+fail
+blocked
+gap
+```
+
+`violation` не является допустимым profile-agent RESULT `STATUS`.
+
+`violation` является orchestrator-derived recovery/logging category для governance, workflow, filesystem, runtime-state или formally invalid RESULT handling.
+
+Если RESULT format invalid, включая отсутствующие обязательные поля или недопустимый `STATUS`, оркестратор не имеет права route by status. Он должен зафиксировать orchestrator-classified `violation` log entry и перейти к governed correction/reformat согласно `VIOLATION_RECOVERY.md`.
 
 11. Зафиксировать RESULT перед routing by STATUS.
 
@@ -176,11 +189,23 @@ NEXT_REQUIRED_ACTION
 - сохранить полный RESULT или получить deterministic `RESULT_REF`, по которому полный RESULT доступен;
 - добавить bounded entry в `project-runtime/AGENT_RESULTS_LOG.md`;
 - указать в entry поля `DATE`, `ROLE`, `TASK`, `STATUS`, `RESULT_REF`, `CHANGED_FILES`, `NEXT_REQUIRED_ACTION`;
-- применить это правило для `pass`, `fail`, `blocked`, `gap` и `violation` results.
+- применить это правило для valid profile-agent `pass`, `fail`, `blocked`, `gap` results и для orchestrator-classified `violation` log entries.
 
 Recovery/status routing запрещён, пока `AGENT_RESULTS_LOG.md` не получил bounded entry или deterministic reference на полный RESULT.
 
 Если RESULT format invalid, violation/reformat routing также запрещён до bounded log entry или deterministic reference.
+
+Для formally invalid RESULT bounded log entry должен быть заполнен детерминированно и без semantic inference of agent intent:
+
+```text
+DATE: current runtime date if available, otherwise UNKNOWN
+ROLE: from handoff TARGET_ROLE, otherwise unknown
+TASK: current NEXT_ACTION.TASK_ID, otherwise unknown
+STATUS: violation
+RESULT_REF: raw invalid RESULT reference
+CHANGED_FILES: unknown unless safely extractable
+NEXT_REQUIRED_ACTION: correction
+```
 
 12. Действовать по STATUS:
    - `pass` → перейти к следующему gate;
