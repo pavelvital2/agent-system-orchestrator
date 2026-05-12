@@ -20,7 +20,14 @@
    - `agent-system/02_runtime/STATE_TRANSITION_RULES.md`
    - `agent-system/02_runtime/VIOLATION_RECOVERY.md`
    - `agent-system/02_runtime/ACCEPTED_STATE_LOCKING.md`
+   - `agent-system/02_runtime/AGENT_LIFECYCLE.md`
+   - `agent-system/03_templates/TASK_PACKET_TEMPLATE.md`
+   - `agent-system/03_templates/ORCHESTRATOR_TASK_HANDOFF_TEMPLATE.md`
+   - `agent-system/03_templates/AGENT_RESULT_TEMPLATE.md`
    - `agent-system/04_state/RUNTIME_STATE_SCHEMA.md`
+   - `agent-system/05_gap_flow/GAP_FLOW.md`
+   - `agent-system/05_gap_flow/GAP_REGISTER_TEMPLATE.md`
+   - `agent-system/06_logs/AGENT_RESULTS_LOG_TEMPLATE.md`
    - `project-runtime/PROJECT_STATE.md`
    - `project-runtime/CURRENT_GATE.md`
    - `project-runtime/NEXT_ACTION.md`
@@ -34,12 +41,26 @@
 
 4. Проверить filesystem governance.
 
-Оркестратор обязан проверить, что task packet:
+Оркестратор обязан определить, требуется ли task-packet validation.
+
+Task-packet validation применяется только если:
+
+- `NEXT_ACTION.ACTION_TYPE` равен `create_agent`;
+- или `NEXT_ACTION.TASK_PACKET` не равен `NONE`;
+- или planned action явно ссылается на task packet.
+
+Если task-packet validation требуется, оркестратор обязан проверить, что task packet:
 
 - соответствует `TASK_PACKET_TEMPLATE.md`;
 - содержит обязательные секции;
 - не нарушает mandatory workflow;
 - не нарушает filesystem governance.
+
+Для `wait_for_owner`, `update_state`, `finalize`, `stop` и `correction` без task packet значение `TASK_PACKET: NONE` допустимо, если full runtime state tuple разрешён `STATE_TRANSITION_RULES.md`.
+
+Оркестратор не должен считать `TASK_PACKET: NONE` отсутствующим task packet для таких non-dispatch actions.
+
+Обычный project `create_agent` всегда требует валидный task packet.
 
 Оркестратор обязан сверить planned action с:
 
@@ -121,24 +142,60 @@ tester(gap) → orchestrator
    - есть `STATUS`;
    - есть `ROLE`;
    - есть `TASK`;
+   - есть `SUMMARY`;
    - есть `CHANGED_FILES` или указано `NONE`;
+   - есть `READ_DOCS`;
    - есть `EVIDENCE`;
    - есть `RISKS`;
+   - есть `BLOCKERS`;
+   - есть `GAPS`;
    - есть `NEXT_REQUIRED_ACTION`.
 
-11. Действовать по STATUS:
+Формальная проверка RESULT должна требовать ровно обязательные поля из `AGENT_RESULT_TEMPLATE.md`:
+
+```text
+STATUS
+ROLE
+TASK
+SUMMARY
+CHANGED_FILES
+READ_DOCS
+EVIDENCE
+RISKS
+BLOCKERS
+GAPS
+NEXT_REQUIRED_ACTION
+```
+
+Если RESULT format invalid, оркестратор не имеет права route by status. Он должен зафиксировать violation result и перейти к governed correction/reformat согласно `VIOLATION_RECOVERY.md`.
+
+11. Зафиксировать RESULT перед routing by STATUS.
+
+После формальной проверки RESULT и до любого действия по `STATUS` оркестратор обязан:
+
+- сохранить полный RESULT или получить deterministic `RESULT_REF`, по которому полный RESULT доступен;
+- добавить bounded entry в `project-runtime/AGENT_RESULTS_LOG.md`;
+- указать в entry поля `DATE`, `ROLE`, `TASK`, `STATUS`, `RESULT_REF`, `CHANGED_FILES`, `NEXT_REQUIRED_ACTION`;
+- применить это правило для `pass`, `fail`, `blocked`, `gap` и `violation` results.
+
+Recovery/status routing запрещён, пока `AGENT_RESULTS_LOG.md` не получил bounded entry или deterministic reference на полный RESULT.
+
+Если RESULT format invalid, violation/reformat routing также запрещён до bounded log entry или deterministic reference.
+
+12. Действовать по STATUS:
    - `pass` → перейти к следующему gate;
    - `fail` → вернуть задачу на исправление профильному агенту;
    - `blocked` → зафиксировать блокер;
    - `gap` → зафиксировать GAP и остановить зависимую ветку.
 
-12. Обновить runtime state:
+13. Обновить runtime state:
    - `PROJECT_STATE.md`
    - `CURRENT_GATE.md`
    - `NEXT_ACTION.md`
+   - `AGENT_RESULTS_LOG.md` для каждого agent result
    - при необходимости `GAP_REGISTER.md`
 
-13. Повторить цикл перед следующим действием.
+14. Повторить цикл перед следующим действием.
 
 ## Mandatory validation order
 
@@ -151,13 +208,28 @@ Before any `create_agent`, `route_result`, `update_state`, `correction`, `finali
 5. full runtime state tuple is valid under `STATE_TRANSITION_RULES.md`;
 6. `NEXT_ACTION.md` contains exactly one action;
 7. `NEXT_ACTION.md` does not conflict with `GOVERNANCE_AUTHORITY.md`;
-8. target task packet is active, not superseded, not deprecated;
-9. target task packet is inside `ACTIVE_DOC_ROOT`;
-10. REQUIRED_DOCS do not include deprecated/archive documents;
-11. role/file permissions match `FILESYSTEM_GOVERNANCE.md`;
-12. no governance freeze condition is active.
+8. if `NEXT_ACTION.ACTION_TYPE` is `create_agent` or `NEXT_ACTION.TASK_PACKET` is not `NONE`, target task packet is active, not superseded, not deprecated;
+9. if task-packet validation is required, target task packet is inside `ACTIVE_DOC_ROOT` unless it is explicitly governed as system/bootstrap/package correction material;
+10. if task-packet validation is required, REQUIRED_DOCS do not include deprecated/archive documents;
+11. if task-packet validation is not required, `TASK_PACKET: NONE` is valid only for `wait_for_owner`, `update_state`, `finalize`, `stop`, or `correction` when allowed by `STATE_TRANSITION_RULES.md`;
+12. role/file permissions match `FILESYSTEM_GOVERNANCE.md`;
+13. requested action is valid under governance-freeze rules.
 
 If any validation fails, dispatch is forbidden.
+
+Freeze absence is not a required validation condition for recovery actions.
+
+Instead, when governance freeze is active, the orchestrator must validate that `NEXT_ACTION.ACTION_TYPE` is freeze-safe:
+
+- `correction`;
+- `wait_for_owner`;
+- governed `update_state`;
+- governed `stop`;
+- bounded package-governance correction when permitted by `STATE_TRANSITION_RULES.md`.
+
+Normal project `create_agent`, `route_result`, and `finalize` actions are not freeze-safe.
+
+A `create_agent` action during governance freeze is allowed only when it dispatches an explicitly bounded package-governance correction task and passes task-packet, filesystem, lifecycle, and transition validation.
 
 ## Governance freeze behavior
 
@@ -166,16 +238,17 @@ If governance freeze is active:
 ```text
 PROJECT_STATUS: blocked
 CURRENT_PHASE: correction | blocked
-NEXT_ACTION.ACTION_TYPE: correction | wait_for_owner | stop
+NEXT_ACTION.ACTION_TYPE: correction | wait_for_owner | update_state | stop
 ```
 
 During governance freeze, normal project `create_agent` dispatch is forbidden.
 
 The orchestrator may only:
 
-- update runtime state into correction/wait/stop;
+- update runtime state into correction/wait/stop through governed `update_state`;
 - request owner input;
-- route a bounded correction/package-governance task;
+- route an explicitly bounded package-governance correction task when transition rules permit it;
+- stop through governed `stop`;
 - reread and revalidate runtime files.
 
 ## Post-update validation
