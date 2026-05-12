@@ -68,18 +68,36 @@ any_agent(gap)          -> GAP register + dependent branch blocked
 ## Phase/action compatibility
 
 ```text
-bootstrap              -> create_agent | wait_for_owner | correction | stop
+bootstrap              -> create_agent | update_state | wait_for_owner | correction | stop
 design                 -> create_agent | route_result | correction | wait_for_owner
 design_audit           -> create_agent | route_result | correction
 implementation         -> create_agent | route_result | correction | wait_for_owner
 implementation_audit   -> create_agent | route_result | correction
 testing                -> create_agent | route_result | correction | wait_for_owner
 documentation          -> create_agent | route_result | correction | wait_for_owner
-correction             -> correction | create_agent | wait_for_owner | stop
-blocked                -> wait_for_owner | correction | stop
-finalization           -> finalize | correction | stop
+correction             -> update_state | correction | create_agent | wait_for_owner | stop
+blocked                -> update_state | wait_for_owner | correction | stop
+finalization           -> update_state | finalize | correction | stop
 completed              -> stop
 ```
+
+## Governed non-dispatch actions
+
+```text
+update_state:
+TARGET_ROLE: orchestrator | none
+TASK_PACKET: NONE unless a governed package-correction task explicitly requires one
+Dispatch: must not dispatch a profile agent
+Follow-up: must be followed by tuple validation
+```
+
+`TASK_PACKET: NONE` is allowed for:
+
+- wait_for_owner;
+- governed update_state;
+- finalize when no task packet is required;
+- stop;
+- correction when routing does not dispatch a profile/package-correction agent.
 
 ## Terminal completion
 
@@ -107,7 +125,7 @@ Enter correction if any of the following are detected:
 - mandatory field absent;
 - NEXT_ACTION contains multiple instructions;
 - phase/gate/action mismatch;
-- task packet absent or invalid;
+- task packet absent or invalid when ACTION_TYPE requires a task packet;
 - task packet outside ACTIVE_DOC_ROOT;
 - task packet deprecated or superseded;
 - REQUIRED_DOCS includes deprecated/archive doc;
