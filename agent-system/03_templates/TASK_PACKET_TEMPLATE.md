@@ -137,6 +137,46 @@ technical_writer
 
 ---
 
+## TARGET_ROLE
+
+```text
+<designer | developer | auditor | tester | technical_writer>
+```
+
+Rules:
+- TARGET_ROLE is the role that must execute this task;
+- TARGET_ROLE must match TASK_TYPE unless the packet explicitly documents a governed exception;
+- a task packet must not assign work to multiple profile roles.
+
+---
+
+## DEPENDENCIES
+
+```text
+- <TASK_ID | audit result | runtime gate | NONE>
+```
+
+Rules:
+- dependencies must be explicit and bounded;
+- a dependency is ready only after required audit/checkpoint gates are satisfied;
+- a task must not be dispatched while a required dependency is failed, blocked, superseded, or missing.
+
+---
+
+## DEPENDENCY_STATUS
+
+```text
+ready | blocked | pending | none
+```
+
+Rules:
+- `ready` means all listed dependencies are satisfied for dispatch;
+- `blocked` means at least one dependency prevents dispatch;
+- `pending` means dependency work is known but incomplete;
+- `none` is allowed only when DEPENDENCIES is `NONE`.
+
+---
+
 ## PURPOSE
 
 Краткая цель задачи.
@@ -242,6 +282,26 @@ NONE
 
 ---
 
+## READ_INPUTS
+
+Inputs or external package documents the agent must read in addition to REQUIRED_DOCS.
+
+Examples:
+- task graph;
+- acceptance criteria;
+- prior RESULT reference;
+- owner decision record.
+
+If no additional inputs are required:
+
+```text
+NONE
+```
+
+READ_INPUTS must not expand scope beyond this task packet.
+
+---
+
 ## EXPECTED_OUTPUTS
 
 Что агент должен вернуть.
@@ -324,6 +384,73 @@ NONE
 ```text
 NONE
 ```
+
+---
+
+## SETUP_HOOKS
+
+Setup actions or checks required before task execution.
+
+Examples:
+- verify local dependencies are installed;
+- confirm runtime state file exists;
+- ensure required service is stopped before editing.
+
+If no setup hook is required:
+
+```text
+NONE
+```
+
+Rules:
+- setup hooks must be bounded and non-secret;
+- setup hooks must not perform deployment or launch unless explicitly in scope;
+- setup hooks must not bypass task dependencies or audit gates.
+
+---
+
+## LAUNCH_HOOKS
+
+Launch, run, or smoke actions allowed after task execution.
+
+Examples:
+- run local smoke command;
+- start local development service for verification;
+- capture launch readiness evidence.
+
+If no launch hook is required:
+
+```text
+NONE
+```
+
+Rules:
+- launch hooks must be explicit before an agent runs them;
+- production launch requires a dedicated governed launch task;
+- launch evidence must be recorded in RESULT when hooks are executed.
+
+---
+
+## RESULT_PATH
+
+Where the orchestrator should store or reference the agent RESULT.
+
+Example:
+
+```text
+project-runtime/agent-results/<TASK_ID>.md
+```
+
+If the runtime uses a log reference instead of a file path:
+
+```text
+project-runtime/AGENT_RESULTS_LOG.md#<RESULT_REF>
+```
+
+Rules:
+- RESULT_PATH must be deterministic;
+- RESULT_PATH must not contain secrets;
+- RESULT_PATH must be compatible with filesystem governance and runtime state.
 
 ---
 
