@@ -47,6 +47,50 @@ agent-system/09_validators/TRANSITION_VALIDATION_RULES.md
 agent-system/09_validators/GIT_CHECKPOINT_VALIDATION_RULES.md
 ```
 
+## Machine-readable schema sidecars
+
+The universal package also provides JSON Schema sidecars for structures that
+are represented to humans as Markdown templates:
+
+```text
+agent-system/09_validators/schemas/project_state.schema.json
+agent-system/09_validators/schemas/next_action.schema.json
+agent-system/09_validators/schemas/task_packet.schema.json
+agent-system/09_validators/schemas/result.schema.json
+agent-system/09_validators/schemas/task_registry.schema.json
+agent-system/09_validators/schemas/accepted_artifacts.schema.json
+agent-system/09_validators/schemas/orchestrator_event.schema.json
+```
+
+These sidecars use JSON Schema Draft 2020-12 as the machine-readable target
+format. They define the equivalent structured object form for files that are
+authored, displayed, or exchanged as Markdown.
+
+## Markdown mirror and structured source rule
+
+Markdown templates remain the human-readable operating surface for agents and
+owners. JSON Schema sidecars define the canonical machine-readable field set,
+required keys, enum values, and nested structures for validators.
+
+When both forms exist:
+
+- the Markdown template must list the same required fields as its schema
+  sidecar;
+- a runtime Markdown file may be parsed or transformed into the sidecar object
+  shape before validation;
+- a YAML or JSON runtime source may be rendered into Markdown for human review
+  if the rendered Markdown preserves all required fields;
+- validators must not infer missing required values from prose or context;
+- if a Markdown template and sidecar conflict, runtime governance and the
+  current template are the authority until a bounded package update reconciles
+  the sidecar;
+- no runtime dispatch depends on a parser, renderer, CLI, or validator
+  implementation that is not present. Such automation is optional future
+  tooling unless separately implemented and accepted.
+
+The sidecars are therefore validation specifications, not a requirement that
+the current package already contains executable validation tooling.
+
 ## Validation points
 
 The orchestrator should apply validator rules at these points:

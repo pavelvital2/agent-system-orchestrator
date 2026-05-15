@@ -26,6 +26,22 @@ agent-system/09_validators/VALIDATOR_SPEC.md
 agent-system/09_validators/RUNTIME_CONSISTENCY_RULES.md
 ```
 
+Machine-readable sidecar schemas are defined in:
+
+```text
+agent-system/09_validators/schemas/project_state.schema.json
+agent-system/09_validators/schemas/next_action.schema.json
+agent-system/09_validators/schemas/task_registry.schema.json
+agent-system/09_validators/schemas/accepted_artifacts.schema.json
+agent-system/09_validators/schemas/orchestrator_event.schema.json
+```
+
+These sidecars use JSON Schema Draft 2020-12 and mirror the Markdown runtime
+templates. The Markdown files remain human-readable runtime records; validators
+may validate an equivalent YAML or JSON object that preserves the same fields.
+Executable parsing or rendering support is future/optional unless separately
+implemented by an accepted package task.
+
 ---
 
 ## Обязательные runtime files
@@ -584,6 +600,10 @@ RESULT_REFS:
 AUDIT_REFS:
 CORRECTION_LINKS:
 COMMIT_HASH:
+BRANCH:
+PUSH_STATUS:
+ACCEPTED_FILES:
+CHECKPOINT_REF:
 CREATED_AT:
 UPDATED_AT:
 ```
@@ -610,6 +630,10 @@ completed
 - `AUDIT_REFS` must reference bounded audit records or `NONE`;
 - `CORRECTION_LINKS` must reference correction tasks/results or `NONE`;
 - `COMMIT_HASH` is required after a successful post-audit Git checkpoint and may be `NONE` before checkpoint;
+- `BRANCH` is required after a post-audit Git checkpoint and may be `NONE` before checkpoint;
+- `PUSH_STATUS` must be one of `not_required`, `not_attempted`, `pushed`, or `failed`;
+- `ACCEPTED_FILES` must list audited accepted changed files or `NONE`;
+- `CHECKPOINT_REF` must point to the checkpoint event or record after checkpoint attempt, otherwise `NONE`;
 - task registry entries must not contain full task packet, RESULT, or audit contents.
 
 ---
@@ -633,6 +657,9 @@ AUDIT_REF:
 SUPERSEDES:
 SUPERSEDED_BY:
 COMMIT_HASH:
+BRANCH:
+PUSH_STATUS:
+CHECKPOINT_REF:
 ACCEPTED_AT:
 UPDATED_AT:
 NOTES:
@@ -653,6 +680,9 @@ superseded
 - `ARTIFACT_REF`, `SOURCE_RESULT_REF`, and `AUDIT_REF` must be bounded references or `NONE`;
 - superseded artifacts must remain traceable through `SUPERSEDES` and `SUPERSEDED_BY`;
 - `COMMIT_HASH` is required after a successful post-audit Git checkpoint and may be `NONE` before checkpoint;
+- `BRANCH` is required after a post-audit Git checkpoint and may be `NONE` before checkpoint;
+- `PUSH_STATUS` must be one of `not_required`, `not_attempted`, `pushed`, or `failed`;
+- `CHECKPOINT_REF` must point to the checkpoint event or record after checkpoint attempt, otherwise `NONE`;
 - accepted artifacts registry entries must not contain full artifact contents.
 
 ---
@@ -677,6 +707,10 @@ SUMMARY:
 INPUT_REFS:
 OUTPUT_REFS:
 COMMIT_HASH:
+BRANCH:
+PUSH_STATUS:
+ACCEPTED_FILES:
+FAILURE_REASON:
 NEXT_ACTION_REF:
 ```
 
@@ -709,6 +743,9 @@ system
 
 - bootstrap, owner pause, validator result, checkpoint, and manual intervention events must be representable;
 - `COMMIT_HASH` is required for successful checkpoint events and must be `NONE` otherwise;
+- `BRANCH`, `PUSH_STATUS`, and `ACCEPTED_FILES` are required for checkpoint events;
+- `PUSH_STATUS` must be one of `not_required`, `not_attempted`, `pushed`, or `failed`;
+- `FAILURE_REASON` must be populated for failed checkpoint, validator, or recovery events and must not include secret values;
 - `INPUT_REFS`, `OUTPUT_REFS`, and `NEXT_ACTION_REF` must use bounded references or `NONE`;
 - orchestrator events log entries must not contain full task packet, RESULT, or audit contents.
 

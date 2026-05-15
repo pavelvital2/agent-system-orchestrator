@@ -1,0 +1,101 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://agent-system.local/schemas/result.schema.json",
+  "title": "AGENT_RESULT",
+  "description": "Machine-readable sidecar for agent-system/03_templates/AGENT_RESULT_TEMPLATE.md.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "STATUS",
+    "ROLE",
+    "TASK",
+    "SUMMARY",
+    "READ_DOCS",
+    "READ_INPUTS",
+    "CHANGED_FILES",
+    "CREATED_FILES",
+    "DELETED_FILES",
+    "COMMANDS_RUN",
+    "EVIDENCE",
+    "SCOPE_VERIFICATION",
+    "FORBIDDEN_CHANGES_CHECK",
+    "RISKS",
+    "BLOCKERS",
+    "GAPS",
+    "NEXT_RECOMMENDED_ACTION"
+  ],
+  "properties": {
+    "STATUS": { "type": "string", "enum": ["pass", "fail", "blocked", "gap"] },
+    "ROLE": { "type": "string", "enum": ["designer", "developer", "auditor", "tester", "technical_writer"] },
+    "TASK": { "type": "string" },
+    "SUMMARY": { "$ref": "#/$defs/nonEmptyList" },
+    "READ_DOCS": { "$ref": "#/$defs/listOrNone" },
+    "READ_INPUTS": { "$ref": "#/$defs/listOrNone" },
+    "CHANGED_FILES": { "$ref": "#/$defs/listOrNone" },
+    "CREATED_FILES": { "$ref": "#/$defs/listOrNone" },
+    "DELETED_FILES": { "$ref": "#/$defs/listOrNone" },
+    "COMMANDS_RUN": { "$ref": "#/$defs/listOrNone" },
+    "EVIDENCE": { "$ref": "#/$defs/listOrNone" },
+    "SCOPE_VERIFICATION": { "$ref": "#/$defs/listOrNone" },
+    "FORBIDDEN_CHANGES_CHECK": { "$ref": "#/$defs/listOrNone" },
+    "RISKS": { "$ref": "#/$defs/listOrNone" },
+    "BLOCKERS": { "$ref": "#/$defs/listOrNone" },
+    "GAPS": {
+      "oneOf": [
+        { "const": "NONE" },
+        {
+          "type": "array",
+          "items": { "$ref": "#/$defs/gap" }
+        }
+      ]
+    },
+    "NEXT_RECOMMENDED_ACTION": { "$ref": "#/$defs/listOrNone" }
+  },
+  "$defs": {
+    "listOrNone": {
+      "oneOf": [
+        { "const": "NONE" },
+        { "type": "array", "items": { "type": "string" } }
+      ]
+    },
+    "nonEmptyList": {
+      "type": "array",
+      "minItems": 1,
+      "items": { "type": "string" }
+    },
+    "gap": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "GAP_ID",
+        "TYPE",
+        "BLOCKS",
+        "QUESTION_TO_OWNER",
+        "RECOMMENDED_OPTIONS",
+        "RECOMMENDED_OPTION",
+        "REASON"
+      ],
+      "properties": {
+        "GAP_ID": { "type": "string" },
+        "TYPE": {
+          "type": "string",
+          "enum": ["business", "functional", "technical", "documentation", "acceptance", "runtime"]
+        },
+        "BLOCKS": { "type": "string" },
+        "QUESTION_TO_OWNER": { "type": "string" },
+        "RECOMMENDED_OPTIONS": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["A", "B", "C"],
+          "properties": {
+            "A": { "type": "string" },
+            "B": { "type": "string" },
+            "C": { "type": "string" }
+          }
+        },
+        "RECOMMENDED_OPTION": { "type": "string", "enum": ["A", "B", "C"] },
+        "REASON": { "type": "string" }
+      }
+    }
+  }
+}

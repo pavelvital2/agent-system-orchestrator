@@ -1,0 +1,62 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://agent-system.local/schemas/accepted_artifacts.schema.json",
+  "title": "ACCEPTED_ARTIFACTS",
+  "description": "Machine-readable sidecar for agent-system/04_state/ACCEPTED_ARTIFACTS_TEMPLATE.md.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["ARTIFACT_ENTRIES"],
+  "properties": {
+    "ARTIFACT_ENTRIES": {
+      "oneOf": [
+        { "const": "NONE" },
+        {
+          "type": "array",
+          "items": { "$ref": "#/$defs/artifactEntry" }
+        }
+      ]
+    }
+  },
+  "$defs": {
+    "artifactEntry": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "ARTIFACT_ID",
+        "ARTIFACT_TYPE",
+        "ARTIFACT_REF",
+        "STATUS",
+        "SOURCE_TASK",
+        "SOURCE_RESULT_REF",
+        "AUDIT_REF",
+        "SUPERSEDES",
+        "SUPERSEDED_BY",
+        "COMMIT_HASH",
+        "BRANCH",
+        "PUSH_STATUS",
+        "CHECKPOINT_REF",
+        "ACCEPTED_AT",
+        "UPDATED_AT",
+        "NOTES"
+      ],
+      "properties": {
+        "ARTIFACT_ID": { "type": "string" },
+        "ARTIFACT_TYPE": { "type": "string" },
+        "ARTIFACT_REF": { "type": "string" },
+        "STATUS": { "type": "string", "enum": ["draft", "accepted", "failed", "superseded"] },
+        "SOURCE_TASK": { "type": "string" },
+        "SOURCE_RESULT_REF": { "type": "string" },
+        "AUDIT_REF": { "type": "string" },
+        "SUPERSEDES": { "type": "string" },
+        "SUPERSEDED_BY": { "type": "string" },
+        "COMMIT_HASH": { "type": "string" },
+        "BRANCH": { "type": "string" },
+        "PUSH_STATUS": { "type": "string", "enum": ["not_required", "not_attempted", "pushed", "failed"] },
+        "CHECKPOINT_REF": { "type": "string" },
+        "ACCEPTED_AT": { "type": "string" },
+        "UPDATED_AT": { "type": "string" },
+        "NOTES": { "type": "string" }
+      }
+    }
+  }
+}

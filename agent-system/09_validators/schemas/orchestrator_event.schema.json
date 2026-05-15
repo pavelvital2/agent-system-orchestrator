@@ -1,0 +1,67 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://agent-system.local/schemas/orchestrator_event.schema.json",
+  "title": "ORCHESTRATOR_EVENT",
+  "description": "Machine-readable sidecar for agent-system/06_logs/ORCHESTRATOR_EVENTS_LOG_TEMPLATE.md event entries.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "DATE",
+    "EVENT_TYPE",
+    "ACTOR",
+    "TASK_ID",
+    "GATE_ID",
+    "ACTION_ID",
+    "STATUS",
+    "SUMMARY",
+    "INPUT_REFS",
+    "OUTPUT_REFS",
+    "COMMIT_HASH",
+    "BRANCH",
+    "PUSH_STATUS",
+    "ACCEPTED_FILES",
+    "FAILURE_REASON",
+    "NEXT_ACTION_REF"
+  ],
+  "properties": {
+    "DATE": { "type": "string" },
+    "EVENT_TYPE": {
+      "type": "string",
+      "enum": [
+        "bootstrap",
+        "owner_pause",
+        "validator_result",
+        "checkpoint",
+        "manual_intervention",
+        "task_dispatch",
+        "result_route",
+        "audit_route",
+        "correction_route",
+        "state_update",
+        "violation_recovery"
+      ]
+    },
+    "ACTOR": { "type": "string", "enum": ["orchestrator", "project_owner", "validator", "system"] },
+    "TASK_ID": { "type": "string" },
+    "GATE_ID": { "type": "string" },
+    "ACTION_ID": { "type": "string" },
+    "STATUS": { "type": "string" },
+    "SUMMARY": { "type": "string" },
+    "INPUT_REFS": { "$ref": "#/$defs/listOrNone" },
+    "OUTPUT_REFS": { "$ref": "#/$defs/listOrNone" },
+    "COMMIT_HASH": { "type": "string" },
+    "BRANCH": { "type": "string" },
+    "PUSH_STATUS": { "type": "string", "enum": ["not_required", "not_attempted", "pushed", "failed"] },
+    "ACCEPTED_FILES": { "$ref": "#/$defs/listOrNone" },
+    "FAILURE_REASON": { "type": "string" },
+    "NEXT_ACTION_REF": { "type": "string" }
+  },
+  "$defs": {
+    "listOrNone": {
+      "oneOf": [
+        { "const": "NONE" },
+        { "type": "array", "items": { "type": "string" } }
+      ]
+    }
+  }
+}
