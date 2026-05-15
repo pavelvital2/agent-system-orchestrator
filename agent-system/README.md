@@ -153,4 +153,17 @@ Example task flow:
 7. On audit fail, orchestrator creates a correction task without committing failed work.
 ```
 
+Documentation-only examples and the final smoke checklist live in:
+
+```text
+agent-system/10_examples/MINIMAL_EXAMPLE_FIXTURE.md
+agent-system/10_examples/EXPECTED_FLOW_EXAMPLE.md
+agent-system/10_examples/FINAL_SMOKE_CHECKLIST.md
+```
+
+These examples demonstrate the generic TZ -> requirements/design -> task ->
+audit -> checkpoint -> setup/run/launch/handover flow without requiring actual
+deployment, credentials, external source repositories, or business-specific
+implementation.
+
 This repository package does not claim a separate CLI wrapper. It is an instruction, governance, template, lifecycle, and validation package for Codex CLI orchestration.

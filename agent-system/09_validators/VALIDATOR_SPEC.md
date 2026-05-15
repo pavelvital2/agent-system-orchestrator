@@ -181,3 +181,18 @@ Any path outside allowed scope is a workflow/filesystem violation.
 Validator rules must remain universal. They must not include business-domain
 terms, application-specific implementation details, or project-specific
 exceptions.
+
+## Final smoke fixture
+
+The package includes a documentation-level final smoke checklist:
+
+```text
+agent-system/10_examples/FINAL_SMOKE_CHECKLIST.md
+```
+
+This checklist is a validation aid for final package review. It verifies that
+required upgrade documents exist and that lifecycle, role, task/result, state,
+audit/checkpoint, setup/run/launch/handover, profile, GAP/owner, secret-safety,
+and project-agnostic rules do not contradict each other. It does not require a
+runtime validator implementation, production deployment, external repository, or
+credential access.
