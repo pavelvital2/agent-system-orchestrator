@@ -37,7 +37,11 @@ project-runtime/PROJECT_STATE.md
 project-runtime/CURRENT_GATE.md
 project-runtime/NEXT_ACTION.md
 project-runtime/GAP_REGISTER.md
+project-runtime/TASK_REGISTRY.md
+project-runtime/ACCEPTED_ARTIFACTS.md
 project-runtime/AGENT_RESULTS_LOG.md
+project-runtime/ORCHESTRATOR_EVENTS_LOG.md
+project-runtime/STATUS_SUMMARY.md
 ```
 
 Если какого-либо файла нет, оркестратор обязан создать его из шаблона или остановить pipeline в `wait_for_owner`, если шаблон отсутствует.
@@ -495,7 +499,7 @@ TASK:
 STATUS:
 RESULT_REF:
 CHANGED_FILES:
-NEXT_REQUIRED_ACTION:
+NEXT_RECOMMENDED_ACTION:
 ```
 
 ## Правила
@@ -504,8 +508,212 @@ NEXT_REQUIRED_ACTION:
 - failed, blocked, gap, and orchestrator-classified violation entries must be logged before recovery routing;
 - Profile-agent RESULT STATUS remains limited to pass | fail | blocked | gap; violation is a log/recovery classification only.
 - RESULT_REF должен ссылаться на место хранения полного RESULT или содержать краткий RESULT, если он небольшой;
+- `NEXT_RECOMMENDED_ACTION` records the advisory next action emitted by the agent RESULT;
+- legacy consumers may display `NEXT_REQUIRED_ACTION`, but new log entries must use `NEXT_RECOMMENDED_ACTION`;
 - log не должен заменять project docs;
 - log не должен становиться giant execution document.
+
+---
+
+# TASK_REGISTRY.md schema
+
+## Назначение
+
+`TASK_REGISTRY.md` фиксирует operational lifecycle state задач и их traceability.
+
+## Формат записи
+
+```text
+TASK_ID:
+TASK_TITLE:
+TASK_TYPE:
+OWNER_ROLE:
+STATUS:
+TASK_PACKET:
+DEPENDENCIES:
+RESULT_REFS:
+AUDIT_REFS:
+CORRECTION_LINKS:
+COMMIT_HASH:
+CREATED_AT:
+UPDATED_AT:
+```
+
+## STATUS допустимые значения
+
+```text
+pending
+ready
+running
+audit_pending
+audit_passed
+checkpoint_done
+blocked
+failed
+superseded
+completed
+```
+
+## Правила
+
+- `DEPENDENCIES` must list prerequisite task ids or `NONE`;
+- `RESULT_REFS` must reference bounded RESULT records or `NONE`;
+- `AUDIT_REFS` must reference bounded audit records or `NONE`;
+- `CORRECTION_LINKS` must reference correction tasks/results or `NONE`;
+- `COMMIT_HASH` is required after a successful post-audit Git checkpoint and may be `NONE` before checkpoint;
+- task registry entries must not contain full task packet, RESULT, or audit contents.
+
+---
+
+# ACCEPTED_ARTIFACTS.md schema
+
+## Назначение
+
+`ACCEPTED_ARTIFACTS.md` фиксирует acceptance state артефактов по bounded references.
+
+## Формат записи
+
+```text
+ARTIFACT_ID:
+ARTIFACT_TYPE:
+ARTIFACT_REF:
+STATUS:
+SOURCE_TASK:
+SOURCE_RESULT_REF:
+AUDIT_REF:
+SUPERSEDES:
+SUPERSEDED_BY:
+COMMIT_HASH:
+ACCEPTED_AT:
+UPDATED_AT:
+NOTES:
+```
+
+## STATUS допустимые значения
+
+```text
+draft
+accepted
+failed
+superseded
+```
+
+## Правила
+
+- `draft`, `accepted`, `failed`, and `superseded` must remain distinct states;
+- `ARTIFACT_REF`, `SOURCE_RESULT_REF`, and `AUDIT_REF` must be bounded references or `NONE`;
+- superseded artifacts must remain traceable through `SUPERSEDES` and `SUPERSEDED_BY`;
+- `COMMIT_HASH` is required after a successful post-audit Git checkpoint and may be `NONE` before checkpoint;
+- accepted artifacts registry entries must not contain full artifact contents.
+
+---
+
+# ORCHESTRATOR_EVENTS_LOG.md schema
+
+## Назначение
+
+`ORCHESTRATOR_EVENTS_LOG.md` фиксирует material orchestrator events and routing decisions.
+
+## Формат записи
+
+```text
+DATE:
+EVENT_TYPE:
+ACTOR:
+TASK_ID:
+GATE_ID:
+ACTION_ID:
+STATUS:
+SUMMARY:
+INPUT_REFS:
+OUTPUT_REFS:
+COMMIT_HASH:
+NEXT_ACTION_REF:
+```
+
+## EVENT_TYPE допустимые значения
+
+```text
+bootstrap
+owner_pause
+validator_result
+checkpoint
+manual_intervention
+task_dispatch
+result_route
+audit_route
+correction_route
+state_update
+violation_recovery
+```
+
+## ACTOR допустимые значения
+
+```text
+orchestrator
+project_owner
+validator
+system
+```
+
+## Правила
+
+- bootstrap, owner pause, validator result, checkpoint, and manual intervention events must be representable;
+- `COMMIT_HASH` is required for successful checkpoint events and must be `NONE` otherwise;
+- `INPUT_REFS`, `OUTPUT_REFS`, and `NEXT_ACTION_REF` must use bounded references or `NONE`;
+- orchestrator events log entries must not contain full task packet, RESULT, or audit contents.
+
+---
+
+# STATUS_SUMMARY.md schema
+
+## Назначение
+
+`STATUS_SUMMARY.md` фиксирует compact operational summary текущего состояния.
+
+## Обязательные поля
+
+```text
+PROJECT_STATUS:
+CURRENT_PHASE:
+CURRENT_GATE:
+GATE_STATUS:
+LAST_ACCEPTED_RESULT:
+LAST_FAILED_RESULT:
+ACTIVE_BLOCKERS:
+ACTIVE_GAPS:
+NEXT_ACTION:
+LAUNCH_READINESS:
+UPDATED_AT:
+PROJECT_STATE_REF:
+CURRENT_GATE_REF:
+NEXT_ACTION_REF:
+TASK_REGISTRY_REF:
+ACCEPTED_ARTIFACTS_REF:
+AGENT_RESULTS_LOG_REF:
+ORCHESTRATOR_EVENTS_LOG_REF:
+```
+
+## LAUNCH_READINESS допустимые значения
+
+```text
+not_started
+not_ready
+blocked
+ready
+launched
+not_applicable
+```
+
+## Правила
+
+- `PROJECT_STATUS` must match `PROJECT_STATE.md`;
+- `CURRENT_GATE` and `GATE_STATUS` must match `CURRENT_GATE.md`;
+- `LAST_ACCEPTED_RESULT` and `LAST_FAILED_RESULT` must reference bounded result records or `NONE`;
+- `ACTIVE_BLOCKERS` must list blocker ids or `NONE`;
+- `ACTIVE_GAPS` must list GAP ids or `NONE`;
+- `NEXT_ACTION` must summarize exactly one governed next action;
+- `LAUNCH_READINESS` must summarize launch gate state when applicable, otherwise `not_applicable`.
 
 ---
 
@@ -531,6 +739,23 @@ NEXT_ACTION.TASK_ID
 NEXT_ACTION.TASK_PACKET
 NEXT_ACTION.DEPENDENCY_STATUS
 GAP_REGISTER.active_gaps
+TASK_REGISTRY.task_statuses
+TASK_REGISTRY.dependencies
+TASK_REGISTRY.result_refs
+TASK_REGISTRY.audit_refs
+TASK_REGISTRY.correction_links
+TASK_REGISTRY.commit_hashes
+ACCEPTED_ARTIFACTS.artifact_statuses
+ACCEPTED_ARTIFACTS.audit_refs
+ORCHESTRATOR_EVENTS_LOG.latest_events
+STATUS_SUMMARY.project_status
+STATUS_SUMMARY.current_gate
+STATUS_SUMMARY.last_accepted_result
+STATUS_SUMMARY.last_failed_result
+STATUS_SUMMARY.active_blockers
+STATUS_SUMMARY.active_gaps
+STATUS_SUMMARY.next_action
+STATUS_SUMMARY.launch_readiness
 PROJECT_STATE.active_blockers
 PROJECT_STATE.active_branches
 ```
@@ -546,8 +771,12 @@ The following templates must be compatible with this schema:
 agent-system/04_state/PROJECT_STATE_TEMPLATE.md
 agent-system/04_state/CURRENT_GATE_TEMPLATE.md
 agent-system/04_state/NEXT_ACTION_TEMPLATE.md
+agent-system/04_state/TASK_REGISTRY_TEMPLATE.md
+agent-system/04_state/ACCEPTED_ARTIFACTS_TEMPLATE.md
 agent-system/05_gap_flow/GAP_REGISTER_TEMPLATE.md
 agent-system/06_logs/AGENT_RESULTS_LOG_TEMPLATE.md
+agent-system/06_logs/ORCHESTRATOR_EVENTS_LOG_TEMPLATE.md
+agent-system/06_logs/STATUS_SUMMARY_TEMPLATE.md
 ```
 
 If schema and templates conflict, bootstrap is invalid and governance freeze applies.

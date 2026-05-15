@@ -17,7 +17,7 @@ TASK:
 STATUS:
 RESULT_REF:
 CHANGED_FILES:
-NEXT_REQUIRED_ACTION:
+NEXT_RECOMMENDED_ACTION:
 ```
 
 ## Rules
@@ -27,6 +27,8 @@ NEXT_REQUIRED_ACTION:
 - profile-agent RESULT `STATUS` is limited to `pass`, `fail`, `blocked`, and `gap`;
 - `violation` is an orchestrator-derived recovery/logging category, not a valid profile-agent RESULT `STATUS`;
 - `RESULT_REF` must point to the full RESULT location or contain a bounded reference;
+- `NEXT_RECOMMENDED_ACTION` records the advisory next action emitted by the agent RESULT;
+- legacy consumers may display `NEXT_REQUIRED_ACTION`, but new log entries must use `NEXT_RECOMMENDED_ACTION`;
 - the log must not store full large reports;
 - ordinary profile agents must not edit this file.
 
@@ -41,5 +43,5 @@ TASK: <current NEXT_ACTION.TASK_ID if available, otherwise unknown>
 STATUS: violation
 RESULT_REF: <raw invalid RESULT reference>
 CHANGED_FILES: <unknown unless safely extractable>
-NEXT_REQUIRED_ACTION: correction
+NEXT_RECOMMENDED_ACTION: correction
 ```
