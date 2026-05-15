@@ -10,6 +10,13 @@ Action/state terms that can be confused during routing are defined in:
 agent-system/02_runtime/ACTION_STATE_SEMANTICS.md
 ```
 
+Documentation-first validator checks for these rules are defined in:
+
+```text
+agent-system/09_validators/TRANSITION_VALIDATION_RULES.md
+agent-system/09_validators/RUNTIME_CONSISTENCY_RULES.md
+```
+
 ## State tuple
 
 Before dispatch, validate the combined runtime state:
@@ -219,3 +226,10 @@ Enter correction if any of the following are detected:
 - `ACTION_SEMANTIC: pause` with `NEXT_ACTION.ACTION_TYPE: stop`;
 - `ACTION_TYPE: wait_for_owner` with no owner-facing blocker, GAP, or question;
 - auditor fail followed by `DEPENDENCY_STATUS: ready` for dependent work.
+
+The validator layer must also catch the concrete invalid states listed in:
+
+```text
+agent-system/09_validators/RUNTIME_CONSISTENCY_RULES.md
+agent-system/09_validators/TRANSITION_VALIDATION_RULES.md
+```

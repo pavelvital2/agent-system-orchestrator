@@ -22,6 +22,8 @@ agent-system/02_runtime/STATE_TRANSITION_RULES.md
 agent-system/02_runtime/VIOLATION_RECOVERY.md
 agent-system/02_runtime/ACCEPTED_STATE_LOCKING.md
 agent-system/PACKAGE_VERSIONING.md
+agent-system/09_validators/VALIDATOR_SPEC.md
+agent-system/09_validators/RUNTIME_CONSISTENCY_RULES.md
 ```
 
 ---
@@ -558,6 +560,12 @@ Authoritative runtime transition rules, forbidden transitions, terminal completi
 
 ```text
 agent-system/02_runtime/STATE_TRANSITION_RULES.md
+```
+
+Detailed documentation-first runtime consistency checks are defined in:
+
+```text
+agent-system/09_validators/RUNTIME_CONSISTENCY_RULES.md
 ```
 
 Structural runtime state validation in this schema does not authorize role, phase, gate, action, terminal, GAP, blocker, or workflow transitions.
