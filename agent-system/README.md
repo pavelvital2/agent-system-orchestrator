@@ -21,6 +21,8 @@
 
 - старт оркестратора;
 - роль оркестратора;
+- universal project lifecycle from TZ intake to final acceptance;
+- requirements analyst, devops/setup engineer, and release manager roles;
 - runtime loop;
 - whitelist действий;
 - lifecycle агента;
@@ -51,3 +53,32 @@ agent-system/02_runtime/ACCEPTED_STATE_LOCKING.md
 
 These documents do not introduce a new orchestration model.
 They formalize authority, transitions, recovery, accepted-state locking, and package governance for the existing deterministic filesystem-based runtime.
+
+## Universal lifecycle layer
+
+The package defines a project-agnostic lifecycle for taking a project from TZ intake through requirements, design, implementation, audit, testing, setup, run, launch, documentation, handover, and final acceptance:
+
+```text
+agent-system/07_lifecycle/PROJECT_LIFECYCLE.md
+agent-system/07_lifecycle/BOOTSTRAP_STAGE.md
+agent-system/07_lifecycle/REQUIREMENTS_STAGE.md
+agent-system/07_lifecycle/DESIGN_STAGE.md
+agent-system/07_lifecycle/IMPLEMENTATION_STAGE.md
+agent-system/07_lifecycle/TESTING_STAGE.md
+agent-system/07_lifecycle/SETUP_STAGE.md
+agent-system/07_lifecycle/RUN_STAGE.md
+agent-system/07_lifecycle/LAUNCH_STAGE.md
+agent-system/07_lifecycle/HANDOVER_STAGE.md
+```
+
+The lifecycle adds universal stage boundaries and gates without changing the deterministic orchestrator model.
+
+## Additional universal roles
+
+The lifecycle uses these additional role documents:
+
+```text
+agent-system/01_roles/REQUIREMENTS_ANALYST.md
+agent-system/01_roles/DEVOPS_SETUP_ENGINEER.md
+agent-system/01_roles/RELEASE_MANAGER.md
+```
