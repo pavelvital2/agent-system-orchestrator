@@ -427,6 +427,10 @@ EXPECTED_RESULT:
 
 `GAP_REGISTER.md` фиксирует GAP, которые требуют решения владельца проекта или correction flow.
 
+GAP entries are blocking records.
+Non-blocking findings must not be stored as active GAPs.
+Use a findings register based on `agent-system/03_templates/FINDINGS_REGISTER_TEMPLATE.md` when traceability is required without blocking dependent dispatch.
+
 ## Active gaps
 
 Формат:
@@ -440,8 +444,13 @@ TYPE: business | functional | technical | documentation | acceptance | runtime
 BLOCKS:
 QUESTION_TO_OWNER:
 RECOMMENDED_OPTIONS:
+RECOMMENDED_OPTION:
+OWNER_DECISION_REF:
 OWNER_ANSWER:
 RESOLUTION_TASK:
+ACCEPTED_SOURCE_OF_TRUTH_UPDATE:
+ACCEPTED_ARTIFACT_REF:
+CLOSURE_EVIDENCE:
 CREATED_AT:
 UPDATED_AT:
 ```
@@ -459,6 +468,10 @@ NONE
 ```text
 GAP_ID:
 RESOLUTION:
+OWNER_DECISION_REF:
+ACCEPTED_SOURCE_OF_TRUTH_UPDATE:
+ACCEPTED_ARTIFACT_REF:
+CLOSURE_EVIDENCE:
 CLOSED_BY:
 CLOSED_AT:
 ```
@@ -479,6 +492,42 @@ NONE
 - runtime GAP → designer, если не требуется business decision.
 
 Оркестратор не решает GAP по существу.
+
+## GAP closure requirements
+
+- `STATUS: answered` means an answer or owner decision exists, but dependent dispatch remains blocked.
+- `STATUS: closed` requires an accepted source-of-truth update.
+- `ACCEPTED_SOURCE_OF_TRUTH_UPDATE` must reference the accepted document, task packet, runtime-state update, or owner decision record that became source-of-truth.
+- `CLOSURE_EVIDENCE` must reference the RESULT, audit, accepted artifact, or runtime-state record that proves the update was accepted.
+- If the resolution changes requirements, design, task scope, acceptance criteria, runtime behavior, or launch readiness, closure must go through governed designer/audit or correction/audit flow before dependent dispatch continues.
+
+---
+
+# Owner decision and evidence tracking
+
+Owner decision records and evidence matrices are bounded artifacts, not replacements for runtime state.
+
+Use:
+
+```text
+agent-system/03_templates/OWNER_DECISION_TEMPLATE.md
+agent-system/03_templates/EVIDENCE_MATRIX_TEMPLATE.md
+agent-system/03_templates/FINDINGS_REGISTER_TEMPLATE.md
+```
+
+Runtime state may reference these artifacts through:
+
+- `GAP_REGISTER.OWNER_DECISION_REF`;
+- `GAP_REGISTER.CLOSURE_EVIDENCE`;
+- `ACCEPTED_ARTIFACTS.ARTIFACT_REF`;
+- `TASK_REGISTRY.RESULT_REFS`;
+- `ORCHESTRATOR_EVENTS_LOG.INPUT_REFS`;
+- `ORCHESTRATOR_EVENTS_LOG.OUTPUT_REFS`;
+- `STATUS_SUMMARY.ACTIVE_BLOCKERS`;
+- `STATUS_SUMMARY.ACTIVE_GAPS`.
+
+These references must be bounded paths or ids.
+Runtime state must not copy full owner decisions, evidence matrices, or findings registers.
 
 ---
 
