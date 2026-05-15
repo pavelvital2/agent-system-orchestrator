@@ -22,6 +22,10 @@ RESULT_REFS:
 AUDIT_REFS:
 CORRECTION_LINKS:
 COMMIT_HASH:
+BRANCH:
+PUSH_STATUS: not_required | not_attempted | pushed | failed
+ACCEPTED_FILES:
+CHECKPOINT_REF:
 CREATED_AT:
 UPDATED_AT:
 ```
@@ -40,7 +44,11 @@ NONE
 - `RESULT_REFS` must point to bounded RESULT records or `NONE`.
 - `AUDIT_REFS` must point to bounded audit RESULT records or `NONE`.
 - `CORRECTION_LINKS` must list correction task ids, correction result refs, or `NONE`.
-- `COMMIT_HASH` is required after a post-audit Git checkpoint; before checkpoint it may be `NONE`.
+- `COMMIT_HASH` is required after a successful post-audit Git checkpoint; before checkpoint it may be `NONE`.
+- `BRANCH` is required after a post-audit Git checkpoint; before checkpoint it may be `NONE`.
+- `PUSH_STATUS` must reflect the latest checkpoint push state.
+- `ACCEPTED_FILES` must list only audited and accepted changed files or `NONE`.
+- `CHECKPOINT_REF` must point to the checkpoint event or record after checkpoint attempt, otherwise `NONE`.
 - Superseded tasks must keep their historical refs and set `STATUS: superseded`.
 
 ## Rules
@@ -48,5 +56,6 @@ NONE
 - each dispatched task must have one registry entry;
 - dependent work must not be marked `ready` until dependencies satisfy transition rules;
 - audit pass alone does not imply checkpoint completion;
+- `STATUS: checkpoint_done` requires commit hash, branch, pushed status, accepted files, and checkpoint reference;
 - failed and blocked tasks must retain result and correction traceability;
 - ordinary profile agents must not edit this file.

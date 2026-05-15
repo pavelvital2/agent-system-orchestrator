@@ -22,6 +22,9 @@ AUDIT_REF:
 SUPERSEDES:
 SUPERSEDED_BY:
 COMMIT_HASH:
+BRANCH:
+PUSH_STATUS: not_required | not_attempted | pushed | failed
+CHECKPOINT_REF:
 ACCEPTED_AT:
 UPDATED_AT:
 NOTES:
@@ -47,11 +50,15 @@ NONE
 - `SOURCE_RESULT_REF` must point to the producing RESULT or `NONE`.
 - `AUDIT_REF` is required for artifacts accepted through an audit gate; otherwise use `NONE`.
 - `SUPERSEDES` and `SUPERSEDED_BY` must use artifact ids or `NONE`.
-- `COMMIT_HASH` is required after a post-audit Git checkpoint; before checkpoint it may be `NONE`.
+- `COMMIT_HASH` is required after a successful post-audit Git checkpoint; before checkpoint it may be `NONE`.
+- `BRANCH` is required after a post-audit Git checkpoint; before checkpoint it may be `NONE`.
+- `PUSH_STATUS` must reflect whether the accepted artifact has been pushed after checkpoint.
+- `CHECKPOINT_REF` must point to the checkpoint event or record after checkpoint attempt, otherwise `NONE`.
 
 ## Rules
 
 - failed artifacts must remain distinguishable from draft artifacts;
 - superseded artifacts must remain traceable and must not be deleted from the registry;
 - accepted-state locking rules apply to `STATUS: accepted`;
+- audit-accepted artifacts are not fully checkpointed until commit hash, branch, pushed status, and checkpoint reference are recorded;
 - ordinary profile agents must not edit this file.

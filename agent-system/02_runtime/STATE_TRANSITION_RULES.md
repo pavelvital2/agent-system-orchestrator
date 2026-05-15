@@ -15,6 +15,8 @@ Documentation-first validator checks for these rules are defined in:
 ```text
 agent-system/09_validators/TRANSITION_VALIDATION_RULES.md
 agent-system/09_validators/RUNTIME_CONSISTENCY_RULES.md
+agent-system/09_validators/GIT_CHECKPOINT_VALIDATION_RULES.md
+agent-system/02_runtime/POST_AUDIT_GIT_CHECKPOINT.md
 ```
 
 ## State tuple
@@ -80,6 +82,11 @@ any_agent(gap)          -> GAP register + dependent branch blocked
 - NEXT_ACTION stop before terminal invariants pass.
 - audit fail routed to normal next task, testing, documentation, finalization, or completed;
 - audit fail routed to post-audit Git checkpoint;
+- audit blocked or gap routed to post-audit Git checkpoint;
+- post-audit Git checkpoint before required auditor pass;
+- post-audit Git checkpoint that stages files outside the audited task allowed scope;
+- post-audit Git checkpoint that stages suspected secret or credential material;
+- push after commit failure or checkpoint validation failure;
 - terminal stop used as a temporary pause or owner wait;
 - `ACTION_SEMANTIC: pause` without an active blocker and resume or correction path;
 - `wait_for_owner` without `TARGET_ROLE: project_owner` or an owner-facing blocker/GAP.
@@ -127,6 +134,46 @@ When an auditor returns `STATUS: fail`:
 - normal next project task dispatch is forbidden;
 - post-audit Git checkpoint is forbidden;
 - correction must pass its own required audit before dependent work resumes.
+
+## Post-audit Git checkpoint routing
+
+When an auditor returns `STATUS: pass` for required audited work:
+
+- `POST_AUDIT_GIT_CHECKPOINT.md` must run before normal dependent work is
+  marked `ready`;
+- Git checkpoint validation must pass before staging, committing, or pushing;
+- only accepted files from the audited task allowed scope may be staged;
+- successful checkpoint must record branch, commit hash, push status, accepted
+  files, accepted result reference, and audit reference;
+- task registry status may move from `audit_passed` to `checkpoint_done` only
+  after commit and push succeed;
+- accepted artifacts may receive a commit hash only after checkpoint success.
+
+When auditor status is `fail`, `blocked`, or `gap`:
+
+- post-audit Git checkpoint is forbidden;
+- commit and push are forbidden;
+- dependent work remains blocked;
+- routing must use correction, blocked, GAP, governed update_state, or genuine
+  owner handling as permitted by the full runtime tuple.
+
+When checkpoint commit fails:
+
+- push is forbidden;
+- checkpoint failure must be logged;
+- routing must use governed correction or owner handling.
+
+When checkpoint push fails:
+
+- checkpoint failure must be logged with `PUSH_STATUS: failed`;
+- the local commit hash must remain traceable if available;
+- routing must use governed correction or owner handling.
+
+When secret or credential risk is detected:
+
+- staging, commit, and push are forbidden;
+- logs and RESULT summaries must not include secret values;
+- routing must use governed correction or owner handling.
 
 ## Phase/action compatibility
 
@@ -226,6 +273,10 @@ Enter correction if any of the following are detected:
 - `ACTION_SEMANTIC: pause` with `NEXT_ACTION.ACTION_TYPE: stop`;
 - `ACTION_TYPE: wait_for_owner` with no owner-facing blocker, GAP, or question;
 - auditor fail followed by `DEPENDENCY_STATUS: ready` for dependent work.
+- checkpoint_done without commit hash, branch, push status, accepted files, or audit reference;
+- checkpoint after auditor fail, blocked, gap, invalid RESULT, or pending correction;
+- checkpoint push attempted after commit failure;
+- checkpoint record or event containing unredacted secret values.
 
 The validator layer must also catch the concrete invalid states listed in:
 

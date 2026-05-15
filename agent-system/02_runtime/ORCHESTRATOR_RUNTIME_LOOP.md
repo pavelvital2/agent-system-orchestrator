@@ -19,6 +19,7 @@
    - `agent-system/02_runtime/GOVERNANCE_AUTHORITY.md`
    - `agent-system/02_runtime/ACTION_STATE_SEMANTICS.md`
    - `agent-system/02_runtime/STATE_TRANSITION_RULES.md`
+   - `agent-system/02_runtime/POST_AUDIT_GIT_CHECKPOINT.md`
    - `agent-system/02_runtime/VIOLATION_RECOVERY.md`
    - `agent-system/02_runtime/ACCEPTED_STATE_LOCKING.md`
    - `agent-system/02_runtime/AGENT_LIFECYCLE.md`
@@ -29,6 +30,8 @@
    - `agent-system/05_gap_flow/GAP_FLOW.md`
    - `agent-system/05_gap_flow/GAP_REGISTER_TEMPLATE.md`
    - `agent-system/06_logs/AGENT_RESULTS_LOG_TEMPLATE.md`
+   - `agent-system/06_logs/ORCHESTRATOR_EVENTS_LOG_TEMPLATE.md`
+   - `agent-system/09_validators/GIT_CHECKPOINT_VALIDATION_RULES.md`
    - `project-runtime/PROJECT_STATE.md`
    - `project-runtime/CURRENT_GATE.md`
    - `project-runtime/NEXT_ACTION.md`
@@ -128,6 +131,23 @@ tester(gap) → orchestrator
 - заблокировать зависимые ветки;
 - route только в correction, governed update_state, or genuine wait_for_owner.
 
+Если auditor RESULT имеет `STATUS: blocked` or `STATUS: gap`, оркестратор обязан:
+
+- запретить normal next task dispatch;
+- запретить post-audit Git checkpoint;
+- заблокировать зависимые ветки;
+- route only according to blocked/GAP governance.
+
+Если auditor RESULT имеет `STATUS: pass`, оркестратор обязан:
+
+- route first to `POST_AUDIT_GIT_CHECKPOINT.md`;
+- validate `GIT_CHECKPOINT_VALIDATION_RULES.md` before staging;
+- stage only accepted files allowed by the audited task packet;
+- commit only after checkpoint validation passes;
+- push only after a valid local commit exists;
+- record branch, commit hash, push status, and accepted files;
+- route to the next governed task only after successful checkpoint completion.
+
 7. Проверить routing blocked/gap issues.
 
 Если blocked/gap относится к:
@@ -160,13 +180,19 @@ tester(gap) → orchestrator
    - есть `ROLE`;
    - есть `TASK`;
    - есть `SUMMARY`;
-   - есть `CHANGED_FILES` или указано `NONE`;
    - есть `READ_DOCS`;
+   - есть `READ_INPUTS`;
+   - есть `CHANGED_FILES` или указано `NONE`;
+   - есть `CREATED_FILES`;
+   - есть `DELETED_FILES`;
+   - есть `COMMANDS_RUN`;
    - есть `EVIDENCE`;
+   - есть `SCOPE_VERIFICATION`;
+   - есть `FORBIDDEN_CHANGES_CHECK`;
    - есть `RISKS`;
    - есть `BLOCKERS`;
    - есть `GAPS`;
-   - есть `NEXT_REQUIRED_ACTION`.
+   - есть `NEXT_RECOMMENDED_ACTION`.
 
 Формальная проверка RESULT должна требовать ровно обязательные поля из `AGENT_RESULT_TEMPLATE.md`:
 
@@ -175,13 +201,19 @@ STATUS
 ROLE
 TASK
 SUMMARY
-CHANGED_FILES
 READ_DOCS
+READ_INPUTS
+CHANGED_FILES
+CREATED_FILES
+DELETED_FILES
+COMMANDS_RUN
 EVIDENCE
+SCOPE_VERIFICATION
+FORBIDDEN_CHANGES_CHECK
 RISKS
 BLOCKERS
 GAPS
-NEXT_REQUIRED_ACTION
+NEXT_RECOMMENDED_ACTION
 ```
 
 Допустимые profile-agent `STATUS` values:
@@ -205,7 +237,7 @@ gap
 
 - сохранить полный RESULT или получить deterministic `RESULT_REF`, по которому полный RESULT доступен;
 - добавить bounded entry в `project-runtime/AGENT_RESULTS_LOG.md`;
-- указать в entry поля `DATE`, `ROLE`, `TASK`, `STATUS`, `RESULT_REF`, `CHANGED_FILES`, `NEXT_REQUIRED_ACTION`;
+- указать в entry поля `DATE`, `ROLE`, `TASK`, `STATUS`, `RESULT_REF`, `CHANGED_FILES`, `NEXT_RECOMMENDED_ACTION`;
 - применить это правило для valid profile-agent `pass`, `fail`, `blocked`, `gap` results и для orchestrator-classified `violation` log entries.
 
 Recovery/status routing запрещён, пока `AGENT_RESULTS_LOG.md` не получил bounded entry или deterministic reference на полный RESULT.
@@ -221,11 +253,12 @@ TASK: current NEXT_ACTION.TASK_ID, otherwise unknown
 STATUS: violation
 RESULT_REF: raw invalid RESULT reference
 CHANGED_FILES: unknown unless safely extractable
-NEXT_REQUIRED_ACTION: correction
+NEXT_RECOMMENDED_ACTION: correction
 ```
 
 12. Действовать по STATUS:
-   - `pass` → перейти к следующему gate;
+   - profile-agent `pass` → перейти к обязательному audit gate;
+   - auditor `pass` → выполнить post-audit Git checkpoint, then перейти к следующему governed gate;
    - `fail` → вернуть задачу на исправление профильному агенту;
    - `blocked` → зафиксировать блокер;
    - `gap` → зафиксировать GAP и остановить зависимую ветку.

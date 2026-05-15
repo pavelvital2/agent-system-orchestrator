@@ -12,8 +12,12 @@ It does not require a working CLI implementation.
 
 ```text
 agent-system/02_runtime/STATE_TRANSITION_RULES.md
+agent-system/02_runtime/POST_AUDIT_GIT_CHECKPOINT.md
 agent-system/02_runtime/ACCEPTED_STATE_LOCKING.md
 agent-system/02_runtime/FILESYSTEM_GOVERNANCE.md
+agent-system/04_state/TASK_REGISTRY_TEMPLATE.md
+agent-system/04_state/ACCEPTED_ARTIFACTS_TEMPLATE.md
+agent-system/06_logs/ORCHESTRATOR_EVENTS_LOG_TEMPLATE.md
 ```
 
 ## Checkpoint preconditions
@@ -29,6 +33,7 @@ A Git checkpoint is valid only when all conditions are true:
 - no suspected secret or credential file is staged;
 - runtime state does not contain active blockers or GAPs that block the
   checkpointed work.
+- accepted files can be listed without reading or printing secret values.
 
 ## Forbidden checkpoint attempts
 
@@ -101,6 +106,23 @@ Push must not proceed when:
 - audit pass is missing;
 - correction remains pending for the committed work.
 
+## Required checkpoint outputs
+
+Successful checkpoint validation must ensure the checkpoint records:
+
+- accepted task id;
+- accepted result reference;
+- audit reference;
+- accepted files;
+- branch;
+- commit hash;
+- push status.
+
+`PUSH_STATUS: pushed` requires a valid local commit hash and a completed push.
+
+`STATUS: checkpoint_done` in the task registry is invalid unless commit hash,
+branch, pushed status, accepted files, and checkpoint reference are recorded.
+
 ## Recovery
 
 If checkpoint validation fails:
@@ -110,3 +132,23 @@ If checkpoint validation fails:
 - do not push;
 - log the validation failure without secret values;
 - route to correction or owner handling according to governance.
+
+If commit fails:
+
+- do not push;
+- log a checkpoint failure with `PUSH_STATUS: not_attempted`;
+- route to governed correction or owner handling.
+
+If push fails:
+
+- keep the local commit hash traceable if available;
+- log a checkpoint failure with `PUSH_STATUS: failed`;
+- route to governed correction or owner handling.
+
+If secret or credential risk is detected:
+
+- do not stage additional files;
+- do not commit;
+- do not push;
+- log only a redacted risk class and affected path or field;
+- route to governed correction or owner handling.

@@ -23,7 +23,9 @@
 - помечать зависимую ветку как blocked;
 - продолжать независимую ветку, если она есть в `NEXT_ACTION.md`;
 - выполнять `git status`;
+- выполнять bounded Git checkpoint commands defined in `POST_AUDIT_GIT_CHECKPOINT.md` only after required auditor `STATUS: pass`;
 - фиксировать список изменённых файлов из отчёта агента;
+- фиксировать branch, commit hash, push status, and accepted files after a post-audit Git checkpoint;
 - передавать задачу аудитору после проектировщика или разработчика;
 - передавать задачу тестировщику, если это указано в task packet;
 - передавать задачу техрайтеру, если это указано в task packet;
@@ -39,6 +41,7 @@
 - dispatch an explicitly bounded package-governance correction task during governance freeze only when governance, filesystem, lifecycle, and transition validation permit it;
 - create `AGENT_RESULTS_LOG.md` from template during bootstrap if missing;
 - log failed, blocked, gap, and violation results before routing recovery.
+- log post-audit Git checkpoint attempts and failures without secret values.
 
 ## Запрещено
 
@@ -71,3 +74,7 @@
 - silently repair schema/template mismatch;
 - mark project completed before orchestrator finalization invariants pass;
 - accept forbidden file changes as valid output.
+- run post-audit Git checkpoint after profile-agent pass without required auditor pass;
+- run post-audit Git checkpoint after auditor fail, blocked, or gap;
+- inspect, print, copy, modify, stage, commit, or push credentials, secret values, token values, private keys, cookies, or local environment files;
+- push when commit validation failed or no valid checkpoint commit exists.
