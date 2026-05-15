@@ -14,6 +14,13 @@ CURRENT_PHASE: bootstrap | design | design_audit | implementation | implementati
 PROJECT_STATUS: active | blocked | completed | archived
 ```
 
+## Runtime semantic state
+
+```text
+ACTION_SEMANTIC: normal | wait_for_owner | pause | stop_terminal | completed_state
+SEMANTIC_REASON:
+```
+
 ## Active branches
 
 If active branches exist:
@@ -24,7 +31,7 @@ STATUS: active | blocked | completed | archived
 CURRENT_TASK:
 CURRENT_AGENT_ROLE:
 DEPENDENCIES:
-BLOCKED_BY:
+BLOCKED_BY: <BLOCKER_ID | GAP_ID | NONE>
 ```
 
 If no active branches exist:
@@ -46,6 +53,17 @@ NONE
 ```
 
 ## Active blockers
+
+```text
+BLOCKER_ID:
+BLOCKER_TYPE: owner_decision | pause | audit_fail | gap | runtime | dependency | governance | other
+STATUS: active | resolving
+BLOCKS:
+BLOCKED_BY:
+RESOLUTION_PATH:
+```
+
+If no active blockers exist:
 
 ```text
 NONE

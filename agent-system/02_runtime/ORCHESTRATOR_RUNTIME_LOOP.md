@@ -17,6 +17,7 @@
    - `agent-system/02_runtime/ALLOWED_ORCHESTRATOR_ACTIONS.md`
    - `agent-system/02_runtime/FILESYSTEM_GOVERNANCE.md`
    - `agent-system/02_runtime/GOVERNANCE_AUTHORITY.md`
+   - `agent-system/02_runtime/ACTION_STATE_SEMANTICS.md`
    - `agent-system/02_runtime/STATE_TRANSITION_RULES.md`
    - `agent-system/02_runtime/VIOLATION_RECOVERY.md`
    - `agent-system/02_runtime/ACCEPTED_STATE_LOCKING.md`
@@ -110,6 +111,22 @@ tester(gap) → orchestrator
 - runtime state должен быть переведён в workflow violation;
 - dispatch следующего агента запрещён;
 - violation должен быть возвращён на correction flow.
+
+Оркестратор обязан применять `ACTION_STATE_SEMANTICS.md` при различении:
+
+- `wait_for_owner`;
+- `pause`;
+- `stop_terminal`;
+- `completed`.
+
+Если текущий `NEXT_ACTION` использует `stop` как временную паузу, dispatch запрещён и runtime state должен быть переведён в correction.
+
+Если auditor RESULT имеет `STATUS: fail`, оркестратор обязан:
+
+- запретить normal next task dispatch;
+- запретить post-audit Git checkpoint;
+- заблокировать зависимые ветки;
+- route только в correction, governed update_state, or genuine wait_for_owner.
 
 7. Проверить routing blocked/gap issues.
 
@@ -231,14 +248,15 @@ Before any `create_agent`, `route_result`, `update_state`, `correction`, `finali
 3. mandatory runtime files exist;
 4. runtime state matches `RUNTIME_STATE_SCHEMA.md`;
 5. full runtime state tuple is valid under `STATE_TRANSITION_RULES.md`;
-6. `NEXT_ACTION.md` contains exactly one action;
-7. `NEXT_ACTION.md` does not conflict with `GOVERNANCE_AUTHORITY.md`;
-8. if `NEXT_ACTION.ACTION_TYPE` is `create_agent` or `NEXT_ACTION.TASK_PACKET` is not `NONE`, target task packet is active, not superseded, not deprecated;
-9. if task-packet validation is required, target task packet is inside `ACTIVE_DOC_ROOT` unless it is explicitly governed as system/bootstrap/package correction material;
-10. if task-packet validation is required, REQUIRED_DOCS do not include deprecated/archive documents;
-11. if task-packet validation is not required, `TASK_PACKET: NONE` is valid only for `wait_for_owner`, `update_state`, `finalize`, `stop`, or `correction` when allowed by `STATE_TRANSITION_RULES.md`;
-12. role/file permissions match `FILESYSTEM_GOVERNANCE.md`;
-13. requested action is valid under governance-freeze rules.
+6. action/state semantics are valid under `ACTION_STATE_SEMANTICS.md`;
+7. `NEXT_ACTION.md` contains exactly one action;
+8. `NEXT_ACTION.md` does not conflict with `GOVERNANCE_AUTHORITY.md`;
+9. if `NEXT_ACTION.ACTION_TYPE` is `create_agent` or `NEXT_ACTION.TASK_PACKET` is not `NONE`, target task packet is active, not superseded, not deprecated;
+10. if task-packet validation is required, target task packet is inside `ACTIVE_DOC_ROOT` unless it is explicitly governed as system/bootstrap/package correction material;
+11. if task-packet validation is required, REQUIRED_DOCS do not include deprecated/archive documents;
+12. if task-packet validation is not required, `TASK_PACKET: NONE` is valid only for `wait_for_owner`, `update_state`, `finalize`, `stop`, or `correction` when allowed by `STATE_TRANSITION_RULES.md`;
+13. role/file permissions match `FILESYSTEM_GOVERNANCE.md`;
+14. requested action is valid under governance-freeze rules.
 
 If any validation fails, dispatch is forbidden.
 
