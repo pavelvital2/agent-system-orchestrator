@@ -19,9 +19,9 @@ RUNTIME_SCHEMA_VERSION:
 ## Active version constants
 
 ```text
-CURRENT_PACKAGE_VERSION: 1.1.0
-CURRENT_GOVERNANCE_RULESET_VERSION: 1.1.0
-CURRENT_RUNTIME_SCHEMA_VERSION: 1.0.0
+CURRENT_PACKAGE_VERSION: 1.2.0
+CURRENT_GOVERNANCE_RULESET_VERSION: 1.2.0
+CURRENT_RUNTIME_SCHEMA_VERSION: 1.1.0
 ```
 
 These constants define the active package/governance/schema tuple for runtime validation. They are policy constants, not a release manifest.
