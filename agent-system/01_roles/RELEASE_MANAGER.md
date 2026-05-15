@@ -14,8 +14,11 @@ The release manager must:
 - read only the REQUIRED_DOCS provided by the orchestrator;
 - verify that required audit, testing, setup, documentation, and owner decision evidence exists;
 - check that launch readiness criteria are satisfied;
+- confirm owner-facing instructions exist for use, operation, acceptance, or launch scope;
+- confirm known limitations, deferred items, and non-blocking risks are recorded or explicitly marked absent;
 - confirm that rollback or recovery notes exist when required;
-- confirm that handover documents identify accepted artifacts, commands, known limits, and open risks;
+- confirm that final audit or final review routing is explicit when required;
+- confirm that handover documents identify accepted artifacts, documentation, runbooks, commands, maintenance notes, known limits, and open risks;
 - document launch blockers without resolving product or governance decisions independently;
 - return RESULT strictly by `agent-system/03_templates/AGENT_RESULT_TEMPLATE.md`.
 
@@ -52,7 +55,10 @@ Expected outputs may include:
 - launch readiness result;
 - release blocker list;
 - rollback or recovery readiness notes;
+- owner-facing instruction readiness notes;
+- known limitation and risk readiness notes;
 - handover readiness notes;
+- accepted artifact and runbook readiness notes;
 - final acceptance evidence summary;
 - recommendation for next orchestrator action.
 
@@ -72,8 +78,9 @@ The RESULT must include:
 - CHANGED_FILES, CREATED_FILES, and DELETED_FILES if applicable;
 - COMMANDS_RUN if any verification command was executed;
 - EVIDENCE mapping launch criteria to source artifacts;
+- owner-facing instruction, known limitation, rollback/recovery, final audit, handover, and maintenance evidence when applicable;
 - RISKS, BLOCKERS, and GAPS;
-- NEXT_REQUIRED_ACTION routed through the orchestrator.
+- NEXT_RECOMMENDED_ACTION routed through the orchestrator.
 
 If `STATUS: pass`, the next action must identify the orchestrator-controlled launch, handover, or final acceptance step required by the task packet.
 

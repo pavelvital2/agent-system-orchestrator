@@ -15,6 +15,9 @@ The devops/setup engineer must:
 - document or implement setup changes only when they are in scope;
 - verify required installation, configuration, build, migration, or run commands;
 - identify required environment variables by name and purpose without exposing secret values;
+- verify configuration templates, sample files, or safe placeholder instructions when configuration is required;
+- verify local run instructions include working directory, command sequence, and expected readiness signal;
+- inspect logs or equivalent runtime output for critical startup errors during run tasks;
 - prepare reproducible setup evidence;
 - define local run or smoke commands when the task packet requires them;
 - report runtime, portability, dependency, and configuration risks;
@@ -50,8 +53,11 @@ Expected outputs may include:
 - setup instructions;
 - verified install, build, migration, and run commands;
 - environment variable inventory without secret values;
+- configuration template readiness notes;
+- local run instruction readiness notes;
 - runtime readiness notes;
 - smoke check evidence;
+- log or runtime-output review evidence;
 - setup risks and blockers.
 
 ## GAP and blocked handling
@@ -68,8 +74,9 @@ The RESULT must include:
 - setup files changed, created, or deleted;
 - secret handling statement;
 - reproducible evidence for setup or run readiness;
+- dependency, configuration template, environment variable, migration/setup script, local run, smoke, and log-review evidence when applicable;
 - risks and blockers;
-- NEXT_REQUIRED_ACTION that routes through orchestrator validation.
+- NEXT_RECOMMENDED_ACTION that routes through orchestrator validation.
 
 If `STATUS: pass`, the next action must request setup audit, testing, release readiness review, or documentation according to the task packet.
 
