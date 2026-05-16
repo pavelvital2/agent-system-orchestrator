@@ -83,6 +83,7 @@ agent-system/09_validators/RESULT_VALIDATION_RULES.md
 agent-system/09_validators/TASK_PACKET_VALIDATION_RULES.md
 agent-system/09_validators/TRANSITION_VALIDATION_RULES.md
 agent-system/09_validators/GIT_CHECKPOINT_VALIDATION_RULES.md
+agent-system/09_validators/CROSS_LINK_VALIDATION_RULES.md
 agent-system/09_validators/schemas/project_state.schema.json
 agent-system/09_validators/schemas/next_action.schema.json
 agent-system/09_validators/schemas/task_packet.schema.json
@@ -148,7 +149,19 @@ PACKAGE_DOCUMENT_COVERAGE:
   Required package document existence checks include mandatory runtime and
   governance docs referenced by start/runtime loading rules, plus previously
   missing package docs such as AGENT_LIFECYCLE, HANDOFF_PROTOCOL,
-  ORCHESTRATOR_TASK_HANDOFF_TEMPLATE, and DOCUMENTATION_STAGE.
+  ORCHESTRATOR_TASK_HANDOFF_TEMPLATE, DOCUMENTATION_STAGE, and
+  CROSS_LINK_VALIDATION_RULES.
+
+CROSS_LINK_ALIGNMENT:
+  CROSS_LINK_VALIDATION_RULES exists and is linked from README, VALIDATOR_SPEC,
+  and FINAL_SMOKE_CHECKLIST. It verifies role, lifecycle, template, validator,
+  runtime, and README links.
+
+PACKAGE_FILE_DEPENDENCY_ALIGNMENT:
+  Every package file listed as required or referenced by README,
+  VALIDATOR_SPEC, PROJECT_LIFECYCLE, and FINAL_SMOKE_CHECKLIST exists, unless
+  the reference is explicitly documented as a runtime file dependency rather
+  than a package file.
 
 AUDIT_CHECKPOINT_ALIGNMENT:
   Audit pass is required before accepted-state checkpoint. Audit fail,
@@ -188,6 +201,14 @@ DOC_EXISTENCE:
 CONSISTENCY_CHECKS:
 - <check id>: pass | fail | blocked | gap
   EVIDENCE: <file references and concise reason>
+
+CROSS_LINK_CHECKS:
+- CROSS_LINK_VALIDATION_RULES_LINKED: pass | fail | blocked | gap
+  EVIDENCE: README, VALIDATOR_SPEC, and FINAL_SMOKE_CHECKLIST link to
+    agent-system/09_validators/CROSS_LINK_VALIDATION_RULES.md.
+- PACKAGE_FILE_DEPENDENCIES_EXIST: pass | fail | blocked | gap
+  EVIDENCE: Required package file paths referenced by package docs exist, and
+    runtime file dependencies use canonical names.
 
 CONTRADICTIONS_FOUND:
 - <file refs and contradiction> | NONE

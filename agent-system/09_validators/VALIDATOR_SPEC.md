@@ -17,6 +17,7 @@ Validators help the orchestrator detect:
 - invalid agent RESULT payloads;
 - unsafe or unauthorized file changes;
 - unsafe Git checkpoint attempts;
+- stale or missing package cross-links;
 - secret-handling violations.
 
 ## Source of authority
@@ -45,6 +46,7 @@ agent-system/09_validators/RESULT_VALIDATION_RULES.md
 agent-system/09_validators/TASK_PACKET_VALIDATION_RULES.md
 agent-system/09_validators/TRANSITION_VALIDATION_RULES.md
 agent-system/09_validators/GIT_CHECKPOINT_VALIDATION_RULES.md
+agent-system/09_validators/CROSS_LINK_VALIDATION_RULES.md
 ```
 
 ## Machine-readable schema sidecars

@@ -66,7 +66,7 @@ Key rules cover:
 - violation recovery;
 - post-audit Git checkpoint requirements.
 
-Validation rules live in `agent-system/09_validators/` and define checks for task packets, results, transitions, runtime consistency, Git checkpoint readiness, and validator specification.
+Validation rules live in `agent-system/09_validators/` and define checks for task packets, results, transitions, runtime consistency, Git checkpoint readiness, cross-link coverage, and validator specification. Cross-link validation is documented in [CROSS_LINK_VALIDATION_RULES.md](09_validators/CROSS_LINK_VALIDATION_RULES.md).
 
 ## Templates, state, and logs
 
