@@ -63,7 +63,11 @@
 - `project-runtime/CURRENT_GATE.md`
 - `project-runtime/NEXT_ACTION.md`
 - `project-runtime/GAP_REGISTER.md`
+- `project-runtime/TASK_REGISTRY.md`
+- `project-runtime/ACCEPTED_ARTIFACTS.md`
 - `project-runtime/AGENT_RESULTS_LOG.md`
+- `project-runtime/ORCHESTRATOR_EVENTS_LOG.md`
+- `project-runtime/STATUS_SUMMARY.md`
 - task packets, созданные проектировщиком;
 - RESULT-отчёты агентов.
 
