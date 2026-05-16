@@ -775,4 +775,36 @@ MIGRATION_REQUIRED: no
 MIGRATION_NOTE: This bounded correction records the final residual placeholder remediation and hardens checkpoint validation semantics without changing active package, governance ruleset, or runtime schema version constants. It does not change role authority, runtime file set, requester-return audit gating, or reasoning-level policy.
 AUTHORIZED_BY: project_owner
 AUDIT_REQUIRED: yes
+
+CHANGE_ID: GOV-2026-05-16-014
+CHANGE_TITLE: CORR_ASU_130_007_FINAL_V13_ACTIVATION_TRACEABILITY
+DATE: 2026-05-16
+PACKAGE_VERSION_BEFORE: 1.2.0
+PACKAGE_VERSION_AFTER: 1.3.0
+GOVERNANCE_RULESET_BEFORE: 1.2.0
+GOVERNANCE_RULESET_AFTER: 1.3.0
+RUNTIME_SCHEMA_BEFORE: 1.1.0
+RUNTIME_SCHEMA_AFTER: 1.2.0
+CHANGE_TYPE: minor_release_acceptance
+AFFECTED_FILES:
+- agent-system/GOVERNANCE_CHANGELOG.md
+AFFECTED_INVARIANTS:
+- active package/governance/runtime tuple has an accepted v1.3.0 activation record
+- UPG_ASU_130_001 remains historically recorded as a proposed implementation entry
+- UPG_ASU_130_002 and UPG_ASU_130_003 remain historically recorded as proposed/incomplete correction entries
+- CORR_ASU_130_004, CORR_ASU_130_005, and CORR_ASU_130_006 are accepted remediation closure records
+- this entry is the accepted release activation record for package/governance v1.3.0 after remediation closure
+- active version tuple remains 1.3.0 / 1.3.0 / 1.2.0
+- no new runtime behavior, role authority, filesystem authority, or schema behavior is introduced
+- merge to main remains forbidden until independent audit pass and post-commit --head / pushed --ref verification pass
+AFFECTED_TRANSITIONS:
+- final v1.3.0 audit gate -> accepted release activation traceability -> merge readiness review
+- missing accepted activation traceability -> governed correction before main merge
+SCHEMA_TEMPLATE_IMPACT: none
+MIGRATION_REQUIRED: no
+MIGRATION_NOTE: This entry ratifies the installed v1.3.0 package/governance tuple after accepted remediation closure. No runtime migration or active tuple change is introduced by this correction.
+TRACEABILITY_NOTE: UPG_ASU_130_001 remains historically proposed as the initial implementation proposal. UPG_ASU_130_002 and UPG_ASU_130_003 remain historically recorded as proposed/incomplete correction entries. This CORR_ASU_130_007 entry is the accepted release activation record for package/governance v1.3.0 after CORR_ASU_130_004, CORR_ASU_130_005, and CORR_ASU_130_006 remediation closure.
+AUTHORIZED_BY: project_owner
+AUDIT_REQUIRED: yes
+STATUS: accepted
 ```
