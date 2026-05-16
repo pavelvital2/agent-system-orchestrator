@@ -11,10 +11,14 @@ require credentials.
 
 ```text
 TZ
--> requirements task
--> requirements audit
--> post-audit Git checkpoint
--> design task
+-> bootstrap routing
+-> if input is incomplete or ambiguous:
+   requirements task
+   requirements audit
+   post-audit Git checkpoint
+   design task
+-> if input is sufficiently structured:
+   design task
 -> design audit
 -> post-audit Git checkpoint
 -> implementation task packet
@@ -33,11 +37,11 @@ TZ
 
 | Step | Orchestrator action | Primary package references | Accepted output |
 |---:|---|---|---|
-| 1 | Read owner TZ and runtime seed. | `00_start/ORCHESTRATOR_START.md`, `07_lifecycle/BOOTSTRAP_STAGE.md` | Valid bounded next action. |
-| 2 | Dispatch requirements analyst. | `01_roles/REQUIREMENTS_ANALYST.md`, `07_lifecycle/REQUIREMENTS_STAGE.md` | Requirements baseline or GAP. |
-| 3 | Dispatch requirements auditor. | `01_roles/AUDITOR.md`, `09_validators/RESULT_VALIDATION_RULES.md` | Audit pass before acceptance. |
-| 4 | Run post-audit checkpoint. | `02_runtime/POST_AUDIT_GIT_CHECKPOINT.md`, `09_validators/GIT_CHECKPOINT_VALIDATION_RULES.md` | Commit hash and accepted artifact record. |
-| 5 | Dispatch designer. | `01_roles/DESIGNER.md`, `07_lifecycle/DESIGN_STAGE.md` | Design docs and bounded task packets. |
+| 1 | Read owner TZ and runtime seed, then choose exactly one first profile route. | `00_start/ORCHESTRATOR_START.md`, `07_lifecycle/BOOTSTRAP_STAGE.md` | Valid bounded `NEXT_ACTION` for `requirements_analyst` or `designer`. |
+| 2 | Dispatch requirements analyst when input is incomplete, ambiguous, or not clearly design-ready. | `01_roles/REQUIREMENTS_ANALYST.md`, `07_lifecycle/REQUIREMENTS_STAGE.md` | Requirements baseline or GAP. |
+| 3 | Dispatch requirements auditor when a requirements task ran. | `01_roles/AUDITOR.md`, `09_validators/RESULT_VALIDATION_RULES.md` | Audit pass before acceptance. |
+| 4 | Run post-audit checkpoint after requirements audit pass. | `02_runtime/POST_AUDIT_GIT_CHECKPOINT.md`, `09_validators/GIT_CHECKPOINT_VALIDATION_RULES.md` | Commit hash and accepted artifact record. |
+| 5 | Dispatch designer directly from bootstrap only for sufficiently structured input, or after accepted requirements. | `01_roles/DESIGNER.md`, `07_lifecycle/DESIGN_STAGE.md` | Design docs and bounded task packets. |
 | 6 | Dispatch design auditor, then checkpoint on pass. | `02_runtime/STATE_TRANSITION_RULES.md` | Accepted design state. |
 | 7 | Dispatch one profile agent for one task packet. | `03_templates/TASK_PACKET_TEMPLATE.md`, role file for the target role | Structured `RESULT`. |
 | 8 | Dispatch matching auditor. | `01_roles/AUDITOR.md`, `03_templates/AGENT_RESULT_TEMPLATE.md` | Audit pass, fail, blocked, or GAP route. |
@@ -47,6 +51,26 @@ TZ
 | 12 | Dispatch run/smoke gate. | `03_templates/RUN_SMOKE_CHECKLIST_TEMPLATE.md`, `07_lifecycle/RUN_STAGE.md` | Start/smoke evidence or documentation-only equivalent. |
 | 13 | Dispatch launch readiness gate. | `03_templates/LAUNCH_READINESS_CHECKLIST_TEMPLATE.md`, `07_lifecycle/LAUNCH_STAGE.md` | Launch readiness statement without deployment. |
 | 14 | Dispatch handover gate. | `03_templates/HANDOVER_CHECKLIST_TEMPLATE.md`, `07_lifecycle/HANDOVER_STAGE.md` | Handover index and final acceptance evidence map. |
+
+## Bootstrap NEXT_ACTION examples
+
+```text
+INCOMPLETE_OR_AMBIGUOUS_INPUT:
+  ACTION_TYPE: create_agent
+  TARGET_ROLE: requirements_analyst
+  TASK_ID: REQ_INTAKE_001
+  TASK_PACKET: project-runtime/HANDOFF_BOOTSTRAP.md
+  DEPENDENCY_STATUS: ready
+  BLOCKED_BY: NONE
+
+SUFFICIENTLY_STRUCTURED_INPUT:
+  ACTION_TYPE: create_agent
+  TARGET_ROLE: designer
+  TASK_ID: DESIGN_BOOTSTRAP_001
+  TASK_PACKET: project-runtime/HANDOFF_BOOTSTRAP.md
+  DEPENDENCY_STATUS: ready
+  BLOCKED_BY: NONE
+```
 
 ## Minimal task/audit/checkpoint cycle
 

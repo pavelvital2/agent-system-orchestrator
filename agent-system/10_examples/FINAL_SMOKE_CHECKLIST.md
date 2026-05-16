@@ -117,6 +117,14 @@ LIFECYCLE_ALIGNMENT:
   documented mappings, and gate evidence requirements do not contradict
   runtime transition rules.
 
+BOOTSTRAP_REQUIREMENTS_ROUTING:
+  ORCHESTRATOR_START and BOOTSTRAP_STAGE do not hard-code designer as the only
+  first profile agent. They route incomplete, ambiguous, or uncertain input to
+  requirements_analyst and allow direct designer routing only for sufficiently
+  structured input. Routing examples use v1.2.0 NEXT_ACTION fields:
+  ACTION_TYPE, TARGET_ROLE, TASK_ID, TASK_PACKET, DEPENDENCY_STATUS, and
+  BLOCKED_BY.
+
 ROLE_ALIGNMENT:
   Role documents keep authority boundaries distinct. Profile agents do not
   audit themselves, run Git checkpoints, or mark whole projects completed.

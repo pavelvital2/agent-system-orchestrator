@@ -32,13 +32,19 @@
 1. ТЗ проекта:
    - `project-input/TZ.md`
 
-2. Инструкции роли проектировщика:
+2. Инструкции роли аналитика требований:
+   - `agent-system/01_roles/REQUIREMENTS_ANALYST.md`
+
+3. Инструкции роли проектировщика:
    - `agent-system/01_roles/DESIGNER.md`
 
-3. Шаблона результата агента:
+4. Шаблона task packet:
+   - `agent-system/03_templates/TASK_PACKET_TEMPLATE.md`
+
+5. Шаблона результата агента:
    - `agent-system/03_templates/AGENT_RESULT_TEMPLATE.md`
 
-Если хотя бы один из этих файлов отсутствует, оркестратор не имеет права запускать проектировщика.
+Если хотя бы один из этих файлов отсутствует, оркестратор не имеет права запускать первого profile-агента.
 
 В этом случае оркестратор обязан:
 
@@ -54,7 +60,7 @@
    - `project-runtime/STATUS_SUMMARY.md`
 
 2. Создать черновик handoff-файла:
-   - `project-runtime/HANDOFF_DESIGNER_BOOTSTRAP.md`
+   - `project-runtime/HANDOFF_BOOTSTRAP.md`
 
 3. Классифицировать причину отсутствия файла по взаимоисключающим правилам.
 
@@ -68,7 +74,9 @@ BLOCKED_BY: missing_bootstrap_input
 ```
 
 Если отсутствует или недоступен обязательный файл пакета `agent-system/`,
-включая `agent-system/01_roles/DESIGNER.md` или
+включая `agent-system/01_roles/REQUIREMENTS_ANALYST.md`,
+`agent-system/01_roles/DESIGNER.md`,
+`agent-system/03_templates/TASK_PACKET_TEMPLATE.md` или
 `agent-system/03_templates/AGENT_RESULT_TEMPLATE.md`:
 
 ```text
@@ -82,7 +90,7 @@ BLOCKED_BY: invalid_or_missing_package_file
 
 5. В handoff-файле явно указать, какие файлы отсутствуют.
 
-6. Остановить dispatch проектировщика до устранения причины bootstrap failure.
+6. Остановить dispatch первого profile-агента до устранения причины bootstrap failure.
 
 ---
 
@@ -133,9 +141,39 @@ BLOCKED_BY: invalid_or_missing_package_file
 
 После создания runtime state-файлов оркестратор может подготовить первый bounded-шаг только если все обязательные bootstrap-файлы существуют.
 
-Если обязательные bootstrap-файлы существуют, следующий шаг:
+Если обязательные bootstrap-файлы существуют, оркестратор выбирает первый
+profile-агент по deterministic routing:
 
-`назначить проектировщика для анализа ТЗ и подготовки проектной исполнительной документации`.
+```text
+if project input is sufficiently structured for design:
+  ACTION_TYPE: create_agent
+  TARGET_ROLE: designer
+  TASK_ID: <bootstrap design task>
+  TASK_PACKET: <valid task packet path or governed bootstrap handoff path>
+  DEPENDENCY_STATUS: ready
+  BLOCKED_BY: NONE
+else:
+  ACTION_TYPE: create_agent
+  TARGET_ROLE: requirements_analyst
+  TASK_ID: <requirements intake task>
+  TASK_PACKET: <valid task packet path or governed bootstrap handoff path>
+  DEPENDENCY_STATUS: ready
+  BLOCKED_BY: NONE
+```
+
+Input is sufficiently structured for direct design only when it contains enough
+information for architecture and task planning without guessing:
+
+- project purpose;
+- scope boundaries;
+- target deliverables;
+- major constraints;
+- acceptance criteria or success criteria;
+- runtime/setup expectations, if relevant;
+- known dependencies, if relevant.
+
+If the input is incomplete, ambiguous, or the orchestrator is unsure, the first
+profile-agent route must be `TARGET_ROLE: requirements_analyst`.
 
 Если обязательные bootstrap-файлы отсутствуют, следующий шаг определяется
 взаимоисключающей классификацией bootstrap failure:
@@ -201,15 +239,19 @@ The first profile-agent dispatch remains forbidden until bootstrap validation pa
 
 Оркестратор не обязан глубоко читать ТЗ проекта.
 
-Он передаёт ТЗ проектировщику как входной документ.
+Он передаёт ТЗ первому profile-агенту как входной документ.
 
 Оркестратор может открыть ТЗ только для:
 - проверки существования файла;
 - проверки корректности пути;
-- проверки доступности файла для передачи агенту.
+- проверки доступности файла для передачи агенту;
+- проверки наличия явных разделов, достаточных только для выбора маршрута
+  `requirements_analyst` или `designer`.
 
 Оркестратору запрещено:
 - анализировать бизнес-логику ТЗ;
 - проектировать решение;
 - интерпретировать требования;
-- додумывать недостающие части ТЗ.
+- додумывать недостающие части ТЗ;
+- разрешать неоднозначные требования;
+- декомпозировать реализацию проекта.
