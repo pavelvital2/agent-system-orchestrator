@@ -7,7 +7,7 @@ RESULT:
 STATUS: pass | fail | blocked | gap
 
 ROLE:
-<designer | developer | auditor | tester | technical_writer>
+<requirements_analyst | designer | developer | auditor | tester | technical_writer | devops_setup_engineer | release_manager>
 
 TASK:
 <TASK_ID or task title>
@@ -15,14 +15,32 @@ TASK:
 SUMMARY:
 <1-5 lines>
 
-CHANGED_FILES:
-- <path> | NONE
-
 READ_DOCS:
 - <path>
 
+READ_INPUTS:
+- <path or input ref> | NONE
+
+CHANGED_FILES:
+- <path> | NONE
+
+CREATED_FILES:
+- <path> | NONE
+
+DELETED_FILES:
+- <path> | NONE
+
+COMMANDS_RUN:
+- <command and concise result> | NONE
+
 EVIDENCE:
 - <command/result/file/report> | NONE
+
+SCOPE_VERIFICATION:
+- <verification item> | NONE
+
+FORBIDDEN_CHANGES_CHECK:
+- <check/result> | NONE
 
 RISKS:
 - <risk> | NONE
@@ -42,7 +60,7 @@ GAPS:
   RECOMMENDED_OPTION: <A|B|C>
   REASON: <short reason>
 
-NEXT_REQUIRED_ACTION:
+NEXT_RECOMMENDED_ACTION:
 - <next action>
 ```
 
@@ -61,6 +79,23 @@ gap
 
 `violation` is an orchestrator-derived recovery/logging category for governance, workflow, filesystem, runtime-state, or formally invalid RESULT handling.
 
+## Role rule
+
+`ROLE` must be one of the canonical profile execution roles:
+
+```text
+requirements_analyst
+designer
+developer
+auditor
+tester
+technical_writer
+devops_setup_engineer
+release_manager
+```
+
+Control/routing pseudo-roles `orchestrator`, `project_owner`, and `none` are not valid profile-agent RESULT roles.
+
 Если GAP отсутствует, секция должна быть:
 
 ```text
@@ -70,7 +105,7 @@ GAPS:
 
 ## Result authority rule
 
-`NEXT_REQUIRED_ACTION` is advisory.
+`NEXT_RECOMMENDED_ACTION` is advisory.
 
 The orchestrator must validate it against:
 
@@ -81,3 +116,33 @@ The orchestrator must validate it against:
 - active task packet lifecycle.
 
 Agent RESULT cannot directly override governance or mark the project completed.
+
+## Required field rule
+
+Every RESULT must include these fields exactly:
+
+```text
+STATUS
+ROLE
+TASK
+SUMMARY
+READ_DOCS
+READ_INPUTS
+CHANGED_FILES
+CREATED_FILES
+DELETED_FILES
+COMMANDS_RUN
+EVIDENCE
+SCOPE_VERIFICATION
+FORBIDDEN_CHANGES_CHECK
+RISKS
+BLOCKERS
+GAPS
+NEXT_RECOMMENDED_ACTION
+```
+
+If a field has no entries, use `NONE`.
+
+Legacy RESULT consumers may still display or read `NEXT_REQUIRED_ACTION` as an
+alias for older records, but profile agents must emit
+`NEXT_RECOMMENDED_ACTION`.

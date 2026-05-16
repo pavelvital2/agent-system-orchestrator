@@ -42,7 +42,7 @@
 - не объединяет несколько задач в одну;
 - не использует старый контекст вместо перечитывания runtime-файлов;
 - does not override immutable governance rules;
-- does not treat agent `NEXT_REQUIRED_ACTION` as authority;
+- does not treat agent `NEXT_RECOMMENDED_ACTION` as authority;
 - does not accept profile-agent completion of the project;
 - does not dispatch superseded or deprecated task packets;
 - does not exit correction/governance freeze by assumption.
@@ -63,7 +63,11 @@
 - `project-runtime/CURRENT_GATE.md`
 - `project-runtime/NEXT_ACTION.md`
 - `project-runtime/GAP_REGISTER.md`
+- `project-runtime/TASK_REGISTRY.md`
+- `project-runtime/ACCEPTED_ARTIFACTS.md`
 - `project-runtime/AGENT_RESULTS_LOG.md`
+- `project-runtime/ORCHESTRATOR_EVENTS_LOG.md`
+- `project-runtime/STATUS_SUMMARY.md`
 - task packets, созданные проектировщиком;
 - RESULT-отчёты агентов.
 

@@ -32,13 +32,22 @@
 1. ТЗ проекта:
    - `project-input/TZ.md`
 
-2. Инструкции роли проектировщика:
+2. Инструкции роли аналитика требований:
+   - `agent-system/01_roles/REQUIREMENTS_ANALYST.md`
+
+3. Инструкции роли проектировщика:
    - `agent-system/01_roles/DESIGNER.md`
 
-3. Шаблона результата агента:
+4. Шаблона task packet:
+   - `agent-system/03_templates/TASK_PACKET_TEMPLATE.md`
+
+5. Шаблона bootstrap task packet:
+   - `agent-system/03_templates/BOOTSTRAP_TASK_PACKET_TEMPLATE.md`
+
+6. Шаблона результата агента:
    - `agent-system/03_templates/AGENT_RESULT_TEMPLATE.md`
 
-Если хотя бы один из этих файлов отсутствует, оркестратор не имеет права запускать проектировщика.
+Если хотя бы один из этих файлов отсутствует, оркестратор не имеет права запускать первого profile-агента.
 
 В этом случае оркестратор обязан:
 
@@ -48,9 +57,13 @@
    - `project-runtime/NEXT_ACTION.md`
    - `project-runtime/GAP_REGISTER.md`
    - `project-runtime/AGENT_RESULTS_LOG.md`
+   - `project-runtime/TASK_REGISTRY.md`
+   - `project-runtime/ACCEPTED_ARTIFACTS.md`
+   - `project-runtime/ORCHESTRATOR_EVENTS_LOG.md`
+   - `project-runtime/STATUS_SUMMARY.md`
 
 2. Создать черновик handoff-файла:
-   - `project-runtime/HANDOFF_DESIGNER_BOOTSTRAP.md`
+   - `project-runtime/HANDOFF_BOOTSTRAP.md`
 
 3. Классифицировать причину отсутствия файла по взаимоисключающим правилам.
 
@@ -64,7 +77,10 @@ BLOCKED_BY: missing_bootstrap_input
 ```
 
 Если отсутствует или недоступен обязательный файл пакета `agent-system/`,
-включая `agent-system/01_roles/DESIGNER.md` или
+включая `agent-system/01_roles/REQUIREMENTS_ANALYST.md`,
+`agent-system/01_roles/DESIGNER.md`,
+`agent-system/03_templates/TASK_PACKET_TEMPLATE.md` или
+`agent-system/03_templates/BOOTSTRAP_TASK_PACKET_TEMPLATE.md` или
 `agent-system/03_templates/AGENT_RESULT_TEMPLATE.md`:
 
 ```text
@@ -78,7 +94,7 @@ BLOCKED_BY: invalid_or_missing_package_file
 
 5. В handoff-файле явно указать, какие файлы отсутствуют.
 
-6. Остановить dispatch проектировщика до устранения причины bootstrap failure.
+6. Остановить dispatch первого profile-агента до устранения причины bootstrap failure.
 
 ---
 
@@ -99,13 +115,18 @@ BLOCKED_BY: invalid_or_missing_package_file
 11. `agent-system/02_runtime/ACCEPTED_STATE_LOCKING.md`
 12. `agent-system/03_templates/ORCHESTRATOR_TASK_HANDOFF_TEMPLATE.md`
 13. `agent-system/03_templates/AGENT_RESULT_TEMPLATE.md`
-14. `agent-system/04_state/RUNTIME_STATE_SCHEMA.md`
-15. `agent-system/04_state/PROJECT_STATE_TEMPLATE.md`
-16. `agent-system/04_state/CURRENT_GATE_TEMPLATE.md`
-17. `agent-system/04_state/NEXT_ACTION_TEMPLATE.md`
-18. `agent-system/05_gap_flow/GAP_FLOW.md`
-19. `agent-system/05_gap_flow/GAP_REGISTER_TEMPLATE.md`
-20. `agent-system/06_logs/AGENT_RESULTS_LOG_TEMPLATE.md`
+14. `agent-system/03_templates/BOOTSTRAP_TASK_PACKET_TEMPLATE.md`
+15. `agent-system/04_state/RUNTIME_STATE_SCHEMA.md`
+16. `agent-system/04_state/PROJECT_STATE_TEMPLATE.md`
+17. `agent-system/04_state/CURRENT_GATE_TEMPLATE.md`
+18. `agent-system/04_state/NEXT_ACTION_TEMPLATE.md`
+19. `agent-system/05_gap_flow/GAP_FLOW.md`
+20. `agent-system/05_gap_flow/GAP_REGISTER_TEMPLATE.md`
+21. `agent-system/06_logs/AGENT_RESULTS_LOG_TEMPLATE.md`
+22. `agent-system/04_state/TASK_REGISTRY_TEMPLATE.md`
+23. `agent-system/04_state/ACCEPTED_ARTIFACTS_TEMPLATE.md`
+24. `agent-system/06_logs/ORCHESTRATOR_EVENTS_LOG_TEMPLATE.md`
+25. `agent-system/06_logs/STATUS_SUMMARY_TEMPLATE.md`
 
 ---
 
@@ -118,12 +139,79 @@ BLOCKED_BY: invalid_or_missing_package_file
 - `project-runtime/NEXT_ACTION.md`
 - `project-runtime/GAP_REGISTER.md`
 - `project-runtime/AGENT_RESULTS_LOG.md`
+- `project-runtime/TASK_REGISTRY.md`
+- `project-runtime/ACCEPTED_ARTIFACTS.md`
+- `project-runtime/ORCHESTRATOR_EVENTS_LOG.md`
+- `project-runtime/STATUS_SUMMARY.md`
 
 После создания runtime state-файлов оркестратор может подготовить первый bounded-шаг только если все обязательные bootstrap-файлы существуют.
 
-Если обязательные bootstrap-файлы существуют, следующий шаг:
+Если обязательные bootstrap-файлы существуют, оркестратор обязан создать или
+сослаться на один валидный bootstrap task packet до dispatch первого
+profile-агента.
 
-`назначить проектировщика для анализа ТЗ и подготовки проектной исполнительной документации`.
+Canonical bootstrap task packet path convention:
+
+```text
+project-runtime/bootstrap/TASK_BOOTSTRAP_<TARGET_ROLE>_001.md
+```
+
+Оркестратор создаёт этот runtime input по шаблону:
+
+```text
+agent-system/03_templates/BOOTSTRAP_TASK_PACKET_TEMPLATE.md
+```
+
+Profile agents may read bootstrap task packets, but they must not edit them.
+The first profile-agent `NEXT_ACTION.TASK_PACKET` must point to the created
+bootstrap task packet. `TASK_PACKET: NONE` is forbidden for first profile-agent
+dispatch, and `project-runtime/HANDOFF_BOOTSTRAP.md` is not a task packet
+substitute.
+
+If input is incomplete, ambiguous, or the orchestrator is unsure, create:
+
+```text
+project-runtime/bootstrap/TASK_BOOTSTRAP_REQUIREMENTS_ANALYST_001.md
+```
+
+If input is sufficiently structured for direct design, create:
+
+```text
+project-runtime/bootstrap/TASK_BOOTSTRAP_DESIGNER_001.md
+```
+
+После этого оркестратор выбирает первый profile-агент по deterministic routing:
+
+```text
+if project input is sufficiently structured for design:
+  ACTION_TYPE: create_agent
+  TARGET_ROLE: designer
+  TASK_ID: TASK_BOOTSTRAP_DESIGNER_001
+  TASK_PACKET: project-runtime/bootstrap/TASK_BOOTSTRAP_DESIGNER_001.md
+  DEPENDENCY_STATUS: ready
+  BLOCKED_BY: NONE
+else:
+  ACTION_TYPE: create_agent
+  TARGET_ROLE: requirements_analyst
+  TASK_ID: TASK_BOOTSTRAP_REQUIREMENTS_ANALYST_001
+  TASK_PACKET: project-runtime/bootstrap/TASK_BOOTSTRAP_REQUIREMENTS_ANALYST_001.md
+  DEPENDENCY_STATUS: ready
+  BLOCKED_BY: NONE
+```
+
+Input is sufficiently structured for direct design only when it contains enough
+information for architecture and task planning without guessing:
+
+- project purpose;
+- scope boundaries;
+- target deliverables;
+- major constraints;
+- acceptance criteria or success criteria;
+- runtime/setup expectations, if relevant;
+- known dependencies, if relevant.
+
+If the input is incomplete, ambiguous, or the orchestrator is unsure, the first
+profile-agent route must be `TARGET_ROLE: requirements_analyst`.
 
 Если обязательные bootstrap-файлы отсутствуют, следующий шаг определяется
 взаимоисключающей классификацией bootstrap failure:
@@ -139,6 +227,7 @@ Before dispatching the first profile agent, the orchestrator must verify that:
 - runtime templates match `RUNTIME_STATE_SCHEMA.md`;
 - governance/runtime documents are present;
 - `NEXT_ACTION.md` contains exactly one allowed next action;
+- first profile-agent `create_agent` references a valid bootstrap task packet;
 - no governance freeze condition is active.
 
 If bootstrap validation fails, the orchestrator must not dispatch the first profile agent.
@@ -189,15 +278,19 @@ The first profile-agent dispatch remains forbidden until bootstrap validation pa
 
 Оркестратор не обязан глубоко читать ТЗ проекта.
 
-Он передаёт ТЗ проектировщику как входной документ.
+Он передаёт ТЗ первому profile-агенту как входной документ.
 
 Оркестратор может открыть ТЗ только для:
 - проверки существования файла;
 - проверки корректности пути;
-- проверки доступности файла для передачи агенту.
+- проверки доступности файла для передачи агенту;
+- проверки наличия явных разделов, достаточных только для выбора маршрута
+  `requirements_analyst` или `designer`.
 
 Оркестратору запрещено:
 - анализировать бизнес-логику ТЗ;
 - проектировать решение;
 - интерпретировать требования;
-- додумывать недостающие части ТЗ.
+- додумывать недостающие части ТЗ;
+- разрешать неоднозначные требования;
+- декомпозировать реализацию проекта.

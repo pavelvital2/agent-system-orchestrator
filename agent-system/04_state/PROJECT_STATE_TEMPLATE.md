@@ -10,8 +10,19 @@ ACTIVE_DOC_ROOT:
 PACKAGE_VERSION:
 GOVERNANCE_RULESET_VERSION:
 RUNTIME_SCHEMA_VERSION:
-CURRENT_PHASE: bootstrap | design | design_audit | implementation | implementation_audit | testing | documentation | correction | blocked | finalization | completed
+CURRENT_PHASE: bootstrap | requirements | design | design_audit | implementation | implementation_audit | audit | testing | setup | run | launch | documentation | handover | correction | blocked | finalization | final_acceptance | completed
 PROJECT_STATUS: active | blocked | completed | archived
+```
+
+## Runtime semantic state
+
+These fields are mandatory and must remain in parity with
+`agent-system/04_state/RUNTIME_STATE_SCHEMA.md` and
+`agent-system/09_validators/schemas/project_state.schema.json`.
+
+```text
+ACTION_SEMANTIC: normal | wait_for_owner | pause | stop_terminal | completed_state
+SEMANTIC_REASON:
 ```
 
 ## Active branches
@@ -24,8 +35,12 @@ STATUS: active | blocked | completed | archived
 CURRENT_TASK:
 CURRENT_AGENT_ROLE:
 DEPENDENCIES:
-BLOCKED_BY:
+BLOCKED_BY: <BLOCKER_ID | GAP_ID | NONE>
 ```
+
+`CURRENT_AGENT_ROLE` must be one of the profile execution roles:
+`requirements_analyst`, `designer`, `developer`, `auditor`, `tester`,
+`technical_writer`, `devops_setup_engineer`, or `release_manager`.
 
 If no active branches exist:
 
@@ -48,6 +63,17 @@ NONE
 ## Active blockers
 
 ```text
+BLOCKER_ID:
+BLOCKER_TYPE: owner_decision | pause | audit_fail | gap | runtime | dependency | governance | other
+STATUS: active | resolving
+BLOCKS:
+BLOCKED_BY:
+RESOLUTION_PATH:
+```
+
+If no active blockers exist:
+
+```text
 NONE
 ```
 
@@ -66,3 +92,7 @@ DATE:
 STATUS:
 RESULT_REF:
 ```
+
+`ROLE` records the profile execution role that produced the accepted result.
+Control pseudo-roles `orchestrator`, `project_owner`, and `none` are routing
+values and must not be recorded as profile result roles.

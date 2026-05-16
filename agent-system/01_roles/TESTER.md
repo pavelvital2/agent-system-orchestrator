@@ -45,7 +45,12 @@
 - тестировать функции вне scope как обязательные;
 - запускать следующего агента;
 - использовать deprecated docs из `project-archive/`;
-- читать документы вне REQUIRED_DOCS.
+- читать документы вне REQUIRED_DOCS;
+- делать commit или push.
+
+Profile agents never commit or push.
+Task packets cannot grant commit/push authority to profile agents.
+Git checkpoint is orchestrator-owned only and runs only after auditor STATUS: pass.
 
 ---
 
@@ -120,7 +125,7 @@ STATUS: fail
 - данные не сохраняются, если persistence входит в acceptance criteria;
 - результат нельзя принять без исправления разработчиком.
 
-В `NEXT_REQUIRED_ACTION` тестировщик должен указать, что задачу нужно вернуть разработчику через оркестратора.
+В `NEXT_RECOMMENDED_ACTION` тестировщик должен рекомендовать вернуть задачу разработчику через оркестратора.
 
 ---
 
@@ -230,31 +235,31 @@ Evidence тестировщика должно быть воспроизводи
 - RISKS;
 - BLOCKERS;
 - GAPS;
-- NEXT_REQUIRED_ACTION.
+- NEXT_RECOMMENDED_ACTION.
 
 ---
 
 ## Следующее действие
 
-Если STATUS `pass`, в `NEXT_REQUIRED_ACTION` должно быть указано:
+Если STATUS `pass`, в `NEXT_RECOMMENDED_ACTION` рекомендуется указать:
 
 ```text
 Proceed to technical writer task if required by task packet.
 ```
 
-Если STATUS `fail`, в `NEXT_REQUIRED_ACTION` должно быть указано:
+Если STATUS `fail`, в `NEXT_RECOMMENDED_ACTION` рекомендуется указать:
 
 ```text
 Return failed acceptance result to orchestrator for developer fix routing.
 ```
 
-Если STATUS `gap`, в `NEXT_REQUIRED_ACTION` должно быть указано:
+Если STATUS `gap`, в `NEXT_RECOMMENDED_ACTION` рекомендуется указать:
 
 ```text
 Return GAP to orchestrator for routing.
 ```
 
-Если STATUS `blocked`, в `NEXT_REQUIRED_ACTION` должно быть указано:
+Если STATUS `blocked`, в `NEXT_RECOMMENDED_ACTION` рекомендуется указать:
 
 ```text
 Return blocker to orchestrator for routing.

@@ -1,0 +1,90 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://agent-system.local/schemas/task_registry.schema.json",
+  "title": "TASK_REGISTRY",
+  "description": "Machine-readable sidecar for agent-system/04_state/TASK_REGISTRY_TEMPLATE.md.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["TASK_ENTRIES"],
+  "properties": {
+    "TASK_ENTRIES": {
+      "oneOf": [
+        { "const": "NONE" },
+        {
+          "type": "array",
+          "items": { "$ref": "#/$defs/taskEntry" }
+        }
+      ]
+    }
+  },
+  "$defs": {
+    "taskEntry": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "TASK_ID",
+        "TASK_TITLE",
+        "TASK_TYPE",
+        "OWNER_ROLE",
+        "STATUS",
+        "TASK_PACKET",
+        "DEPENDENCIES",
+        "RESULT_REFS",
+        "AUDIT_REFS",
+        "CORRECTION_LINKS",
+        "COMMIT_HASH",
+        "BRANCH",
+        "PUSH_STATUS",
+        "ACCEPTED_FILES",
+        "CHECKPOINT_REF",
+        "CREATED_AT",
+        "UPDATED_AT"
+      ],
+      "properties": {
+        "TASK_ID": { "type": "string" },
+        "TASK_TITLE": { "type": "string" },
+        "TASK_TYPE": {
+          "type": "string",
+          "enum": ["requirements_analyst", "designer", "developer", "auditor", "tester", "technical_writer", "devops_setup_engineer", "release_manager"]
+        },
+        "OWNER_ROLE": {
+          "type": "string",
+          "enum": ["orchestrator", "requirements_analyst", "designer", "developer", "auditor", "tester", "technical_writer", "devops_setup_engineer", "release_manager", "project_owner", "none"]
+        },
+        "STATUS": {
+          "type": "string",
+          "enum": [
+            "pending",
+            "ready",
+            "running",
+            "audit_pending",
+            "audit_passed",
+            "checkpoint_done",
+            "blocked",
+            "failed",
+            "superseded",
+            "completed"
+          ]
+        },
+        "TASK_PACKET": { "type": "string" },
+        "DEPENDENCIES": { "$ref": "#/$defs/listOrNone" },
+        "RESULT_REFS": { "$ref": "#/$defs/listOrNone" },
+        "AUDIT_REFS": { "$ref": "#/$defs/listOrNone" },
+        "CORRECTION_LINKS": { "$ref": "#/$defs/listOrNone" },
+        "COMMIT_HASH": { "type": "string" },
+        "BRANCH": { "type": "string" },
+        "PUSH_STATUS": { "type": "string", "enum": ["not_required", "not_attempted", "pushed", "failed"] },
+        "ACCEPTED_FILES": { "$ref": "#/$defs/listOrNone" },
+        "CHECKPOINT_REF": { "type": "string" },
+        "CREATED_AT": { "type": "string" },
+        "UPDATED_AT": { "type": "string" }
+      }
+    },
+    "listOrNone": {
+      "oneOf": [
+        { "const": "NONE" },
+        { "type": "array", "items": { "type": "string" } }
+      ]
+    }
+  }
+}

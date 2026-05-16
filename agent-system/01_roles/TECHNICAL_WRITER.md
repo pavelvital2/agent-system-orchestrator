@@ -41,12 +41,16 @@
 - изменять task packets;
 - изменять runtime state;
 - изменять business requirements;
+- делать commit или push;
 - додумывать пользовательские сценарии;
 - описывать функции вне verified implementation;
 - документировать непроверенное поведение;
 - запускать следующего агента;
 - использовать deprecated docs из `project-archive/`;
 - читать документы вне REQUIRED_DOCS.
+
+Profile agents never commit or push. Task packets cannot grant commit or push
+authority to the technical writer.
 
 ---
 
@@ -255,25 +259,25 @@ Evidence техрайтера должно быть воспроизводимы
 - RISKS;
 - BLOCKERS;
 - GAPS;
-- NEXT_REQUIRED_ACTION.
+- NEXT_RECOMMENDED_ACTION.
 
 ---
 
 ## Следующее действие
 
-Если STATUS `pass`, в `NEXT_REQUIRED_ACTION` должно быть указано:
+Если STATUS `pass`, в `NEXT_RECOMMENDED_ACTION` рекомендуется указать:
 
 ```text
 Documentation task completed.
 ```
 
-Если STATUS `gap`, в `NEXT_REQUIRED_ACTION` должно быть указано:
+Если STATUS `gap`, в `NEXT_RECOMMENDED_ACTION` рекомендуется указать:
 
 ```text
 Return GAP to orchestrator for routing.
 ```
 
-Если STATUS `blocked`, в `NEXT_REQUIRED_ACTION` должно быть указано:
+Если STATUS `blocked`, в `NEXT_RECOMMENDED_ACTION` рекомендуется указать:
 
 ```text
 Return blocker to orchestrator for routing.

@@ -1,0 +1,101 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://agent-system.local/schemas/next_action.schema.json",
+  "title": "NEXT_ACTION",
+  "description": "Machine-readable sidecar for agent-system/04_state/NEXT_ACTION_TEMPLATE.md.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "ACTION_ID",
+    "ACTION_TYPE",
+    "TARGET_ROLE",
+    "TASK_ID",
+    "TASK_PACKET",
+    "DEPENDENCY_STATUS",
+    "BLOCKED_BY",
+    "ACTION_SEMANTIC",
+    "BLOCKING_OR_RESUME_CONTEXT",
+    "REQUIRED_UNIVERSAL_DOCS",
+    "REQUIRED_PROJECT_DOCS",
+    "EXPECTED_RESULT",
+    "INSTRUCTION_FOR_ORCHESTRATOR"
+  ],
+  "properties": {
+    "ACTION_ID": { "type": "string" },
+    "ACTION_TYPE": {
+      "type": "string",
+      "enum": ["create_agent", "route_result", "update_state", "wait_for_owner", "correction", "finalize", "stop"]
+    },
+    "TARGET_ROLE": {
+      "type": "string",
+      "enum": ["orchestrator", "requirements_analyst", "designer", "developer", "auditor", "tester", "technical_writer", "devops_setup_engineer", "release_manager", "project_owner", "none"]
+    },
+    "TASK_ID": { "type": "string" },
+    "TASK_PACKET": { "type": "string" },
+    "DEPENDENCY_STATUS": {
+      "type": "string",
+      "enum": ["ready", "blocked", "completed", "not_applicable"]
+    },
+    "BLOCKED_BY": { "type": "string" },
+    "ACTION_SEMANTIC": {
+      "type": "string",
+      "enum": ["normal", "wait_for_owner", "pause", "stop_terminal", "completed_state_transition"]
+    },
+    "BLOCKING_OR_RESUME_CONTEXT": {
+      "oneOf": [
+        { "const": "NONE" },
+        { "$ref": "#/$defs/blockingOrResumeContext" }
+      ]
+    },
+    "REQUIRED_UNIVERSAL_DOCS": { "$ref": "#/$defs/listOrNone" },
+    "REQUIRED_PROJECT_DOCS": { "$ref": "#/$defs/listOrNone" },
+    "EXPECTED_RESULT": { "$ref": "#/$defs/listOrNone" },
+    "INSTRUCTION_FOR_ORCHESTRATOR": { "type": "string" }
+  },
+  "allOf": [
+    {
+      "if": { "properties": { "ACTION_SEMANTIC": { "const": "wait_for_owner" } }, "required": ["ACTION_SEMANTIC"] },
+      "then": {
+        "properties": {
+          "ACTION_TYPE": { "const": "wait_for_owner" },
+          "TARGET_ROLE": { "const": "project_owner" }
+        }
+      }
+    },
+    {
+      "if": { "properties": { "ACTION_SEMANTIC": { "const": "stop_terminal" } }, "required": ["ACTION_SEMANTIC"] },
+      "then": { "properties": { "ACTION_TYPE": { "const": "stop" } } }
+    }
+  ],
+  "$defs": {
+    "listOrNone": {
+      "oneOf": [
+        { "const": "NONE" },
+        { "type": "array", "items": { "type": "string" } }
+      ]
+    },
+    "blockingOrResumeContext": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "BLOCKER_ID",
+        "BLOCKER_TYPE",
+        "BLOCKS",
+        "RESOLUTION_PATH",
+        "OWNER_QUESTION",
+        "RESUME_CONDITION"
+      ],
+      "properties": {
+        "BLOCKER_ID": { "type": "string" },
+        "BLOCKER_TYPE": {
+          "type": "string",
+          "enum": ["owner_decision", "pause", "audit_fail", "gap", "runtime", "dependency", "governance", "other"]
+        },
+        "BLOCKS": { "type": "string" },
+        "RESOLUTION_PATH": { "type": "string" },
+        "OWNER_QUESTION": { "type": "string" },
+        "RESUME_CONDITION": { "type": "string" }
+      }
+    }
+  }
+}

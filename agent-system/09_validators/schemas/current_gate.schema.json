@@ -1,0 +1,119 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://agent-system.local/schemas/current_gate.schema.json",
+  "title": "CURRENT_GATE",
+  "description": "Machine-readable sidecar for agent-system/04_state/CURRENT_GATE_TEMPLATE.md.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "GATE_ID",
+    "GATE_NAME",
+    "GATE_TYPE",
+    "STATUS",
+    "OWNER_ROLE",
+    "TASK_ID",
+    "TASK_PACKET",
+    "ACTION_SEMANTIC",
+    "ENTRY_CRITERIA",
+    "EXIT_CRITERIA",
+    "REQUIRED_NEXT_ROLE",
+    "GATE_EVIDENCE",
+    "BLOCKING_STATUS",
+    "NOTES"
+  ],
+  "properties": {
+    "GATE_ID": { "type": "string" },
+    "GATE_NAME": { "type": "string" },
+    "GATE_TYPE": {
+      "type": "string",
+      "enum": [
+        "bootstrap",
+        "requirements",
+        "design",
+        "audit",
+        "implementation",
+        "testing",
+        "setup",
+        "run",
+        "launch",
+        "documentation",
+        "handover",
+        "correction",
+        "finalization",
+        "final_acceptance",
+        "terminal"
+      ]
+    },
+    "STATUS": {
+      "type": "string",
+      "enum": ["open", "passed", "failed", "blocked", "skipped"]
+    },
+    "OWNER_ROLE": {
+      "type": "string",
+      "enum": ["orchestrator", "requirements_analyst", "designer", "developer", "auditor", "tester", "technical_writer", "devops_setup_engineer", "release_manager", "project_owner"]
+    },
+    "TASK_ID": { "type": "string" },
+    "TASK_PACKET": { "type": "string" },
+    "ACTION_SEMANTIC": {
+      "type": "string",
+      "enum": ["normal", "wait_for_owner", "pause", "stop_terminal", "completed_state_transition"]
+    },
+    "ENTRY_CRITERIA": {
+      "oneOf": [
+        { "const": "NONE" },
+        { "type": "array", "items": { "type": "string" } }
+      ]
+    },
+    "EXIT_CRITERIA": {
+      "oneOf": [
+        { "const": "NONE" },
+        { "type": "array", "items": { "type": "string" } }
+      ]
+    },
+    "REQUIRED_NEXT_ROLE": {
+      "type": "string",
+      "enum": ["requirements_analyst", "designer", "developer", "auditor", "tester", "technical_writer", "devops_setup_engineer", "release_manager", "orchestrator", "project_owner", "none"]
+    },
+    "GATE_EVIDENCE": {
+      "oneOf": [
+        { "const": "NONE" },
+        { "type": "array", "items": { "type": "string" } }
+      ]
+    },
+    "BLOCKING_STATUS": {
+      "oneOf": [
+        { "const": "NONE" },
+        { "$ref": "#/$defs/blockingStatus" }
+      ]
+    },
+    "NOTES": {
+      "oneOf": [
+        { "const": "NONE" },
+        { "type": "array", "items": { "type": "string" } }
+      ]
+    }
+  },
+  "$defs": {
+    "blockingStatus": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "BLOCKER_ID",
+        "BLOCKER_TYPE",
+        "BLOCKS",
+        "BLOCKED_BY",
+        "RESOLUTION_PATH"
+      ],
+      "properties": {
+        "BLOCKER_ID": { "type": "string" },
+        "BLOCKER_TYPE": {
+          "type": "string",
+          "enum": ["owner_decision", "pause", "audit_fail", "gap", "runtime", "dependency", "governance", "other"]
+        },
+        "BLOCKS": { "type": "string" },
+        "BLOCKED_BY": { "type": "string" },
+        "RESOLUTION_PATH": { "type": "string" }
+      }
+    }
+  }
+}

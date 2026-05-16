@@ -17,22 +17,31 @@
    - `agent-system/02_runtime/ALLOWED_ORCHESTRATOR_ACTIONS.md`
    - `agent-system/02_runtime/FILESYSTEM_GOVERNANCE.md`
    - `agent-system/02_runtime/GOVERNANCE_AUTHORITY.md`
+   - `agent-system/02_runtime/ACTION_STATE_SEMANTICS.md`
    - `agent-system/02_runtime/STATE_TRANSITION_RULES.md`
+   - `agent-system/02_runtime/POST_AUDIT_GIT_CHECKPOINT.md`
    - `agent-system/02_runtime/VIOLATION_RECOVERY.md`
    - `agent-system/02_runtime/ACCEPTED_STATE_LOCKING.md`
    - `agent-system/02_runtime/AGENT_LIFECYCLE.md`
    - `agent-system/03_templates/TASK_PACKET_TEMPLATE.md`
+   - `agent-system/03_templates/BOOTSTRAP_TASK_PACKET_TEMPLATE.md`
    - `agent-system/03_templates/ORCHESTRATOR_TASK_HANDOFF_TEMPLATE.md`
    - `agent-system/03_templates/AGENT_RESULT_TEMPLATE.md`
    - `agent-system/04_state/RUNTIME_STATE_SCHEMA.md`
    - `agent-system/05_gap_flow/GAP_FLOW.md`
    - `agent-system/05_gap_flow/GAP_REGISTER_TEMPLATE.md`
    - `agent-system/06_logs/AGENT_RESULTS_LOG_TEMPLATE.md`
+   - `agent-system/06_logs/ORCHESTRATOR_EVENTS_LOG_TEMPLATE.md`
+   - `agent-system/09_validators/GIT_CHECKPOINT_VALIDATION_RULES.md`
    - `project-runtime/PROJECT_STATE.md`
    - `project-runtime/CURRENT_GATE.md`
    - `project-runtime/NEXT_ACTION.md`
    - `project-runtime/GAP_REGISTER.md`
    - `project-runtime/AGENT_RESULTS_LOG.md`
+   - `project-runtime/TASK_REGISTRY.md`
+   - `project-runtime/ACCEPTED_ARTIFACTS.md`
+   - `project-runtime/ORCHESTRATOR_EVENTS_LOG.md`
+   - `project-runtime/STATUS_SUMMARY.md`
 
 
 2. Определить следующий шаг только из `NEXT_ACTION.md`.
@@ -60,7 +69,23 @@ Task-packet validation применяется только если:
 
 Оркестратор не должен считать `TASK_PACKET: NONE` отсутствующим task packet для таких non-dispatch actions.
 
-Обычный project `create_agent` всегда требует валидный task packet.
+Любой profile-agent `create_agent` всегда требует валидный task packet.
+Для первого profile-agent dispatch этот packet должен быть валидным bootstrap
+task packet, созданным по:
+
+```text
+agent-system/03_templates/BOOTSTRAP_TASK_PACKET_TEMPLATE.md
+```
+
+Canonical first-dispatch path convention:
+
+```text
+project-runtime/bootstrap/TASK_BOOTSTRAP_<TARGET_ROLE>_001.md
+```
+
+`TASK_PACKET: NONE` is forbidden for first profile-agent dispatch. A bootstrap
+handoff file is not a task packet substitute unless it is explicitly full
+task-packet-equivalent and satisfies bootstrap task packet validation.
 
 Оркестратор обязан сверить planned action с:
 
@@ -69,7 +94,14 @@ Task-packet validation применяется только если:
 - запретом на использование `project-archive/` как active source;
 - запретом на изменение `project-runtime/` обычными агентами;
 - запретом на изменение `agent-system/` обычными агентами;
-- правилом, что task packets должны находиться внутри `ACTIVE_DOC_ROOT`.
+- правилом, что task packets должны находиться внутри `ACTIVE_DOC_ROOT`, кроме
+  единственного первого bootstrap task packet:
+
+```text
+project-runtime/bootstrap/TASK_BOOTSTRAP_<TARGET_ROLE>_001.md
+```
+
+Ordinary task packets outside `ACTIVE_DOC_ROOT` remain invalid.
 
 Если planned action нарушает filesystem governance:
 - dispatch агента запрещён;
@@ -97,12 +129,23 @@ Task-packet validation применяется только если:
 
 Оркестратор обязан валидировать:
 
-designer → auditor
-developer → auditor
+profile_agent(pass) → auditor when `AUDIT_REQUIREMENTS` makes audit mandatory
+requirements_analyst(pass) → auditor when audit mandatory
+designer(pass) → auditor when audit mandatory
+developer(pass) → auditor when audit mandatory
+tester(pass) → auditor when audit mandatory
+technical_writer(pass) → auditor when audit mandatory
+devops_setup_engineer(pass) → auditor when audit mandatory
+release_manager(pass) → auditor when audit mandatory
 tester(pass) → technical_writer (если required)
 tester(fail) → developer
 tester(blocked) → orchestrator
 tester(gap) → orchestrator
+
+When audit is mandatory, a profile-agent `STATUS: pass` must not route directly
+to another profile role, another lifecycle phase, terminal completion, or Git
+checkpoint. It must route to an auditor first. The post-audit Git checkpoint is
+allowed only after auditor `STATUS: pass`.
 
 Если RESULT агента нарушает mandatory workflow:
 
@@ -110,6 +153,39 @@ tester(gap) → orchestrator
 - runtime state должен быть переведён в workflow violation;
 - dispatch следующего агента запрещён;
 - violation должен быть возвращён на correction flow.
+
+Оркестратор обязан применять `ACTION_STATE_SEMANTICS.md` при различении:
+
+- `wait_for_owner`;
+- `pause`;
+- `stop_terminal`;
+- `completed`.
+
+Если текущий `NEXT_ACTION` использует `stop` как временную паузу, dispatch запрещён и runtime state должен быть переведён в correction.
+
+Если auditor RESULT имеет `STATUS: fail`, оркестратор обязан:
+
+- запретить normal next task dispatch;
+- запретить post-audit Git checkpoint;
+- заблокировать зависимые ветки;
+- route только в correction, governed update_state, or genuine wait_for_owner.
+
+Если auditor RESULT имеет `STATUS: blocked` or `STATUS: gap`, оркестратор обязан:
+
+- запретить normal next task dispatch;
+- запретить post-audit Git checkpoint;
+- заблокировать зависимые ветки;
+- route only according to blocked/GAP governance.
+
+Если auditor RESULT имеет `STATUS: pass`, оркестратор обязан:
+
+- route first to `POST_AUDIT_GIT_CHECKPOINT.md`;
+- validate `GIT_CHECKPOINT_VALIDATION_RULES.md` before staging;
+- stage only accepted files allowed by the audited task packet;
+- commit only after checkpoint validation passes;
+- push only after a valid local commit exists;
+- record branch, commit hash, push status, and accepted files;
+- route to the next governed task only after successful checkpoint completion.
 
 7. Проверить routing blocked/gap issues.
 
@@ -143,13 +219,19 @@ tester(gap) → orchestrator
    - есть `ROLE`;
    - есть `TASK`;
    - есть `SUMMARY`;
-   - есть `CHANGED_FILES` или указано `NONE`;
    - есть `READ_DOCS`;
+   - есть `READ_INPUTS`;
+   - есть `CHANGED_FILES` или указано `NONE`;
+   - есть `CREATED_FILES`;
+   - есть `DELETED_FILES`;
+   - есть `COMMANDS_RUN`;
    - есть `EVIDENCE`;
+   - есть `SCOPE_VERIFICATION`;
+   - есть `FORBIDDEN_CHANGES_CHECK`;
    - есть `RISKS`;
    - есть `BLOCKERS`;
    - есть `GAPS`;
-   - есть `NEXT_REQUIRED_ACTION`.
+   - есть `NEXT_RECOMMENDED_ACTION`.
 
 Формальная проверка RESULT должна требовать ровно обязательные поля из `AGENT_RESULT_TEMPLATE.md`:
 
@@ -158,14 +240,25 @@ STATUS
 ROLE
 TASK
 SUMMARY
-CHANGED_FILES
 READ_DOCS
+READ_INPUTS
+CHANGED_FILES
+CREATED_FILES
+DELETED_FILES
+COMMANDS_RUN
 EVIDENCE
+SCOPE_VERIFICATION
+FORBIDDEN_CHANGES_CHECK
 RISKS
 BLOCKERS
 GAPS
-NEXT_REQUIRED_ACTION
+NEXT_RECOMMENDED_ACTION
 ```
+
+`NEXT_RECOMMENDED_ACTION` is an advisory profile-agent recommendation, not an
+authoritative routing decision. Before acting on it, the orchestrator must
+validate runtime state, task registry, current gate, transition rules, blockers,
+and accepted artifacts.
 
 Допустимые profile-agent `STATUS` values:
 
@@ -188,7 +281,7 @@ gap
 
 - сохранить полный RESULT или получить deterministic `RESULT_REF`, по которому полный RESULT доступен;
 - добавить bounded entry в `project-runtime/AGENT_RESULTS_LOG.md`;
-- указать в entry поля `DATE`, `ROLE`, `TASK`, `STATUS`, `RESULT_REF`, `CHANGED_FILES`, `NEXT_REQUIRED_ACTION`;
+- указать в entry поля `DATE`, `ROLE`, `TASK`, `STATUS`, `RESULT_REF`, `CHANGED_FILES`, `NEXT_RECOMMENDED_ACTION`;
 - применить это правило для valid profile-agent `pass`, `fail`, `blocked`, `gap` results и для orchestrator-classified `violation` log entries.
 
 Recovery/status routing запрещён, пока `AGENT_RESULTS_LOG.md` не получил bounded entry или deterministic reference на полный RESULT.
@@ -204,11 +297,13 @@ TASK: current NEXT_ACTION.TASK_ID, otherwise unknown
 STATUS: violation
 RESULT_REF: raw invalid RESULT reference
 CHANGED_FILES: unknown unless safely extractable
-NEXT_REQUIRED_ACTION: correction
+NEXT_RECOMMENDED_ACTION: correction
 ```
 
 12. Действовать по STATUS:
-   - `pass` → перейти к следующему gate;
+   - profile-agent `pass` with mandatory audit → перейти к обязательному audit gate;
+   - profile-agent `pass` without mandatory audit → route only by validated task packet, task registry, and transition rules;
+   - auditor `pass` → выполнить post-audit Git checkpoint, then перейти к следующему governed gate;
    - `fail` → вернуть задачу на исправление профильному агенту;
    - `blocked` → зафиксировать блокер;
    - `gap` → зафиксировать GAP и остановить зависимую ветку.
@@ -218,6 +313,10 @@ NEXT_REQUIRED_ACTION: correction
    - `CURRENT_GATE.md`
    - `NEXT_ACTION.md`
    - `AGENT_RESULTS_LOG.md` для каждого agent result
+   - `TASK_REGISTRY.md` для task lifecycle state
+   - `ACCEPTED_ARTIFACTS.md` для accepted artifact state
+   - `ORCHESTRATOR_EVENTS_LOG.md` для material orchestrator events
+   - `STATUS_SUMMARY.md` для compact status summary
    - при необходимости `GAP_REGISTER.md`
 
 14. Повторить цикл перед следующим действием.
@@ -231,14 +330,15 @@ Before any `create_agent`, `route_result`, `update_state`, `correction`, `finali
 3. mandatory runtime files exist;
 4. runtime state matches `RUNTIME_STATE_SCHEMA.md`;
 5. full runtime state tuple is valid under `STATE_TRANSITION_RULES.md`;
-6. `NEXT_ACTION.md` contains exactly one action;
-7. `NEXT_ACTION.md` does not conflict with `GOVERNANCE_AUTHORITY.md`;
-8. if `NEXT_ACTION.ACTION_TYPE` is `create_agent` or `NEXT_ACTION.TASK_PACKET` is not `NONE`, target task packet is active, not superseded, not deprecated;
-9. if task-packet validation is required, target task packet is inside `ACTIVE_DOC_ROOT` unless it is explicitly governed as system/bootstrap/package correction material;
-10. if task-packet validation is required, REQUIRED_DOCS do not include deprecated/archive documents;
-11. if task-packet validation is not required, `TASK_PACKET: NONE` is valid only for `wait_for_owner`, `update_state`, `finalize`, `stop`, or `correction` when allowed by `STATE_TRANSITION_RULES.md`;
-12. role/file permissions match `FILESYSTEM_GOVERNANCE.md`;
-13. requested action is valid under governance-freeze rules.
+6. action/state semantics are valid under `ACTION_STATE_SEMANTICS.md`;
+7. `NEXT_ACTION.md` contains exactly one action;
+8. `NEXT_ACTION.md` does not conflict with `GOVERNANCE_AUTHORITY.md`;
+9. if `NEXT_ACTION.ACTION_TYPE` is `create_agent` or `NEXT_ACTION.TASK_PACKET` is not `NONE`, target task packet is active, not superseded, not deprecated;
+10. if task-packet validation is required, target task packet is inside `ACTIVE_DOC_ROOT` unless it is the governed first bootstrap task packet at `project-runtime/bootstrap/TASK_BOOTSTRAP_<TARGET_ROLE>_001.md` or explicitly governed as system/package correction material;
+11. if task-packet validation is required, REQUIRED_DOCS do not include deprecated/archive documents;
+12. if task-packet validation is not required, `TASK_PACKET: NONE` is valid only for `wait_for_owner`, `update_state`, `finalize`, `stop`, or `correction` when allowed by `STATE_TRANSITION_RULES.md`;
+13. role/file permissions match `FILESYSTEM_GOVERNANCE.md`;
+14. requested action is valid under governance-freeze rules.
 
 If any validation fails, dispatch is forbidden.
 
@@ -286,6 +386,10 @@ After updating any runtime state file, the orchestrator must reread:
 - `NEXT_ACTION.md`
 - `GAP_REGISTER.md`
 - `AGENT_RESULTS_LOG.md`
+- `TASK_REGISTRY.md`
+- `ACCEPTED_ARTIFACTS.md`
+- `ORCHESTRATOR_EVENTS_LOG.md`
+- `STATUS_SUMMARY.md`
 
 Then it must validate the updated runtime state tuple before the next dispatch.
 

@@ -1,0 +1,128 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://agent-system.local/schemas/task_packet.schema.json",
+  "title": "TASK_PACKET",
+  "description": "Machine-readable sidecar for agent-system/03_templates/TASK_PACKET_TEMPLATE.md.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "TASK_ID",
+    "TASK_STATUS",
+    "SUPERSEDES",
+    "SUPERSEDED_BY",
+    "CORRECTION_OF",
+    "SOURCE_RESULT_REF",
+    "ATTEMPT_NO",
+    "FAILURE_TYPE",
+    "TASK_TITLE",
+    "TASK_TYPE",
+    "TARGET_ROLE",
+    "DEPENDENCIES",
+    "DEPENDENCY_STATUS",
+    "PURPOSE",
+    "SOURCE_OF_TRUTH",
+    "SCOPE_IN",
+    "SCOPE_OUT",
+    "REQUIRED_DOCS",
+    "INPUTS",
+    "READ_INPUTS",
+    "EXPECTED_OUTPUTS",
+    "ALLOWED_FILE_CHANGES",
+    "FORBIDDEN_FILE_CHANGES",
+    "ACCEPTANCE_CRITERIA",
+    "EVIDENCE_REQUIREMENTS",
+    "SETUP_HOOKS",
+    "LAUNCH_HOOKS",
+    "RESULT_PATH",
+    "RISK_REQUIREMENTS",
+    "MANDATORY_WORKFLOW",
+    "NEXT_ROLE_ON_PASS",
+    "NEXT_ROLE_ON_FAIL",
+    "NEXT_ROLE_ON_BLOCKED",
+    "NEXT_ROLE_ON_GAP",
+    "AUDIT_REQUIREMENTS",
+    "TESTING_REQUIREMENTS",
+    "DOCUMENTATION_REQUIREMENTS",
+    "FILESYSTEM_GOVERNANCE",
+    "RUNTIME_GOVERNANCE",
+    "RESULT_FORMAT",
+    "TERMINAL_CONDITIONS",
+    "NOTES"
+  ],
+  "properties": {
+    "TASK_ID": { "type": "string", "minLength": 1 },
+    "TASK_STATUS": { "type": "string", "enum": ["active", "completed", "superseded", "deprecated"] },
+    "SUPERSEDES": { "type": "string" },
+    "SUPERSEDED_BY": { "type": "string" },
+    "CORRECTION_OF": { "type": "string" },
+    "SOURCE_RESULT_REF": { "type": "string" },
+    "ATTEMPT_NO": { "oneOf": [{ "const": "NONE" }, { "type": "integer", "minimum": 1 }] },
+    "FAILURE_TYPE": {
+      "type": "string",
+      "enum": ["governance", "workflow", "filesystem", "runtime_state", "audit", "testing", "gap", "blocked", "none"]
+    },
+    "TASK_TITLE": { "type": "string" },
+    "TASK_TYPE": {
+      "type": "string",
+      "enum": ["requirements_analyst", "designer", "developer", "auditor", "tester", "technical_writer", "devops_setup_engineer", "release_manager"]
+    },
+    "TARGET_ROLE": {
+      "type": "string",
+      "enum": ["requirements_analyst", "designer", "developer", "auditor", "tester", "technical_writer", "devops_setup_engineer", "release_manager"]
+    },
+    "DEPENDENCIES": { "$ref": "#/$defs/listOrNone" },
+    "DEPENDENCY_STATUS": { "type": "string", "enum": ["ready", "blocked", "pending", "none"] },
+    "PURPOSE": { "type": "string" },
+    "SOURCE_OF_TRUTH": { "$ref": "#/$defs/listOrNone" },
+    "SCOPE_IN": { "$ref": "#/$defs/nonEmptyList" },
+    "SCOPE_OUT": { "$ref": "#/$defs/nonEmptyList" },
+    "REQUIRED_DOCS": { "$ref": "#/$defs/listOrNone" },
+    "INPUTS": { "$ref": "#/$defs/listOrNone" },
+    "READ_INPUTS": { "$ref": "#/$defs/listOrNone" },
+    "EXPECTED_OUTPUTS": { "$ref": "#/$defs/nonEmptyList" },
+    "ALLOWED_FILE_CHANGES": { "$ref": "#/$defs/nonEmptyList" },
+    "FORBIDDEN_FILE_CHANGES": { "$ref": "#/$defs/listOrNone" },
+    "ACCEPTANCE_CRITERIA": { "$ref": "#/$defs/nonEmptyList" },
+    "EVIDENCE_REQUIREMENTS": { "$ref": "#/$defs/listOrNone" },
+    "SETUP_HOOKS": { "$ref": "#/$defs/listOrNone" },
+    "LAUNCH_HOOKS": { "$ref": "#/$defs/listOrNone" },
+    "RESULT_PATH": { "type": "string" },
+    "RISK_REQUIREMENTS": { "$ref": "#/$defs/listOrNone" },
+    "MANDATORY_WORKFLOW": { "$ref": "#/$defs/nonEmptyList" },
+    "NEXT_ROLE_ON_PASS": { "$ref": "#/$defs/nextRole" },
+    "NEXT_ROLE_ON_FAIL": { "$ref": "#/$defs/nextRole" },
+    "NEXT_ROLE_ON_BLOCKED": { "$ref": "#/$defs/nextRole" },
+    "NEXT_ROLE_ON_GAP": { "$ref": "#/$defs/nextRole" },
+    "AUDIT_REQUIREMENTS": { "type": "string", "enum": ["mandatory", "optional", "none"] },
+    "TESTING_REQUIREMENTS": { "type": "string", "enum": ["mandatory", "optional", "none"] },
+    "DOCUMENTATION_REQUIREMENTS": { "type": "string", "enum": ["mandatory", "optional", "none"] },
+    "FILESYSTEM_GOVERNANCE": { "$ref": "#/$defs/nonEmptyList" },
+    "RUNTIME_GOVERNANCE": { "$ref": "#/$defs/nonEmptyList" },
+    "RESULT_FORMAT": { "type": "string" },
+    "TERMINAL_CONDITIONS": { "$ref": "#/$defs/listOrNone" },
+    "NOTES": { "$ref": "#/$defs/listOrNone" }
+  },
+  "allOf": [
+    {
+      "if": { "properties": { "DEPENDENCY_STATUS": { "const": "none" } }, "required": ["DEPENDENCY_STATUS"] },
+      "then": { "properties": { "DEPENDENCIES": { "const": "NONE" } } }
+    }
+  ],
+  "$defs": {
+    "listOrNone": {
+      "oneOf": [
+        { "const": "NONE" },
+        { "type": "array", "items": { "type": "string" } }
+      ]
+    },
+    "nonEmptyList": {
+      "type": "array",
+      "minItems": 1,
+      "items": { "type": "string" }
+    },
+    "nextRole": {
+      "type": "string",
+      "enum": ["orchestrator", "requirements_analyst", "designer", "developer", "auditor", "tester", "technical_writer", "devops_setup_engineer", "release_manager", "project_owner", "none"]
+    }
+  }
+}

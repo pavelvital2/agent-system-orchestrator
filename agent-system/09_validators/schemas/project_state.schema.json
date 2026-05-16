@@ -1,0 +1,177 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://agent-system.local/schemas/project_state.schema.json",
+  "title": "PROJECT_STATE",
+  "description": "Machine-readable sidecar for agent-system/04_state/PROJECT_STATE_TEMPLATE.md.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "PROJECT_NAME",
+    "PROJECT_ROOT",
+    "TZ_PATH",
+    "ACTIVE_DOC_ROOT",
+    "PACKAGE_VERSION",
+    "GOVERNANCE_RULESET_VERSION",
+    "RUNTIME_SCHEMA_VERSION",
+    "CURRENT_PHASE",
+    "PROJECT_STATUS",
+    "ACTION_SEMANTIC",
+    "SEMANTIC_REASON",
+    "ACTIVE_BRANCHES",
+    "COMPLETED_MILESTONES",
+    "ACTIVE_RISKS",
+    "ACTIVE_BLOCKERS",
+    "ACTIVE_GAPS",
+    "LAST_ACCEPTED_RESULT"
+  ],
+  "properties": {
+    "PROJECT_NAME": { "type": "string" },
+    "PROJECT_ROOT": { "type": "string" },
+    "TZ_PATH": { "type": "string" },
+    "ACTIVE_DOC_ROOT": { "type": "string" },
+    "PACKAGE_VERSION": { "type": "string" },
+    "GOVERNANCE_RULESET_VERSION": { "type": "string" },
+    "RUNTIME_SCHEMA_VERSION": { "type": "string" },
+    "CURRENT_PHASE": {
+      "type": "string",
+      "enum": [
+        "bootstrap",
+        "requirements",
+        "design",
+        "design_audit",
+        "implementation",
+        "implementation_audit",
+        "audit",
+        "testing",
+        "setup",
+        "run",
+        "launch",
+        "documentation",
+        "handover",
+        "correction",
+        "blocked",
+        "finalization",
+        "final_acceptance",
+        "completed"
+      ]
+    },
+    "PROJECT_STATUS": {
+      "type": "string",
+      "enum": ["active", "blocked", "completed", "archived"]
+    },
+    "ACTION_SEMANTIC": {
+      "type": "string",
+      "enum": ["normal", "wait_for_owner", "pause", "stop_terminal", "completed_state"]
+    },
+    "SEMANTIC_REASON": { "type": "string" },
+    "ACTIVE_BRANCHES": {
+      "oneOf": [
+        { "const": "NONE" },
+        {
+          "type": "array",
+          "items": { "$ref": "#/$defs/branch" }
+        }
+      ]
+    },
+    "COMPLETED_MILESTONES": {
+      "oneOf": [
+        { "const": "NONE" },
+        {
+          "type": "array",
+          "items": { "type": "string" }
+        }
+      ]
+    },
+    "ACTIVE_RISKS": {
+      "oneOf": [
+        { "const": "NONE" },
+        {
+          "type": "array",
+          "items": { "type": "string" }
+        }
+      ]
+    },
+    "ACTIVE_BLOCKERS": {
+      "oneOf": [
+        { "const": "NONE" },
+        {
+          "type": "array",
+          "items": { "$ref": "#/$defs/blocker" }
+        }
+      ]
+    },
+    "ACTIVE_GAPS": {
+      "oneOf": [
+        { "const": "NONE" },
+        {
+          "type": "array",
+          "items": { "type": "string" }
+        }
+      ]
+    },
+    "LAST_ACCEPTED_RESULT": { "$ref": "#/$defs/lastAcceptedResult" }
+  },
+  "$defs": {
+    "branch": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "BRANCH_ID",
+        "STATUS",
+        "CURRENT_TASK",
+        "CURRENT_AGENT_ROLE",
+        "DEPENDENCIES",
+        "BLOCKED_BY"
+      ],
+      "properties": {
+        "BRANCH_ID": { "type": "string" },
+        "STATUS": { "type": "string", "enum": ["active", "blocked", "completed", "archived"] },
+        "CURRENT_TASK": { "type": "string" },
+        "CURRENT_AGENT_ROLE": {
+          "type": "string",
+          "enum": ["requirements_analyst", "designer", "developer", "auditor", "tester", "technical_writer", "devops_setup_engineer", "release_manager"]
+        },
+        "DEPENDENCIES": { "oneOf": [{ "const": "NONE" }, { "type": "array", "items": { "type": "string" } }] },
+        "BLOCKED_BY": { "type": "string" }
+      }
+    },
+    "blocker": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "BLOCKER_ID",
+        "BLOCKER_TYPE",
+        "STATUS",
+        "BLOCKS",
+        "BLOCKED_BY",
+        "RESOLUTION_PATH"
+      ],
+      "properties": {
+        "BLOCKER_ID": { "type": "string" },
+        "BLOCKER_TYPE": {
+          "type": "string",
+          "enum": ["owner_decision", "pause", "audit_fail", "gap", "runtime", "dependency", "governance", "other"]
+        },
+        "STATUS": { "type": "string", "enum": ["active", "resolving"] },
+        "BLOCKS": { "type": "string" },
+        "BLOCKED_BY": { "type": "string" },
+        "RESOLUTION_PATH": { "type": "string" }
+      }
+    },
+    "lastAcceptedResult": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["ROLE", "TASK", "DATE", "STATUS", "RESULT_REF"],
+      "properties": {
+        "ROLE": {
+          "type": "string",
+          "enum": ["requirements_analyst", "designer", "developer", "auditor", "tester", "technical_writer", "devops_setup_engineer", "release_manager"]
+        },
+        "TASK": { "type": "string" },
+        "DATE": { "type": "string" },
+        "STATUS": { "type": "string" },
+        "RESULT_REF": { "type": "string" }
+      }
+    }
+  }
+}
