@@ -81,6 +81,14 @@ Template validation must catch stale template names, missing schema sidecars
 when a sidecar is documented as present, and references that use a non-canonical
 template path for the same package object.
 
+Task packet validation must compare `TASK_PACKET_TEMPLATE.md` with
+`schemas/task_packet.schema.json`. Their required fields must remain in parity
+for task identity, lifecycle, role routing, scope boundaries, source-of-truth
+documents, dependencies, acceptance criteria, evidence requirements, audit
+requirements, next-role routing, and result format. A field required by one and
+omitted by the other is a cross-link validation failure unless the difference is
+explicitly documented as a compatibility alias.
+
 ## Validator link checks
 
 Every validator document referenced by `VALIDATOR_SPEC.md`, README, or the
@@ -123,6 +131,24 @@ Cross-link validation checks name consistency for these runtime dependencies.
 It must not require the runtime directory to exist during package-only smoke
 review unless the active task explicitly includes runtime initialization.
 
+Cross-link validation must also detect stale authoritative runtime source-of-
+truth lists. A current package document is stale when it presents only this
+legacy five-file set as complete:
+
+```text
+project-runtime/PROJECT_STATE.md
+project-runtime/CURRENT_GATE.md
+project-runtime/NEXT_ACTION.md
+project-runtime/GAP_REGISTER.md
+project-runtime/AGENT_RESULTS_LOG.md
+```
+
+Any such list must be corrected to the canonical nine-file runtime set above or
+must be explicitly marked as a partial example. Current start, runtime loop,
+orchestrator role, runtime schema, filesystem governance, validator, and final
+smoke documents must not use the legacy five-file set as the complete runtime
+source of truth.
+
 ## Project-agnostic check
 
 Package core docs must not reference project-specific entities, business-domain
@@ -135,9 +161,10 @@ an example fixture and remains generic.
 
 ## Failure handling
 
-Any missing required file, stale reference, non-canonical runtime name,
-unresolved lifecycle stage, unresolved profile execution role, unresolved
-template, unresolved validator, or project-specific core reference is a
+Any missing required file, stale reference, stale runtime source-of-truth list,
+non-canonical runtime name, unresolved lifecycle stage, unresolved profile
+execution role, unresolved template, task packet template/schema parity
+mismatch, unresolved validator, or project-specific core reference is a
 cross-link validation failure.
 
 The orchestrator must route failures through governed correction flow. Profile

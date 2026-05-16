@@ -300,4 +300,29 @@ MIGRATION_NOTE: This correction records completion of the v1.2.0 correction chai
 AUTHORIZED_BY: project_owner
 AUDIT_REQUIRED: yes
 STATUS: accepted
+
+CHANGE_ID: GOV-2026-05-16-002
+DATE: 2026-05-16
+PACKAGE_VERSION_BEFORE: 1.2.0
+PACKAGE_VERSION_AFTER: 1.2.0
+CHANGE_TYPE: patch
+AFFECTED_FILES:
+- agent-system/10_examples/FINAL_SMOKE_CHECKLIST.md
+- agent-system/09_validators/CROSS_LINK_VALIDATION_RULES.md
+- agent-system/GOVERNANCE_CHANGELOG.md
+- agent-system/PACKAGE_VERSIONING.md
+AFFECTED_INVARIANTS:
+- lifecycle/runtime/gate alignment smoke coverage
+- runtime file source-of-truth freshness
+- task packet template/schema parity
+- v1.2.0 correction traceability without new package installation
+AFFECTED_TRANSITIONS:
+- final smoke validation -> final auditor or correction routing
+- cross-link validation -> correction routing for stale runtime lists or template/schema mismatches
+SCHEMA_TEMPLATE_IMPACT: none
+MIGRATION_REQUIRED: no
+MIGRATION_NOTE: This v1.2.0 consistency correction adds final smoke and cross-link detection coverage only. It does not change active package, governance ruleset, or runtime schema version constants and does not install a new package version.
+AUTHORIZED_BY: project_owner
+AUDIT_REQUIRED: yes
+STATUS: accepted
 ```

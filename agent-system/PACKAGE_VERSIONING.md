@@ -46,6 +46,10 @@ normalization, documentation stage reconciliation, and final smoke/cross-link
 hardening in that chain are treated as v1.2.0 correction metadata, not as a new
 package installation.
 
+These correction entries do not reserve or pre-install any future minor package
+version. A later package installation must use its own owner-authorized bounded
+package update, active tuple change, migration note, and changelog entry.
+
 ## Version semantics
 
 ```text

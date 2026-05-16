@@ -113,6 +113,9 @@ LIFECYCLE_ALIGNMENT:
   testing, setup, run, launch, documentation, handover, and final acceptance.
   Stage documents exist for documented lifecycle stages where applicable and do
   not contradict the lifecycle order.
+  Lifecycle stages are represented by runtime phase/gate enums or by explicit
+  documented mappings, and gate evidence requirements do not contradict
+  runtime transition rules.
 
 ROLE_ALIGNMENT:
   Role documents keep authority boundaries distinct. Profile agents do not
@@ -121,6 +124,10 @@ ROLE_ALIGNMENT:
 TASK_RESULT_ALIGNMENT:
   TASK_PACKET_TEMPLATE and AGENT_RESULT_TEMPLATE include the fields required
   by validator rules and schema sidecars.
+  TASK_PACKET_TEMPLATE and task_packet.schema.json use the same required field
+  set for task identity, lifecycle, role routing, scope, source-of-truth docs,
+  dependencies, acceptance criteria, evidence, audit, next-role routing, and
+  result format.
 
 RESULT_ACTION_FIELD_ALIGNMENT:
   AGENT_RESULT_TEMPLATE, RESULT_VALIDATION_RULES, runtime loop, and result
@@ -134,7 +141,8 @@ STATE_ALIGNMENT:
 
 RUNTIME_FILE_SET_ALIGNMENT:
   Mandatory runtime file lists in start, runtime loop, runtime state schema,
-  runtime consistency rules, and smoke checks use this exact required set:
+  orchestrator role loading rules, filesystem governance, validators, and smoke
+  checks use this exact required set:
   project-runtime/PROJECT_STATE.md
   project-runtime/CURRENT_GATE.md
   project-runtime/NEXT_ACTION.md
@@ -144,6 +152,13 @@ RUNTIME_FILE_SET_ALIGNMENT:
   project-runtime/ACCEPTED_ARTIFACTS.md
   project-runtime/ORCHESTRATOR_EVENTS_LOG.md
   project-runtime/STATUS_SUMMARY.md
+  No authoritative current package doc keeps a stale runtime source-of-truth
+  list that contains only the first five files in this set.
+
+GATE_RUNTIME_ALIGNMENT:
+  CURRENT_GATE template, lifecycle stages, transition rules, setup/run/launch/
+  handover templates, and final acceptance wording use compatible gate names,
+  owner roles, evidence states, and pass/fail/blocked/gap routing semantics.
 
 PACKAGE_DOCUMENT_COVERAGE:
   Required package document existence checks include mandatory runtime and
@@ -175,6 +190,11 @@ PROFILE_ALIGNMENT:
   profiles are optional extensions and do not replace core governance,
   lifecycle, runtime, validator, or evidence requirements.
 
+NEW_PROFILE_ROLE_PROPAGATION:
+  Any new profile role must be represented consistently across role docs, task
+  packet types, target roles, runtime state, gate owner roles, result roles,
+  and filesystem governance before final smoke can pass.
+
 GAP_OWNER_ALIGNMENT:
   GAP flow and owner decision templates route unresolved decisions to owner
   handling instead of allowing profile agents to decide blocked requirements.
@@ -187,6 +207,10 @@ SECRET_SAFETY_ALIGNMENT:
 PROJECT_AGNOSTIC_ALIGNMENT:
   universal core docs remain free of project-specific business implementation
   and named external-platform terminology.
+
+NEXT_VERSION_ABSENCE:
+  final smoke and cross-link corrections do not install next-version feature
+  docs, fields, roles, runtime enums, or version constants.
 ```
 
 ## Final smoke evidence format
