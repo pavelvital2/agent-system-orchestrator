@@ -59,7 +59,7 @@ INCOMPLETE_OR_AMBIGUOUS_INPUT:
   ACTION_TYPE: create_agent
   TARGET_ROLE: requirements_analyst
   TASK_ID: TASK_BOOTSTRAP_REQUIREMENTS_ANALYST_001
-  TASK_PACKET: project-runtime/bootstrap/TASK_BOOTSTRAP_REQUIREMENTS_ANALYST_001.md
+  TASK_PACKET: project-docs/example/03_tasks/TASK_BOOTSTRAP_REQUIREMENTS_ANALYST_001.md
   DEPENDENCY_STATUS: ready
   BLOCKED_BY: NONE
 
@@ -67,14 +67,14 @@ SUFFICIENTLY_STRUCTURED_INPUT:
   ACTION_TYPE: create_agent
   TARGET_ROLE: designer
   TASK_ID: TASK_BOOTSTRAP_DESIGNER_001
-  TASK_PACKET: project-runtime/bootstrap/TASK_BOOTSTRAP_DESIGNER_001.md
+  TASK_PACKET: project-docs/example/03_tasks/TASK_BOOTSTRAP_DESIGNER_001.md
   DEPENDENCY_STATUS: ready
   BLOCKED_BY: NONE
 ```
 
 Bootstrap `TASK_PACKET` must never be `NONE` for these first profile-agent
-routes. `project-runtime/HANDOFF_BOOTSTRAP.md` may support owner/runtime
-handoff notes, but it is not a task packet substitute unless explicitly
+routes. Orchestrator-owned runtime seed, state, and log notes may support
+bootstrap routing, but they are not task packet substitutes unless explicitly
 full task-packet-equivalent.
 
 ## Minimal task/audit/checkpoint cycle
@@ -87,7 +87,7 @@ TASK_PACKET:
   TARGET_ROLE: developer
   DEPENDENCY_STATUS: ready
   ALLOWED_FILE_CHANGES:
-  - project-runtime/example/docs/*
+  - project-docs/example/07_reports/*
   AUDIT_REQUIREMENTS: mandatory
   TESTING_REQUIREMENTS: none
   DOCUMENTATION_REQUIREMENTS: optional
@@ -98,7 +98,7 @@ TASK_PACKET:
 PROFILE_AGENT_RESULT:
   STATUS: pass
   CHANGED_FILES:
-  - project-runtime/example/docs/WORKFLOW_NOTE.md
+  - project-docs/example/07_reports/WORKFLOW_NOTE.md
   NEXT_RECOMMENDED_ACTION:
   - create matching auditor agent
 
@@ -115,6 +115,10 @@ POST_AUDIT_GIT_CHECKPOINT:
   allowed only after auditor STATUS: pass
   records commit hash, branch, push status, accepted files, and task id
 ```
+
+Profile-agent task packets must use the active documentation root, such as
+`project-docs/example/*`, for allowed artifact changes. `project-runtime/*`
+remains reserved for orchestrator-owned runtime seed, state, and log records.
 
 ## Setup, run, launch, and handover without deployment
 

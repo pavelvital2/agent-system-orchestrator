@@ -126,7 +126,7 @@ BOOTSTRAP_REQUIREMENTS_ROUTING:
   ACTION_TYPE, TARGET_ROLE, TASK_ID, TASK_PACKET, DEPENDENCY_STATUS, and
   BLOCKED_BY. The first profile-agent TASK_PACKET is a valid bootstrap task
   packet using the canonical path convention
-  project-runtime/bootstrap/TASK_BOOTSTRAP_<TARGET_ROLE>_001.md, never
+  project-docs/example/03_tasks/TASK_BOOTSTRAP_<TARGET_ROLE>_001.md, never
   TASK_PACKET: NONE, and never a plain handoff-only file.
   Smoke evidence must explicitly verify all of these bootstrap paths:
   requirements_analyst route is valid for incomplete, ambiguous, or uncertain
@@ -214,6 +214,14 @@ MINIMAL_FIXTURE_SCHEMA_ALIGNMENT:
   fields compatible with TASK_PACKET_TEMPLATE and runtime schema sidecars.
   It must not depend on deployment, credentials, external repositories, or
   project-specific business terms.
+
+EXAMPLE_FILESYSTEM_GOVERNANCE_ALIGNMENT:
+  MINIMAL_EXAMPLE_FIXTURE and EXPECTED_FLOW_EXAMPLE keep profile-agent task
+  packet ALLOWED_FILE_CHANGES, EXPECTED_OUTPUTS, CHANGED_FILES, and result
+  handoff examples under an active documentation root such as
+  project-docs/example/*. They do not allow profile-agent writes to
+  runtime-owned paths. project-runtime example paths appear only as
+  orchestrator-owned runtime seed, state, or log examples.
 
 PROFILE_AGENT_GIT_AUTHORITY:
   README, POST_AUDIT_GIT_CHECKPOINT, FILESYSTEM_GOVERNANCE, role docs, and

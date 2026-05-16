@@ -20,10 +20,15 @@ project-runtime/example/TASK_REGISTRY.md
 project-runtime/example/ACCEPTED_ARTIFACTS.md
 project-runtime/example/ORCHESTRATOR_EVENTS_LOG.md
 project-runtime/example/STATUS_SUMMARY.md
+project-docs/example/03_tasks/TASK_EXAMPLE_001_REQUIREMENTS.md
+project-docs/example/00_requirements/REQUIREMENTS_BASELINE.md
+project-docs/example/07_reports/TASK_EXAMPLE_001_REQUIREMENTS_RESULT.md
 ```
 
-The paths above are illustrative. A real orchestrator may choose different
-runtime paths when the owner authorizes a project.
+The `project-runtime/example/*` paths above are orchestrator-owned runtime
+seed, state, and log examples. The `project-docs/example/*` paths illustrate
+the active documentation root used for profile-agent task packets, artifacts,
+and result handoff files.
 
 ## Example TZ
 
@@ -75,7 +80,7 @@ NEXT_ACTION:
 ACTION_TYPE: create_agent
 TARGET_ROLE: requirements_analyst
 TASK_ID: TASK_EXAMPLE_001_REQUIREMENTS
-TASK_PACKET: project-runtime/example/tasks/TASK_EXAMPLE_001_REQUIREMENTS.md
+TASK_PACKET: project-docs/example/03_tasks/TASK_EXAMPLE_001_REQUIREMENTS.md
 DEPENDENCY_STATUS: ready
 BLOCKED_BY: NONE
 REASON:
@@ -129,7 +134,8 @@ SCOPE_OUT:
 - no credentials.
 
 ALLOWED_FILE_CHANGES:
-- project-runtime/example/requirements/*
+- project-docs/example/00_requirements/*
+- project-docs/example/07_reports/*
 
 FORBIDDEN_FILE_CHANGES:
 - credential files
@@ -137,7 +143,7 @@ FORBIDDEN_FILE_CHANGES:
 - files outside allowed changes
 
 EXPECTED_OUTPUTS:
-- project-runtime/example/requirements/REQUIREMENTS_BASELINE.md
+- project-docs/example/00_requirements/REQUIREMENTS_BASELINE.md
 
 ACCEPTANCE_CRITERIA:
 - baseline maps each requirement to the TZ;
@@ -156,7 +162,7 @@ LAUNCH_HOOKS:
 NONE
 
 RESULT_PATH:
-project-runtime/example/agent-results/TASK_EXAMPLE_001_REQUIREMENTS.md
+project-docs/example/07_reports/TASK_EXAMPLE_001_REQUIREMENTS_RESULT.md
 
 RISK_REQUIREMENTS:
 - unresolved or ambiguous owner input.
