@@ -515,4 +515,68 @@ MIGRATION_NOTE: This bounded correction updates documentation parity and smoke c
 AUTHORIZED_BY: project_owner
 AUDIT_REQUIRED: yes
 STATUS: accepted
+
+CHANGE_ID: GOV-2026-05-16-008
+CHANGE_TITLE: UPG_ASU_130_001 research return protocol and reasoning model
+DATE: 2026-05-16
+PACKAGE_VERSION_BEFORE: 1.2.0
+PACKAGE_VERSION_AFTER: 1.3.0
+CHANGE_TYPE: minor
+AFFECTED_FILES:
+- agent-system/README.md
+- agent-system/PACKAGE_VERSIONING.md
+- agent-system/GOVERNANCE_CHANGELOG.md
+- agent-system/01_roles/ORCHESTRATOR.md
+- agent-system/01_roles/DESIGNER.md
+- agent-system/02_runtime/REQUESTER_RETURN_PROTOCOL.md
+- agent-system/02_runtime/ORCHESTRATOR_RUNTIME_LOOP.md
+- agent-system/02_runtime/STATE_TRANSITION_RULES.md
+- agent-system/02_runtime/FILESYSTEM_GOVERNANCE.md
+- agent-system/02_runtime/POST_AUDIT_GIT_CHECKPOINT.md
+- agent-system/03_templates/TASK_PACKET_TEMPLATE.md
+- agent-system/03_templates/BOOTSTRAP_TASK_PACKET_TEMPLATE.md
+- agent-system/03_templates/AGENT_RESULT_TEMPLATE.md
+- agent-system/03_templates/ORCHESTRATOR_TASK_HANDOFF_TEMPLATE.md
+- agent-system/03_templates/RESEARCH_REQUEST_TEMPLATE.md
+- agent-system/03_templates/RESEARCH_RESULT_TEMPLATE.md
+- agent-system/03_templates/DESIGN_CONTINUATION_TASK_TEMPLATE.md
+- agent-system/04_state/RUNTIME_STATE_SCHEMA.md
+- agent-system/04_state/NEXT_ACTION_TEMPLATE.md
+- agent-system/04_state/TASK_REGISTRY_TEMPLATE.md
+- agent-system/07_lifecycle/PROJECT_LIFECYCLE.md
+- agent-system/07_lifecycle/DESIGN_STAGE.md
+- agent-system/07_lifecycle/DESIGN_RESEARCH_LOOP.md
+- agent-system/09_validators/VALIDATOR_SPEC.md
+- agent-system/09_validators/TASK_PACKET_VALIDATION_RULES.md
+- agent-system/09_validators/RESULT_VALIDATION_RULES.md
+- agent-system/09_validators/TRANSITION_VALIDATION_RULES.md
+- agent-system/09_validators/CROSS_LINK_VALIDATION_RULES.md
+- agent-system/09_validators/RUNTIME_CONSISTENCY_RULES.md
+- agent-system/09_validators/RESEARCH_RETURN_VALIDATION_RULES.md
+- agent-system/09_validators/REASONING_LEVEL_VALIDATION_RULES.md
+- agent-system/09_validators/schemas/task_packet.schema.json
+- agent-system/09_validators/schemas/result.schema.json
+- agent-system/09_validators/schemas/next_action.schema.json
+- agent-system/09_validators/schemas/task_registry.schema.json
+- agent-system/10_examples/FINAL_SMOKE_CHECKLIST.md
+- agent-system/10_examples/EXPECTED_FLOW_EXAMPLE.md
+AFFECTED_INVARIANTS:
+- Research Dependency Loop distinguishes RESEARCH_DEPENDENCY from GAP and BLOCKER.
+- Design Research Loop requires designer not to guess when factual evidence is missing.
+- Requester Return Protocol requires explicit return metadata and independent audit pass before requester continuation.
+- Reasoning level model defines low/default/high/maximum/role_default, role defaults, and gate-required floors.
+- Runtime tuple validation explicitly includes CURRENT_GATE.ACTION_SEMANTIC and NEXT_ACTION.ACTION_SEMANTIC.
+- Profile agents still never commit or push.
+- One-agent-one-task, fresh context, audit gate, and bootstrap canonical path invariants remain unchanged.
+AFFECTED_TRANSITIONS:
+- requester task -> research_dependency -> research RESULT -> auditor -> audit pass -> requester continuation
+- research audit fail/blocked/gap -> correction, blocked/GAP handling, governed update_state, or owner handling; no requester continuation
+- designer missing factual evidence -> research_dependency -> audited research -> design_continuation
+- reasoning level below gate-required floor -> dispatch blocked and governed correction
+SCHEMA_TEMPLATE_IMPACT: both
+MIGRATION_REQUIRED: yes
+MIGRATION_NOTE: Active package and governance ruleset versions change to 1.3.0 and runtime schema version changes to 1.2.0. Existing runtime state and task registries must be checked for requester return context, task kind, reasoning level fields, task registry return metadata, and ACTION_SEMANTIC tuple parity before normal dispatch. This feature upgrade must not use 1.2.1 as the active tuple.
+AUTHORIZED_BY: project_owner
+AUDIT_REQUIRED: yes
+STATUS: proposed
 ```

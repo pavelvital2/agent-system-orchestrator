@@ -12,7 +12,9 @@ agent-system/03_templates/TASK_PACKET_TEMPLATE.md
 agent-system/02_runtime/FILESYSTEM_GOVERNANCE.md
 agent-system/02_runtime/STATE_TRANSITION_RULES.md
 agent-system/02_runtime/ACCEPTED_STATE_LOCKING.md
+agent-system/02_runtime/REQUESTER_RETURN_PROTOCOL.md
 agent-system/04_state/RUNTIME_STATE_SCHEMA.md
+agent-system/09_validators/REASONING_LEVEL_VALIDATION_RULES.md
 ```
 
 ## Required structure
@@ -34,6 +36,10 @@ A task packet is invalid when:
 - acceptance criteria expand beyond scope in;
 - expected outputs are not verifiable;
 - workflow fields contradict governance.
+- `REASONING_LEVEL` is missing, invalid, below the gate-required floor, or
+  lowered below role default without a valid mechanical-task `OVERRIDE_REASON`;
+- `TASK_KIND: research_dependency` lacks requester return metadata or expected
+  research evidence.
 
 ## ACTIVE_DOC_ROOT checks
 
@@ -104,6 +110,52 @@ A task packet is invalid when it allows or requires:
 - audit fail to Git checkpoint;
 - correction without a fresh bounded task where correction is required;
 - terminal completion by profile-agent RESULT alone.
+- requester continuation before research audit pass;
+- audit fail, blocked, or gap routing to requester continuation;
+- research dependency used as a substitute for GAP or BLOCKER handling.
+
+## Reasoning level checks
+
+Allowed levels are:
+
+```text
+low
+default
+high
+maximum
+role_default
+```
+
+Task packets may raise reasoning level freely. They may lower below role
+default only for mechanical bounded tasks and only with `OVERRIDE_REASON`.
+They must not lower below the gate-required floor. `low` is forbidden for
+design, requirements, audit, correction after failed audit,
+lifecycle/state/transition changes, security/secrets policy, launch/release
+readiness, final acceptance, and cross-link validation.
+
+## Research dependency checks
+
+For `TASK_KIND: research_dependency`, validators must require:
+
+```text
+REQUESTED_BY_ROLE
+REQUESTED_BY_TASK
+RESEARCH_QUESTION_ID
+RESEARCH_PURPOSE
+RESEARCH_QUESTIONS
+ALLOWED_SOURCES
+FORBIDDEN_SOURCES
+EXPECTED_EVIDENCE
+EXPECTED_OUTPUT
+RETURN_TO_REQUESTER_AFTER_AUDIT_PASS
+RETURN_TO_ROLE_AFTER_AUDIT_PASS
+RETURN_TASK_AFTER_AUDIT_PASS
+AUDIT_REQUIREMENTS: mandatory
+```
+
+Research dependencies are invalid if they request owner decisions, omit allowed
+or forbidden sources, omit expected evidence, or allow requester return before
+independent audit pass.
 
 ## Role enum checks
 

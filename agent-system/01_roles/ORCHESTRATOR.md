@@ -26,6 +26,8 @@
 - refuses dispatch during governance freeze;
 - logs failed/blocked/gap results before correction routing;
 - performs orchestrator finalization only after terminal invariants pass.
+- routes audited research dependencies through `REQUESTER_RETURN_PROTOCOL.md`;
+- enforces explicit `REASONING_LEVEL` values and gate-required floors before dispatch.
 
 ## Оркестратор не делает
 
@@ -73,13 +75,42 @@
 
 ## Уровень рассуждения агентов
 
-По умолчанию:
+Allowed reasoning levels:
 
-- orchestrator: default
-- designer / проектировщик: maximum
-- auditor / аудитор: high
-- developer / разработчик: default
-- tester / тестировщик: default
-- technical writer / техрайтер: default
+```text
+low
+default
+high
+maximum
+role_default
+```
 
-Если task packet явно требует иной уровень, используется уровень из task packet.
+Role defaults:
+
+```text
+orchestrator: default
+requirements_analyst: maximum
+designer: maximum
+developer: default
+auditor: high
+tester: high
+technical_writer: default
+devops_setup_engineer: high
+release_manager: high
+```
+
+If a task packet sets `REASONING_LEVEL.VALUE: role_default`, the orchestrator
+must resolve it to the default for `TARGET_ROLE` before gate-floor validation.
+
+Task packets may raise reasoning level freely. A task packet may lower below
+the role default only for mechanical bounded tasks and only with
+`OVERRIDE_REASON`.
+
+The orchestrator must reject dispatch when the requested level is below a
+gate-required floor from
+`agent-system/09_validators/REASONING_LEVEL_VALIDATION_RULES.md`.
+
+`low` is valid only for mechanical bounded tasks and is forbidden for design,
+requirements, audit, correction after failed audit, lifecycle/state/transition
+changes, security/secrets policy, launch/release readiness, final acceptance,
+and cross-link validation.

@@ -49,7 +49,19 @@
         }
       ]
     },
-    "NEXT_RECOMMENDED_ACTION": { "$ref": "#/$defs/listOrNone" }
+    "NEXT_RECOMMENDED_ACTION": { "$ref": "#/$defs/listOrNone" },
+    "RESEARCH_QUESTION_ID": { "type": "string" },
+    "RESEARCH_SUMMARY": { "$ref": "#/$defs/listOrNone" },
+    "SOURCES_USED": { "$ref": "#/$defs/listOrNone" },
+    "EVIDENCE_MATRIX": {
+      "oneOf": [
+        { "const": "NONE" },
+        { "type": "array", "items": { "$ref": "#/$defs/researchEvidenceRow" } }
+      ]
+    },
+    "UNRESOLVED_FINDINGS": { "$ref": "#/$defs/listOrNone" },
+    "DESIGN_OR_TASK_IMPLICATIONS": { "$ref": "#/$defs/listOrNone" },
+    "RECOMMENDED_NEXT_ACTION": { "$ref": "#/$defs/listOrNone" }
   },
   "$defs": {
     "listOrNone": {
@@ -95,6 +107,18 @@
         },
         "RECOMMENDED_OPTION": { "type": "string", "enum": ["A", "B", "C"] },
         "REASON": { "type": "string" }
+      }
+    },
+    "researchEvidenceRow": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["QUESTION", "SOURCE", "FINDING", "CONFIDENCE", "LIMITATION"],
+      "properties": {
+        "QUESTION": { "type": "string" },
+        "SOURCE": { "type": "string" },
+        "FINDING": { "type": "string" },
+        "CONFIDENCE": { "type": "string", "enum": ["low", "default", "high", "maximum"] },
+        "LIMITATION": { "type": "string" }
       }
     }
   }

@@ -29,6 +29,7 @@ agent-system/02_runtime/AGENT_LIFECYCLE.md
 agent-system/02_runtime/FILESYSTEM_GOVERNANCE.md
 agent-system/02_runtime/GOVERNANCE_AUTHORITY.md
 agent-system/02_runtime/HANDOFF_PROTOCOL.md
+agent-system/02_runtime/REQUESTER_RETURN_PROTOCOL.md
 agent-system/02_runtime/ACCEPTED_STATE_LOCKING.md
 agent-system/02_runtime/VIOLATION_RECOVERY.md
 agent-system/02_runtime/POST_AUDIT_GIT_CHECKPOINT.md
@@ -44,6 +45,9 @@ agent-system/03_templates/SETUP_TASK_TEMPLATE.md
 agent-system/03_templates/RUN_SMOKE_CHECKLIST_TEMPLATE.md
 agent-system/03_templates/LAUNCH_READINESS_CHECKLIST_TEMPLATE.md
 agent-system/03_templates/HANDOVER_CHECKLIST_TEMPLATE.md
+agent-system/03_templates/RESEARCH_REQUEST_TEMPLATE.md
+agent-system/03_templates/RESEARCH_RESULT_TEMPLATE.md
+agent-system/03_templates/DESIGN_CONTINUATION_TASK_TEMPLATE.md
 agent-system/04_state/RUNTIME_STATE_SCHEMA.md
 agent-system/04_state/PROJECT_STATE_TEMPLATE.md
 agent-system/04_state/CURRENT_GATE_TEMPLATE.md
@@ -59,6 +63,7 @@ agent-system/07_lifecycle/PROJECT_LIFECYCLE.md
 agent-system/07_lifecycle/BOOTSTRAP_STAGE.md
 agent-system/07_lifecycle/REQUIREMENTS_STAGE.md
 agent-system/07_lifecycle/DESIGN_STAGE.md
+agent-system/07_lifecycle/DESIGN_RESEARCH_LOOP.md
 agent-system/07_lifecycle/IMPLEMENTATION_STAGE.md
 agent-system/07_lifecycle/TESTING_STAGE.md
 agent-system/07_lifecycle/SETUP_STAGE.md
@@ -85,6 +90,8 @@ agent-system/09_validators/TASK_PACKET_VALIDATION_RULES.md
 agent-system/09_validators/TRANSITION_VALIDATION_RULES.md
 agent-system/09_validators/GIT_CHECKPOINT_VALIDATION_RULES.md
 agent-system/09_validators/CROSS_LINK_VALIDATION_RULES.md
+agent-system/09_validators/RESEARCH_RETURN_VALIDATION_RULES.md
+agent-system/09_validators/REASONING_LEVEL_VALIDATION_RULES.md
 agent-system/09_validators/schemas/project_state.schema.json
 agent-system/09_validators/schemas/current_gate.schema.json
 agent-system/09_validators/schemas/next_action.schema.json
@@ -123,7 +130,7 @@ BOOTSTRAP_REQUIREMENTS_ROUTING:
   ORCHESTRATOR_START and BOOTSTRAP_STAGE do not hard-code designer as the only
   first profile agent. They route incomplete, ambiguous, or uncertain input to
   requirements_analyst and allow direct designer routing only for sufficiently
-  structured input. Routing examples use v1.2.0 NEXT_ACTION fields:
+  structured input. Routing examples use current NEXT_ACTION fields:
   ACTION_TYPE, TARGET_ROLE, TASK_ID, TASK_PACKET, DEPENDENCY_STATUS, and
   BLOCKED_BY. The first profile-agent TASK_PACKET is a valid bootstrap task
   packet using the canonical path convention
@@ -157,9 +164,9 @@ TASK_RESULT_ALIGNMENT:
 
 RESULT_ACTION_FIELD_ALIGNMENT:
   AGENT_RESULT_TEMPLATE, RESULT_VALIDATION_RULES, runtime loop, and result
-  schema require NEXT_RECOMMENDED_ACTION as the canonical v1.2.0 RESULT field.
+  schema require NEXT_RECOMMENDED_ACTION as the canonical RESULT field.
   NEXT_REQUIRED_ACTION appears only as a documented legacy alias and is not
-  required by v1.2.0 validators.
+  required by current validators.
 
 STATE_ALIGNMENT:
   runtime state templates, task registry, accepted artifacts registry, logs,
@@ -173,9 +180,41 @@ STATE_ALIGNMENT:
   BLOCKING_STATUS, and NOTES.
   RUNTIME_STATE_SCHEMA, NEXT_ACTION_TEMPLATE, and next_action.schema.json
   represent the same NEXT_ACTION mandatory fields, including ACTION_SEMANTIC,
+  REQUESTER_RETURN_CONTEXT,
   BLOCKING_OR_RESUME_CONTEXT, REQUIRED_UNIVERSAL_DOCS,
   REQUIRED_PROJECT_DOCS, EXPECTED_RESULT, and
   INSTRUCTION_FOR_ORCHESTRATOR.
+  Runtime tuple validation explicitly includes CURRENT_GATE.ACTION_SEMANTIC
+  and NEXT_ACTION.ACTION_SEMANTIC.
+
+RESEARCH_DEPENDENCY_LOOP:
+  REQUESTER_RETURN_PROTOCOL, DESIGN_RESEARCH_LOOP, RESEARCH_REQUEST_TEMPLATE,
+  RESEARCH_RESULT_TEMPLATE, DESIGN_CONTINUATION_TASK_TEMPLATE,
+  RESEARCH_RETURN_VALIDATION_RULES, task_packet.schema.json,
+  result.schema.json, next_action.schema.json, and task_registry.schema.json
+  all represent research dependency routing. Smoke evidence must confirm that
+  RESEARCH_DEPENDENCY is distinct from GAP and BLOCKER, exact questions and
+  allowed/forbidden sources are required, expected evidence/output are
+  required, and requester continuation is blocked until independent audit pass.
+  Audit fail, blocked, or gap must route to correction/blocked/GAP handling,
+  not requester continuation.
+
+REQUESTER_RETURN_PROTOCOL_ALIGNMENT:
+  Task packets, task registry entries, and NEXT_ACTION preserve
+  REQUESTED_BY_ROLE, REQUESTED_BY_TASK,
+  RETURN_TO_REQUESTER_AFTER_AUDIT_PASS,
+  RETURN_TO_ROLE_AFTER_AUDIT_PASS, and
+  RETURN_TASK_AFTER_AUDIT_PASS where applicable. The orchestrator must not
+  infer return targets from informal context.
+
+REASONING_LEVEL_ALIGNMENT:
+  Allowed levels are low, default, high, maximum, and role_default. Role
+  defaults include tester: high. Task packets may raise reasoning level freely,
+  may lower it only for mechanical bounded tasks with OVERRIDE_REASON, and may
+  never lower below gate-required floor. Low is forbidden for design,
+  requirements, audit, correction after failed audit, lifecycle/state/transition
+  changes, security/secrets policy, launch/release readiness, final acceptance,
+  and cross-link validation.
 
 RUNTIME_FILE_SET_ALIGNMENT:
   Mandatory runtime file lists in start, runtime loop, runtime state schema,
@@ -232,8 +271,8 @@ AUDIT_CHECKPOINT_ALIGNMENT:
   devops_setup_engineer, and release_manager.
 
 MINIMAL_FIXTURE_SCHEMA_ALIGNMENT:
-  MINIMAL_EXAMPLE_FIXTURE uses the active v1.2.0 runtime tuple, the canonical
-  nine runtime file dependencies, v1.2.0 NEXT_ACTION fields, and task packet
+  MINIMAL_EXAMPLE_FIXTURE uses the active v1.3.0 runtime tuple, the canonical
+  nine runtime file dependencies, current NEXT_ACTION fields, and task packet
   fields compatible with TASK_PACKET_TEMPLATE and task_packet.schema.json.
   Example task packets route outcomes through MANDATORY_WORKFLOW,
   NEXT_ROLE_ON_PASS, NEXT_ROLE_ON_FAIL, NEXT_ROLE_ON_BLOCKED, and
@@ -283,8 +322,9 @@ PROJECT_AGNOSTIC_ALIGNMENT:
   universal core docs remain free of project-specific business implementation
   and named external-platform terminology.
 
-PRE_1_2_1_CORRECTION_CHAIN_COVERAGE:
-  Final smoke evidence must explicitly cover CORR_ASU_120_017 through
+HISTORICAL_PRE_1_2_1_CORRECTION_CHAIN_COVERAGE:
+  Historical smoke evidence for the v1.2.0 correction chain must cover
+  CORR_ASU_120_017 through
   CORR_ASU_120_021. Coverage must show that bootstrap first profile dispatch
   uses a valid bootstrap task packet protocol; example profile-agent outputs
   stay under an active documentation root and do not allow writes to
@@ -292,9 +332,8 @@ PRE_1_2_1_CORRECTION_CHAIN_COVERAGE:
   sidecar lists; STATUS_SUMMARY sidecar policy is explicit; and
   ACTION_SEMANTIC plus SEMANTIC_REASON have parity across PROJECT_STATE
   template, runtime schema, JSON schema, runtime consistency validation, and
-  smoke validation. This correction-chain smoke coverage does not install
-  v1.2.1, does not alter reasoning-level policy, and preserves the rule that
-  profile agents never commit or push.
+  smoke validation. This historical correction-chain coverage did not install
+  v1.2.1 and preserved the rule that profile agents never commit or push.
 
 BOOTSTRAP_ACTIVE_DOC_ROOT_EXCEPTION_SYNC:
   Smoke evidence must verify that the only active task packet exception outside
@@ -305,7 +344,7 @@ BOOTSTRAP_ACTIVE_DOC_ROOT_EXCEPTION_SYNC:
   without a task packet, and multiple simultaneously active first bootstrap
   task packets are invalid.
 
-FINAL_PRE_1_2_1_READINESS_SMOKE:
+VERSIONED_READINESS_SMOKE:
   Final smoke evidence must explicitly verify the bootstrap canonical path
   convention in ORCHESTRATOR_START, BOOTSTRAP_STAGE,
   BOOTSTRAP_TASK_PACKET_TEMPLATE, runtime loop, filesystem governance, state
@@ -317,16 +356,16 @@ FINAL_PRE_1_2_1_READINESS_SMOKE:
   TASK_PACKET_TEMPLATE and schemas/task_packet.schema.json, including
   MANDATORY_WORKFLOW and NEXT_ROLE_ON_* routing fields, and must confirm that
   task packet examples do not include RESULT-only NEXT_RECOMMENDED_ACTION.
-  Evidence must also confirm changelog traceability for the current accepted
-  correction chain, canonical nine-file runtime set stability, version tuple
-  stability, v1.2.1 absence, and reasoning-level policy absence.
+  Evidence must also confirm changelog traceability, canonical nine-file
+  runtime set stability, active version tuple, and whether the current versioned
+  task changes reasoning-level policy.
 
 CHANGELOG_TRACEABILITY_SYNC:
   Governance changelog evidence must explicitly cover CORR_ASU_120_017 through
   CORR_ASU_120_021 and CORR_ASU_120_022 through CORR_ASU_120_026 or the
   current accepted scope of that chain. Coverage must include representative
-  affected files, affected invariants, version tuple stability, v1.2.1 absence,
-  and reasoning-level policy absence.
+  affected files, affected invariants, version tuple impact, and
+  reasoning-level policy impact for the relevant versioned task.
 
 CORR_ASU_120_027_FINAL_PRE_121_CONSISTENCY_CLEANUP:
   Final smoke evidence must explicitly verify removal of standalone REQUESTER
@@ -339,13 +378,11 @@ CORR_ASU_120_027_FINAL_PRE_121_CONSISTENCY_CLEANUP:
   AUDIT and FINAL_ACCEPTANCE aliases, CROSS_LINK_VALIDATION_RULES coverage, and
   GOVERNANCE_CHANGELOG traceability for CORR_ASU_120_027.
 
-NEXT_VERSION_ABSENCE:
-  final smoke and cross-link corrections do not install next-version feature
-  docs, fields, roles, runtime enums, or version constants.
-
-REASONING_LEVEL_POLICY_ABSENCE:
-  final smoke and cross-link corrections do not change reasoning-level policy
-  or add reasoning-level fields, roles, validators, or runtime requirements.
+V1_3_0_VERSION_ALIGNMENT:
+  active package tuple is CURRENT_PACKAGE_VERSION: 1.3.0,
+  CURRENT_GOVERNANCE_RULESET_VERSION: 1.3.0, and
+  CURRENT_RUNTIME_SCHEMA_VERSION: 1.2.0. This feature upgrade must not use
+  1.2.1 as the active tuple.
 ```
 
 ## Final smoke evidence format

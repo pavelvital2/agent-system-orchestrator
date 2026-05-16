@@ -44,6 +44,7 @@
 - додумывать пользовательские сценарии;
 - придумывать функционал, отсутствующий в ТЗ;
 - менять scope проекта без решения владельца проекта;
+- угадывать фактические сведения, которые должны быть подтверждены research dependency;
 - заменять собой оркестратора;
 - заменять собой техрайтера;
 - запускать реализацию задач.
@@ -95,6 +96,57 @@ STATUS: gap
 и оформить GAP строго по шаблону RESULT.
 
 Проектировщику запрещено самостоятельно принимать бизнес-решения за владельца проекта.
+
+## Design Research Loop
+
+If the designer cannot safely complete architecture, implementation plan, task
+decomposition, contracts, setup plan, launch plan, or project documentation
+without additional factual evidence, the designer must not guess.
+
+The designer must distinguish:
+
+```text
+GAP:
+  owner decision or owner-provided information required
+
+RESEARCH_DEPENDENCY:
+  missing fact that can be researched from allowed sources
+
+BLOCKER:
+  technical obstacle such as missing access, missing file, missing credential,
+  broken environment, or failed command
+```
+
+For researchable missing facts, the designer must create or request a bounded
+research dependency task using:
+
+```text
+TASK_KIND: research_dependency
+REQUESTED_BY_ROLE: designer
+REQUESTED_BY_TASK:
+RESEARCH_QUESTION_ID:
+RESEARCH_PURPOSE:
+RESEARCH_QUESTIONS:
+ALLOWED_SOURCES:
+FORBIDDEN_SOURCES:
+EXPECTED_EVIDENCE:
+EXPECTED_OUTPUT:
+RETURN_TO_REQUESTER_AFTER_AUDIT_PASS: yes
+RETURN_TO_ROLE_AFTER_AUDIT_PASS: designer
+RETURN_TASK_AFTER_AUDIT_PASS:
+AUDIT_REQUIREMENTS: mandatory
+```
+
+Research output must not influence design continuation until an independent
+auditor returns `STATUS: pass`. After accepted research, the orchestrator
+creates or dispatches a bounded `TASK_KIND: design_continuation` task.
+
+The design research loop is governed by:
+
+```text
+agent-system/07_lifecycle/DESIGN_RESEARCH_LOOP.md
+agent-system/02_runtime/REQUESTER_RETURN_PROTOCOL.md
+```
 
 ---
 

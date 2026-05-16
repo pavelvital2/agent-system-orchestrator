@@ -18,6 +18,8 @@ Validators help the orchestrator detect:
 - unsafe or unauthorized file changes;
 - unsafe Git checkpoint attempts;
 - stale or missing package cross-links;
+- unsafe research dependency return routing;
+- invalid reasoning level assignments;
 - secret-handling violations.
 
 ## Source of authority
@@ -47,6 +49,8 @@ agent-system/09_validators/TASK_PACKET_VALIDATION_RULES.md
 agent-system/09_validators/TRANSITION_VALIDATION_RULES.md
 agent-system/09_validators/GIT_CHECKPOINT_VALIDATION_RULES.md
 agent-system/09_validators/CROSS_LINK_VALIDATION_RULES.md
+agent-system/09_validators/RESEARCH_RETURN_VALIDATION_RULES.md
+agent-system/09_validators/REASONING_LEVEL_VALIDATION_RULES.md
 ```
 
 ## Machine-readable schema sidecars
@@ -103,6 +107,8 @@ before_dispatch:
   runtime consistency
   task packet validity
   transition validity
+  reasoning level floor validity
+  research/requester return validity when applicable
 
 after_agent_result:
   result validity
@@ -117,11 +123,13 @@ after_audit_result:
   result validity
   transition validity
   accepted-state rules
+  research/requester return validity when applicable
 
 before_git_checkpoint:
   Git checkpoint validity
   secret-safety checks
   allowed/forbidden file checks
+  research return blocked unless audit pass preconditions hold
 ```
 
 ## Role enum validation baseline

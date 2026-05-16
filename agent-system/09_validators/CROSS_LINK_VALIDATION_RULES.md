@@ -17,6 +17,8 @@ agent-system/README.md
 agent-system/07_lifecycle/PROJECT_LIFECYCLE.md
 agent-system/09_validators/VALIDATOR_SPEC.md
 agent-system/10_examples/FINAL_SMOKE_CHECKLIST.md
+agent-system/02_runtime/REQUESTER_RETURN_PROTOCOL.md
+agent-system/07_lifecycle/DESIGN_RESEARCH_LOOP.md
 ```
 
 Cross-link rules complement the validator set documented in
@@ -100,7 +102,7 @@ active first bootstrap task packet at the same time.
 Every role referenced in templates, state files, transition rules, validator
 rules, or README routing text must map to one of:
 
-- an existing role file in `agent-system/01_roles/`;
+- an existing role file in the `01_roles/` package directory;
 - an explicit control or routing pseudo-role defined by validator rules.
 
 Profile execution roles must have matching role files. Control and routing
@@ -149,12 +151,27 @@ completion, or Git checkpoint.
 ## Template link checks
 
 Every template referenced by role, runtime, state, validator, smoke, or README
-docs must exist in `agent-system/03_templates/`, `agent-system/04_state/`,
-`agent-system/05_gap_flow/`, or `agent-system/06_logs/` as applicable.
+docs must exist in the package template, state, gap-flow, or log directories as
+applicable.
 
 Template validation must catch stale template names, missing schema sidecars
 when a sidecar is documented as present, and references that use a non-canonical
 template path for the same package object.
+
+Research-return template validation must cross-check:
+
+```text
+agent-system/02_runtime/REQUESTER_RETURN_PROTOCOL.md
+agent-system/03_templates/RESEARCH_REQUEST_TEMPLATE.md
+agent-system/03_templates/RESEARCH_RESULT_TEMPLATE.md
+agent-system/03_templates/DESIGN_CONTINUATION_TASK_TEMPLATE.md
+agent-system/07_lifecycle/DESIGN_RESEARCH_LOOP.md
+agent-system/09_validators/RESEARCH_RETURN_VALIDATION_RULES.md
+```
+
+These documents are inconsistent if they allow unaudited research to return to
+the requester, omit requester return metadata, treat research dependency as a
+GAP or BLOCKER substitute, or infer return targets from informal context.
 
 Schema sidecar validation must catch stale sidecar lists across validator,
 runtime state schema, and final smoke source-of-truth documents. A sidecar that
@@ -209,6 +226,8 @@ agent-system/09_validators/TASK_PACKET_VALIDATION_RULES.md
 agent-system/09_validators/TRANSITION_VALIDATION_RULES.md
 agent-system/09_validators/GIT_CHECKPOINT_VALIDATION_RULES.md
 agent-system/09_validators/CROSS_LINK_VALIDATION_RULES.md
+agent-system/09_validators/RESEARCH_RETURN_VALIDATION_RULES.md
+agent-system/09_validators/REASONING_LEVEL_VALIDATION_RULES.md
 ```
 
 If a validator is referenced by smoke evidence or another validator rule, the
@@ -277,13 +296,12 @@ task packet to bypass the orchestrator-owned post-audit Git checkpoint, commit
 or push without auditor `STATUS: pass`, or stage files outside the audited task
 allowed scope.
 
-## Final pre-1.2.1 readiness checks
+## Versioned readiness checks
 
-Final pre-1.2.1 readiness validation must cross-check the final smoke checklist
+Versioned readiness validation must cross-check the final smoke checklist
 against the bootstrap, task packet, runtime, validator, example, README,
 versioning, and changelog documents. It is a documentation-level package smoke
-check and must not install a new package version or require runtime
-initialization.
+check and does not require runtime initialization.
 
 The readiness check fails if any current package document contradicts the
 canonical bootstrap task packet path:
@@ -318,13 +336,26 @@ bootstrap role documents explicitly to
 Runtime schema parity must compare `RUNTIME_STATE_SCHEMA.md`,
 `CURRENT_GATE_TEMPLATE.md`, `NEXT_ACTION_TEMPLATE.md`,
 `schemas/current_gate.schema.json`, and `schemas/next_action.schema.json`.
+The runtime tuple must explicitly include `CURRENT_GATE.ACTION_SEMANTIC` and
+`NEXT_ACTION.ACTION_SEMANTIC`.
 `CURRENT_GATE` and `NEXT_ACTION` mandatory fields must be represented directly
 or by documented Markdown section-to-schema mapping.
 
 Changelog traceability must verify that accepted governance changelog entries
 cover the current correction-chain scope, representative affected files,
-affected invariants, unchanged active version tuple, absence of v1.2.1
-installation, and absence of reasoning-level policy changes.
+affected invariants, active version tuple impact, and the presence or absence
+of reasoning-level policy changes for the relevant versioned task.
+
+For v1.3.0, readiness checks must confirm the active tuple:
+
+```text
+CURRENT_PACKAGE_VERSION: 1.3.0
+CURRENT_GOVERNANCE_RULESET_VERSION: 1.3.0
+CURRENT_RUNTIME_SCHEMA_VERSION: 1.2.0
+```
+
+They must also confirm that `1.2.1` is not used as the active tuple for this
+feature upgrade.
 
 ## Changelog traceability checks
 

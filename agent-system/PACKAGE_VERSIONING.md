@@ -19,9 +19,9 @@ RUNTIME_SCHEMA_VERSION:
 ## Active version constants
 
 ```text
-CURRENT_PACKAGE_VERSION: 1.2.0
-CURRENT_GOVERNANCE_RULESET_VERSION: 1.2.0
-CURRENT_RUNTIME_SCHEMA_VERSION: 1.1.0
+CURRENT_PACKAGE_VERSION: 1.3.0
+CURRENT_GOVERNANCE_RULESET_VERSION: 1.3.0
+CURRENT_RUNTIME_SCHEMA_VERSION: 1.2.0
 ```
 
 These constants define the active package/governance/schema tuple for runtime validation. They are policy constants, not a release manifest.
@@ -29,9 +29,9 @@ These constants define the active package/governance/schema tuple for runtime va
 ## Correction semantics
 
 Owner-authorized corrections may reconcile internally inconsistent artifacts
-inside the active package version when the intended public package capability is
-already v1.2.0. Such corrections are recorded in `GOVERNANCE_CHANGELOG.md` and
-must state whether the active tuple changed.
+inside an accepted package version when the intended public package capability
+is already installed. Such corrections are recorded in `GOVERNANCE_CHANGELOG.md`
+and must state whether the active tuple changed.
 
 The v1.2.0 correction chain keeps the active tuple unchanged:
 
@@ -49,6 +49,19 @@ package installation.
 These correction entries do not reserve or pre-install any future minor package
 version. A later package installation must use its own owner-authorized bounded
 package update, active tuple change, migration note, and changelog entry.
+
+The v1.3.0 feature upgrade installs:
+
+```text
+CURRENT_PACKAGE_VERSION: 1.3.0
+CURRENT_GOVERNANCE_RULESET_VERSION: 1.3.0
+CURRENT_RUNTIME_SCHEMA_VERSION: 1.2.0
+```
+
+This upgrade adds Research Dependency Loop, Design Research Loop, Requester
+Return Protocol, explicit reasoning-level governance, requester return metadata
+fields, and runtime tuple cleanup for `CURRENT_GATE.ACTION_SEMANTIC` and
+`NEXT_ACTION.ACTION_SEMANTIC`. It must not use `1.2.1` as the active tuple.
 
 ## Version semantics
 

@@ -64,6 +64,25 @@ NEXT_RECOMMENDED_ACTION:
 - <next action>
 ```
 
+For `TASK_KIND: research_dependency`, the RESULT must also include the research
+output fields from:
+
+```text
+agent-system/03_templates/RESEARCH_RESULT_TEMPLATE.md
+```
+
+These fields are:
+
+```text
+RESEARCH_QUESTION_ID
+RESEARCH_SUMMARY
+SOURCES_USED
+EVIDENCE_MATRIX
+UNRESOLVED_FINDINGS
+DESIGN_OR_TASK_IMPLICATIONS
+RECOMMENDED_NEXT_ACTION
+```
+
 ## Status rule
 
 Profile agents may return only these `STATUS` values:
@@ -146,3 +165,7 @@ If a field has no entries, use `NONE`.
 Legacy RESULT consumers may still display or read `NEXT_REQUIRED_ACTION` as an
 alias for older records, but profile agents must emit
 `NEXT_RECOMMENDED_ACTION`.
+
+Research `RECOMMENDED_NEXT_ACTION` is also advisory. It does not replace
+`NEXT_RECOMMENDED_ACTION` and does not authorize requester return before audit
+pass.

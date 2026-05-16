@@ -9,8 +9,10 @@ RESULT payloads.
 
 ```text
 agent-system/03_templates/AGENT_RESULT_TEMPLATE.md
+agent-system/03_templates/RESEARCH_RESULT_TEMPLATE.md
 agent-system/02_runtime/STATE_TRANSITION_RULES.md
 agent-system/02_runtime/FILESYSTEM_GOVERNANCE.md
+agent-system/02_runtime/REQUESTER_RETURN_PROTOCOL.md
 agent-system/02_runtime/ACCEPTED_STATE_LOCKING.md
 ```
 
@@ -166,7 +168,7 @@ runtime state, task registry, current gate, transition rules, blockers, and
 accepted artifacts.
 
 Legacy RESULT readers may accept `NEXT_REQUIRED_ACTION` as an alias when
-reading older records, but current v1.2.0 RESULT validation must require
+reading older records, but current RESULT validation must require
 `NEXT_RECOMMENDED_ACTION`.
 
 Invalid RESULT recommendations include:
@@ -178,6 +180,33 @@ Invalid RESULT recommendations include:
 - tester fail routed to technical writer or finalization;
 - profile agent directly setting project completed;
 - direct progress after a required audit fail.
+- direct requester continuation from unaudited research output.
 
 The orchestrator must validate advisory action against transition rules before
 updating `NEXT_ACTION.md`.
+
+## Research result validation
+
+For `TASK_KIND: research_dependency`, RESULT is invalid unless it includes the
+additional research output fields from
+`agent-system/03_templates/RESEARCH_RESULT_TEMPLATE.md`:
+
+```text
+RESEARCH_QUESTION_ID
+RESEARCH_SUMMARY
+SOURCES_USED
+EVIDENCE_MATRIX
+UNRESOLVED_FINDINGS
+DESIGN_OR_TASK_IMPLICATIONS
+RECOMMENDED_NEXT_ACTION
+```
+
+Research result validation must reject:
+
+- missing source references for factual findings;
+- use of forbidden sources;
+- unredacted secrets;
+- owner decisions treated as research findings instead of GAP;
+- technical execution obstacles treated as research findings instead of
+  BLOCKER;
+- any recommendation that bypasses independent audit before requester return.

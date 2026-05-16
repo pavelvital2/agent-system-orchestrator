@@ -14,6 +14,7 @@
     "DEPENDENCY_STATUS",
     "BLOCKED_BY",
     "ACTION_SEMANTIC",
+    "REQUESTER_RETURN_CONTEXT",
     "BLOCKING_OR_RESUME_CONTEXT",
     "REQUIRED_UNIVERSAL_DOCS",
     "REQUIRED_PROJECT_DOCS",
@@ -40,6 +41,12 @@
     "ACTION_SEMANTIC": {
       "type": "string",
       "enum": ["normal", "wait_for_owner", "pause", "stop_terminal", "completed_state_transition"]
+    },
+    "REQUESTER_RETURN_CONTEXT": {
+      "oneOf": [
+        { "const": "NONE" },
+        { "$ref": "#/$defs/requesterReturnContext" }
+      ]
     },
     "BLOCKING_OR_RESUME_CONTEXT": {
       "oneOf": [
@@ -95,6 +102,36 @@
         "RESOLUTION_PATH": { "type": "string" },
         "OWNER_QUESTION": { "type": "string" },
         "RESUME_CONDITION": { "type": "string" }
+      }
+    },
+    "requesterReturnContext": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "REQUESTED_BY_ROLE",
+        "REQUESTED_BY_TASK",
+        "RETURN_TO_REQUESTER_AFTER_AUDIT_PASS",
+        "RETURN_TO_ROLE_AFTER_AUDIT_PASS",
+        "RETURN_TASK_AFTER_AUDIT_PASS",
+        "RESEARCH_QUESTION_ID",
+        "ACCEPTED_RESEARCH_RESULT_REF",
+        "ACCEPTED_RESEARCH_AUDIT_REF"
+      ],
+      "properties": {
+        "REQUESTED_BY_ROLE": {
+          "type": "string",
+          "enum": ["requirements_analyst", "designer", "developer", "auditor", "tester", "technical_writer", "devops_setup_engineer", "release_manager", "NONE"]
+        },
+        "REQUESTED_BY_TASK": { "type": "string" },
+        "RETURN_TO_REQUESTER_AFTER_AUDIT_PASS": { "type": "string", "enum": ["yes", "no"] },
+        "RETURN_TO_ROLE_AFTER_AUDIT_PASS": {
+          "type": "string",
+          "enum": ["requirements_analyst", "designer", "developer", "auditor", "tester", "technical_writer", "devops_setup_engineer", "release_manager", "none"]
+        },
+        "RETURN_TASK_AFTER_AUDIT_PASS": { "type": "string" },
+        "RESEARCH_QUESTION_ID": { "type": "string" },
+        "ACCEPTED_RESEARCH_RESULT_REF": { "type": "string" },
+        "ACCEPTED_RESEARCH_AUDIT_REF": { "type": "string" }
       }
     }
   }

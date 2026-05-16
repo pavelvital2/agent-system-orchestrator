@@ -16,6 +16,11 @@ after all preconditions pass.
 Profile agents never commit or push. Task packets cannot grant commit or push
 authority to profile agents.
 
+Research dependency results follow the same audit-pass checkpoint rule. If a
+research dependency task requires checkpointing, requester continuation may be
+marked ready only after the independent auditor passes and this checkpoint
+completes successfully.
+
 The orchestrator must not inspect, print, copy, modify, stage, commit, or push
 credentials, secret values, token values, private keys, cookies, or local
 environment files.
@@ -46,6 +51,8 @@ The orchestrator must not stage, commit, or push after:
 - formally invalid profile-agent RESULT;
 - formally invalid auditor RESULT;
 - pending correction for the same work;
+- unaudited research dependency output or research audit fail/blocked/gap when
+  requester continuation is waiting;
 - suspected secret or credential risk in changed, staged, logged, or generated
   checkpoint material;
 - out-of-scope changed files.

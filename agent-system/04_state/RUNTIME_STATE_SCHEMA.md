@@ -19,6 +19,7 @@ Runtime state validation must also comply with:
 ```text
 agent-system/02_runtime/GOVERNANCE_AUTHORITY.md
 agent-system/02_runtime/STATE_TRANSITION_RULES.md
+agent-system/02_runtime/REQUESTER_RETURN_PROTOCOL.md
 agent-system/02_runtime/VIOLATION_RECOVERY.md
 agent-system/02_runtime/ACCEPTED_STATE_LOCKING.md
 agent-system/PACKAGE_VERSIONING.md
@@ -462,6 +463,7 @@ TASK_PACKET:
 DEPENDENCY_STATUS:
 BLOCKED_BY:
 ACTION_SEMANTIC:
+REQUESTER_RETURN_CONTEXT:
 BLOCKING_OR_RESUME_CONTEXT:
 REQUIRED_UNIVERSAL_DOCS:
 REQUIRED_PROJECT_DOCS:
@@ -473,6 +475,7 @@ Markdown section-to-schema mapping:
 
 ```text
 ## Next action -> ACTION_ID, ACTION_TYPE, TARGET_ROLE, TASK_ID, TASK_PACKET, DEPENDENCY_STATUS, BLOCKED_BY, ACTION_SEMANTIC
+## Requester return context -> REQUESTER_RETURN_CONTEXT
 ## Blocking or resume context -> BLOCKING_OR_RESUME_CONTEXT
 ## REQUIRED_UNIVERSAL_DOCS -> REQUIRED_UNIVERSAL_DOCS
 ## REQUIRED_PROJECT_DOCS -> REQUIRED_PROJECT_DOCS
@@ -530,6 +533,23 @@ wait_for_owner
 pause
 stop_terminal
 completed_state_transition
+```
+
+## Requester return context
+
+Required when routing a research dependency, audited dependency, or requester
+continuation. Otherwise use `NONE`.
+
+```text
+## Requester return context
+REQUESTED_BY_ROLE:
+REQUESTED_BY_TASK:
+RETURN_TO_REQUESTER_AFTER_AUDIT_PASS: yes | no
+RETURN_TO_ROLE_AFTER_AUDIT_PASS:
+RETURN_TASK_AFTER_AUDIT_PASS:
+RESEARCH_QUESTION_ID:
+ACCEPTED_RESEARCH_RESULT_REF:
+ACCEPTED_RESEARCH_AUDIT_REF:
 ```
 
 ## Blocking or resume context
@@ -786,10 +806,17 @@ Control pseudo-roles are not profile-agent result roles.
 TASK_ID:
 TASK_TITLE:
 TASK_TYPE:
+TASK_KIND:
 OWNER_ROLE:
 STATUS:
 TASK_PACKET:
 DEPENDENCIES:
+REQUESTED_BY_ROLE:
+REQUESTED_BY_TASK:
+RETURN_TO_REQUESTER_AFTER_AUDIT_PASS:
+RETURN_TO_ROLE_AFTER_AUDIT_PASS:
+RETURN_TASK_AFTER_AUDIT_PASS:
+RESEARCH_QUESTION_ID:
 RESULT_REFS:
 AUDIT_REFS:
 CORRECTION_LINKS:
@@ -813,6 +840,21 @@ tester
 technical_writer
 devops_setup_engineer
 release_manager
+```
+
+`TASK_KIND` допустимые значения:
+
+```text
+normal
+research_dependency
+design_continuation
+task_continuation
+correction
+audit
+testing
+setup
+launch
+handover
 ```
 
 `OWNER_ROLE` uses the control/target role enum:
@@ -849,6 +891,12 @@ completed
 ## Правила
 
 - `DEPENDENCIES` must list prerequisite task ids or `NONE`;
+- `REQUESTED_BY_ROLE`, `REQUESTED_BY_TASK`,
+  `RETURN_TO_REQUESTER_AFTER_AUDIT_PASS`,
+  `RETURN_TO_ROLE_AFTER_AUDIT_PASS`, `RETURN_TASK_AFTER_AUDIT_PASS`, and
+  `RESEARCH_QUESTION_ID` must preserve requester return metadata for research
+  dependency and continuation tasks, otherwise use `NONE` or `no` as
+  applicable;
 - `RESULT_REFS` must reference bounded RESULT records or `NONE`;
 - `AUDIT_REFS` must reference bounded audit records or `NONE`;
 - `CORRECTION_LINKS` must reference correction tasks/results or `NONE`;
@@ -1047,14 +1095,17 @@ CURRENT_GATE.STATUS
 CURRENT_GATE.OWNER_ROLE
 CURRENT_GATE.TASK_ID
 CURRENT_GATE.TASK_PACKET
+CURRENT_GATE.ACTION_SEMANTIC
 NEXT_ACTION.ACTION_TYPE
 NEXT_ACTION.TARGET_ROLE
 NEXT_ACTION.TASK_ID
 NEXT_ACTION.TASK_PACKET
 NEXT_ACTION.DEPENDENCY_STATUS
+NEXT_ACTION.ACTION_SEMANTIC
 GAP_REGISTER.active_gaps
 TASK_REGISTRY.task_statuses
 TASK_REGISTRY.dependencies
+TASK_REGISTRY.requester_return_metadata
 TASK_REGISTRY.result_refs
 TASK_REGISTRY.audit_refs
 TASK_REGISTRY.correction_links

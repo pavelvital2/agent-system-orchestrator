@@ -7,7 +7,8 @@ ROLE:
 <requirements_analyst | designer | developer | auditor | tester | technical_writer | devops_setup_engineer | release_manager>
 
 REASONING_LEVEL:
-<default | high | maximum>
+VALUE: low | default | high | maximum | role_default
+OVERRIDE_REASON: <reason | NONE>
 
 TASK_ID:
 <TASK_ID>
@@ -48,6 +49,8 @@ MANDATORY_RULES:
 - If task packet conflicts with governance or scope, return STATUS: blocked or gap.
 - NEXT_RECOMMENDED_ACTION is advisory, not authoritative; orchestrator validates it before routing.
 - Return result strictly using AGENT_RESULT_TEMPLATE.
+- Follow the assigned REASONING_LEVEL only when it satisfies role default and gate-required floor governance.
+- Do not use unaudited research as accepted input; requester return requires independent audit pass.
 
 EXPECTED_RESULT_FORMAT:
 Use:

@@ -41,6 +41,12 @@ TASK_BOOTSTRAP_<TARGET_ROLE>_001
 active
 ```
 
+## TASK_KIND
+
+```text
+normal
+```
+
 ## SUPERSEDES
 
 ```text
@@ -103,6 +109,13 @@ Rules:
 - Use `designer` only when source input is sufficiently structured for design
   routing under `agent-system/07_lifecycle/BOOTSTRAP_STAGE.md`.
 
+## REASONING_LEVEL
+
+```text
+VALUE: maximum
+OVERRIDE_REASON: NONE
+```
+
 ## DEPENDENCIES
 
 ```text
@@ -113,6 +126,78 @@ Rules:
 
 ```text
 ready
+```
+
+## REQUESTED_BY_ROLE
+
+```text
+NONE
+```
+
+## REQUESTED_BY_TASK
+
+```text
+NONE
+```
+
+## RESEARCH_QUESTION_ID
+
+```text
+NONE
+```
+
+## RESEARCH_PURPOSE
+
+```text
+NONE
+```
+
+## RESEARCH_QUESTIONS
+
+```text
+NONE
+```
+
+## ALLOWED_SOURCES
+
+```text
+NONE
+```
+
+## FORBIDDEN_SOURCES
+
+```text
+NONE
+```
+
+## EXPECTED_EVIDENCE
+
+```text
+NONE
+```
+
+## EXPECTED_OUTPUT
+
+```text
+NONE
+```
+
+## RETURN_TO_REQUESTER_AFTER_AUDIT_PASS
+
+```text
+no
+```
+
+## RETURN_TO_ROLE_AFTER_AUDIT_PASS
+
+```text
+none
+```
+
+## RETURN_TASK_AFTER_AUDIT_PASS
+
+```text
+NONE
 ```
 
 ## PURPOSE

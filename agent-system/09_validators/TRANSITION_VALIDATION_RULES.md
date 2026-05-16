@@ -13,6 +13,7 @@ document lists the validator checks that must catch transition violations.
 ```text
 agent-system/02_runtime/STATE_TRANSITION_RULES.md
 agent-system/02_runtime/ACTION_STATE_SEMANTICS.md
+agent-system/02_runtime/REQUESTER_RETURN_PROTOCOL.md
 agent-system/04_state/RUNTIME_STATE_SCHEMA.md
 ```
 
@@ -40,6 +41,8 @@ After a RESULT, validate:
 - required audit/testing/documentation gates are not skipped;
 - failed, blocked, and gap results are logged before recovery routing;
 - accepted state is updated only after required gates pass.
+- research dependency results do not return to requester continuation before
+  independent audit pass.
 
 ## Required catches
 
@@ -154,6 +157,8 @@ Validators must catch these forbidden transitions:
 - profile-agent RESULT directly setting completed;
 - ordinary project task changing universal package state;
 - ordinary profile agent changing runtime state.
+- unaudited research result routed to requester continuation;
+- research audit fail, blocked, or gap routed to requester continuation.
 
 ## Action semantic checks
 

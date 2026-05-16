@@ -19,6 +19,10 @@ TZ
    design task
 -> if input is sufficiently structured:
    design task
+-> if design needs factual evidence:
+   research_dependency task
+   research audit
+   requester return to design_continuation after audit pass
 -> design audit
 -> post-audit Git checkpoint
 -> implementation task packet
@@ -41,8 +45,9 @@ TZ
 | 2 | Dispatch requirements analyst when input is incomplete, ambiguous, or not clearly design-ready. | `01_roles/REQUIREMENTS_ANALYST.md`, `07_lifecycle/REQUIREMENTS_STAGE.md` | Requirements baseline or GAP. |
 | 3 | Dispatch requirements auditor when a requirements task ran. | `01_roles/AUDITOR.md`, `09_validators/RESULT_VALIDATION_RULES.md` | Audit pass before acceptance. |
 | 4 | Run post-audit checkpoint after requirements audit pass. | `02_runtime/POST_AUDIT_GIT_CHECKPOINT.md`, `09_validators/GIT_CHECKPOINT_VALIDATION_RULES.md` | Commit hash and accepted artifact record. |
-| 5 | Dispatch designer directly from bootstrap only for sufficiently structured input, or after accepted requirements. | `01_roles/DESIGNER.md`, `07_lifecycle/DESIGN_STAGE.md` | Design docs and bounded task packets. |
-| 6 | Dispatch design auditor, then checkpoint on pass. | `02_runtime/STATE_TRANSITION_RULES.md` | Accepted design state. |
+| 5 | Dispatch designer directly from bootstrap only for sufficiently structured input, or after accepted requirements. | `01_roles/DESIGNER.md`, `07_lifecycle/DESIGN_STAGE.md` | Design docs and bounded task packets, or bounded research dependencies when factual evidence is missing. |
+| 6 | If design needs factual evidence, dispatch a research dependency, audit it, then return only to explicit design continuation after audit pass. | `02_runtime/REQUESTER_RETURN_PROTOCOL.md`, `07_lifecycle/DESIGN_RESEARCH_LOOP.md` | Accepted research evidence and `design_continuation` task. |
+| 7 | Dispatch design auditor, then checkpoint on pass. | `02_runtime/STATE_TRANSITION_RULES.md` | Accepted design state. |
 | 7 | Dispatch one profile agent for one task packet. | `03_templates/TASK_PACKET_TEMPLATE.md`, role file for the target role | Structured `RESULT`. |
 | 8 | Dispatch matching auditor. | `01_roles/AUDITOR.md`, `03_templates/AGENT_RESULT_TEMPLATE.md` | Audit pass, fail, blocked, or GAP route. |
 | 9 | Checkpoint only after audit pass. | `02_runtime/ACCEPTED_STATE_LOCKING.md` | Accepted implementation artifact record. |
@@ -126,6 +131,58 @@ POST_AUDIT_GIT_CHECKPOINT:
   records commit hash, branch, push status, accepted files, and task id
 ```
 
+## Research dependency return cycle
+
+```text
+DESIGNER_RESULT:
+  STATUS: pass
+  EVIDENCE:
+  - missing factual evidence was classified as a bounded research dependency,
+    not a blocker or GAP
+  BLOCKERS:
+  - NONE
+  GAPS:
+  - NONE
+  NEXT_RECOMMENDED_ACTION:
+  - create TASK_KIND: research_dependency
+
+RESEARCH_TASK_PACKET:
+  TASK_KIND: research_dependency
+  REQUESTED_BY_ROLE: designer
+  REQUESTED_BY_TASK: TASK_DESIGN_EXAMPLE_001
+  RESEARCH_QUESTION_ID: RQ_DESIGN_001
+  RESEARCH_QUESTIONS:
+  - exact factual question
+  ALLOWED_SOURCES:
+  - bounded source list
+  FORBIDDEN_SOURCES:
+  - secrets and deprecated/archive active use
+  RETURN_TO_REQUESTER_AFTER_AUDIT_PASS: yes
+  RETURN_TO_ROLE_AFTER_AUDIT_PASS: designer
+  RETURN_TASK_AFTER_AUDIT_PASS: TASK_DESIGN_CONTINUE_001
+  AUDIT_REQUIREMENTS: mandatory
+
+RESEARCH_RESULT:
+  RESEARCH_QUESTION_ID: RQ_DESIGN_001
+  SOURCES_USED:
+  - bounded source ref
+  RECOMMENDED_NEXT_ACTION:
+  - advisory only
+
+AUDITOR_RESULT:
+  STATUS: pass
+
+NEXT_ACTION:
+  TARGET_ROLE: designer
+  TASK_ID: TASK_DESIGN_CONTINUE_001
+  REQUESTER_RETURN_CONTEXT:
+    RETURN_TO_ROLE_AFTER_AUDIT_PASS: designer
+    RETURN_TASK_AFTER_AUDIT_PASS: TASK_DESIGN_CONTINUE_001
+```
+
+Unaudited research, audit fail, audit blocked, or audit gap must not route to
+design continuation.
+
 Profile-agent task packets must use the active documentation root, such as
 `project-docs/example/*`, for allowed artifact changes. `project-runtime/*`
 remains reserved for orchestrator-owned runtime seed, state, and log records.
@@ -165,6 +222,8 @@ first profile TASK_PACKET -> plain handoff-only file
 ordinary task packet outside ACTIVE_DOC_ROOT
 multiple active first bootstrap task packets at the same time
 audit fail -> commit accepted state
+unaudited research -> requester continuation
+research audit fail -> requester continuation
 setup/run/launch/handover -> skipped when required evidence is missing
 handover agent -> marks whole project completed directly
 ```

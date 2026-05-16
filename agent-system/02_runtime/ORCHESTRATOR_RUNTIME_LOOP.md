@@ -17,6 +17,7 @@
    - `agent-system/02_runtime/ALLOWED_ORCHESTRATOR_ACTIONS.md`
    - `agent-system/02_runtime/FILESYSTEM_GOVERNANCE.md`
    - `agent-system/02_runtime/GOVERNANCE_AUTHORITY.md`
+   - `agent-system/02_runtime/REQUESTER_RETURN_PROTOCOL.md`
    - `agent-system/02_runtime/ACTION_STATE_SEMANTICS.md`
    - `agent-system/02_runtime/STATE_TRANSITION_RULES.md`
    - `agent-system/02_runtime/POST_AUDIT_GIT_CHECKPOINT.md`
@@ -25,6 +26,9 @@
    - `agent-system/02_runtime/AGENT_LIFECYCLE.md`
    - `agent-system/03_templates/TASK_PACKET_TEMPLATE.md`
    - `agent-system/03_templates/BOOTSTRAP_TASK_PACKET_TEMPLATE.md`
+   - `agent-system/03_templates/RESEARCH_REQUEST_TEMPLATE.md`
+   - `agent-system/03_templates/RESEARCH_RESULT_TEMPLATE.md`
+   - `agent-system/03_templates/DESIGN_CONTINUATION_TASK_TEMPLATE.md`
    - `agent-system/03_templates/ORCHESTRATOR_TASK_HANDOFF_TEMPLATE.md`
    - `agent-system/03_templates/AGENT_RESULT_TEMPLATE.md`
    - `agent-system/04_state/RUNTIME_STATE_SCHEMA.md`
@@ -33,6 +37,8 @@
    - `agent-system/06_logs/AGENT_RESULTS_LOG_TEMPLATE.md`
    - `agent-system/06_logs/ORCHESTRATOR_EVENTS_LOG_TEMPLATE.md`
    - `agent-system/09_validators/GIT_CHECKPOINT_VALIDATION_RULES.md`
+   - `agent-system/09_validators/RESEARCH_RETURN_VALIDATION_RULES.md`
+   - `agent-system/09_validators/REASONING_LEVEL_VALIDATION_RULES.md`
    - `project-runtime/PROJECT_STATE.md`
    - `project-runtime/CURRENT_GATE.md`
    - `project-runtime/NEXT_ACTION.md`
@@ -187,6 +193,19 @@ allowed only after auditor `STATUS: pass`.
 - record branch, commit hash, push status, and accepted files;
 - route to the next governed task only after successful checkpoint completion.
 
+If the audited task has `TASK_KIND: research_dependency` and
+`RETURN_TO_REQUESTER_AFTER_AUDIT_PASS: yes`, the next governed task after audit
+pass and any required checkpoint must be the exact requester continuation
+encoded by:
+
+```text
+RETURN_TO_ROLE_AFTER_AUDIT_PASS
+RETURN_TASK_AFTER_AUDIT_PASS
+```
+
+The orchestrator must not infer requester return targets from memory or
+informal context.
+
 7. Проверить routing blocked/gap issues.
 
 Если blocked/gap относится к:
@@ -338,7 +357,11 @@ Before any `create_agent`, `route_result`, `update_state`, `correction`, `finali
 11. if task-packet validation is required, REQUIRED_DOCS do not include deprecated/archive documents;
 12. if task-packet validation is not required, `TASK_PACKET: NONE` is valid only for `wait_for_owner`, `update_state`, `finalize`, `stop`, or `correction` when allowed by `STATE_TRANSITION_RULES.md`;
 13. role/file permissions match `FILESYSTEM_GOVERNANCE.md`;
-14. requested action is valid under governance-freeze rules.
+14. task packet `REASONING_LEVEL` is valid for allowed values, role default,
+    and gate-required floor;
+15. `TASK_KIND: research_dependency` and requester continuation routing are
+    valid under `REQUESTER_RETURN_PROTOCOL.md`;
+16. requested action is valid under governance-freeze rules.
 
 If any validation fails, dispatch is forbidden.
 

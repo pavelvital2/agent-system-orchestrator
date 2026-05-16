@@ -14,10 +14,17 @@ It must not replace task packets, audit reports, RESULT reports, or project docu
 TASK_ID:
 TASK_TITLE:
 TASK_TYPE:
+TASK_KIND: normal | research_dependency | design_continuation | task_continuation | correction | audit | testing | setup | launch | handover
 OWNER_ROLE:
 STATUS: pending | ready | running | audit_pending | audit_passed | checkpoint_done | blocked | failed | superseded | completed
 TASK_PACKET:
 DEPENDENCIES:
+REQUESTED_BY_ROLE:
+REQUESTED_BY_TASK:
+RETURN_TO_REQUESTER_AFTER_AUDIT_PASS: yes | no
+RETURN_TO_ROLE_AFTER_AUDIT_PASS:
+RETURN_TASK_AFTER_AUDIT_PASS:
+RESEARCH_QUESTION_ID:
 RESULT_REFS:
 AUDIT_REFS:
 CORRECTION_LINKS:
@@ -41,6 +48,12 @@ NONE
 - `TASK_ID` must match the task packet identifier.
 - `STATUS` must reflect the governed lifecycle state, not an agent recommendation alone.
 - `DEPENDENCIES` must list prerequisite task ids or `NONE`.
+- `TASK_KIND` must classify the task without adding a second execution role.
+- Requester return metadata must be populated for `research_dependency`,
+  `design_continuation`, and `task_continuation`; otherwise use `NONE` for
+  role/task/question fields and `RETURN_TO_REQUESTER_AFTER_AUDIT_PASS: no`.
+- `RETURN_TO_ROLE_AFTER_AUDIT_PASS` and `RETURN_TASK_AFTER_AUDIT_PASS` must not
+  route to requester continuation until independent audit pass.
 - `RESULT_REFS` must point to bounded RESULT records or `NONE`.
 - `AUDIT_REFS` must point to bounded audit RESULT records or `NONE`.
 - `CORRECTION_LINKS` must list correction task ids, correction result refs, or `NONE`.

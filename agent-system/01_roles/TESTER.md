@@ -272,7 +272,7 @@ Return blocker to orchestrator for routing.
 Рекомендуемый reasoning level для тестировщика:
 
 ```text
-default
+high
 ```
 
 Если testing task требует неочевидной трактовки продукта, тестировщик не принимает решение самостоятельно, а возвращает GAP.

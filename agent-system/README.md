@@ -26,6 +26,18 @@ The orchestrator coordinates work, but it does not perform profile-agent tasks o
 
 The filesystem is the source of truth. Runtime state, gates, registries, logs, task packets, results, audit results, handoffs, and accepted artifacts are represented as files governed by the package rules.
 
+Research dependencies use a controlled extension of the same sequence:
+
+```text
+requester -> research_dependency task -> research RESULT -> auditor -> audit pass -> requester continuation
+```
+
+Research output must not return to requester continuation before independent
+audit pass. Requester return routing is governed by
+[REQUESTER_RETURN_PROTOCOL.md](02_runtime/REQUESTER_RETURN_PROTOCOL.md), and
+design-specific research is governed by
+[DESIGN_RESEARCH_LOOP.md](07_lifecycle/DESIGN_RESEARCH_LOOP.md).
+
 ## Lifecycle
 
 The universal lifecycle is documented in:
@@ -46,13 +58,14 @@ Dedicated stage documents define gates and responsibilities where a stage is rep
 
 ## Roles
 
-Role instructions live in `agent-system/01_roles/`.
+Role instructions live in the [01_roles/](01_roles/) package directory.
 
 The package includes the orchestrator role, implementation and review roles, documentation and testing roles, plus lifecycle roles for requirements analysis, setup/operations, and release management. Role files define authority boundaries. Profile agents must follow their task packet, read only required docs, change only allowed files, and return the current `AGENT_RESULT_TEMPLATE` structure.
 
 ## Runtime governance
 
-Runtime and governance rules live in `agent-system/02_runtime/`.
+Runtime and governance rules live in the [02_runtime/](02_runtime/) package
+directory.
 
 Key rules cover:
 
@@ -66,17 +79,32 @@ Key rules cover:
 - violation recovery;
 - post-audit Git checkpoint requirements.
 
-Validation rules live in `agent-system/09_validators/` and define checks for task packets, results, transitions, runtime consistency, Git checkpoint readiness, cross-link coverage, and validator specification. Cross-link validation is documented in [CROSS_LINK_VALIDATION_RULES.md](09_validators/CROSS_LINK_VALIDATION_RULES.md).
+Validation rules live in the [09_validators/](09_validators/) package
+directory and define checks for task packets, results, transitions, runtime
+consistency, Git checkpoint readiness, cross-link coverage, and validator
+specification. Cross-link validation is documented in
+[CROSS_LINK_VALIDATION_RULES.md](09_validators/CROSS_LINK_VALIDATION_RULES.md).
+Research return validation is documented in
+[RESEARCH_RETURN_VALIDATION_RULES.md](09_validators/RESEARCH_RETURN_VALIDATION_RULES.md).
+Reasoning-level validation is documented in
+[REASONING_LEVEL_VALIDATION_RULES.md](09_validators/REASONING_LEVEL_VALIDATION_RULES.md).
 
 ## Templates, state, and logs
 
-Templates in `agent-system/03_templates/` define task packets, agent results, handoffs, owner decisions, evidence matrices, findings registers, setup tasks, smoke checks, launch readiness checks, and handover checks.
+Templates in the [03_templates/](03_templates/) package directory define task
+packets, agent results, handoffs, owner decisions, evidence matrices, findings
+registers, setup tasks, smoke checks, launch readiness checks, handover checks,
+research requests, research results, and design continuation tasks.
 
-Runtime state templates in `agent-system/04_state/` define the project state, current gate, next action, accepted artifacts registry, and task registry. Log templates in `agent-system/06_logs/` define agent results, orchestrator events, and status summaries.
+Runtime state templates in the [04_state/](04_state/) package directory define
+the project state, current gate, next action, accepted artifacts registry, and
+task registry. Log templates in the [06_logs/](06_logs/) package directory
+define agent results, orchestrator events, and status summaries.
 
 ## Profiles
 
-Project profiles are optional extensions in `agent-system/08_profiles/`.
+Project profiles are optional extensions in the
+[08_profiles/](08_profiles/) package directory.
 
 Profiles help the orchestrator select relevant role emphasis, evidence expectations, and lifecycle checks for common project types. They do not replace the core runtime, do not weaken governance, and do not introduce domain terms into the universal package.
 
@@ -133,12 +161,12 @@ Governance and package changes are recorded in:
 agent-system/GOVERNANCE_CHANGELOG.md
 ```
 
-Current v1.2.0 tuple:
+Current v1.3.0 tuple:
 
 ```text
-CURRENT_PACKAGE_VERSION: 1.2.0
-CURRENT_GOVERNANCE_RULESET_VERSION: 1.2.0
-CURRENT_RUNTIME_SCHEMA_VERSION: 1.1.0
+CURRENT_PACKAGE_VERSION: 1.3.0
+CURRENT_GOVERNANCE_RULESET_VERSION: 1.3.0
+CURRENT_RUNTIME_SCHEMA_VERSION: 1.2.0
 ```
 
 ## Examples
@@ -177,11 +205,11 @@ deployment, credentials, external source repositories, or business-specific
 implementation.
 
 Final smoke coverage explicitly checks bootstrap requirements/design routing,
-profile-role audit transitions, minimal fixture schema alignment, profile-agent
-Git authority prohibition, changelog traceability, and absence of next-version
-or reasoning-level policy changes. It also covers the final pre-1.2.1
-correction chain for bootstrap task packet protocol, example filesystem
-governance, schema sidecar linkage, STATUS_SUMMARY sidecar policy, and
-PROJECT_STATE semantic field parity without changing the v1.2.0 tuple.
+profile-role audit transitions, research dependency return routing, reasoning
+level floors, minimal fixture schema alignment, profile-agent Git authority
+prohibition, changelog traceability, schema sidecar linkage, STATUS_SUMMARY
+sidecar policy, PROJECT_STATE semantic field parity, and runtime tuple
+validation for `CURRENT_GATE.ACTION_SEMANTIC` and
+`NEXT_ACTION.ACTION_SEMANTIC`.
 
 This repository package does not claim a separate CLI wrapper. It is an instruction, governance, template, lifecycle, and validation package for Codex CLI orchestration.

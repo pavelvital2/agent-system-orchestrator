@@ -110,23 +110,27 @@ BLOCKED_BY: invalid_or_missing_package_file
 6. `agent-system/02_runtime/AGENT_LIFECYCLE.md`
 7. `agent-system/02_runtime/FILESYSTEM_GOVERNANCE.md`
 8. `agent-system/02_runtime/GOVERNANCE_AUTHORITY.md`
-9. `agent-system/02_runtime/STATE_TRANSITION_RULES.md`
-10. `agent-system/02_runtime/VIOLATION_RECOVERY.md`
-11. `agent-system/02_runtime/ACCEPTED_STATE_LOCKING.md`
-12. `agent-system/03_templates/ORCHESTRATOR_TASK_HANDOFF_TEMPLATE.md`
-13. `agent-system/03_templates/AGENT_RESULT_TEMPLATE.md`
-14. `agent-system/03_templates/BOOTSTRAP_TASK_PACKET_TEMPLATE.md`
-15. `agent-system/04_state/RUNTIME_STATE_SCHEMA.md`
-16. `agent-system/04_state/PROJECT_STATE_TEMPLATE.md`
-17. `agent-system/04_state/CURRENT_GATE_TEMPLATE.md`
-18. `agent-system/04_state/NEXT_ACTION_TEMPLATE.md`
-19. `agent-system/05_gap_flow/GAP_FLOW.md`
-20. `agent-system/05_gap_flow/GAP_REGISTER_TEMPLATE.md`
-21. `agent-system/06_logs/AGENT_RESULTS_LOG_TEMPLATE.md`
-22. `agent-system/04_state/TASK_REGISTRY_TEMPLATE.md`
-23. `agent-system/04_state/ACCEPTED_ARTIFACTS_TEMPLATE.md`
-24. `agent-system/06_logs/ORCHESTRATOR_EVENTS_LOG_TEMPLATE.md`
-25. `agent-system/06_logs/STATUS_SUMMARY_TEMPLATE.md`
+9. `agent-system/02_runtime/REQUESTER_RETURN_PROTOCOL.md`
+10. `agent-system/02_runtime/STATE_TRANSITION_RULES.md`
+11. `agent-system/02_runtime/VIOLATION_RECOVERY.md`
+12. `agent-system/02_runtime/ACCEPTED_STATE_LOCKING.md`
+13. `agent-system/03_templates/ORCHESTRATOR_TASK_HANDOFF_TEMPLATE.md`
+14. `agent-system/03_templates/AGENT_RESULT_TEMPLATE.md`
+15. `agent-system/03_templates/BOOTSTRAP_TASK_PACKET_TEMPLATE.md`
+16. `agent-system/03_templates/RESEARCH_REQUEST_TEMPLATE.md`
+17. `agent-system/03_templates/RESEARCH_RESULT_TEMPLATE.md`
+18. `agent-system/03_templates/DESIGN_CONTINUATION_TASK_TEMPLATE.md`
+19. `agent-system/04_state/RUNTIME_STATE_SCHEMA.md`
+20. `agent-system/04_state/PROJECT_STATE_TEMPLATE.md`
+21. `agent-system/04_state/CURRENT_GATE_TEMPLATE.md`
+22. `agent-system/04_state/NEXT_ACTION_TEMPLATE.md`
+23. `agent-system/05_gap_flow/GAP_FLOW.md`
+24. `agent-system/05_gap_flow/GAP_REGISTER_TEMPLATE.md`
+25. `agent-system/06_logs/AGENT_RESULTS_LOG_TEMPLATE.md`
+26. `agent-system/04_state/TASK_REGISTRY_TEMPLATE.md`
+27. `agent-system/04_state/ACCEPTED_ARTIFACTS_TEMPLATE.md`
+28. `agent-system/06_logs/ORCHESTRATOR_EVENTS_LOG_TEMPLATE.md`
+29. `agent-system/06_logs/STATUS_SUMMARY_TEMPLATE.md`
 
 ---
 

@@ -35,6 +35,7 @@ CURRENT_GATE.STATUS
 CURRENT_GATE.OWNER_ROLE
 CURRENT_GATE.TASK_ID
 CURRENT_GATE.TASK_PACKET
+CURRENT_GATE.ACTION_SEMANTIC
 NEXT_ACTION.ACTION_TYPE
 NEXT_ACTION.TARGET_ROLE
 NEXT_ACTION.TASK_ID
@@ -59,6 +60,7 @@ devops_setup_engineer(pass) -> auditor when audit mandatory
 release_manager(pass)   -> auditor when audit mandatory
 requirements_analyst(auditor pass) -> post-audit checkpoint gate, then designer or next requirements task according to NEXT_ACTION/TASK_REGISTRY
 auditor(pass, design)   -> post-audit checkpoint gate, then next audited implementation/correction task
+auditor(pass, research_dependency) -> post-audit checkpoint gate if required, then explicit requester continuation according to RETURN_TO_ROLE_AFTER_AUDIT_PASS and RETURN_TASK_AFTER_AUDIT_PASS
 auditor(pass, impl)     -> tester if testing required, else next governed task/finalization
 devops_setup_engineer(auditor pass) -> post-audit checkpoint gate, then run, launch, documentation, or correction according to gate
 release_manager(auditor pass) -> post-audit checkpoint gate, then final_acceptance, handover, completed, or correction according to gate
@@ -124,6 +126,9 @@ the auditor returns `STATUS: pass`.
 - post-audit Git checkpoint that stages files outside the audited task allowed scope;
 - post-audit Git checkpoint that stages suspected secret or credential material;
 - push after commit failure or checkpoint validation failure;
+- research_dependency result routed to requester continuation before independent auditor pass;
+- audit fail, blocked, or gap for research_dependency routed to requester continuation;
+- requester return target inferred from informal context instead of explicit return metadata;
 - terminal stop used as a temporary pause or owner wait;
 - `ACTION_SEMANTIC: pause` without an active blocker and resume or correction path;
 - `wait_for_owner` without `TARGET_ROLE: project_owner` or an owner-facing blocker/GAP.
@@ -193,6 +198,31 @@ When auditor status is `fail`, `blocked`, or `gap`:
 - dependent work remains blocked;
 - routing must use correction, blocked, GAP, governed update_state, or genuine
   owner handling as permitted by the full runtime tuple.
+
+## Research dependency and requester return routing
+
+`TASK_KIND: research_dependency` is a sequential dependency route, not a GAP,
+not a BLOCKER, and not generalized DAG/parallel orchestration.
+
+A research dependency may return to its requester only when all conditions are
+true:
+
+- the research task packet includes complete requester return metadata;
+- the research executor RESULT is formally valid;
+- the independent auditor returns `STATUS: pass`;
+- any required post-audit Git checkpoint is complete;
+- `TASK_REGISTRY` preserves `REQUESTED_BY_ROLE`, `REQUESTED_BY_TASK`,
+  `RETURN_TO_REQUESTER_AFTER_AUDIT_PASS`,
+  `RETURN_TO_ROLE_AFTER_AUDIT_PASS`, and
+  `RETURN_TASK_AFTER_AUDIT_PASS`;
+- `NEXT_ACTION` routes exactly to the recorded return role and return task.
+
+If audit returns `fail`, `blocked`, or `gap`, requester continuation remains
+blocked and routing must use correction, blocked/GAP handling, governed
+update_state, or owner handling when genuinely required.
+
+The orchestrator must not infer return targets from memory, conversation, or
+informal notes.
 
 When checkpoint commit fails:
 
@@ -318,6 +348,10 @@ Enter correction if any of the following are detected:
 - completed/archived status with NEXT_ACTION not stop.
 - profile-agent pass followed by `DEPENDENCY_STATUS: ready` for dependent work
   before required auditor pass;
+- research_dependency requester continuation marked `ready` before independent
+  audit pass;
+- missing or contradictory requester return metadata in task packet,
+  task registry, or NEXT_ACTION;
 - `ACTION_SEMANTIC: stop_terminal` with unresolved active blockers, active GAPs, failed required gates, or missing finalization evidence;
 - `ACTION_SEMANTIC: pause` with `NEXT_ACTION.ACTION_TYPE: stop`;
 - `ACTION_TYPE: wait_for_owner` with no owner-facing blocker, GAP, or question;

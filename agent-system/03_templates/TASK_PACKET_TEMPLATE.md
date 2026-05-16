@@ -53,6 +53,22 @@ Rules:
 
 ---
 
+## TASK_KIND
+
+```text
+normal | research_dependency | design_continuation | task_continuation | correction | audit | testing | setup | launch | handover
+```
+
+Rules:
+
+- `TASK_KIND` classifies task routing semantics without assigning a second
+  profile role;
+- `research_dependency` must follow `REQUESTER_RETURN_PROTOCOL.md`;
+- `design_continuation` must use only independently audited research inputs;
+- `normal` is used when no special dependency/continuation semantics apply.
+
+---
+
 ## SUPERSEDES
 
 ```text
@@ -157,6 +173,33 @@ Rules:
 
 ---
 
+## REASONING_LEVEL
+
+```text
+VALUE: low | default | high | maximum | role_default
+OVERRIDE_REASON: <reason | NONE>
+```
+
+Rules:
+
+- `role_default` resolves to the default for `TARGET_ROLE`;
+- a task packet may raise reasoning level freely;
+- a task packet may lower below role default only for mechanical bounded tasks
+  and must include `OVERRIDE_REASON`;
+- a task packet must not lower below a gate-required floor;
+- `low` is allowed only for mechanical bounded tasks and is forbidden for
+  design, requirements analysis, audit, correction after failed audit,
+  lifecycle/state/transition changes, security/secrets policy, launch/release
+  readiness, final acceptance, and cross-link validation.
+
+Gate-required floors are defined in:
+
+```text
+agent-system/09_validators/REASONING_LEVEL_VALIDATION_RULES.md
+```
+
+---
+
 ## DEPENDENCIES
 
 ```text
@@ -181,6 +224,91 @@ Rules:
 - `blocked` means at least one dependency prevents dispatch;
 - `pending` means dependency work is known but incomplete;
 - `none` is allowed only when DEPENDENCIES is `NONE`.
+
+---
+
+## REQUESTED_BY_ROLE
+
+```text
+<requirements_analyst | designer | developer | auditor | tester | technical_writer | devops_setup_engineer | release_manager | NONE>
+```
+
+## REQUESTED_BY_TASK
+
+```text
+<TASK_ID | NONE>
+```
+
+## RESEARCH_QUESTION_ID
+
+```text
+<QUESTION_ID | NONE>
+```
+
+## RESEARCH_PURPOSE
+
+```text
+<purpose | NONE>
+```
+
+## RESEARCH_QUESTIONS
+
+```text
+- <exact factual question> | NONE
+```
+
+## ALLOWED_SOURCES
+
+```text
+- <allowed source> | NONE
+```
+
+## FORBIDDEN_SOURCES
+
+```text
+- <forbidden source> | NONE
+```
+
+## EXPECTED_EVIDENCE
+
+```text
+- <expected research evidence> | NONE
+```
+
+## EXPECTED_OUTPUT
+
+```text
+- <expected research output> | NONE
+```
+
+## RETURN_TO_REQUESTER_AFTER_AUDIT_PASS
+
+```text
+yes | no
+```
+
+## RETURN_TO_ROLE_AFTER_AUDIT_PASS
+
+```text
+<requirements_analyst | designer | developer | auditor | tester | technical_writer | devops_setup_engineer | release_manager | none>
+```
+
+## RETURN_TASK_AFTER_AUDIT_PASS
+
+```text
+<TASK_ID | task packet path | NONE>
+```
+
+Rules:
+
+- requester return metadata is mandatory for `TASK_KIND:
+  research_dependency`, `design_continuation`, and `task_continuation`;
+- research dependency return to requester is allowed only after independent
+  audit pass and any required checkpoint;
+- audit `fail`, `blocked`, or `gap` must route to correction/blocked/GAP
+  handling, not requester continuation;
+- the orchestrator must use explicit return metadata and must not infer return
+  targets from context.
 
 ---
 
