@@ -135,6 +135,12 @@ Template validation must catch stale template names, missing schema sidecars
 when a sidecar is documented as present, and references that use a non-canonical
 template path for the same package object.
 
+Schema sidecar validation must catch stale sidecar lists across validator,
+runtime state schema, and final smoke source-of-truth documents. A sidecar that
+exists and is listed as a package validation target in one source-of-truth list
+must not be omitted from another source-of-truth list that enumerates package
+schema sidecars.
+
 Task packet validation must compare `TASK_PACKET_TEMPLATE.md` with
 `schemas/task_packet.schema.json`. Their required fields must remain in parity
 for task identity, lifecycle, role routing, scope boundaries, source-of-truth

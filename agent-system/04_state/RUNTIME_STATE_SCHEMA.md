@@ -859,6 +859,11 @@ system
 
 # STATUS_SUMMARY.md schema
 
+`STATUS_SUMMARY.md` is a human-readable runtime summary only. It is validated
+through runtime tuple consistency and final smoke checks, not through a JSON
+Schema sidecar; no `status_summary.schema.json` sidecar is defined by this
+package.
+
 ## Назначение
 
 `STATUS_SUMMARY.md` фиксирует compact operational summary текущего состояния.

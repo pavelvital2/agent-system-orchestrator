@@ -86,6 +86,7 @@ agent-system/09_validators/TRANSITION_VALIDATION_RULES.md
 agent-system/09_validators/GIT_CHECKPOINT_VALIDATION_RULES.md
 agent-system/09_validators/CROSS_LINK_VALIDATION_RULES.md
 agent-system/09_validators/schemas/project_state.schema.json
+agent-system/09_validators/schemas/current_gate.schema.json
 agent-system/09_validators/schemas/next_action.schema.json
 agent-system/09_validators/schemas/task_packet.schema.json
 agent-system/09_validators/schemas/result.schema.json
