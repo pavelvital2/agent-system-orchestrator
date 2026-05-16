@@ -54,7 +54,12 @@
 - запускать следующую роль;
 - обновлять project-runtime state вместо оркестратора;
 - вести проектную документацию вместо техрайтера;
-- проводить полноценное функциональное тестирование вместо тестировщика.
+- проводить полноценное функциональное тестирование вместо тестировщика;
+- делать commit или push.
+
+Profile agents never commit or push.
+Task packets cannot grant commit/push authority to profile agents.
+Git checkpoint is orchestrator-owned only and runs only after auditor STATUS: pass.
 
 ---
 

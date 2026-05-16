@@ -628,6 +628,15 @@ Task packet не должен:
 - изменять forbidden zones;
 - нарушать ACTIVE_DOC_ROOT;
 - смешивать runtime/docs/source zones.
+- grant commit or push authority to a profile agent.
+
+Git authority rule:
+
+```text
+Profile agents never commit or push.
+Task packets cannot grant commit/push authority to profile agents.
+Git checkpoint is orchestrator-owned only and runs only after auditor STATUS: pass.
+```
 
 ---
 

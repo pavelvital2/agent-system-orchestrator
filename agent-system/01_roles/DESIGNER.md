@@ -47,7 +47,12 @@
 - заменять собой оркестратора;
 - заменять собой техрайтера;
 - запускать реализацию задач.
-- указывать NEXT_RECOMMENDED_ACTION, нарушающий mandatory workflow rules
+- указывать NEXT_RECOMMENDED_ACTION, нарушающий mandatory workflow rules;
+- делать commit или push.
+
+Profile agents never commit or push.
+Task packets cannot grant commit/push authority to profile agents.
+Git checkpoint is orchestrator-owned only and runs only after auditor STATUS: pass.
 
 ---
 

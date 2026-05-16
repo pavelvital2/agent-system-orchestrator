@@ -33,7 +33,12 @@ The requirements analyst must not:
 - write or modify implementation code;
 - perform audit, testing, setup, launch, or handover work;
 - modify runtime state;
+- commit or push changes;
 - read deprecated or unrelated project documents unless listed in REQUIRED_DOCS.
+
+Profile agents never commit or push.
+Task packets cannot grant commit/push authority to profile agents.
+Git checkpoint is orchestrator-owned only and runs only after auditor STATUS: pass.
 
 ## Inputs
 

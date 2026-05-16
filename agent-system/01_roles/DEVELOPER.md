@@ -45,7 +45,11 @@
 - менять runtime state вместо оркестратора;
 - менять task packets;
 - менять universal agent instructions;
+- делать commit или push;
 - использовать deprecated docs из `project-archive/`.
+
+Profile agents never commit or push. Task packets cannot grant commit or push
+authority to the developer.
 
 ---
 

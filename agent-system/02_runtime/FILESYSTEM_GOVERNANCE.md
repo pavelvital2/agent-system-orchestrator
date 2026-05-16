@@ -259,6 +259,10 @@ project-docs/
 - только implementation files, разрешённые task packet;
 - новые implementation files, если они входят в scope задачи.
 
+Git authority:
+- profile agents never commit or push;
+- task packets cannot grant commit or push authority to the developer.
+
 Не может изменять:
 - `agent-system/`;
 - `project-runtime/`;
@@ -352,6 +356,7 @@ project-docs/08_user_docs/
 Не может:
 - expose, print, commit, or invent secret values;
 - run production deployment unless explicitly assigned and approved by task packet.
+- commit or push changes.
 
 ---
 
@@ -376,7 +381,8 @@ project-docs/08_user_docs/
 Не может:
 - mark the project completed;
 - ignore failed or missing gates;
-- commit, push, tag, deploy, or approve production launch unless explicitly assigned by an orchestrator-controlled task.
+- commit or push changes;
+- tag, deploy, or approve production launch unless explicitly assigned by an orchestrator-controlled task.
 
 Terminal completion remains orchestrator-controlled.
 
@@ -489,9 +495,19 @@ project-runtime/STATUS_SUMMARY.md
 
 ---
 
+## Git authority
+
+Profile agents never commit or push. Task packets cannot grant commit or push
+authority to profile agents.
+
+The post-audit Git checkpoint is orchestrator-owned only and may run only after
+the required auditor returns `STATUS: pass`.
+
 ## Secret handling
 
-No role may read, print, edit, stage, commit, or push secrets unless explicitly governed by a safe secret-handling task.
+No role may read, print, edit, stage, commit, or push secrets. A safe
+secret-handling task may only identify non-secret configuration names,
+purposes, and placeholder examples when task scope requires it.
 
 Secret values must never be written into:
 - logs;

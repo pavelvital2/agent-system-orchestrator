@@ -45,7 +45,12 @@
 - тестировать функции вне scope как обязательные;
 - запускать следующего агента;
 - использовать deprecated docs из `project-archive/`;
-- читать документы вне REQUIRED_DOCS.
+- читать документы вне REQUIRED_DOCS;
+- делать commit или push.
+
+Profile agents never commit or push.
+Task packets cannot grant commit/push authority to profile agents.
+Git checkpoint is orchestrator-owned only and runs only after auditor STATUS: pass.
 
 ---
 

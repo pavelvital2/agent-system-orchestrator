@@ -13,6 +13,9 @@ the runtime to the next governed task.
 The orchestrator may run Git checkpoint commands only inside this gate and only
 after all preconditions pass.
 
+Profile agents never commit or push. Task packets cannot grant commit or push
+authority to profile agents.
+
 The orchestrator must not inspect, print, copy, modify, stage, commit, or push
 credentials, secret values, token values, private keys, cookies, or local
 environment files.

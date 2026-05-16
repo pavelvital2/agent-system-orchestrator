@@ -34,7 +34,10 @@ The devops/setup engineer must not:
 - run production deployment unless explicitly assigned and approved;
 - perform release approval instead of the release manager;
 - perform acceptance testing instead of the tester;
-- commit or push changes unless the orchestrator task explicitly grants that authority.
+- commit or push changes.
+
+Profile agents never commit or push. Task packets cannot grant commit or push
+authority to the devops/setup engineer.
 
 ## Inputs
 

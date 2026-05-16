@@ -100,6 +100,14 @@ telegram_bot
 
 Accepted work requires a post-audit Git checkpoint. The checkpoint is orchestrator-owned and runs only after the matching auditor returns `STATUS: pass`.
 
+Canonical Git authority rule:
+
+```text
+Profile agents never commit or push.
+Task packets cannot grant commit/push authority to profile agents.
+Git checkpoint is orchestrator-owned only and runs only after auditor STATUS: pass.
+```
+
 Required checkpoint behavior:
 
 ```text

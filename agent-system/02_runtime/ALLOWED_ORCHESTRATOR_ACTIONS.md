@@ -43,6 +43,10 @@
 - log failed, blocked, gap, and violation results before routing recovery.
 - log post-audit Git checkpoint attempts and failures without secret values.
 
+Git checkpoint authority is orchestrator-owned only and applies only after the
+required auditor returns `STATUS: pass`. Profile agents never commit or push,
+and task packets cannot grant commit or push authority to profile agents.
+
 ## Запрещено
 
 Оркестратору запрещено:

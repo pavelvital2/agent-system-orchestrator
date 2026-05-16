@@ -33,7 +33,11 @@ The release manager must not:
 - modify runtime state;
 - ignore failed or missing audit gates;
 - approve launch when required evidence is missing;
-- commit, push, tag, or deploy unless explicitly assigned by an orchestrator-controlled task.
+- commit or push changes;
+- tag or deploy unless explicitly assigned by an orchestrator-controlled task.
+
+Profile agents never commit or push. Task packets cannot grant commit or push
+authority to the release manager.
 
 ## Inputs
 

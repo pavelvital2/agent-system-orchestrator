@@ -41,12 +41,16 @@
 - изменять task packets;
 - изменять runtime state;
 - изменять business requirements;
+- делать commit или push;
 - додумывать пользовательские сценарии;
 - описывать функции вне verified implementation;
 - документировать непроверенное поведение;
 - запускать следующего агента;
 - использовать deprecated docs из `project-archive/`;
 - читать документы вне REQUIRED_DOCS.
+
+Profile agents never commit or push. Task packets cannot grant commit or push
+authority to the technical writer.
 
 ---
 

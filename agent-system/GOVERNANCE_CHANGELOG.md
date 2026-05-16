@@ -325,4 +325,40 @@ MIGRATION_NOTE: This v1.2.0 consistency correction adds final smoke and cross-li
 AUTHORIZED_BY: project_owner
 AUDIT_REQUIRED: yes
 STATUS: accepted
+
+CHANGE_ID: GOV-2026-05-16-003
+CHANGE_TITLE: CORR_ASU_120_012 through CORR_ASU_120_016 final blockers correction sync
+DATE: 2026-05-16
+PACKAGE_VERSION_BEFORE: 1.2.0
+PACKAGE_VERSION_AFTER: 1.2.0
+CHANGE_TYPE: patch
+AFFECTED_FILES:
+- agent-system/README.md
+- agent-system/01_roles/DEVOPS_SETUP_ENGINEER.md
+- agent-system/01_roles/RELEASE_MANAGER.md
+- agent-system/01_roles/DEVELOPER.md
+- agent-system/01_roles/TECHNICAL_WRITER.md
+- agent-system/02_runtime/POST_AUDIT_GIT_CHECKPOINT.md
+- agent-system/02_runtime/FILESYSTEM_GOVERNANCE.md
+- agent-system/02_runtime/ALLOWED_ORCHESTRATOR_ACTIONS.md
+- agent-system/03_templates/TASK_PACKET_TEMPLATE.md
+- agent-system/GOVERNANCE_CHANGELOG.md
+AFFECTED_INVARIANTS:
+- bootstrap requirements/design routing sync
+- profile-role audit transition sync
+- minimal example fixture schema sync
+- profile-agent Git authority hardening
+- final smoke/cross-link coverage
+- task packets cannot grant commit or push authority to profile agents
+- post-audit Git checkpoint remains orchestrator-owned and audit-pass-only
+AFFECTED_TRANSITIONS:
+- profile agent RESULT -> auditor agent before accepted-state checkpoint
+- auditor STATUS: pass -> orchestrator-owned post-audit Git checkpoint
+- auditor fail, blocked, or gap -> no commit, no push, governed correction or owner routing
+SCHEMA_TEMPLATE_IMPACT: template_update_required
+MIGRATION_REQUIRED: no
+MIGRATION_NOTE: This v1.2.0 final blockers correction sync hardens Git authority wording and records traceability for CORR_ASU_120_012 through CORR_ASU_120_016 without advancing the active package, governance ruleset, or runtime schema version and without installing v1.2.1 features.
+AUTHORIZED_BY: project_owner
+AUDIT_REQUIRED: yes
+STATUS: accepted
 ```
