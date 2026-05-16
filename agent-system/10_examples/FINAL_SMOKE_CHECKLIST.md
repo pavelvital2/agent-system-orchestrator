@@ -120,6 +120,19 @@ STATE_ALIGNMENT:
   runtime state templates, task registry, accepted artifacts registry, logs,
   and transition rules use compatible statuses and routing terms.
 
+RUNTIME_FILE_SET_ALIGNMENT:
+  Mandatory runtime file lists in start, runtime loop, runtime state schema,
+  runtime consistency rules, and smoke checks use this exact required set:
+  project-runtime/PROJECT_STATE.md
+  project-runtime/CURRENT_GATE.md
+  project-runtime/NEXT_ACTION.md
+  project-runtime/GAP_REGISTER.md
+  project-runtime/AGENT_RESULTS_LOG.md
+  project-runtime/TASK_REGISTRY.md
+  project-runtime/ACCEPTED_ARTIFACTS.md
+  project-runtime/ORCHESTRATOR_EVENTS_LOG.md
+  project-runtime/STATUS_SUMMARY.md
+
 AUDIT_CHECKPOINT_ALIGNMENT:
   Audit pass is required before accepted-state checkpoint. Audit fail,
   blocked, or gap cannot advance to accepted commit/push state.

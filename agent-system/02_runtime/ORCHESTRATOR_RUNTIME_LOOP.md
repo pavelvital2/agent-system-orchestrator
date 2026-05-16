@@ -37,6 +37,10 @@
    - `project-runtime/NEXT_ACTION.md`
    - `project-runtime/GAP_REGISTER.md`
    - `project-runtime/AGENT_RESULTS_LOG.md`
+   - `project-runtime/TASK_REGISTRY.md`
+   - `project-runtime/ACCEPTED_ARTIFACTS.md`
+   - `project-runtime/ORCHESTRATOR_EVENTS_LOG.md`
+   - `project-runtime/STATUS_SUMMARY.md`
 
 
 2. Определить следующий шаг только из `NEXT_ACTION.md`.
@@ -268,6 +272,10 @@ NEXT_RECOMMENDED_ACTION: correction
    - `CURRENT_GATE.md`
    - `NEXT_ACTION.md`
    - `AGENT_RESULTS_LOG.md` для каждого agent result
+   - `TASK_REGISTRY.md` для task lifecycle state
+   - `ACCEPTED_ARTIFACTS.md` для accepted artifact state
+   - `ORCHESTRATOR_EVENTS_LOG.md` для material orchestrator events
+   - `STATUS_SUMMARY.md` для compact status summary
    - при необходимости `GAP_REGISTER.md`
 
 14. Повторить цикл перед следующим действием.
@@ -337,6 +345,10 @@ After updating any runtime state file, the orchestrator must reread:
 - `NEXT_ACTION.md`
 - `GAP_REGISTER.md`
 - `AGENT_RESULTS_LOG.md`
+- `TASK_REGISTRY.md`
+- `ACCEPTED_ARTIFACTS.md`
+- `ORCHESTRATOR_EVENTS_LOG.md`
+- `STATUS_SUMMARY.md`
 
 Then it must validate the updated runtime state tuple before the next dispatch.
 

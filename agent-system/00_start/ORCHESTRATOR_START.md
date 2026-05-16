@@ -48,6 +48,10 @@
    - `project-runtime/NEXT_ACTION.md`
    - `project-runtime/GAP_REGISTER.md`
    - `project-runtime/AGENT_RESULTS_LOG.md`
+   - `project-runtime/TASK_REGISTRY.md`
+   - `project-runtime/ACCEPTED_ARTIFACTS.md`
+   - `project-runtime/ORCHESTRATOR_EVENTS_LOG.md`
+   - `project-runtime/STATUS_SUMMARY.md`
 
 2. Создать черновик handoff-файла:
    - `project-runtime/HANDOFF_DESIGNER_BOOTSTRAP.md`
@@ -106,6 +110,10 @@ BLOCKED_BY: invalid_or_missing_package_file
 18. `agent-system/05_gap_flow/GAP_FLOW.md`
 19. `agent-system/05_gap_flow/GAP_REGISTER_TEMPLATE.md`
 20. `agent-system/06_logs/AGENT_RESULTS_LOG_TEMPLATE.md`
+21. `agent-system/04_state/TASK_REGISTRY_TEMPLATE.md`
+22. `agent-system/04_state/ACCEPTED_ARTIFACTS_TEMPLATE.md`
+23. `agent-system/06_logs/ORCHESTRATOR_EVENTS_LOG_TEMPLATE.md`
+24. `agent-system/06_logs/STATUS_SUMMARY_TEMPLATE.md`
 
 ---
 
@@ -118,6 +126,10 @@ BLOCKED_BY: invalid_or_missing_package_file
 - `project-runtime/NEXT_ACTION.md`
 - `project-runtime/GAP_REGISTER.md`
 - `project-runtime/AGENT_RESULTS_LOG.md`
+- `project-runtime/TASK_REGISTRY.md`
+- `project-runtime/ACCEPTED_ARTIFACTS.md`
+- `project-runtime/ORCHESTRATOR_EVENTS_LOG.md`
+- `project-runtime/STATUS_SUMMARY.md`
 
 После создания runtime state-файлов оркестратор может подготовить первый bounded-шаг только если все обязательные bootstrap-файлы существуют.
 
