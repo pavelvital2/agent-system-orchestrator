@@ -60,6 +60,20 @@ Lifecycle validation must cover the documented lifecycle order and the stage
 document list. A stage reference is invalid when the order mentions a stage but
 neither the stage document list nor an explicit alias accounts for it.
 
+Bootstrap lifecycle validation must also cross-check:
+
+```text
+agent-system/00_start/ORCHESTRATOR_START.md
+agent-system/07_lifecycle/PROJECT_LIFECYCLE.md
+agent-system/07_lifecycle/REQUIREMENTS_STAGE.md
+agent-system/07_lifecycle/DESIGN_STAGE.md
+```
+
+The bootstrap, lifecycle, requirements, and design documents are inconsistent
+if they make designer the only valid first profile agent, omit the
+requirements_analyst route for incomplete, ambiguous, or uncertain owner input,
+or allow direct designer routing without sufficiently structured owner input.
+
 ## Role link checks
 
 Every role referenced in templates, state files, transition rules, validator
@@ -91,6 +105,26 @@ role, points directly to another lifecycle phase, points directly to terminal
 completion, or points directly to a Git checkpoint before auditor `STATUS:
 pass`.
 
+Profile-role transition validation must cross-check
+`STATE_TRANSITION_RULES.md` against every role enum or profile-role set in
+runtime state, task packet, result, gate, validator, and README docs. The
+covered v1.2.0 profile execution role set is:
+
+```text
+requirements_analyst
+designer
+developer
+auditor
+tester
+technical_writer
+devops_setup_engineer
+release_manager
+```
+
+For mandatory-audit pass routing, all non-auditor profile execution roles in
+that set must route to auditor before accepted state, next phase, terminal
+completion, or Git checkpoint.
+
 ## Template link checks
 
 Every template referenced by role, runtime, state, validator, smoke, or README
@@ -108,6 +142,19 @@ documents, dependencies, acceptance criteria, evidence requirements, audit
 requirements, next-role routing, and result format. A field required by one and
 omitted by the other is a cross-link validation failure unless the difference is
 explicitly documented as a compatibility alias.
+
+Minimal fixture validation must cross-check:
+
+```text
+agent-system/10_examples/MINIMAL_EXAMPLE_FIXTURE.md
+agent-system/04_state/RUNTIME_STATE_SCHEMA.md
+agent-system/03_templates/TASK_PACKET_TEMPLATE.md
+```
+
+The fixture is inconsistent if its runtime seed omits active version tuple
+fields, uses stale `NEXT_ACTION` field names, omits canonical runtime file
+dependencies, or shows a task packet shape that conflicts with the current task
+packet template.
 
 ## Validator link checks
 
@@ -168,6 +215,37 @@ must be explicitly marked as a partial example. Current start, runtime loop,
 orchestrator role, runtime schema, filesystem governance, validator, and final
 smoke documents must not use the legacy five-file set as the complete runtime
 source of truth.
+
+## Git authority cross-link checks
+
+Git authority validation must cross-check:
+
+```text
+agent-system/02_runtime/POST_AUDIT_GIT_CHECKPOINT.md
+agent-system/01_roles/REQUIREMENTS_ANALYST.md
+agent-system/01_roles/DESIGNER.md
+agent-system/01_roles/DEVELOPER.md
+agent-system/01_roles/AUDITOR.md
+agent-system/01_roles/TESTER.md
+agent-system/01_roles/TECHNICAL_WRITER.md
+agent-system/01_roles/DEVOPS_SETUP_ENGINEER.md
+agent-system/01_roles/RELEASE_MANAGER.md
+agent-system/02_runtime/FILESYSTEM_GOVERNANCE.md
+```
+
+These documents are inconsistent if they allow a profile agent, auditor, or
+task packet to bypass the orchestrator-owned post-audit Git checkpoint, commit
+or push without auditor `STATUS: pass`, or stage files outside the audited task
+allowed scope.
+
+## Changelog traceability checks
+
+Governance changelog validation must cross-check
+`agent-system/GOVERNANCE_CHANGELOG.md` against files changed by each accepted
+v1.2.0 correction task in the correction chain. Changelog traceability is
+incomplete if the changelog omits the changed files, affected invariants,
+version tuple impact, migration impact, audit requirement, or status needed to
+replay why a final smoke or cross-link correction was accepted.
 
 ## Project-agnostic check
 

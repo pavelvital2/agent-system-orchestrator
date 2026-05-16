@@ -124,6 +124,11 @@ BOOTSTRAP_REQUIREMENTS_ROUTING:
   structured input. Routing examples use v1.2.0 NEXT_ACTION fields:
   ACTION_TYPE, TARGET_ROLE, TASK_ID, TASK_PACKET, DEPENDENCY_STATUS, and
   BLOCKED_BY.
+  Smoke evidence must explicitly verify all of these bootstrap paths:
+  requirements_analyst route is valid for incomplete, ambiguous, or uncertain
+  owner input; direct designer route is valid only for sufficiently structured
+  owner input; no bootstrap document presents designer as the universal first
+  profile agent.
 
 ROLE_ALIGNMENT:
   Role documents keep authority boundaries distinct. Profile agents do not
@@ -193,6 +198,24 @@ AUDIT_CHECKPOINT_ALIGNMENT:
   auditor before any next profile role, lifecycle phase, terminal completion,
   or Git checkpoint. Requirements analyst, devops/setup engineer, and release
   manager pass routing examples are explicitly covered by transition rules.
+  Smoke evidence must list each v1.2.0 profile execution role covered by
+  mandatory-audit transition rules:
+  requirements_analyst, designer, developer, tester, technical_writer,
+  devops_setup_engineer, and release_manager.
+
+MINIMAL_FIXTURE_SCHEMA_ALIGNMENT:
+  MINIMAL_EXAMPLE_FIXTURE uses the active v1.2.0 runtime tuple, the canonical
+  nine runtime file dependencies, v1.2.0 NEXT_ACTION fields, and task packet
+  fields compatible with TASK_PACKET_TEMPLATE and runtime schema sidecars.
+  It must not depend on deployment, credentials, external repositories, or
+  project-specific business terms.
+
+PROFILE_AGENT_GIT_AUTHORITY:
+  README, POST_AUDIT_GIT_CHECKPOINT, FILESYSTEM_GOVERNANCE, role docs, and
+  task packet guidance preserve the rule that profile agents never commit or
+  push and task packets cannot grant commit or push authority to profile
+  agents. Git checkpoint authority remains orchestrator-owned and audit-pass
+  only.
 
 SETUP_RUN_LAUNCH_HANDOVER_ALIGNMENT:
   setup, run/smoke, launch readiness, and handover templates have explicit
@@ -223,6 +246,10 @@ PROJECT_AGNOSTIC_ALIGNMENT:
 NEXT_VERSION_ABSENCE:
   final smoke and cross-link corrections do not install next-version feature
   docs, fields, roles, runtime enums, or version constants.
+
+REASONING_LEVEL_POLICY_ABSENCE:
+  final smoke and cross-link corrections do not change reasoning-level policy
+  or add reasoning-level fields, roles, validators, or runtime requirements.
 ```
 
 ## Final smoke evidence format

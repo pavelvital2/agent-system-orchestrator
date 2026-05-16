@@ -176,4 +176,9 @@ audit -> checkpoint -> setup/run/launch/handover flow without requiring actual
 deployment, credentials, external source repositories, or business-specific
 implementation.
 
+Final smoke coverage explicitly checks bootstrap requirements/design routing,
+profile-role audit transitions, minimal fixture schema alignment, profile-agent
+Git authority prohibition, changelog traceability, and absence of next-version
+or reasoning-level policy changes.
+
 This repository package does not claim a separate CLI wrapper. It is an instruction, governance, template, lifecycle, and validation package for Codex CLI orchestration.
