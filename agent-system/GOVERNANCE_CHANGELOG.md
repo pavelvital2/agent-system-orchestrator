@@ -398,4 +398,35 @@ MIGRATION_NOTE: This correction adds documentation-level smoke and cross-link co
 AUTHORIZED_BY: project_owner
 AUDIT_REQUIRED: yes
 STATUS: accepted
+
+CHANGE_ID: GOV-2026-05-16-005
+CHANGE_TITLE: CORR_ASU_120_017 through CORR_ASU_120_021 final pre-1.2.1 smoke coverage
+DATE: 2026-05-16
+PACKAGE_VERSION_BEFORE: 1.2.0
+PACKAGE_VERSION_AFTER: 1.2.0
+CHANGE_TYPE: patch
+AFFECTED_FILES:
+- agent-system/10_examples/FINAL_SMOKE_CHECKLIST.md
+- agent-system/GOVERNANCE_CHANGELOG.md
+- agent-system/README.md
+AFFECTED_INVARIANTS:
+- bootstrap first profile dispatch requires a valid task packet protocol
+- example filesystem governance keeps profile-agent outputs out of project-runtime
+- current_gate schema sidecar linkage is represented in smoke coverage
+- STATUS_SUMMARY sidecar policy is explicit
+- PROJECT_STATE semantic fields have template/schema/runtime/validator parity
+- profile-agent Git authority remains prohibited
+- package version tuple compatibility remains unchanged
+- no v1.2.1 installation
+- no reasoning-level policy change
+AFFECTED_TRANSITIONS:
+- bootstrap routing -> first profile-agent task packet validation
+- final smoke validation -> final auditor or correction routing
+- auditor STATUS: pass -> orchestrator-owned post-audit Git checkpoint
+SCHEMA_TEMPLATE_IMPACT: none
+MIGRATION_REQUIRED: no
+MIGRATION_NOTE: This bounded correction records final smoke and changelog traceability for CORR_ASU_120_017 through CORR_ASU_120_021. It adds documentation-level coverage only, does not advance the active package, governance ruleset, or runtime schema version, does not install v1.2.1, and does not change reasoning-level policy.
+AUTHORIZED_BY: project_owner
+AUDIT_REQUIRED: yes
+STATUS: accepted
 ```

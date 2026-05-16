@@ -179,6 +179,9 @@ implementation.
 Final smoke coverage explicitly checks bootstrap requirements/design routing,
 profile-role audit transitions, minimal fixture schema alignment, profile-agent
 Git authority prohibition, changelog traceability, and absence of next-version
-or reasoning-level policy changes.
+or reasoning-level policy changes. It also covers the final pre-1.2.1
+correction chain for bootstrap task packet protocol, example filesystem
+governance, schema sidecar linkage, STATUS_SUMMARY sidecar policy, and
+PROJECT_STATE semantic field parity without changing the v1.2.0 tuple.
 
 This repository package does not claim a separate CLI wrapper. It is an instruction, governance, template, lifecycle, and validation package for Codex CLI orchestration.

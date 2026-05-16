@@ -260,6 +260,19 @@ PROJECT_AGNOSTIC_ALIGNMENT:
   universal core docs remain free of project-specific business implementation
   and named external-platform terminology.
 
+PRE_1_2_1_CORRECTION_CHAIN_COVERAGE:
+  Final smoke evidence must explicitly cover CORR_ASU_120_017 through
+  CORR_ASU_120_020. Coverage must show that bootstrap first profile dispatch
+  uses a valid bootstrap task packet protocol; example profile-agent outputs
+  stay under an active documentation root and do not allow writes to
+  project-runtime; current_gate.schema.json appears in validator and smoke
+  sidecar lists; STATUS_SUMMARY sidecar policy is explicit; and
+  ACTION_SEMANTIC plus SEMANTIC_REASON have parity across PROJECT_STATE
+  template, runtime schema, JSON schema, runtime consistency validation, and
+  smoke validation. This correction-chain smoke coverage does not install
+  v1.2.1, does not alter reasoning-level policy, and preserves the rule that
+  profile agents never commit or push.
+
 NEXT_VERSION_ABSENCE:
   final smoke and cross-link corrections do not install next-version feature
   docs, fields, roles, runtime enums, or version constants.
