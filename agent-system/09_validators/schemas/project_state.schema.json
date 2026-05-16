@@ -36,15 +36,22 @@
       "type": "string",
       "enum": [
         "bootstrap",
+        "requirements",
         "design",
         "design_audit",
         "implementation",
         "implementation_audit",
+        "audit",
         "testing",
+        "setup",
+        "run",
+        "launch",
         "documentation",
+        "handover",
         "correction",
         "blocked",
         "finalization",
+        "final_acceptance",
         "completed"
       ]
     },

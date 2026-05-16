@@ -22,6 +22,9 @@ Before creating or routing an agent, validate:
 
 - runtime tuple is valid;
 - `NEXT_ACTION.ACTION_TYPE` is compatible with `CURRENT_PHASE`;
+- every `CURRENT_PHASE` value and every lifecycle stage accepted by
+  `RUNTIME_STATE_SCHEMA.md` has an explicit phase/action compatibility entry in
+  `STATE_TRANSITION_RULES.md` or a documented deterministic alias;
 - `TARGET_ROLE` is compatible with `ACTION_TYPE`;
 - `TASK_PACKET` is present when dispatch requires one;
 - `DEPENDENCY_STATUS` is `ready` only when dependencies are actually clear;

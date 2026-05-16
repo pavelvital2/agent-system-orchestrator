@@ -57,6 +57,39 @@ The tuple is invalid when:
 - `REQUIRED_DOCS` references deprecated, superseded, or archived documents for
   active work.
 
+## Lifecycle/runtime enum drift checks
+
+Validators must compare lifecycle stages from `PROJECT_LIFECYCLE.md` with the
+runtime phase and gate enums in `RUNTIME_STATE_SCHEMA.md`, the Markdown state
+templates, and JSON schema sidecars.
+
+Runtime state is invalid when a lifecycle stage is neither:
+
+- accepted as a `PROJECT_STATE.CURRENT_PHASE` value; nor
+- accepted as a `CURRENT_GATE.GATE_TYPE` value; nor
+- explicitly documented as a deterministic alias to an accepted runtime value.
+
+The required lifecycle stages are:
+
+```text
+bootstrap
+requirements
+design
+audit
+implementation
+testing
+setup
+run
+launch
+documentation
+handover
+final_acceptance
+```
+
+Specialized runtime phases such as `design_audit`, `implementation_audit`,
+`correction`, `blocked`, `finalization`, and `completed` may remain only if
+they do not replace or hide the required lifecycle stages.
+
 ## Required catches
 
 ### Last accepted result cannot be fail

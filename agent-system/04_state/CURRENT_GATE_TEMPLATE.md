@@ -5,7 +5,7 @@
 ```text
 GATE_ID:
 GATE_NAME:
-GATE_TYPE: bootstrap | design | audit | implementation | testing | documentation | correction | finalization | terminal
+GATE_TYPE: bootstrap | requirements | design | audit | implementation | testing | setup | run | launch | documentation | handover | correction | finalization | final_acceptance | terminal
 STATUS: open | passed | failed | blocked | skipped
 OWNER_ROLE: orchestrator | requirements_analyst | designer | developer | auditor | tester | technical_writer | devops_setup_engineer | release_manager | project_owner
 TASK_ID:

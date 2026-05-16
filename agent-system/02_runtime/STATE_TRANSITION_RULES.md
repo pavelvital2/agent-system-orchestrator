@@ -179,15 +179,22 @@ When secret or credential risk is detected:
 
 ```text
 bootstrap              -> create_agent | update_state | wait_for_owner | correction | stop
+requirements           -> create_agent | route_result | correction | wait_for_owner
 design                 -> create_agent | route_result | correction | wait_for_owner
 design_audit           -> create_agent | route_result | correction
 implementation         -> create_agent | route_result | correction | wait_for_owner
 implementation_audit   -> create_agent | route_result | correction
+audit                  -> create_agent | route_result | correction | wait_for_owner
 testing                -> create_agent | route_result | correction | wait_for_owner
+setup                  -> create_agent | route_result | correction | wait_for_owner
+run                    -> create_agent | route_result | correction | wait_for_owner
+launch                 -> create_agent | route_result | correction | wait_for_owner
 documentation          -> create_agent | route_result | correction | wait_for_owner
+handover               -> create_agent | route_result | correction | wait_for_owner
 correction             -> update_state | correction | create_agent | wait_for_owner | stop
 blocked                -> update_state | wait_for_owner | correction | stop
 finalization           -> update_state | finalize | correction | stop
+final_acceptance       -> update_state | finalize | wait_for_owner | correction | stop
 completed              -> stop
 ```
 

@@ -30,6 +30,7 @@ Machine-readable sidecar schemas are defined in:
 
 ```text
 agent-system/09_validators/schemas/project_state.schema.json
+agent-system/09_validators/schemas/current_gate.schema.json
 agent-system/09_validators/schemas/next_action.schema.json
 agent-system/09_validators/schemas/task_registry.schema.json
 agent-system/09_validators/schemas/accepted_artifacts.schema.json
@@ -109,15 +110,22 @@ PROJECT_STATUS:
 
 ```text
 bootstrap
+requirements
 design
 design_audit
 implementation
 implementation_audit
+audit
 testing
+setup
+run
+launch
 documentation
+handover
 correction
 blocked
 finalization
+final_acceptance
 completed
 ```
 
@@ -263,13 +271,19 @@ TASK_PACKET:
 
 ```text
 bootstrap
+requirements
 design
 audit
 implementation
 testing
+setup
+run
+launch
 documentation
+handover
 correction
 finalization
+final_acceptance
 terminal
 ```
 

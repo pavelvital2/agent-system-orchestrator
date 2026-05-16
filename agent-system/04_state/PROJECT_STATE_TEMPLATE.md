@@ -10,7 +10,7 @@ ACTIVE_DOC_ROOT:
 PACKAGE_VERSION:
 GOVERNANCE_RULESET_VERSION:
 RUNTIME_SCHEMA_VERSION:
-CURRENT_PHASE: bootstrap | design | design_audit | implementation | implementation_audit | testing | documentation | correction | blocked | finalization | completed
+CURRENT_PHASE: bootstrap | requirements | design | design_audit | implementation | implementation_audit | audit | testing | setup | run | launch | documentation | handover | correction | blocked | finalization | final_acceptance | completed
 PROJECT_STATUS: active | blocked | completed | archived
 ```
 
