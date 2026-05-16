@@ -12,7 +12,14 @@ implementation.
 ```text
 project-input/example/TZ.md
 project-runtime/example/PROJECT_STATE.md
+project-runtime/example/CURRENT_GATE.md
 project-runtime/example/NEXT_ACTION.md
+project-runtime/example/GAP_REGISTER.md
+project-runtime/example/AGENT_RESULTS_LOG.md
+project-runtime/example/TASK_REGISTRY.md
+project-runtime/example/ACCEPTED_ARTIFACTS.md
+project-runtime/example/ORCHESTRATOR_EVENTS_LOG.md
+project-runtime/example/STATUS_SUMMARY.md
 ```
 
 The paths above are illustrative. A real orchestrator may choose different
@@ -59,17 +66,18 @@ PROJECT_STATE:
 PACKAGE_VERSION: 1.2.0
 GOVERNANCE_RULESET_VERSION: 1.2.0
 RUNTIME_SCHEMA_VERSION: 1.1.0
-CURRENT_STAGE: bootstrap
-CURRENT_GATE: tz_intake
-ACTIVE_TASK: NONE
-ACTIVE_GAP: NONE
+CURRENT_PHASE: bootstrap
+PROJECT_STATUS: active
 ACCEPTED_ARTIFACTS_REF: project-runtime/example/ACCEPTED_ARTIFACTS.md
 TASK_REGISTRY_REF: project-runtime/example/TASK_REGISTRY.md
 
 NEXT_ACTION:
-ACTION: create_agent
+ACTION_TYPE: create_agent
 TARGET_ROLE: requirements_analyst
-TASK_PACKET_REF: project-runtime/example/tasks/TASK_EXAMPLE_001_REQUIREMENTS.md
+TASK_ID: TASK_EXAMPLE_001_REQUIREMENTS
+TASK_PACKET: project-runtime/example/tasks/TASK_EXAMPLE_001_REQUIREMENTS.md
+DEPENDENCY_STATUS: ready
+BLOCKED_BY: NONE
 REASON:
 Convert owner-provided TZ into a bounded requirements baseline.
 ```
@@ -78,20 +86,36 @@ Convert owner-provided TZ into a bounded requirements baseline.
 
 ```text
 TASK_ID: TASK_EXAMPLE_001_REQUIREMENTS
-TASK_TYPE: requirements
+TASK_STATUS: active
+SUPERSEDES: NONE
+SUPERSEDED_BY: NONE
+CORRECTION_OF: NONE
+SOURCE_RESULT_REF: NONE
+ATTEMPT_NO: NONE
+FAILURE_TYPE: none
+TASK_TITLE: Create requirements baseline
+TASK_TYPE: requirements_analyst
 TARGET_ROLE: requirements_analyst
-LIFECYCLE_STAGE: requirements
-DEPENDENCIES: none
-AUDIT_REQUIRED: yes
-POST_AUDIT_GIT_CHECKPOINT_REQUIRED: yes
+DEPENDENCIES:
+- NONE
+DEPENDENCY_STATUS: none
 
 PURPOSE:
 Create a requirements baseline from the example TZ.
+
+SOURCE_OF_TRUTH:
+- project-input/example/TZ.md
 
 REQUIRED_DOCS:
 - agent-system/01_roles/REQUIREMENTS_ANALYST.md
 - agent-system/03_templates/AGENT_RESULT_TEMPLATE.md
 - project-input/example/TZ.md
+
+INPUTS:
+NONE
+
+READ_INPUTS:
+NONE
 
 SCOPE_IN:
 - summarize goals, constraints, scope, and acceptance criteria;
@@ -112,7 +136,7 @@ FORBIDDEN_FILE_CHANGES:
 - secret files
 - files outside allowed changes
 
-EXPECTED_OUTPUT_FILES:
+EXPECTED_OUTPUTS:
 - project-runtime/example/requirements/REQUIREMENTS_BASELINE.md
 
 ACCEPTANCE_CRITERIA:
@@ -120,8 +144,64 @@ ACCEPTANCE_CRITERIA:
 - blockers and GAPs are explicit or marked NONE;
 - no project-specific business behavior is invented.
 
+EVIDENCE_REQUIREMENTS:
+- list changed files;
+- summarize source TZ mapping;
+- confirm no secret values were read or written.
+
+SETUP_HOOKS:
+NONE
+
+LAUNCH_HOOKS:
+NONE
+
+RESULT_PATH:
+project-runtime/example/agent-results/TASK_EXAMPLE_001_REQUIREMENTS.md
+
+RISK_REQUIREMENTS:
+- unresolved or ambiguous owner input.
+
+MANDATORY_WORKFLOW:
+requirements_analyst -> auditor
+
+NEXT_ROLE_ON_PASS:
+auditor
+
+NEXT_ROLE_ON_FAIL:
+orchestrator
+
+NEXT_ROLE_ON_BLOCKED:
+orchestrator
+
+NEXT_ROLE_ON_GAP:
+orchestrator
+
+AUDIT_REQUIREMENTS:
+mandatory
+
+TESTING_REQUIREMENTS:
+none
+
+DOCUMENTATION_REQUIREMENTS:
+none
+
+FILESYSTEM_GOVERNANCE:
+agent-system/02_runtime/FILESYSTEM_GOVERNANCE.md
+
+RUNTIME_GOVERNANCE:
+agent-system/02_runtime/ORCHESTRATOR_RUNTIME_LOOP.md
+
+RESULT_FORMAT:
+agent-system/03_templates/AGENT_RESULT_TEMPLATE.md
+
 NEXT_RECOMMENDED_ACTION:
 - create matching auditor agent.
+
+TERMINAL_CONDITIONS:
+NONE
+
+NOTES:
+NONE
 ```
 
 ## Non-requirements
