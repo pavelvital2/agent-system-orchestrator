@@ -429,4 +429,53 @@ MIGRATION_NOTE: This bounded correction records final smoke and changelog tracea
 AUTHORIZED_BY: project_owner
 AUDIT_REQUIRED: yes
 STATUS: accepted
+
+CHANGE_ID: GOV-2026-05-16-006
+CHANGE_TITLE: CORR_ASU_120_022 through CORR_ASU_120_026 bootstrap canonicalization traceability sync
+DATE: 2026-05-16
+PACKAGE_VERSION_BEFORE: 1.2.0
+PACKAGE_VERSION_AFTER: 1.2.0
+CHANGE_TYPE: patch
+AFFECTED_FILES:
+- agent-system/00_start/ORCHESTRATOR_START.md
+- agent-system/02_runtime/ORCHESTRATOR_RUNTIME_LOOP.md
+- agent-system/02_runtime/FILESYSTEM_GOVERNANCE.md
+- agent-system/02_runtime/STATE_TRANSITION_RULES.md
+- agent-system/03_templates/BOOTSTRAP_TASK_PACKET_TEMPLATE.md
+- agent-system/03_templates/TASK_PACKET_TEMPLATE.md
+- agent-system/03_templates/AGENT_RESULT_TEMPLATE.md
+- agent-system/07_lifecycle/BOOTSTRAP_STAGE.md
+- agent-system/09_validators/TASK_PACKET_VALIDATION_RULES.md
+- agent-system/09_validators/CROSS_LINK_VALIDATION_RULES.md
+- agent-system/09_validators/schemas/task_packet.schema.json
+- agent-system/09_validators/schemas/result.schema.json
+- agent-system/10_examples/EXPECTED_FLOW_EXAMPLE.md
+- agent-system/10_examples/MINIMAL_EXAMPLE_FIXTURE.md
+- agent-system/10_examples/FINAL_SMOKE_CHECKLIST.md
+- agent-system/README.md
+- agent-system/GOVERNANCE_CHANGELOG.md
+- agent-system/PACKAGE_VERSIONING.md
+AFFECTED_INVARIANTS:
+- CORR_ASU_120_022: first bootstrap profile-agent dispatch uses canonical task packet path project-runtime/bootstrap/TASK_BOOTSTRAP_<TARGET_ROLE>_001.md
+- CORR_ASU_120_023: the only active task packet exception outside ACTIVE_DOC_ROOT is the first bootstrap task packet; ordinary task packets outside ACTIVE_DOC_ROOT remain invalid
+- CORR_ASU_120_024: example task packets match task packet template/schema fields and do not use RESULT-only NEXT_RECOMMENDED_ACTION
+- CORR_ASU_120_025: governance changelog records correction-chain affected files and invariants for CORR_ASU_120_017 through CORR_ASU_120_026 or the current accepted chain scope
+- CORR_ASU_120_026: final pre-1.2.1 smoke covers bootstrap canonical path, bootstrap exception propagation, task packet example/schema parity, changelog traceability, runtime file set stability, version tuple stability, next-version absence, and reasoning-level policy absence
+- handoff files are not task packets
+- profile agents do not write runtime-owned state paths
+- package version tuple compatibility remains unchanged
+- no v1.2.1 installation
+- no reasoning-level policy change
+AFFECTED_TRANSITIONS:
+- bootstrap intake -> first profile-agent task packet validation
+- first bootstrap task packet -> requirements_analyst or designer only by governed bootstrap routing
+- ordinary post-bootstrap task packet validation -> ACTIVE_DOC_ROOT enforcement
+- task packet example validation -> correction routing for template/schema mismatches
+- final smoke validation -> final auditor or correction routing
+SCHEMA_TEMPLATE_IMPACT: none
+MIGRATION_REQUIRED: no
+MIGRATION_NOTE: This traceability sync records the current pre-1.2.1 correction chain scope for CORR_ASU_120_022 through CORR_ASU_120_026, together with existing CORR_ASU_120_017 through CORR_ASU_120_021 coverage, without changing active package, governance ruleset, or runtime schema version constants. It does not install v1.2.1 features and does not change reasoning-level policy.
+AUTHORIZED_BY: project_owner
+AUDIT_REQUIRED: yes
+STATUS: accepted
 ```

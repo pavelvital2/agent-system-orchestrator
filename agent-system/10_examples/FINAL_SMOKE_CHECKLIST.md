@@ -269,7 +269,7 @@ PROJECT_AGNOSTIC_ALIGNMENT:
 
 PRE_1_2_1_CORRECTION_CHAIN_COVERAGE:
   Final smoke evidence must explicitly cover CORR_ASU_120_017 through
-  CORR_ASU_120_020. Coverage must show that bootstrap first profile dispatch
+  CORR_ASU_120_021. Coverage must show that bootstrap first profile dispatch
   uses a valid bootstrap task packet protocol; example profile-agent outputs
   stay under an active documentation root and do not allow writes to
   project-runtime; current_gate.schema.json appears in validator and smoke
@@ -288,6 +288,13 @@ BOOTSTRAP_ACTIVE_DOC_ROOT_EXCEPTION_SYNC:
   ACTIVE_DOC_ROOT, handoff files used as task packets, profile-agent dispatch
   without a task packet, and multiple simultaneously active first bootstrap
   task packets are invalid.
+
+CHANGELOG_TRACEABILITY_SYNC:
+  Governance changelog evidence must explicitly cover CORR_ASU_120_017 through
+  CORR_ASU_120_021 and CORR_ASU_120_022 through CORR_ASU_120_026 or the
+  current accepted scope of that chain. Coverage must include representative
+  affected files, affected invariants, version tuple stability, v1.2.1 absence,
+  and reasoning-level policy absence.
 
 NEXT_VERSION_ABSENCE:
   final smoke and cross-link corrections do not install next-version feature
