@@ -59,7 +59,7 @@ INCOMPLETE_OR_AMBIGUOUS_INPUT:
   ACTION_TYPE: create_agent
   TARGET_ROLE: requirements_analyst
   TASK_ID: TASK_BOOTSTRAP_REQUIREMENTS_ANALYST_001
-  TASK_PACKET: project-docs/example/03_tasks/TASK_BOOTSTRAP_REQUIREMENTS_ANALYST_001.md
+  TASK_PACKET: project-runtime/bootstrap/TASK_BOOTSTRAP_REQUIREMENTS_ANALYST_001.md
   DEPENDENCY_STATUS: ready
   BLOCKED_BY: NONE
 
@@ -67,15 +67,14 @@ SUFFICIENTLY_STRUCTURED_INPUT:
   ACTION_TYPE: create_agent
   TARGET_ROLE: designer
   TASK_ID: TASK_BOOTSTRAP_DESIGNER_001
-  TASK_PACKET: project-docs/example/03_tasks/TASK_BOOTSTRAP_DESIGNER_001.md
+  TASK_PACKET: project-runtime/bootstrap/TASK_BOOTSTRAP_DESIGNER_001.md
   DEPENDENCY_STATUS: ready
   BLOCKED_BY: NONE
 ```
 
 Bootstrap `TASK_PACKET` must never be `NONE` for these first profile-agent
 routes. Orchestrator-owned runtime seed, state, and log notes may support
-bootstrap routing, but they are not task packet substitutes unless explicitly
-full task-packet-equivalent.
+bootstrap routing, but they are not task packet substitutes.
 
 ## Minimal task/audit/checkpoint cycle
 

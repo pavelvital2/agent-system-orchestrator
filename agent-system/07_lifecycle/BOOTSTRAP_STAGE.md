@@ -66,8 +66,8 @@ project-runtime/bootstrap/TASK_BOOTSTRAP_DESIGNER_001.md
 The bootstrap task packet is an orchestrator-created runtime input. Profile
 agents may read it but must not edit it. The first profile-agent `NEXT_ACTION`
 must reference this packet in `TASK_PACKET`; `TASK_PACKET: NONE` is forbidden
-for first profile-agent dispatch. A handoff file is not a task packet substitute
-unless it is explicitly full task-packet-equivalent.
+for first profile-agent dispatch. A handoff file is not a task packet
+substitute.
 
 The orchestrator may inspect source input only enough to choose this route. It
 must not analyze project business logic, resolve ambiguity, invent requirements,

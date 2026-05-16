@@ -23,8 +23,7 @@ project-runtime/bootstrap/TASK_BOOTSTRAP_DESIGNER_001.md
 ```
 
 `TASK_PACKET: NONE` is never valid for the first profile-agent dispatch.
-A bootstrap handoff file may not be used as a task packet substitute unless it
-is explicitly full task-packet-equivalent and satisfies this template.
+A bootstrap handoff file may not be used as a task packet substitute.
 
 ---
 
@@ -146,7 +145,7 @@ source input and universal package governance.
 
 ```text
 - project-input/TZ.md
-- agent-system/01_roles/<TARGET_ROLE_ROLE_FILE>.md
+- agent-system/01_roles/<TARGET_ROLE>.md
 - agent-system/03_templates/AGENT_RESULT_TEMPLATE.md
 - agent-system/07_lifecycle/BOOTSTRAP_STAGE.md
 ```
@@ -342,8 +341,7 @@ Rules:
 
 - first profile dispatch must reference this valid bootstrap task packet path;
 - first profile dispatch must not use `TASK_PACKET: NONE`;
-- a handoff file is not a task packet substitute unless explicitly full
-  task-packet-equivalent;
+- a handoff file is not a task packet substitute;
 - post-audit Git checkpoint remains orchestrator-owned and audit-pass only.
 
 ## RESULT_FORMAT

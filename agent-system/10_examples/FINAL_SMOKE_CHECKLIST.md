@@ -127,7 +127,7 @@ BOOTSTRAP_REQUIREMENTS_ROUTING:
   ACTION_TYPE, TARGET_ROLE, TASK_ID, TASK_PACKET, DEPENDENCY_STATUS, and
   BLOCKED_BY. The first profile-agent TASK_PACKET is a valid bootstrap task
   packet using the canonical path convention
-  project-docs/example/03_tasks/TASK_BOOTSTRAP_<TARGET_ROLE>_001.md, never
+  project-runtime/bootstrap/TASK_BOOTSTRAP_<TARGET_ROLE>_001.md, never
   TASK_PACKET: NONE, and never a plain handoff-only file.
   Smoke evidence must explicitly verify all of these bootstrap paths:
   requirements_analyst route is valid for incomplete, ambiguous, or uncertain

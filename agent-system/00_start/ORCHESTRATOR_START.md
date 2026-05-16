@@ -165,8 +165,8 @@ agent-system/03_templates/BOOTSTRAP_TASK_PACKET_TEMPLATE.md
 Profile agents may read bootstrap task packets, but they must not edit them.
 The first profile-agent `NEXT_ACTION.TASK_PACKET` must point to the created
 bootstrap task packet. `TASK_PACKET: NONE` is forbidden for first profile-agent
-dispatch, and `project-runtime/HANDOFF_BOOTSTRAP.md` is not a substitute unless
-it is explicitly full task-packet-equivalent.
+dispatch, and `project-runtime/HANDOFF_BOOTSTRAP.md` is not a task packet
+substitute.
 
 If input is incomplete, ambiguous, or the orchestrator is unsure, create:
 
