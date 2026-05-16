@@ -37,7 +37,7 @@ TZ
 
 | Step | Orchestrator action | Primary package references | Accepted output |
 |---:|---|---|---|
-| 1 | Read owner TZ and runtime seed, then choose exactly one first profile route. | `00_start/ORCHESTRATOR_START.md`, `07_lifecycle/BOOTSTRAP_STAGE.md` | Valid bounded `NEXT_ACTION` for `requirements_analyst` or `designer`. |
+| 1 | Read owner TZ and runtime seed, create a bootstrap task packet, then choose exactly one first profile route. | `00_start/ORCHESTRATOR_START.md`, `03_templates/BOOTSTRAP_TASK_PACKET_TEMPLATE.md`, `07_lifecycle/BOOTSTRAP_STAGE.md` | Valid bounded `NEXT_ACTION` for `requirements_analyst` or `designer` with a bootstrap `TASK_PACKET`. |
 | 2 | Dispatch requirements analyst when input is incomplete, ambiguous, or not clearly design-ready. | `01_roles/REQUIREMENTS_ANALYST.md`, `07_lifecycle/REQUIREMENTS_STAGE.md` | Requirements baseline or GAP. |
 | 3 | Dispatch requirements auditor when a requirements task ran. | `01_roles/AUDITOR.md`, `09_validators/RESULT_VALIDATION_RULES.md` | Audit pass before acceptance. |
 | 4 | Run post-audit checkpoint after requirements audit pass. | `02_runtime/POST_AUDIT_GIT_CHECKPOINT.md`, `09_validators/GIT_CHECKPOINT_VALIDATION_RULES.md` | Commit hash and accepted artifact record. |
@@ -58,19 +58,24 @@ TZ
 INCOMPLETE_OR_AMBIGUOUS_INPUT:
   ACTION_TYPE: create_agent
   TARGET_ROLE: requirements_analyst
-  TASK_ID: REQ_INTAKE_001
-  TASK_PACKET: project-runtime/HANDOFF_BOOTSTRAP.md
+  TASK_ID: TASK_BOOTSTRAP_REQUIREMENTS_ANALYST_001
+  TASK_PACKET: project-runtime/bootstrap/TASK_BOOTSTRAP_REQUIREMENTS_ANALYST_001.md
   DEPENDENCY_STATUS: ready
   BLOCKED_BY: NONE
 
 SUFFICIENTLY_STRUCTURED_INPUT:
   ACTION_TYPE: create_agent
   TARGET_ROLE: designer
-  TASK_ID: DESIGN_BOOTSTRAP_001
-  TASK_PACKET: project-runtime/HANDOFF_BOOTSTRAP.md
+  TASK_ID: TASK_BOOTSTRAP_DESIGNER_001
+  TASK_PACKET: project-runtime/bootstrap/TASK_BOOTSTRAP_DESIGNER_001.md
   DEPENDENCY_STATUS: ready
   BLOCKED_BY: NONE
 ```
+
+Bootstrap `TASK_PACKET` must never be `NONE` for these first profile-agent
+routes. `project-runtime/HANDOFF_BOOTSTRAP.md` may support owner/runtime
+handoff notes, but it is not a task packet substitute unless explicitly
+full task-packet-equivalent.
 
 ## Minimal task/audit/checkpoint cycle
 
@@ -141,6 +146,8 @@ The following shortcuts contradict the universal flow:
 
 ```text
 profile agent pass -> commit without audit
+first profile create_agent -> TASK_PACKET: NONE
+first profile TASK_PACKET -> plain handoff-only file
 audit fail -> commit accepted state
 setup/run/launch/handover -> skipped when required evidence is missing
 handover agent -> marks whole project completed directly

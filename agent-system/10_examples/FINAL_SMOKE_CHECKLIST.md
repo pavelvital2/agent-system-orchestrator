@@ -33,6 +33,7 @@ agent-system/02_runtime/ACCEPTED_STATE_LOCKING.md
 agent-system/02_runtime/VIOLATION_RECOVERY.md
 agent-system/02_runtime/POST_AUDIT_GIT_CHECKPOINT.md
 agent-system/03_templates/TASK_PACKET_TEMPLATE.md
+agent-system/03_templates/BOOTSTRAP_TASK_PACKET_TEMPLATE.md
 agent-system/03_templates/ORCHESTRATOR_TASK_HANDOFF_TEMPLATE.md
 agent-system/03_templates/AGENT_RESULT_TEMPLATE.md
 agent-system/03_templates/HANDOFF_TEMPLATE.md
@@ -123,12 +124,16 @@ BOOTSTRAP_REQUIREMENTS_ROUTING:
   requirements_analyst and allow direct designer routing only for sufficiently
   structured input. Routing examples use v1.2.0 NEXT_ACTION fields:
   ACTION_TYPE, TARGET_ROLE, TASK_ID, TASK_PACKET, DEPENDENCY_STATUS, and
-  BLOCKED_BY.
+  BLOCKED_BY. The first profile-agent TASK_PACKET is a valid bootstrap task
+  packet using the canonical path convention
+  project-runtime/bootstrap/TASK_BOOTSTRAP_<TARGET_ROLE>_001.md, never
+  TASK_PACKET: NONE, and never a plain handoff-only file.
   Smoke evidence must explicitly verify all of these bootstrap paths:
   requirements_analyst route is valid for incomplete, ambiguous, or uncertain
   owner input; direct designer route is valid only for sufficiently structured
   owner input; no bootstrap document presents designer as the universal first
-  profile agent.
+  profile agent; BOOTSTRAP_TASK_PACKET_TEMPLATE includes full task packet
+  fields and governance boundaries.
 
 ROLE_ALIGNMENT:
   Role documents keep authority boundaries distinct. Profile agents do not

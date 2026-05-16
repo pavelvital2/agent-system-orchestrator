@@ -24,6 +24,7 @@
    - `agent-system/02_runtime/ACCEPTED_STATE_LOCKING.md`
    - `agent-system/02_runtime/AGENT_LIFECYCLE.md`
    - `agent-system/03_templates/TASK_PACKET_TEMPLATE.md`
+   - `agent-system/03_templates/BOOTSTRAP_TASK_PACKET_TEMPLATE.md`
    - `agent-system/03_templates/ORCHESTRATOR_TASK_HANDOFF_TEMPLATE.md`
    - `agent-system/03_templates/AGENT_RESULT_TEMPLATE.md`
    - `agent-system/04_state/RUNTIME_STATE_SCHEMA.md`
@@ -68,7 +69,23 @@ Task-packet validation применяется только если:
 
 Оркестратор не должен считать `TASK_PACKET: NONE` отсутствующим task packet для таких non-dispatch actions.
 
-Обычный project `create_agent` всегда требует валидный task packet.
+Любой profile-agent `create_agent` всегда требует валидный task packet.
+Для первого profile-agent dispatch этот packet должен быть валидным bootstrap
+task packet, созданным по:
+
+```text
+agent-system/03_templates/BOOTSTRAP_TASK_PACKET_TEMPLATE.md
+```
+
+Canonical first-dispatch path convention:
+
+```text
+project-runtime/bootstrap/TASK_BOOTSTRAP_<TARGET_ROLE>_001.md
+```
+
+`TASK_PACKET: NONE` is forbidden for first profile-agent dispatch. A bootstrap
+handoff file is not a task packet substitute unless it is explicitly full
+task-packet-equivalent and satisfies bootstrap task packet validation.
 
 Оркестратор обязан сверить planned action с:
 
