@@ -71,6 +71,26 @@ rules, or README routing text must map to one of:
 Profile execution roles must have matching role files. Control and routing
 pseudo-roles must not be treated as dispatchable profile execution roles.
 
+When `STATE_TRANSITION_RULES.md` or validator rules define a mandatory
+profile-agent audit transition, the documented profile execution role set must
+resolve to existing role files and must include:
+
+```text
+requirements_analyst
+designer
+developer
+tester
+technical_writer
+devops_setup_engineer
+release_manager
+```
+
+Cross-link validation must flag a profile role as inconsistent if its
+mandatory-audit pass routing is absent, points directly to another profile
+role, points directly to another lifecycle phase, points directly to terminal
+completion, or points directly to a Git checkpoint before auditor `STATUS:
+pass`.
+
 ## Template link checks
 
 Every template referenced by role, runtime, state, validator, smoke, or README

@@ -49,24 +49,59 @@ PROJECT_STATE.active_branches
 ## Allowed role transitions
 
 ```text
+profile_agent(pass, audit mandatory) -> auditor
+requirements_analyst(pass) -> auditor when audit mandatory
 designer(pass)          -> auditor
 developer(pass)         -> auditor
+tester(pass)            -> auditor when audit mandatory
+technical_writer(pass)  -> auditor when audit mandatory
+devops_setup_engineer(pass) -> auditor when audit mandatory
+release_manager(pass)   -> auditor when audit mandatory
+requirements_analyst(auditor pass) -> post-audit checkpoint gate, then designer or next requirements task according to NEXT_ACTION/TASK_REGISTRY
 auditor(pass, design)   -> post-audit checkpoint gate, then next audited implementation/correction task
 auditor(pass, impl)     -> tester if testing required, else next governed task/finalization
-auditor(fail)           -> correction for checked role or designer
-tester(pass)            -> technical_writer if docs required, else orchestrator finalization
+devops_setup_engineer(auditor pass) -> post-audit checkpoint gate, then run, launch, documentation, or correction according to gate
+release_manager(auditor pass) -> post-audit checkpoint gate, then final_acceptance, handover, completed, or correction according to gate
+auditor(fail)           -> correction for checked profile role; no commit, no push, no next phase
+tester(pass, audit not mandatory) -> technical_writer if docs required, else orchestrator finalization
 tester(fail)            -> developer correction via orchestrator
 tester(blocked)         -> orchestrator routing
 tester(gap)             -> orchestrator GAP routing
-technical_writer(pass)  -> orchestrator finalization
+technical_writer(pass, audit not mandatory) -> orchestrator finalization
 any_agent(blocked)      -> orchestrator routing
 any_agent(gap)          -> GAP register + dependent branch blocked
 ```
+
+For this rule, `profile_agent` covers these profile execution roles:
+
+```text
+requirements_analyst
+designer
+developer
+tester
+technical_writer
+devops_setup_engineer
+release_manager
+```
+
+If `AUDIT_REQUIREMENTS` in the active task packet requires audit, no
+profile-agent `STATUS: pass` may route directly to another profile role,
+another lifecycle phase, terminal completion, or any Git checkpoint. It must
+route to an auditor first. The post-audit Git checkpoint is allowed only after
+the auditor returns `STATUS: pass`.
 
 ## Forbidden transitions
 
 - designer pass directly to developer;
 - developer pass directly to tester or technical writer;
+- requirements_analyst pass directly to designer, next requirements task, or
+  another phase when audit is required;
+- devops_setup_engineer pass directly to run, launch, documentation, or another
+  phase when audit is required;
+- release_manager pass directly to final_acceptance, handover, completed, or
+  another phase when audit is required;
+- any profile agent pass directly to another profile role, another lifecycle
+  phase, terminal completion, or Git checkpoint when audit is required;
 - tester fail to technical writer/finalization;
 - technical writer pass directly to completed;
 - profile agent RESULT directly setting project completed;
@@ -275,7 +310,10 @@ Enter correction if any of the following are detected:
 - active gap without blocked dependent branch;
 - blocked branch without BLOCKED_BY;
 - skipped gate without authority/evidence;
+- skipped mandatory audit after profile-agent pass;
 - completed/archived status with NEXT_ACTION not stop.
+- profile-agent pass followed by `DEPENDENCY_STATUS: ready` for dependent work
+  before required auditor pass;
 - `ACTION_SEMANTIC: stop_terminal` with unresolved active blockers, active GAPs, failed required gates, or missing finalization evidence;
 - `ACTION_SEMANTIC: pause` with `NEXT_ACTION.ACTION_TYPE: stop`;
 - `ACTION_TYPE: wait_for_owner` with no owner-facing blocker, GAP, or question;

@@ -92,6 +92,38 @@ they do not replace or hide the required lifecycle stages.
 
 ## Required catches
 
+### Mandatory profile audit cannot be bypassed
+
+Runtime state is invalid if the active task packet has mandatory
+`AUDIT_REQUIREMENTS`, a profile execution role returned `STATUS: pass`, and the
+next transition is anything other than auditor routing.
+
+Profile execution roles for this check are:
+
+```text
+requirements_analyst
+designer
+developer
+tester
+technical_writer
+devops_setup_engineer
+release_manager
+```
+
+Invalid direct routes after a mandatory-audit profile pass include:
+
+- next profile role dispatch;
+- next lifecycle phase dispatch;
+- terminal completion or finalization;
+- post-audit Git checkpoint before auditor `STATUS: pass`;
+- dependent work marked `ready` before auditor `STATUS: pass`.
+
+If an auditor returns `STATUS: fail` for a profile task, runtime state is invalid
+when it allows commit, push, normal next task dispatch, terminal completion, or
+dependent work marked `ready`. The only valid recovery path is correction,
+governed update_state, GAP/blocked handling, or genuine owner handling when the
+full runtime tuple permits it.
+
 ### Last accepted result cannot be fail
 
 `PROJECT_STATE.md` is invalid if `Last accepted result` contains:

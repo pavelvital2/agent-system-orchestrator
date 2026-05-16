@@ -189,6 +189,10 @@ PACKAGE_FILE_DEPENDENCY_ALIGNMENT:
 AUDIT_CHECKPOINT_ALIGNMENT:
   Audit pass is required before accepted-state checkpoint. Audit fail,
   blocked, or gap cannot advance to accepted commit/push state.
+  Profile roles with mandatory audit requirements route pass results to
+  auditor before any next profile role, lifecycle phase, terminal completion,
+  or Git checkpoint. Requirements analyst, devops/setup engineer, and release
+  manager pass routing examples are explicitly covered by transition rules.
 
 SETUP_RUN_LAUNCH_HANDOVER_ALIGNMENT:
   setup, run/smoke, launch readiness, and handover templates have explicit

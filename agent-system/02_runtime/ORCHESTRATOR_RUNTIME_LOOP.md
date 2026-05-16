@@ -105,12 +105,23 @@ Task-packet validation применяется только если:
 
 Оркестратор обязан валидировать:
 
-designer → auditor
-developer → auditor
+profile_agent(pass) → auditor when `AUDIT_REQUIREMENTS` makes audit mandatory
+requirements_analyst(pass) → auditor when audit mandatory
+designer(pass) → auditor when audit mandatory
+developer(pass) → auditor when audit mandatory
+tester(pass) → auditor when audit mandatory
+technical_writer(pass) → auditor when audit mandatory
+devops_setup_engineer(pass) → auditor when audit mandatory
+release_manager(pass) → auditor when audit mandatory
 tester(pass) → technical_writer (если required)
 tester(fail) → developer
 tester(blocked) → orchestrator
 tester(gap) → orchestrator
+
+When audit is mandatory, a profile-agent `STATUS: pass` must not route directly
+to another profile role, another lifecycle phase, terminal completion, or Git
+checkpoint. It must route to an auditor first. The post-audit Git checkpoint is
+allowed only after auditor `STATUS: pass`.
 
 Если RESULT агента нарушает mandatory workflow:
 
@@ -266,7 +277,8 @@ NEXT_RECOMMENDED_ACTION: correction
 ```
 
 12. Действовать по STATUS:
-   - profile-agent `pass` → перейти к обязательному audit gate;
+   - profile-agent `pass` with mandatory audit → перейти к обязательному audit gate;
+   - profile-agent `pass` without mandatory audit → route only by validated task packet, task registry, and transition rules;
    - auditor `pass` → выполнить post-audit Git checkpoint, then перейти к следующему governed gate;
    - `fail` → вернуть задачу на исправление профильному агенту;
    - `blocked` → зафиксировать блокер;
