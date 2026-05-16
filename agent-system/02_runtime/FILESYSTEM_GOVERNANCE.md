@@ -96,7 +96,11 @@ project-runtime/PROJECT_STATE.md
 project-runtime/CURRENT_GATE.md
 project-runtime/NEXT_ACTION.md
 project-runtime/GAP_REGISTER.md
+project-runtime/TASK_REGISTRY.md
+project-runtime/ACCEPTED_ARTIFACTS.md
 project-runtime/AGENT_RESULTS_LOG.md
+project-runtime/ORCHESTRATOR_EVENTS_LOG.md
+project-runtime/STATUS_SUMMARY.md
 ```
 
 Кто может менять:
@@ -210,6 +214,27 @@ project-docs/
 
 ---
 
+### Requirements Analyst
+
+Может читать:
+- `project-input/`, если указан в REQUIRED_DOCS;
+- accepted project docs внутри ACTIVE_DOC_ROOT, если они указаны в REQUIRED_DOCS;
+- назначенный requirements task packet.
+
+Может изменять:
+- bounded requirements artifacts внутри ACTIVE_DOC_ROOT, если это явно разрешено task packet;
+- requirements traceability notes, GAP notes, and acceptance signal summaries, если они входят в scope задачи.
+
+Не может изменять:
+- `agent-system/`;
+- `project-runtime/`;
+- `project-input/`, включая исходное ТЗ, кроме отдельной source-normalization задачи;
+- `project-archive/`;
+- implementation code;
+- architecture docs, task packets, audit/testing docs, setup docs, release docs, or user docs outside assigned scope.
+
+---
+
 ### Designer
 
 Может изменять:
@@ -305,6 +330,58 @@ project-docs/08_user_docs/
 
 ---
 
+### DevOps Setup Engineer
+
+Может изменять:
+- bounded setup, configuration, run-readiness, or operational handoff artifacts внутри ACTIVE_DOC_ROOT, если это явно разрешено task packet;
+- allowed project setup files, configuration templates, sample files, scripts, or run instructions, если они явно указаны task packet.
+
+Может читать:
+- setup/run task packet;
+- accepted setup, architecture, implementation, testing, or runtime-readiness evidence, если они указаны в REQUIRED_DOCS;
+- configuration examples without secret values.
+
+Не может изменять:
+- `agent-system/`;
+- `project-runtime/`;
+- `project-input/`;
+- `project-archive/`;
+- product requirements, architecture, implementation behavior, acceptance criteria, release approvals, or user docs outside assigned scope;
+- credentials, local secrets, tokens, cookies, private keys, or `.env` files.
+
+Не может:
+- expose, print, commit, or invent secret values;
+- run production deployment unless explicitly assigned and approved by task packet.
+
+---
+
+### Release Manager
+
+Может изменять:
+- launch readiness, release readiness, rollback/recovery, handover, and final acceptance artifacts внутри ACTIVE_DOC_ROOT, если это явно разрешено task packet;
+- bounded release blocker, known limitation, and accepted-artifact readiness summaries, если они входят в scope задачи.
+
+Может читать:
+- launch, release, or handover task packet;
+- accepted task results, audit results, testing results, setup/run evidence, documentation results, and owner decisions, если они указаны в REQUIRED_DOCS.
+
+Не может изменять:
+- `agent-system/`;
+- `project-runtime/`;
+- `project-input/`;
+- `project-archive/`;
+- implementation code;
+- requirements, architecture, acceptance criteria, audit findings, testing evidence, setup evidence, or user docs outside assigned scope.
+
+Не может:
+- mark the project completed;
+- ignore failed or missing gates;
+- commit, push, tag, deploy, or approve production launch unless explicitly assigned by an orchestrator-controlled task.
+
+Terminal completion remains orchestrator-controlled.
+
+---
+
 ## Deprecated documents
 
 Документ считается deprecated, если:
@@ -397,7 +474,11 @@ project-runtime/PROJECT_STATE.md
 project-runtime/CURRENT_GATE.md
 project-runtime/NEXT_ACTION.md
 project-runtime/GAP_REGISTER.md
+project-runtime/TASK_REGISTRY.md
+project-runtime/ACCEPTED_ARTIFACTS.md
 project-runtime/AGENT_RESULTS_LOG.md
+project-runtime/ORCHESTRATOR_EVENTS_LOG.md
+project-runtime/STATUS_SUMMARY.md
 ```
 
 Правила:
@@ -405,6 +486,32 @@ project-runtime/AGENT_RESULTS_LOG.md
 - агенты не меняют runtime state;
 - runtime state не заменяет project docs;
 - project docs не заменяют runtime state.
+
+---
+
+## Secret handling
+
+No role may read, print, edit, stage, commit, or push secrets unless explicitly governed by a safe secret-handling task.
+
+Secret values must never be written into:
+- logs;
+- RESULTs;
+- project docs;
+- runtime state;
+- commits;
+- task packets;
+- handoff artifacts.
+
+Secrets include:
+- credentials;
+- tokens;
+- cookies;
+- private keys;
+- passwords;
+- local secret stores;
+- `.env` files with real values.
+
+Safe references may identify environment variable names, expected purpose, and placeholder examples only when task scope requires configuration documentation.
 
 ---
 
