@@ -89,6 +89,10 @@ Canonical first-dispatch path convention:
 project-runtime/bootstrap/TASK_BOOTSTRAP_<TARGET_ROLE>_001.md
 ```
 
+The `<TARGET_ROLE>` segment is mandatory. Any blank-role bootstrap placeholder
+in current package docs, runtime state, task packets, or checkpointed content is
+invalid and must route to governed correction before dispatch or push.
+
 The first profile-agent `NEXT_ACTION` must still include every required field
 from `agent-system/04_state/NEXT_ACTION_TEMPLATE.md`; for ordinary bootstrap
 dispatch, requester-return and blocking/resume contexts are `NONE`.
@@ -110,6 +114,9 @@ task-packet-equivalent and satisfies bootstrap task packet validation.
 ```text
 project-runtime/bootstrap/TASK_BOOTSTRAP_<TARGET_ROLE>_001.md
 ```
+
+The bootstrap exception is valid only when the role segment is populated by the
+selected first profile route.
 
 Ordinary task packets outside `ACTIVE_DOC_ROOT` remain invalid.
 

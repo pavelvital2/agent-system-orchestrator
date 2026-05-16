@@ -745,4 +745,34 @@ MIGRATION_REQUIRED: no
 MIGRATION_NOTE: This bounded correction finalizes residual bootstrap placeholder cleanup only. It preserves the active package, governance ruleset, and runtime schema tuple 1.3.0 / 1.3.0 / 1.2.0 and does not install new package behavior.
 AUTHORIZED_BY: project_owner
 AUDIT_REQUIRED: yes
+
+CHANGE_ID: GOV-2026-05-16-013
+CHANGE_TITLE: CORR_ASU_130_006_FINAL_FAIL_CLOSED_REMEDIATION
+STATUS: accepted
+DATE: 2026-05-16
+PACKAGE_VERSION_BEFORE: 1.3.0
+PACKAGE_VERSION_AFTER: 1.3.0
+CHANGE_TYPE: patch
+AFFECTED_FILES:
+- agent-system/02_runtime/ORCHESTRATOR_RUNTIME_LOOP.md
+- agent-system/02_runtime/POST_AUDIT_GIT_CHECKPOINT.md
+- agent-system/07_lifecycle/BOOTSTRAP_STAGE.md
+- agent-system/09_validators/GIT_CHECKPOINT_VALIDATION_RULES.md
+- agent-system/GOVERNANCE_CHANGELOG.md
+AFFECTED_INVARIANTS:
+- blank-role bootstrap placeholder is absent from current agent-system package docs
+- canonical generic bootstrap path uses project-runtime/bootstrap/TASK_BOOTSTRAP_<TARGET_ROLE>_001.md
+- concrete bootstrap examples remain project-runtime/bootstrap/TASK_BOOTSTRAP_REQUIREMENTS_ANALYST_001.md and project-runtime/bootstrap/TASK_BOOTSTRAP_DESIGNER_001.md
+- checkpoint validation now requires both working-tree and committed HEAD validation before push
+- CORR_ASU_130_004 and CORR_ASU_130_005 were incomplete for this residual placeholder defect
+- active version tuple remains 1.3.0 / 1.3.0 / 1.2.0
+AFFECTED_TRANSITIONS:
+- bootstrap intake -> first profile-agent task packet validation through project-runtime/bootstrap/TASK_BOOTSTRAP_<TARGET_ROLE>_001.md
+- package invariant validation -> governed correction if a blank-role bootstrap placeholder or contradictory canonical bootstrap wording appears
+- auditor STATUS: pass -> post-audit Git checkpoint -> working-tree validation -> commit -> committed HEAD validation -> push
+SCHEMA_TEMPLATE_IMPACT: none
+MIGRATION_REQUIRED: no
+MIGRATION_NOTE: This bounded correction records the final residual placeholder remediation and hardens checkpoint validation semantics without changing active package, governance ruleset, or runtime schema version constants. It does not change role authority, runtime file set, requester-return audit gating, or reasoning-level policy.
+AUTHORIZED_BY: project_owner
+AUDIT_REQUIRED: yes
 ```

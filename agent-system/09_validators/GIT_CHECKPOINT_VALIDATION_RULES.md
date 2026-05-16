@@ -5,8 +5,9 @@
 This document defines documentation-first validation rules for post-audit Git
 checkpoint attempts.
 
-Git checkpoint validation applies before staging, committing, or pushing.
-It does not require a working CLI implementation.
+Git checkpoint validation applies before staging, committing, and pushing.
+It also requires committed `HEAD` validation after commit and before push. It
+does not require a working CLI implementation.
 
 ## Source documents
 
@@ -33,7 +34,8 @@ A Git checkpoint is valid only when all conditions are true:
 - no suspected secret or credential file is staged;
 - runtime state does not contain active blockers or GAPs that block the
   checkpointed work.
-- accepted files can be listed without reading or printing secret values.
+- accepted files can be listed without reading or printing secret values;
+- working-tree validation for accepted task-specific invariants has passed.
 
 ## Forbidden checkpoint attempts
 
@@ -47,7 +49,9 @@ Checkpoint is forbidden after:
 - invalid task packet;
 - invalid runtime tuple;
 - direct progress after audit fail;
-- unverified correction result.
+- unverified correction result;
+- failed working-tree validation for accepted task-specific invariants;
+- failed committed `HEAD` validation for accepted task-specific invariants.
 
 ## Allowed and forbidden file checks
 
@@ -104,7 +108,10 @@ Push must not proceed when:
 - working tree contains out-of-scope staged changes;
 - secret-safety checks fail;
 - audit pass is missing;
-- correction remains pending for the committed work.
+- correction remains pending for the committed work;
+- committed `HEAD` content has not been validated against the same accepted
+  task-specific invariants checked before commit;
+- committed `HEAD` validation fails.
 
 ## Required checkpoint outputs
 
@@ -116,6 +123,8 @@ Successful checkpoint validation must ensure the checkpoint records:
 - accepted files;
 - branch;
 - commit hash;
+- working-tree validation reference;
+- committed `HEAD` validation reference;
 - push status.
 
 `PUSH_STATUS: pushed` requires a valid local commit hash and a completed push.

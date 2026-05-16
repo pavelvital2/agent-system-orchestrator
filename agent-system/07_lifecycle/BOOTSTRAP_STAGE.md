@@ -56,6 +56,10 @@ Canonical bootstrap task packet path convention:
 project-runtime/bootstrap/TASK_BOOTSTRAP_<TARGET_ROLE>_001.md
 ```
 
+The `<TARGET_ROLE>` segment is mandatory. A blank-role bootstrap placeholder is
+not a valid generic convention, concrete example, task packet path, or
+historical package reference.
+
 Concrete first-route paths:
 
 ```text
