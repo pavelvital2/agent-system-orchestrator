@@ -126,26 +126,33 @@ Implement local task service
 ## TASK_TYPE
 
 ```text
+requirements_analyst
 designer
 developer
 auditor
 tester
 technical_writer
+devops_setup_engineer
+release_manager
 ```
 
-Задача должна относиться только к одному типу роли.
+Задача должна относиться только к одному profile execution role type.
+
+Control pseudo-roles `orchestrator`, `project_owner`, and `none` are not valid
+TASK_TYPE values unless a governance-only exception is explicitly documented.
 
 ---
 
 ## TARGET_ROLE
 
 ```text
-<designer | developer | auditor | tester | technical_writer>
+<requirements_analyst | designer | developer | auditor | tester | technical_writer | devops_setup_engineer | release_manager>
 ```
 
 Rules:
 - TARGET_ROLE is the role that must execute this task;
-- TARGET_ROLE must match TASK_TYPE unless the packet explicitly documents a governed exception;
+- TARGET_ROLE must match TASK_TYPE for profile execution tasks unless the packet explicitly documents a governed exception;
+- control pseudo-roles `orchestrator`, `project_owner`, and `none` are valid only in control/routing fields such as NEXT_ROLE_ON_* where the template permits them;
 - a task packet must not assign work to multiple profile roles.
 
 ---
@@ -547,6 +554,22 @@ orchestrator
 
 ```text
 orchestrator
+```
+
+Allowed NEXT_ROLE_ON_* values use the control/target role enum:
+
+```text
+orchestrator
+requirements_analyst
+designer
+developer
+auditor
+tester
+technical_writer
+devops_setup_engineer
+release_manager
+project_owner
+none
 ```
 
 ---

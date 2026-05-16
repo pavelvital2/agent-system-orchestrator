@@ -7,7 +7,7 @@ GATE_ID:
 GATE_NAME:
 GATE_TYPE: bootstrap | design | audit | implementation | testing | documentation | correction | finalization | terminal
 STATUS: open | passed | failed | blocked | skipped
-OWNER_ROLE: orchestrator | designer | developer | auditor | tester | technical_writer | project_owner
+OWNER_ROLE: orchestrator | requirements_analyst | designer | developer | auditor | tester | technical_writer | devops_setup_engineer | release_manager | project_owner
 TASK_ID:
 TASK_PACKET:
 ACTION_SEMANTIC: normal | wait_for_owner | pause | stop_terminal | completed_state_transition
@@ -28,8 +28,11 @@ ACTION_SEMANTIC: normal | wait_for_owner | pause | stop_terminal | completed_sta
 ## Required next role
 
 ```text
-designer | developer | auditor | tester | technical_writer | orchestrator | project_owner | none
+requirements_analyst | designer | developer | auditor | tester | technical_writer | devops_setup_engineer | release_manager | orchestrator | project_owner | none
 ```
+
+Profile execution roles may own task gates. `orchestrator`, `project_owner`,
+and `none` are control/routing pseudo-roles, not profile task types.
 
 ## Gate evidence
 

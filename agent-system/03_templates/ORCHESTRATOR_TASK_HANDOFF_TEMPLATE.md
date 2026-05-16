@@ -4,7 +4,7 @@
 
 ```text
 ROLE:
-<designer | developer | auditor | tester | technical_writer>
+<requirements_analyst | designer | developer | auditor | tester | technical_writer | devops_setup_engineer | release_manager>
 
 REASONING_LEVEL:
 <default | high | maximum>
@@ -46,10 +46,14 @@ MANDATORY_RULES:
 - Do not modify `agent-system/` unless this is an explicit universal-package update task.
 - Do not treat missing information as permission to infer.
 - If task packet conflicts with governance or scope, return STATUS: blocked or gap.
-- NEXT_REQUIRED_ACTION is advisory; orchestrator validates it.
+- NEXT_RECOMMENDED_ACTION is advisory; orchestrator validates it.
 - Return result strictly using AGENT_RESULT_TEMPLATE.
 
 EXPECTED_RESULT_FORMAT:
 Use:
 agent-system/03_templates/AGENT_RESULT_TEMPLATE.md
 ```
+
+`ROLE` must be a canonical profile execution role. Control/routing pseudo-roles
+`orchestrator`, `project_owner`, and `none` are not valid task handoff execution
+roles in this template.

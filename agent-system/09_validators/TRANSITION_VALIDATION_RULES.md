@@ -108,6 +108,38 @@ state.
 
 ## Role transition checks
 
+The control/target role enum for runtime routing is:
+
+```text
+orchestrator
+requirements_analyst
+designer
+developer
+auditor
+tester
+technical_writer
+devops_setup_engineer
+release_manager
+project_owner
+none
+```
+
+Profile execution roles are:
+
+```text
+requirements_analyst
+designer
+developer
+auditor
+tester
+technical_writer
+devops_setup_engineer
+release_manager
+```
+
+`orchestrator`, `project_owner`, and `none` are control/routing pseudo-roles
+and must not be treated as dispatchable profile execution task types.
+
 Validators must catch these forbidden transitions:
 
 - designer pass directly to developer;

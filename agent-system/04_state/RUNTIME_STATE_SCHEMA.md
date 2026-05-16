@@ -149,6 +149,22 @@ DEPENDENCIES:
 BLOCKED_BY:
 ```
 
+`CURRENT_AGENT_ROLE` допустимые значения:
+
+```text
+requirements_analyst
+designer
+developer
+auditor
+tester
+technical_writer
+devops_setup_engineer
+release_manager
+```
+
+`CURRENT_AGENT_ROLE` records only profile execution roles. It must not use
+control pseudo-roles.
+
 Если активных веток нет:
 
 ```text
@@ -269,6 +285,25 @@ skipped
 
 `skipped` допустим только если skip явно разрешён task packet или governance.
 
+## OWNER_ROLE допустимые значения
+
+```text
+orchestrator
+requirements_analyst
+designer
+developer
+auditor
+tester
+technical_writer
+devops_setup_engineer
+release_manager
+project_owner
+```
+
+`OWNER_ROLE` may identify a profile execution role, the orchestrator, or the
+project owner for the current gate. `none` is reserved for routing fields that
+explicitly permit no next role.
+
 ## Entry criteria
 
 Секция обязательна:
@@ -302,8 +337,13 @@ skipped
 ## Required next role
 
 ```text
-designer | developer | auditor | tester | technical_writer | orchestrator | project_owner | none
+requirements_analyst | designer | developer | auditor | tester | technical_writer | devops_setup_engineer | release_manager | orchestrator | project_owner | none
 ```
+
+Profile execution roles are `requirements_analyst`, `designer`, `developer`,
+`auditor`, `tester`, `technical_writer`, `devops_setup_engineer`, and
+`release_manager`. `orchestrator`, `project_owner`, and `none` are
+control/routing pseudo-roles, not profile task types.
 
 ## Gate evidence
 
@@ -357,15 +397,23 @@ stop
 ## TARGET_ROLE допустимые значения
 
 ```text
+requirements_analyst
 designer
 developer
 auditor
 tester
 technical_writer
+devops_setup_engineer
+release_manager
 orchestrator
 project_owner
 none
 ```
+
+Profile execution TARGET_ROLE values are valid for dispatchable bounded
+profile-agent work. Control pseudo-roles `orchestrator`, `project_owner`, and
+`none` are valid only for orchestration, owner waits, terminal routing, or other
+governed control contexts.
 
 ## DEPENDENCY_STATUS допустимые значения
 
@@ -567,6 +615,21 @@ CHANGED_FILES:
 NEXT_RECOMMENDED_ACTION:
 ```
 
+`ROLE` допустимые значения for profile-agent results:
+
+```text
+requirements_analyst
+designer
+developer
+auditor
+tester
+technical_writer
+devops_setup_engineer
+release_manager
+```
+
+Control pseudo-roles are not profile-agent result roles.
+
 ## Правила
 
 - каждая завершённая agent task должна иметь запись;
@@ -606,6 +669,35 @@ ACCEPTED_FILES:
 CHECKPOINT_REF:
 CREATED_AT:
 UPDATED_AT:
+```
+
+`TASK_TYPE` допустимые значения:
+
+```text
+requirements_analyst
+designer
+developer
+auditor
+tester
+technical_writer
+devops_setup_engineer
+release_manager
+```
+
+`OWNER_ROLE` uses the control/target role enum:
+
+```text
+orchestrator
+requirements_analyst
+designer
+developer
+auditor
+tester
+technical_writer
+devops_setup_engineer
+release_manager
+project_owner
+none
 ```
 
 ## STATUS допустимые значения

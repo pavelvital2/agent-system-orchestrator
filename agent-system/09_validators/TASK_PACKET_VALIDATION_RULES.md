@@ -93,6 +93,36 @@ A task packet is invalid when it allows or requires:
 - correction without a fresh bounded task where correction is required;
 - terminal completion by profile-agent RESULT alone.
 
+## Role enum checks
+
+Profile execution `TASK_TYPE` values are limited to:
+
+```text
+requirements_analyst
+designer
+developer
+auditor
+tester
+technical_writer
+devops_setup_engineer
+release_manager
+```
+
+For profile execution tasks, `TARGET_ROLE` must match `TASK_TYPE` unless the
+packet explicitly documents a governed exception.
+
+Control pseudo-roles are:
+
+```text
+orchestrator
+project_owner
+none
+```
+
+They are valid in control/routing contexts, such as next-role routing, owner
+waits, and terminal routing. They are invalid as profile execution `TASK_TYPE`
+values unless a governance-only exception is explicitly documented.
+
 ## Correction task checks
 
 Correction task packets must include:

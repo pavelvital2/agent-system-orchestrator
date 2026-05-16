@@ -34,6 +34,10 @@ DEPENDENCIES:
 BLOCKED_BY: <BLOCKER_ID | GAP_ID | NONE>
 ```
 
+`CURRENT_AGENT_ROLE` must be one of the profile execution roles:
+`requirements_analyst`, `designer`, `developer`, `auditor`, `tester`,
+`technical_writer`, `devops_setup_engineer`, or `release_manager`.
+
 If no active branches exist:
 
 ```text
@@ -84,3 +88,7 @@ DATE:
 STATUS:
 RESULT_REF:
 ```
+
+`ROLE` records the profile execution role that produced the accepted result.
+Control pseudo-roles `orchestrator`, `project_owner`, and `none` are routing
+values and must not be recorded as profile result roles.

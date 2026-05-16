@@ -26,7 +26,7 @@
   ],
   "properties": {
     "STATUS": { "type": "string", "enum": ["pass", "fail", "blocked", "gap"] },
-    "ROLE": { "type": "string", "enum": ["designer", "developer", "auditor", "tester", "technical_writer"] },
+    "ROLE": { "type": "string", "enum": ["requirements_analyst", "designer", "developer", "auditor", "tester", "technical_writer", "devops_setup_engineer", "release_manager"] },
     "TASK": { "type": "string" },
     "SUMMARY": { "$ref": "#/$defs/nonEmptyList" },
     "READ_DOCS": { "$ref": "#/$defs/listOrNone" },

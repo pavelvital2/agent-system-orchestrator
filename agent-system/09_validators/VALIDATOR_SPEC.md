@@ -121,6 +121,43 @@ before_git_checkpoint:
   allowed/forbidden file checks
 ```
 
+## Role enum validation baseline
+
+Validators that inspect runtime routing fields must use the control/target role
+enum:
+
+```text
+orchestrator
+requirements_analyst
+designer
+developer
+auditor
+tester
+technical_writer
+devops_setup_engineer
+release_manager
+project_owner
+none
+```
+
+Validators that inspect profile execution task types must use:
+
+```text
+requirements_analyst
+designer
+developer
+auditor
+tester
+technical_writer
+devops_setup_engineer
+release_manager
+```
+
+`orchestrator`, `project_owner`, and `none` are control/routing pseudo-roles.
+They are valid for orchestrator control flow and owner/terminal routing, but not
+for profile execution `TASK_TYPE` values unless a governance-only exception is
+explicitly documented.
+
 ## Failure classification
 
 Validator failures are orchestrator-classified violations or routing blockers.

@@ -43,8 +43,14 @@
       "properties": {
         "TASK_ID": { "type": "string" },
         "TASK_TITLE": { "type": "string" },
-        "TASK_TYPE": { "type": "string" },
-        "OWNER_ROLE": { "type": "string" },
+        "TASK_TYPE": {
+          "type": "string",
+          "enum": ["requirements_analyst", "designer", "developer", "auditor", "tester", "technical_writer", "devops_setup_engineer", "release_manager"]
+        },
+        "OWNER_ROLE": {
+          "type": "string",
+          "enum": ["orchestrator", "requirements_analyst", "designer", "developer", "auditor", "tester", "technical_writer", "devops_setup_engineer", "release_manager", "project_owner", "none"]
+        },
         "STATUS": {
           "type": "string",
           "enum": [

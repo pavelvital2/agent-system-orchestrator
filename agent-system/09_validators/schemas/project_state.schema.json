@@ -120,7 +120,10 @@
         "BRANCH_ID": { "type": "string" },
         "STATUS": { "type": "string", "enum": ["active", "blocked", "completed", "archived"] },
         "CURRENT_TASK": { "type": "string" },
-        "CURRENT_AGENT_ROLE": { "type": "string" },
+        "CURRENT_AGENT_ROLE": {
+          "type": "string",
+          "enum": ["requirements_analyst", "designer", "developer", "auditor", "tester", "technical_writer", "devops_setup_engineer", "release_manager"]
+        },
         "DEPENDENCIES": { "oneOf": [{ "const": "NONE" }, { "type": "array", "items": { "type": "string" } }] },
         "BLOCKED_BY": { "type": "string" }
       }
@@ -153,7 +156,10 @@
       "additionalProperties": false,
       "required": ["ROLE", "TASK", "DATE", "STATUS", "RESULT_REF"],
       "properties": {
-        "ROLE": { "type": "string" },
+        "ROLE": {
+          "type": "string",
+          "enum": ["requirements_analyst", "designer", "developer", "auditor", "tester", "technical_writer", "devops_setup_engineer", "release_manager"]
+        },
         "TASK": { "type": "string" },
         "DATE": { "type": "string" },
         "STATUS": { "type": "string" },

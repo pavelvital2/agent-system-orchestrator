@@ -7,7 +7,7 @@ RESULT:
 STATUS: pass | fail | blocked | gap
 
 ROLE:
-<designer | developer | auditor | tester | technical_writer>
+<requirements_analyst | designer | developer | auditor | tester | technical_writer | devops_setup_engineer | release_manager>
 
 TASK:
 <TASK_ID or task title>
@@ -78,6 +78,23 @@ gap
 `violation` is not a valid profile-agent RESULT `STATUS`.
 
 `violation` is an orchestrator-derived recovery/logging category for governance, workflow, filesystem, runtime-state, or formally invalid RESULT handling.
+
+## Role rule
+
+`ROLE` must be one of the canonical profile execution roles:
+
+```text
+requirements_analyst
+designer
+developer
+auditor
+tester
+technical_writer
+devops_setup_engineer
+release_manager
+```
+
+Control/routing pseudo-roles `orchestrator`, `project_owner`, and `none` are not valid profile-agent RESULT roles.
 
 Если GAP отсутствует, секция должна быть:
 
