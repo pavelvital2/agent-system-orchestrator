@@ -46,7 +46,7 @@ MANDATORY_RULES:
 - Do not modify `agent-system/` unless this is an explicit universal-package update task.
 - Do not treat missing information as permission to infer.
 - If task packet conflicts with governance or scope, return STATUS: blocked or gap.
-- NEXT_RECOMMENDED_ACTION is advisory; orchestrator validates it.
+- NEXT_RECOMMENDED_ACTION is advisory, not authoritative; orchestrator validates it before routing.
 - Return result strictly using AGENT_RESULT_TEMPLATE.
 
 EXPECTED_RESULT_FORMAT:

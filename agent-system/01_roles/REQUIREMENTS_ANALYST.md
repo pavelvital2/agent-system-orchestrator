@@ -77,7 +77,7 @@ The RESULT must include:
 - created and deleted files if the active template requires them;
 - evidence mapping requirements to source inputs;
 - explicit risks, blockers, and GAPs;
-- NEXT_REQUIRED_ACTION that routes through the orchestrator.
+- NEXT_RECOMMENDED_ACTION routed through orchestrator validation.
 
 If `STATUS: pass`, the next action must request design or requirements audit according to the task packet.
 

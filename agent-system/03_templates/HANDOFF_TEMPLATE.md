@@ -75,3 +75,5 @@ SUPERSEDED_BY:
 - `SUPERSEDED_BY` must remain `NONE` unless another handoff replaces this one.
 - Superseded or cancelled handoffs must not be dispatched.
 - A handoff cannot override role instructions, task packet scope, runtime state, or governance.
+- Agent `NEXT_RECOMMENDED_ACTION` values may inform handoff creation, but they
+  are advisory and not authoritative until validated by the orchestrator.

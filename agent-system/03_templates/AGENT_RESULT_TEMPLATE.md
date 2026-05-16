@@ -143,4 +143,6 @@ NEXT_RECOMMENDED_ACTION
 
 If a field has no entries, use `NONE`.
 
-Legacy RESULT consumers may still display `NEXT_REQUIRED_ACTION`, but profile agents must emit `NEXT_RECOMMENDED_ACTION`.
+Legacy RESULT consumers may still display or read `NEXT_REQUIRED_ACTION` as an
+alias for older records, but profile agents must emit
+`NEXT_RECOMMENDED_ACTION`.

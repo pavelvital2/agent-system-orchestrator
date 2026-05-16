@@ -186,7 +186,7 @@ STATUS: gap
 - RISKS;
 - BLOCKERS;
 - GAPS;
-- NEXT_REQUIRED_ACTION.
+- NEXT_RECOMMENDED_ACTION.
 
 ---
 
@@ -194,19 +194,19 @@ STATUS: gap
 
 После разработчика всегда обязателен аудит.
 
-Если STATUS `pass`, в `NEXT_REQUIRED_ACTION` должно быть указано:
+Если STATUS `pass`, в `NEXT_RECOMMENDED_ACTION` рекомендуется указать:
 
 ```text
 Run implementation audit for this developer result.
 ```
 
-Если STATUS `gap`, в `NEXT_REQUIRED_ACTION` должно быть указано:
+Если STATUS `gap`, в `NEXT_RECOMMENDED_ACTION` рекомендуется указать:
 
 ```text
 Return GAP to orchestrator for routing.
 ```
 
-Если STATUS `blocked`, в `NEXT_REQUIRED_ACTION` должно быть указано:
+Если STATUS `blocked`, в `NEXT_RECOMMENDED_ACTION` рекомендуется указать:
 
 ```text
 Return blocker to orchestrator for routing.

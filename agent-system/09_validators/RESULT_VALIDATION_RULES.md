@@ -33,10 +33,13 @@ EVIDENCE:
 RISKS:
 BLOCKERS:
 GAPS:
-NEXT_REQUIRED_ACTION:
+NEXT_RECOMMENDED_ACTION:
 ```
 
 If a newer template adds sections, the validator must follow the template.
+
+`NEXT_REQUIRED_ACTION` is a legacy alias for older RESULT records. v1.2.0
+validators must not require profile agents to emit it.
 
 ## STATUS validation
 
@@ -155,9 +158,16 @@ BLOCKERS:
 is invalid unless the task packet explicitly defines a no-progress condition
 that does not require a blocker.
 
-## NEXT_REQUIRED_ACTION validation
+## NEXT_RECOMMENDED_ACTION validation
 
-`NEXT_REQUIRED_ACTION` is advisory and must not contradict governance.
+`NEXT_RECOMMENDED_ACTION` is advisory and must not contradict governance. It is
+not authoritative for routing until the orchestrator validates it against
+runtime state, task registry, current gate, transition rules, blockers, and
+accepted artifacts.
+
+Legacy RESULT readers may accept `NEXT_REQUIRED_ACTION` as an alias when
+reading older records, but current v1.2.0 RESULT validation must require
+`NEXT_RECOMMENDED_ACTION`.
 
 Invalid RESULT recommendations include:
 

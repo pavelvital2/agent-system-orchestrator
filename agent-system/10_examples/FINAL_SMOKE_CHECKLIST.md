@@ -116,6 +116,12 @@ TASK_RESULT_ALIGNMENT:
   TASK_PACKET_TEMPLATE and AGENT_RESULT_TEMPLATE include the fields required
   by validator rules and schema sidecars.
 
+RESULT_ACTION_FIELD_ALIGNMENT:
+  AGENT_RESULT_TEMPLATE, RESULT_VALIDATION_RULES, runtime loop, and result
+  schema require NEXT_RECOMMENDED_ACTION as the canonical v1.2.0 RESULT field.
+  NEXT_REQUIRED_ACTION appears only as a documented legacy alias and is not
+  required by v1.2.0 validators.
+
 STATE_ALIGNMENT:
   runtime state templates, task registry, accepted artifacts registry, logs,
   and transition rules use compatible statuses and routing terms.

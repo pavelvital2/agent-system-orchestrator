@@ -220,6 +220,11 @@ GAPS
 NEXT_RECOMMENDED_ACTION
 ```
 
+`NEXT_RECOMMENDED_ACTION` is an advisory profile-agent recommendation, not an
+authoritative routing decision. Before acting on it, the orchestrator must
+validate runtime state, task registry, current gate, transition rules, blockers,
+and accepted artifacts.
+
 Допустимые profile-agent `STATUS` values:
 
 ```text

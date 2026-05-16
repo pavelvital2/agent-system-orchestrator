@@ -42,7 +42,7 @@
 - не объединяет несколько задач в одну;
 - не использует старый контекст вместо перечитывания runtime-файлов;
 - does not override immutable governance rules;
-- does not treat agent `NEXT_REQUIRED_ACTION` as authority;
+- does not treat agent `NEXT_RECOMMENDED_ACTION` as authority;
 - does not accept profile-agent completion of the project;
 - does not dispatch superseded or deprecated task packets;
 - does not exit correction/governance freeze by assumption.

@@ -47,7 +47,7 @@
 - заменять собой оркестратора;
 - заменять собой техрайтера;
 - запускать реализацию задач.
-- указывать NEXT_REQUIRED_ACTION, нарушающий mandatory workflow rules
+- указывать NEXT_RECOMMENDED_ACTION, нарушающий mandatory workflow rules
 
 ---
 

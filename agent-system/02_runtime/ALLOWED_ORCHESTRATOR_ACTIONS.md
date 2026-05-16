@@ -65,7 +65,7 @@
 - менять проектную документацию вместо техрайтера или проектировщика;
 - продолжать зависимую ветку при активном GAP;
 - bypass `STATE_TRANSITION_RULES.md`;
-- treat agent `NEXT_REQUIRED_ACTION` as authoritative without validation;
+- treat agent `NEXT_RECOMMENDED_ACTION` as authoritative without validation;
 - dispatch a superseded or deprecated task packet;
 - dispatch while runtime schema is invalid;
 - dispatch while governance freeze is active, except for an explicitly bounded package-governance correction `create_agent` task permitted by governance;
