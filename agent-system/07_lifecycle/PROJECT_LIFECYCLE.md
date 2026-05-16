@@ -6,20 +6,7 @@ This document defines the universal project lifecycle for the agent-system packa
 
 ## Lifecycle order
 
-```text
-BOOTSTRAP
-REQUIREMENTS
-DESIGN
-IMPLEMENTATION
-AUDIT
-TESTING
-SETUP
-RUN
-LAUNCH
-DOCUMENTATION
-HANDOVER
-FINAL_ACCEPTANCE
-```
+[BOOTSTRAP](BOOTSTRAP_STAGE.md) -> [REQUIREMENTS](REQUIREMENTS_STAGE.md) -> [DESIGN](DESIGN_STAGE.md) -> [IMPLEMENTATION](IMPLEMENTATION_STAGE.md) -> AUDIT -> [TESTING](TESTING_STAGE.md) -> [SETUP](SETUP_STAGE.md) -> [RUN](RUN_STAGE.md) -> [LAUNCH](LAUNCH_STAGE.md) -> [DOCUMENTATION](DOCUMENTATION_STAGE.md) -> [HANDOVER](HANDOVER_STAGE.md) -> FINAL_ACCEPTANCE
 
 Audit is a mandatory gate after design and implementation work. Additional audit gates may be required by task packets.
 
@@ -62,6 +49,7 @@ A project must not move forward when:
 - `agent-system/07_lifecycle/SETUP_STAGE.md`
 - `agent-system/07_lifecycle/RUN_STAGE.md`
 - `agent-system/07_lifecycle/LAUNCH_STAGE.md`
+- `agent-system/07_lifecycle/DOCUMENTATION_STAGE.md`
 - `agent-system/07_lifecycle/HANDOVER_STAGE.md`
 
 ## Final acceptance rule

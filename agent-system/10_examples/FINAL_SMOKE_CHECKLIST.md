@@ -60,6 +60,7 @@ agent-system/07_lifecycle/TESTING_STAGE.md
 agent-system/07_lifecycle/SETUP_STAGE.md
 agent-system/07_lifecycle/RUN_STAGE.md
 agent-system/07_lifecycle/LAUNCH_STAGE.md
+agent-system/07_lifecycle/DOCUMENTATION_STAGE.md
 agent-system/07_lifecycle/HANDOVER_STAGE.md
 agent-system/08_profiles/PROJECT_PROFILE_SPEC.md
 agent-system/08_profiles/generic.md
@@ -106,7 +107,8 @@ VERSION_ALIGNMENT:
 LIFECYCLE_ALIGNMENT:
   PROJECT_LIFECYCLE includes requirements, design, implementation, audit,
   testing, setup, run, launch, documentation, handover, and final acceptance.
-  Stage documents do not contradict the lifecycle order.
+  Stage documents exist for documented lifecycle stages where applicable and do
+  not contradict the lifecycle order.
 
 ROLE_ALIGNMENT:
   Role documents keep authority boundaries distinct. Profile agents do not

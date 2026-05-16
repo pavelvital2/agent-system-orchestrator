@@ -34,13 +34,15 @@ The universal lifecycle is documented in:
 agent-system/07_lifecycle/PROJECT_LIFECYCLE.md
 ```
 
-Stage documents define the gates and responsibilities for:
+The lifecycle order is:
 
 ```text
-BOOTSTRAP -> REQUIREMENTS -> DESIGN -> IMPLEMENTATION -> TESTING -> SETUP -> RUN -> LAUNCH -> HANDOVER
+BOOTSTRAP -> REQUIREMENTS -> DESIGN -> IMPLEMENTATION -> AUDIT -> TESTING -> SETUP -> RUN -> LAUNCH -> DOCUMENTATION -> HANDOVER -> FINAL_ACCEPTANCE
 ```
 
-The lifecycle supports universal project flow without embedding a business domain. Setup, run, launch, and handover have dedicated gates and checklist templates so operational readiness is tracked separately from implementation.
+The documentation stage is defined in [DOCUMENTATION_STAGE.md](07_lifecycle/DOCUMENTATION_STAGE.md).
+
+Dedicated stage documents define gates and responsibilities where a stage is represented by a lifecycle file. The lifecycle supports universal project flow without embedding a business domain. Setup, run, launch, documentation, and handover have dedicated gates and checklist templates so operational readiness and accepted documentation are tracked separately from implementation.
 
 ## Roles
 
