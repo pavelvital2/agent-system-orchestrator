@@ -717,4 +717,32 @@ RELATION_TO_PRIOR_UPGRADES:
 - UPG_ASU_130_003 remains historically proposed and is superseded for closure purposes by this full remediation entry.
 AUTHORIZED_BY: project_owner
 AUDIT_REQUIRED: yes
+
+CHANGE_ID: GOV-2026-05-16-012
+CHANGE_TITLE: CORR_ASU_130_005_FINAL_BOOTSTRAP_PLACEHOLDER_CLEANUP
+STATUS: accepted
+DATE: 2026-05-16
+PACKAGE_VERSION_BEFORE: 1.3.0
+PACKAGE_VERSION_AFTER: 1.3.0
+CHANGE_TYPE: patch
+AFFECTED_FILES:
+- agent-system/GOVERNANCE_CHANGELOG.md
+- agent-system/09_validators/CROSS_LINK_VALIDATION_RULES.md
+- agent-system/10_examples/FINAL_SMOKE_CHECKLIST.md
+AFFECTED_INVARIANTS:
+- stale blank-role bootstrap placeholder is absent from current agent-system markdown and JSON package docs
+- generic bootstrap task packet path convention uses project-runtime/bootstrap/TASK_BOOTSTRAP_<TARGET_ROLE>_001.md
+- concrete bootstrap examples remain project-runtime/bootstrap/TASK_BOOTSTRAP_REQUIREMENTS_ANALYST_001.md and project-runtime/bootstrap/TASK_BOOTSTRAP_DESIGNER_001.md
+- CORR_ASU_130_004 is recorded as incomplete for the stale blank-role bootstrap placeholder finding despite its accepted closure entry
+- active version tuple remains 1.3.0 / 1.3.0 / 1.2.0
+- no schema, runtime file set, role authority, requester-return audit gate, or reasoning-level policy change
+AFFECTED_TRANSITIONS:
+- bootstrap intake -> first profile-agent task packet validation through project-runtime/bootstrap/TASK_BOOTSTRAP_<TARGET_ROLE>_001.md
+- task packet validation -> correction routing if a blank-role bootstrap placeholder or contradictory canonical bootstrap wording reappears
+- final smoke validation -> correction routing if canonical bootstrap path convention or concrete examples regress
+SCHEMA_TEMPLATE_IMPACT: none
+MIGRATION_REQUIRED: no
+MIGRATION_NOTE: This bounded correction finalizes residual bootstrap placeholder cleanup only. It preserves the active package, governance ruleset, and runtime schema tuple 1.3.0 / 1.3.0 / 1.2.0 and does not install new package behavior.
+AUTHORIZED_BY: project_owner
+AUDIT_REQUIRED: yes
 ```

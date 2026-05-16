@@ -330,7 +330,7 @@ Bootstrap task packet parity must also compare
 `BOOTSTRAP_TASK_PACKET_TEMPLATE.md` with `schemas/task_packet.schema.json`.
 The bootstrap template must not include standalone non-schema task-packet fields
 such as `REQUESTER`, must not include standalone RESULT-only fields such as
-`NEXT_RECOMMENDED_ACTION`, must use the canonical placeholder
+`NEXT_RECOMMENDED_ACTION`, must use the canonical bootstrap task packet path convention
 `project-runtime/bootstrap/TASK_BOOTSTRAP_<TARGET_ROLE>_001.md`, and must map
 bootstrap role documents explicitly to
 `agent-system/01_roles/REQUIREMENTS_ANALYST.md` and

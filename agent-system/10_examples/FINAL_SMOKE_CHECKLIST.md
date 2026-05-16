@@ -389,7 +389,7 @@ CORR_ASU_120_027_FINAL_PRE_121_CONSISTENCY_CLEANUP:
   Final smoke evidence must explicitly verify removal of standalone REQUESTER
   and standalone NEXT_RECOMMENDED_ACTION from
   BOOTSTRAP_TASK_PACKET_TEMPLATE, explicit bootstrap role-doc mapping to
-  REQUIREMENTS_ANALYST.md and DESIGNER.md, canonical bootstrap placeholder
+  REQUIREMENTS_ANALYST.md and DESIGNER.md, canonical bootstrap task packet path convention
   project-runtime/bootstrap/TASK_BOOTSTRAP_<TARGET_ROLE>_001.md plus concrete
   REQUIREMENTS_ANALYST and DESIGNER examples, CURRENT_GATE and NEXT_ACTION
   runtime schema parity with templates and schema sidecars, PROJECT_LIFECYCLE
@@ -406,7 +406,7 @@ UPG_ASU_130_002_BOOTSTRAP_V13_CONSISTENCY_FIX:
   Smoke evidence must verify that current normative docs contain no stale
   blank-role bootstrap placeholder, use
   project-runtime/bootstrap/TASK_BOOTSTRAP_<TARGET_ROLE>_001.md as the
-  canonical placeholder, preserve the concrete
+  canonical bootstrap task packet path convention, preserve the concrete
   project-runtime/bootstrap/TASK_BOOTSTRAP_REQUIREMENTS_ANALYST_001.md and
   project-runtime/bootstrap/TASK_BOOTSTRAP_DESIGNER_001.md examples, align
   bootstrap NEXT_ACTION examples with NEXT_ACTION_TEMPLATE.md and
