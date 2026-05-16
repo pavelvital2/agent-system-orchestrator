@@ -201,6 +201,16 @@ DESIGN_OR_TASK_IMPLICATIONS
 RECOMMENDED_NEXT_ACTION
 ```
 
+Machine-readable validation for these additional fields is defined by:
+
+```text
+agent-system/09_validators/schemas/research_result.schema.json
+```
+
+When a validator knows from the task packet, task registry, or dispatch context
+that the RESULT belongs to `TASK_KIND: research_dependency`, it must validate
+the RESULT against both `result.schema.json` and `research_result.schema.json`.
+
 Research result validation must reject:
 
 - missing source references for factual findings;

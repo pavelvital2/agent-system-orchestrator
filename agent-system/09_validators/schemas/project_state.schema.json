@@ -61,7 +61,7 @@
     },
     "ACTION_SEMANTIC": {
       "type": "string",
-      "enum": ["normal", "wait_for_owner", "pause", "stop_terminal", "completed_state"]
+      "enum": ["normal", "wait_for_owner", "pause", "stop_terminal", "completed_state_transition"]
     },
     "SEMANTIC_REASON": { "type": "string" },
     "ACTIVE_BRANCHES": {

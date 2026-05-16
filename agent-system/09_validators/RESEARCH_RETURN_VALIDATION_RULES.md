@@ -13,6 +13,7 @@ agent-system/07_lifecycle/DESIGN_RESEARCH_LOOP.md
 agent-system/03_templates/RESEARCH_REQUEST_TEMPLATE.md
 agent-system/03_templates/RESEARCH_RESULT_TEMPLATE.md
 agent-system/03_templates/DESIGN_CONTINUATION_TASK_TEMPLATE.md
+agent-system/09_validators/schemas/research_result.schema.json
 agent-system/02_runtime/STATE_TRANSITION_RULES.md
 agent-system/04_state/RUNTIME_STATE_SCHEMA.md
 ```
@@ -32,6 +33,12 @@ A research dependency or requester return route is invalid when:
 - `NEXT_ACTION` drops required requester return context during dependency
   routing;
 - task registry omits requester return metadata for dependency tasks.
+- research RESULT omits fields required by `research_result.schema.json`.
+
+`RESEARCH_REQUEST_TEMPLATE.md` and
+`DESIGN_CONTINUATION_TASK_TEMPLATE.md` are extension section templates. They
+must be embedded into a full `TASK_PACKET_TEMPLATE.md`-compatible task packet;
+standalone use is schema-invalid.
 
 ## Valid route
 

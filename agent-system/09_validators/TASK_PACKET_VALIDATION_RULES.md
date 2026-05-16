@@ -25,6 +25,11 @@ A task packet is invalid if it omits required sections from the current
 Validators must check the current template rather than freezing a separate
 schema here.
 
+`RESEARCH_REQUEST_TEMPLATE.md` and
+`DESIGN_CONTINUATION_TASK_TEMPLATE.md` are extension section templates. They
+are schema-invalid if dispatched standalone and are valid only when embedded in
+a full `TASK_PACKET_TEMPLATE.md`-compatible task packet.
+
 ## Bounded scope checks
 
 A task packet is invalid when:

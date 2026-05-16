@@ -8,6 +8,10 @@ Research dependency tasks collect factual evidence for a requester. They do not
 make business decisions, replace owner GAP handling, or return to the requester
 before audit pass.
 
+This file is an extension section template. It must be embedded into a full
+`TASK_PACKET_TEMPLATE.md`-compatible task packet. It is schema-invalid if used
+standalone.
+
 ---
 
 # RESEARCH REQUEST

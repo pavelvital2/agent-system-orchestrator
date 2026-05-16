@@ -199,12 +199,41 @@ AUDITOR_RESULT:
   STATUS: pass
 
 NEXT_ACTION:
+  ACTION_ID: NEXT_DESIGN_RETURN_AFTER_RESEARCH_AUDIT_PASS_001
+  ACTION_TYPE: create_agent
   TARGET_ROLE: designer
   TASK_ID: TASK_DESIGN_CONTINUE_001
+  TASK_PACKET: project-docs/example/tasks/TASK_DESIGN_CONTINUE_001.md
+  DEPENDENCY_STATUS: ready
+  BLOCKED_BY: NONE
+  ACTION_SEMANTIC: normal
   REQUESTER_RETURN_CONTEXT:
+    REQUESTED_BY_ROLE: designer
+    REQUESTED_BY_TASK: TASK_DESIGN_EXAMPLE_001
+    RETURN_TO_REQUESTER_AFTER_AUDIT_PASS: yes
     RETURN_TO_ROLE_AFTER_AUDIT_PASS: designer
     RETURN_TASK_AFTER_AUDIT_PASS: TASK_DESIGN_CONTINUE_001
+    RESEARCH_QUESTION_ID: RQ_DESIGN_001
+    ACCEPTED_RESEARCH_RESULT_REF: project-docs/example/research/RESULT_RESEARCH_RQ_DESIGN_001.md
+    ACCEPTED_RESEARCH_AUDIT_REF: project-docs/example/audits/AUDIT_RESEARCH_RQ_DESIGN_001.md
+  BLOCKING_OR_RESUME_CONTEXT: NONE
+  REQUIRED_UNIVERSAL_DOCS:
+  - agent-system/01_roles/DESIGNER.md
+  - agent-system/02_runtime/REQUESTER_RETURN_PROTOCOL.md
+  - agent-system/03_templates/AGENT_RESULT_TEMPLATE.md
+  - agent-system/04_state/NEXT_ACTION_TEMPLATE.md
+  - agent-system/07_lifecycle/DESIGN_RESEARCH_LOOP.md
+  REQUIRED_PROJECT_DOCS:
+  - project-docs/example/research/RESULT_RESEARCH_RQ_DESIGN_001.md
+  - project-docs/example/audits/AUDIT_RESEARCH_RQ_DESIGN_001.md
+  EXPECTED_RESULT:
+  - agent-system/03_templates/AGENT_RESULT_TEMPLATE.md
+  INSTRUCTION_FOR_ORCHESTRATOR: Dispatch the explicit audited design continuation task.
 ```
+
+The canonical field contract for this state update remains
+`agent-system/04_state/NEXT_ACTION_TEMPLATE.md`; examples must not omit or
+override that required field set.
 
 Unaudited research, audit fail, audit blocked, or audit gap must not route to
 design continuation.

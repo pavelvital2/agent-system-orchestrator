@@ -67,6 +67,11 @@
 
 3. Классифицировать причину отсутствия файла по взаимоисключающим правилам.
 
+The following snippets are classification deltas only. The resulting
+`project-runtime/NEXT_ACTION.md` must still include every required field from
+`agent-system/04_state/NEXT_ACTION_TEMPLATE.md`; inapplicable context fields
+must use the canonical `NONE` or `[]` values from that template.
+
 Если отсутствует или недоступно ТЗ проекта, предоставляемое владельцем:
 
 ```text
@@ -90,7 +95,8 @@ DEPENDENCY_STATUS: blocked
 BLOCKED_BY: invalid_or_missing_package_file
 ```
 
-4. В `NEXT_ACTION.md` выставить только одну из этих веток.
+4. В `NEXT_ACTION.md` выставить полный v1.3.0 `NEXT_ACTION` record with
+   exactly one selected classification branch.
 
 5. В handoff-файле явно указать, какие файлы отсутствуют.
 
@@ -266,8 +272,13 @@ It must route the failure through exactly one deterministic branch.
 `NEXT_ACTION.md` must contain exactly one action. It must not contain alternative
 `ACTION_TYPE`, `TARGET_ROLE`, or `DEPENDENCY_STATUS` values.
 
+The branch snippets below are classification deltas only. The resulting
+`project-runtime/NEXT_ACTION.md` must still include every required field from
+`agent-system/04_state/NEXT_ACTION_TEMPLATE.md`; inapplicable context fields
+must use the canonical `NONE` or `[]` values from that template.
+
 If validation fails because owner-provided bootstrap input is missing or inaccessible,
-the orchestrator must set:
+the orchestrator must set this classification delta:
 
 ```text
 ACTION_TYPE: wait_for_owner
@@ -278,7 +289,7 @@ BLOCKED_BY: missing_bootstrap_input
 
 If validation fails because a required `agent-system/` package, runtime,
 template, or governance file is missing, inaccessible, malformed, or internally
-invalid, the orchestrator must set:
+invalid, the orchestrator must set this classification delta:
 
 ```text
 ACTION_TYPE: correction
@@ -291,7 +302,7 @@ If validation fails because runtime file creation, runtime schema validation,
 template parity validation, governance validation, `NEXT_ACTION.md` validation,
 or governance freeze state validation failed after required package files were
 available,
-the orchestrator must set:
+the orchestrator must set this classification delta:
 
 ```text
 ACTION_TYPE: correction

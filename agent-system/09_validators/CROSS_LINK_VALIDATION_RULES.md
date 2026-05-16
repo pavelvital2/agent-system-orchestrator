@@ -172,6 +172,9 @@ agent-system/09_validators/RESEARCH_RETURN_VALIDATION_RULES.md
 These documents are inconsistent if they allow unaudited research to return to
 the requester, omit requester return metadata, treat research dependency as a
 GAP or BLOCKER substitute, or infer return targets from informal context.
+`RESEARCH_REQUEST_TEMPLATE.md` and
+`DESIGN_CONTINUATION_TASK_TEMPLATE.md` are extension section templates; they
+must not be referenced or dispatched as standalone task packets.
 
 Schema sidecar validation must catch stale sidecar lists across validator,
 runtime state schema, and final smoke source-of-truth documents. A sidecar that

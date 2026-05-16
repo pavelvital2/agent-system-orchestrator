@@ -12,7 +12,7 @@ OVERRIDE_REASON: <reason | NONE>
 
 DISPATCH_REASONING_RECORD:
 TARGET_ROLE: <same as ROLE>
-TASK_ID: <TASK_ID>
+DISPATCH_TASK_ID: <TASK_ID>
 TASK_PACKET: <path | NONE>
 REASONING_LEVEL_REQUIRED: low | default | high | maximum
 REASONING_LEVEL_SOURCE: role_default | task_packet | gate_required_floor | highest_applicable

@@ -2,6 +2,25 @@
 
 ## Next action
 
+Required structured fields:
+
+```text
+ACTION_ID:
+ACTION_TYPE:
+TARGET_ROLE:
+TASK_ID:
+TASK_PACKET:
+DEPENDENCY_STATUS:
+BLOCKED_BY:
+ACTION_SEMANTIC:
+REQUESTER_RETURN_CONTEXT:
+BLOCKING_OR_RESUME_CONTEXT:
+REQUIRED_UNIVERSAL_DOCS:
+REQUIRED_PROJECT_DOCS:
+EXPECTED_RESULT:
+INSTRUCTION_FOR_ORCHESTRATOR:
+```
+
 ```text
 ACTION_ID:
 ACTION_TYPE: create_agent | route_result | update_state | wait_for_owner | correction | finalize | stop

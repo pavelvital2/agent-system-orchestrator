@@ -124,5 +124,7 @@ evidence from spawn log, handoff, or orchestrator transcript
 ```
 
 If the actual spawned reasoning level is lower than the resolved required level
-and the required level is available, auditor `STATUS: pass` is invalid. The
-auditor must return `STATUS: fail` or `STATUS: blocked`.
+or if evidence for the actual spawned reasoning level is missing, unknown, or
+not traceable to `SPAWN_LOG_REF`, `HANDOFF_LOG_REF`, or an orchestrator
+transcript, auditor `STATUS: pass` is invalid. The auditor must return
+`STATUS: fail` or `STATUS: blocked`.

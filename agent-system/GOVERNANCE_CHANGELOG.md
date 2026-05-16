@@ -656,4 +656,65 @@ MIGRATION_NOTE: This bounded correction hardens v1.3.0 dispatch reasoning enforc
 AUTHORIZED_BY: project_owner
 AUDIT_REQUIRED: yes
 STATUS: proposed
+
+CHANGE_ID: GOV-2026-05-16-011
+CHANGE_TITLE: CORR_ASU_130_004_FULL_REMEDIATION
+STATUS: accepted
+DATE: 2026-05-16
+PACKAGE_VERSION_BEFORE: 1.3.0
+PACKAGE_VERSION_AFTER: 1.3.0
+CHANGE_TYPE: patch
+TRACEABILITY_SUMMARY: affected files, invariants preserved, and independent audit requirement are recorded in this entry.
+AFFECTED_FILES:
+- agent-system/GOVERNANCE_CHANGELOG.md
+- agent-system/00_start/ORCHESTRATOR_START.md
+- agent-system/03_templates/ORCHESTRATOR_TASK_HANDOFF_TEMPLATE.md
+- agent-system/03_templates/RESEARCH_REQUEST_TEMPLATE.md
+- agent-system/03_templates/DESIGN_CONTINUATION_TASK_TEMPLATE.md
+- agent-system/04_state/NEXT_ACTION_TEMPLATE.md
+- agent-system/04_state/PROJECT_STATE_TEMPLATE.md
+- agent-system/09_validators/TASK_PACKET_VALIDATION_RULES.md
+- agent-system/09_validators/CROSS_LINK_VALIDATION_RULES.md
+- agent-system/09_validators/RESULT_VALIDATION_RULES.md
+- agent-system/09_validators/RESEARCH_RETURN_VALIDATION_RULES.md
+- agent-system/09_validators/REASONING_LEVEL_VALIDATION_RULES.md
+- agent-system/09_validators/VALIDATOR_SPEC.md
+- agent-system/09_validators/schemas/project_state.schema.json
+- agent-system/09_validators/schemas/research_result.schema.json
+- agent-system/10_examples/EXPECTED_FLOW_EXAMPLE.md
+- agent-system/10_examples/MINIMAL_EXAMPLE_FIXTURE.md
+- agent-system/10_examples/FINAL_SMOKE_CHECKLIST.md
+DEFECTS_FIXED:
+- ASU130-F001: verified stale blank-role bootstrap placeholder absent under agent-system.
+- ASU130-F002: bootstrap NEXT_ACTION examples remain aligned with current v1.3.0 fields.
+- ASU130-F003: MINIMAL_EXAMPLE_FIXTURE NEXT_ACTION now contains the current required field set.
+- ASU130-F004: v1.3.0 correction chain has this accepted closure entry while preserving proposed history for prior entries.
+- ASU130-F005 and ASU130-F006: research and design continuation templates are explicit schema-invalid extension sections unless embedded in a full task packet.
+- ASU130-F008: active PROJECT_STATE ACTION_SEMANTIC enum now uses completed_state_transition.
+- ASU130-F009: research RESULT extension fields are machine-checkable through research_result.schema.json.
+- ASU130-F010: missing or unknown reasoning evidence now invalidates auditor pass.
+- ASU130-F011: dispatch reasoning metadata uses DISPATCH_TASK_ID, leaving task payload TASK_ID unambiguous.
+AFFECTED_INVARIANTS:
+- one-agent-one-task and fresh-context execution preserved
+- Research Dependency Loop preserved as sequential dependency routing, not GAP/BLOCKER substitution or generalized DAG orchestration
+- Requester Return Protocol remains audit-pass gated and explicit-metadata based
+- reasoning-level governance remains auditable through required/actual/compliance spawn evidence
+- profile agents still cannot commit or push
+- orchestrator authority remains limited to routing/state/checkpoint governance and does not design, implement, audit, or test
+AFFECTED_TRANSITIONS:
+- first bootstrap dispatch -> complete NEXT_ACTION field validation
+- research_dependency RESULT -> result.schema.json plus research_result.schema.json validation before audited requester return
+- profile-agent dispatch -> reasoning evidence validation before auditor pass acceptance
+- finalization semantic update -> completed_state_transition as the active terminal-state semantic
+SCHEMA_TEMPLATE_IMPACT: both
+MIGRATION_REQUIRED: no
+MIGRATION_NOTE: This bounded remediation preserves the active 1.3.0 / 1.3.0 / 1.2.0 tuple. Existing runtime state that still uses the legacy completed-state semantic must be corrected to completed_state_transition before normal dispatch. Research dependency RESULT validation should apply research_result.schema.json alongside result.schema.json when task context is TASK_KIND: research_dependency.
+COMPATIBILITY_NOTE: RESEARCH_REQUEST_TEMPLATE.md and DESIGN_CONTINUATION_TASK_TEMPLATE.md are extension sections only; standalone dispatch remains invalid unless the content is embedded in a full TASK_PACKET_TEMPLATE-compatible packet.
+AUDIT_REQUIREMENT: Independent audit is required using TASK_PKG_AUD_ASU_130_004_FULL_REMEDIATION.md before accepted package checkpoint.
+RELATION_TO_PRIOR_UPGRADES:
+- UPG_ASU_130_001 installed the intended v1.3.0 feature surface but remains historically recorded as proposed in this changelog.
+- UPG_ASU_130_002 remains explicitly invalidated as a clean baseline by UPG_ASU_130_003 findings; this entry does not rewrite that history.
+- UPG_ASU_130_003 remains historically proposed and is superseded for closure purposes by this full remediation entry.
+AUTHORIZED_BY: project_owner
+AUDIT_REQUIRED: yes
 ```

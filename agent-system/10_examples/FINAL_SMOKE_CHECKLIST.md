@@ -97,6 +97,7 @@ agent-system/09_validators/schemas/current_gate.schema.json
 agent-system/09_validators/schemas/next_action.schema.json
 agent-system/09_validators/schemas/task_packet.schema.json
 agent-system/09_validators/schemas/result.schema.json
+agent-system/09_validators/schemas/research_result.schema.json
 agent-system/09_validators/schemas/task_registry.schema.json
 agent-system/09_validators/schemas/accepted_artifacts.schema.json
 agent-system/09_validators/schemas/orchestrator_event.schema.json
@@ -198,8 +199,9 @@ RESEARCH_DEPENDENCY_LOOP:
   REQUESTER_RETURN_PROTOCOL, DESIGN_RESEARCH_LOOP, RESEARCH_REQUEST_TEMPLATE,
   RESEARCH_RESULT_TEMPLATE, DESIGN_CONTINUATION_TASK_TEMPLATE,
   RESEARCH_RETURN_VALIDATION_RULES, task_packet.schema.json,
-  result.schema.json, next_action.schema.json, and task_registry.schema.json
-  all represent research dependency routing. Smoke evidence must confirm that
+  result.schema.json, research_result.schema.json, next_action.schema.json, and
+  task_registry.schema.json all represent research dependency routing. Smoke
+  evidence must confirm that
   RESEARCH_DEPENDENCY is distinct from GAP and BLOCKER, exact questions and
   allowed/forbidden sources are required, expected evidence/output are
   required, and requester continuation is blocked until independent audit pass.

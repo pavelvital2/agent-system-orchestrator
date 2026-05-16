@@ -7,6 +7,10 @@ Use this template for a designer continuation task after accepted research.
 The continuation task resumes the original bounded design work using only
 research that passed independent audit.
 
+This file is an extension section template. It must be embedded into a full
+`TASK_PACKET_TEMPLATE.md`-compatible task packet. It is schema-invalid if used
+standalone.
+
 ---
 
 # DESIGN CONTINUATION TASK

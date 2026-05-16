@@ -64,6 +64,7 @@ agent-system/09_validators/schemas/current_gate.schema.json
 agent-system/09_validators/schemas/next_action.schema.json
 agent-system/09_validators/schemas/task_packet.schema.json
 agent-system/09_validators/schemas/result.schema.json
+agent-system/09_validators/schemas/research_result.schema.json
 agent-system/09_validators/schemas/task_registry.schema.json
 agent-system/09_validators/schemas/accepted_artifacts.schema.json
 agent-system/09_validators/schemas/orchestrator_event.schema.json
@@ -112,6 +113,7 @@ before_dispatch:
 
 after_agent_result:
   result validity
+  research result schema validity when TASK_KIND is research_dependency
   file-scope validity
   transition validity
 
@@ -121,6 +123,7 @@ before_audit_dispatch:
 
 after_audit_result:
   result validity
+  research result schema validity when auditing TASK_KIND research_dependency
   transition validity
   accepted-state rules
   research/requester return validity when applicable
@@ -131,6 +134,14 @@ before_git_checkpoint:
   allowed/forbidden file checks
   research return blocked unless audit pass preconditions hold
 ```
+
+Reasoning-level validation is auditable evidence. Validators must check the
+dispatch record, handoff, spawn log, or orchestrator transcript for
+`REASONING_LEVEL_REQUIRED`, `REASONING_LEVEL_ACTUAL`,
+`REASONING_LEVEL_COMPLIANCE`, and `SPAWN_LOG_REF` or `HANDOFF_LOG_REF`.
+Missing evidence, unknown evidence, or an actual level below the required floor
+must fail or block the audit according to
+`REASONING_LEVEL_VALIDATION_RULES.md`.
 
 ## Role enum validation baseline
 
