@@ -61,20 +61,46 @@ TZ
 
 ```text
 INCOMPLETE_OR_AMBIGUOUS_INPUT:
+  ACTION_ID: NEXT_BOOTSTRAP_REQUIREMENTS_ANALYST_001
   ACTION_TYPE: create_agent
   TARGET_ROLE: requirements_analyst
   TASK_ID: TASK_BOOTSTRAP_REQUIREMENTS_ANALYST_001
   TASK_PACKET: project-runtime/bootstrap/TASK_BOOTSTRAP_REQUIREMENTS_ANALYST_001.md
   DEPENDENCY_STATUS: ready
   BLOCKED_BY: NONE
+  ACTION_SEMANTIC: normal
+  REQUESTER_RETURN_CONTEXT: NONE
+  BLOCKING_OR_RESUME_CONTEXT: NONE
+  REQUIRED_UNIVERSAL_DOCS:
+  - agent-system/01_roles/REQUIREMENTS_ANALYST.md
+  - agent-system/03_templates/AGENT_RESULT_TEMPLATE.md
+  - agent-system/07_lifecycle/BOOTSTRAP_STAGE.md
+  REQUIRED_PROJECT_DOCS:
+  - project-input/TZ.md
+  EXPECTED_RESULT:
+  - agent-system/03_templates/AGENT_RESULT_TEMPLATE.md
+  INSTRUCTION_FOR_ORCHESTRATOR: Dispatch exactly one requirements analyst bootstrap task.
 
 SUFFICIENTLY_STRUCTURED_INPUT:
+  ACTION_ID: NEXT_BOOTSTRAP_DESIGNER_001
   ACTION_TYPE: create_agent
   TARGET_ROLE: designer
   TASK_ID: TASK_BOOTSTRAP_DESIGNER_001
   TASK_PACKET: project-runtime/bootstrap/TASK_BOOTSTRAP_DESIGNER_001.md
   DEPENDENCY_STATUS: ready
   BLOCKED_BY: NONE
+  ACTION_SEMANTIC: normal
+  REQUESTER_RETURN_CONTEXT: NONE
+  BLOCKING_OR_RESUME_CONTEXT: NONE
+  REQUIRED_UNIVERSAL_DOCS:
+  - agent-system/01_roles/DESIGNER.md
+  - agent-system/03_templates/AGENT_RESULT_TEMPLATE.md
+  - agent-system/07_lifecycle/BOOTSTRAP_STAGE.md
+  REQUIRED_PROJECT_DOCS:
+  - project-input/TZ.md
+  EXPECTED_RESULT:
+  - agent-system/03_templates/AGENT_RESULT_TEMPLATE.md
+  INSTRUCTION_FOR_ORCHESTRATOR: Dispatch exactly one designer bootstrap task.
 ```
 
 Bootstrap `TASK_PACKET` must never be `NONE` for these first profile-agent

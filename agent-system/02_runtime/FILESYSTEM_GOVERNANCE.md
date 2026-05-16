@@ -178,6 +178,9 @@ project-docs/
 project-runtime/bootstrap/TASK_BOOTSTRAP_<TARGET_ROLE>_001.md
 ```
 
+The `<TARGET_ROLE>` segment is required and must resolve to the selected first
+profile route.
+
 Это исключение допустимо только для первого bootstrap dispatch одного
 profile-agent и только если файл является полным bootstrap task packet по
 `agent-system/03_templates/BOOTSTRAP_TASK_PACKET_TEMPLATE.md`. Обычные task

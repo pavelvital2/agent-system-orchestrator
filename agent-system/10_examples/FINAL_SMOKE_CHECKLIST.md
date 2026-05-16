@@ -131,9 +131,14 @@ BOOTSTRAP_REQUIREMENTS_ROUTING:
   first profile agent. They route incomplete, ambiguous, or uncertain input to
   requirements_analyst and allow direct designer routing only for sufficiently
   structured input. Routing examples use current NEXT_ACTION fields:
-  ACTION_TYPE, TARGET_ROLE, TASK_ID, TASK_PACKET, DEPENDENCY_STATUS, and
-  BLOCKED_BY. The first profile-agent TASK_PACKET is a valid bootstrap task
-  packet using the canonical path convention
+  ACTION_ID, ACTION_TYPE, TARGET_ROLE, TASK_ID, TASK_PACKET,
+  DEPENDENCY_STATUS, BLOCKED_BY, ACTION_SEMANTIC,
+  REQUESTER_RETURN_CONTEXT, BLOCKING_OR_RESUME_CONTEXT,
+  REQUIRED_UNIVERSAL_DOCS, REQUIRED_PROJECT_DOCS, EXPECTED_RESULT, and
+  INSTRUCTION_FOR_ORCHESTRATOR. Ordinary bootstrap examples use
+  ACTION_SEMANTIC: normal, REQUESTER_RETURN_CONTEXT: NONE, and
+  BLOCKING_OR_RESUME_CONTEXT: NONE. The first profile-agent TASK_PACKET is a
+  valid bootstrap task packet using the canonical path convention
   project-runtime/bootstrap/TASK_BOOTSTRAP_<TARGET_ROLE>_001.md, never
   TASK_PACKET: NONE, and never a plain handoff-only file.
   This is the only active task packet exception outside ACTIVE_DOC_ROOT;
@@ -185,7 +190,9 @@ STATE_ALIGNMENT:
   REQUIRED_PROJECT_DOCS, EXPECTED_RESULT, and
   INSTRUCTION_FOR_ORCHESTRATOR.
   Runtime tuple validation explicitly includes CURRENT_GATE.ACTION_SEMANTIC
-  and NEXT_ACTION.ACTION_SEMANTIC.
+  and NEXT_ACTION.ACTION_SEMANTIC. Requester-return tuple coverage explicitly
+  includes NEXT_ACTION.REQUESTER_RETURN_CONTEXT and
+  TASK_REGISTRY.requester_return_metadata.
 
 RESEARCH_DEPENDENCY_LOOP:
   REQUESTER_RETURN_PROTOCOL, DESIGN_RESEARCH_LOOP, RESEARCH_REQUEST_TEMPLATE,
@@ -265,7 +272,7 @@ AUDIT_CHECKPOINT_ALIGNMENT:
   auditor before any next profile role, lifecycle phase, terminal completion,
   or Git checkpoint. Requirements analyst, devops/setup engineer, and release
   manager pass routing examples are explicitly covered by transition rules.
-  Smoke evidence must list each v1.2.0 profile execution role covered by
+  Smoke evidence must list each current profile execution role covered by
   mandatory-audit transition rules:
   requirements_analyst, designer, developer, tester, technical_writer,
   devops_setup_engineer, and release_manager.
@@ -383,6 +390,18 @@ V1_3_0_VERSION_ALIGNMENT:
   CURRENT_GOVERNANCE_RULESET_VERSION: 1.3.0, and
   CURRENT_RUNTIME_SCHEMA_VERSION: 1.2.0. This feature upgrade must not use
   1.2.1 as the active tuple.
+
+UPG_ASU_130_002_BOOTSTRAP_V13_CONSISTENCY_FIX:
+  Smoke evidence must verify that current normative docs contain no stale
+  blank-role bootstrap placeholder, use
+  project-runtime/bootstrap/TASK_BOOTSTRAP_<TARGET_ROLE>_001.md as the
+  canonical placeholder, preserve the concrete
+  project-runtime/bootstrap/TASK_BOOTSTRAP_REQUIREMENTS_ANALYST_001.md and
+  project-runtime/bootstrap/TASK_BOOTSTRAP_DESIGNER_001.md examples, align
+  bootstrap NEXT_ACTION examples with NEXT_ACTION_TEMPLATE.md and
+  next_action.schema.json, avoid obsolete runtime-field wording in bootstrap
+  outputs, preserve the 1.3.0 / 1.3.0 / 1.2.0 active tuple, and keep the
+  requester-return audit gate mandatory before requester continuation.
 ```
 
 ## Final smoke evidence format

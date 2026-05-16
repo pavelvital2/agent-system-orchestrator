@@ -63,6 +63,14 @@ They must also reject handoff files used as task packets, profile-agent
 dispatch without a task packet, and more than one active first bootstrap task
 packet at the same time.
 
+For the first bootstrap exception, validators must also confirm that the
+corresponding `NEXT_ACTION` uses the current required fields from
+`NEXT_ACTION_TEMPLATE.md` and references the canonical path:
+
+```text
+project-runtime/bootstrap/TASK_BOOTSTRAP_<TARGET_ROLE>_001.md
+```
+
 Universal package upgrade tasks may change `agent-system/` only when a bounded
 task packet explicitly authorizes that scope.
 

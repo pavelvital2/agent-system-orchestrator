@@ -579,4 +579,41 @@ MIGRATION_NOTE: Active package and governance ruleset versions change to 1.3.0 a
 AUTHORIZED_BY: project_owner
 AUDIT_REQUIRED: yes
 STATUS: proposed
+
+CHANGE_ID: GOV-2026-05-16-009
+CHANGE_TITLE: UPG_ASU_130_002_BOOTSTRAP_V13_CONSISTENCY_FIX
+DATE: 2026-05-16
+PACKAGE_VERSION_BEFORE: 1.3.0
+PACKAGE_VERSION_AFTER: 1.3.0
+CHANGE_TYPE: patch
+AFFECTED_FILES:
+- agent-system/00_start/ORCHESTRATOR_START.md
+- agent-system/02_runtime/ORCHESTRATOR_RUNTIME_LOOP.md
+- agent-system/02_runtime/FILESYSTEM_GOVERNANCE.md
+- agent-system/02_runtime/STATE_TRANSITION_RULES.md
+- agent-system/03_templates/BOOTSTRAP_TASK_PACKET_TEMPLATE.md
+- agent-system/07_lifecycle/BOOTSTRAP_STAGE.md
+- agent-system/09_validators/TASK_PACKET_VALIDATION_RULES.md
+- agent-system/09_validators/CROSS_LINK_VALIDATION_RULES.md
+- agent-system/10_examples/EXPECTED_FLOW_EXAMPLE.md
+- agent-system/10_examples/FINAL_SMOKE_CHECKLIST.md
+- agent-system/GOVERNANCE_CHANGELOG.md
+AFFECTED_INVARIANTS:
+- stale bootstrap placeholder removed from current normative docs
+- bootstrap NEXT_ACTION examples aligned with current runtime schema fields
+- requester-return runtime tuple coverage strengthened for NEXT_ACTION.REQUESTER_RETURN_CONTEXT and TASK_REGISTRY.requester_return_metadata
+- stale version wording removed from bootstrap and role-set validation text
+- canonical bootstrap placeholder and concrete REQUIREMENTS_ANALYST/DESIGNER examples preserved
+- requester-return audit gate remains mandatory before requester continuation
+- active version tuple remains 1.3.0 / 1.3.0 / 1.2.0
+AFFECTED_TRANSITIONS:
+- bootstrap intake -> first profile-agent create_agent with complete NEXT_ACTION fields
+- runtime tuple validation -> correction routing for missing requester-return context or task registry metadata
+- research dependency audit pass -> requester continuation only through explicit return metadata after required audit gate
+SCHEMA_TEMPLATE_IMPACT: template_update_required
+MIGRATION_REQUIRED: no
+MIGRATION_NOTE: This bounded correction reconciles v1.3.0 bootstrap/runtime documentation consistency only. It does not change active package, governance ruleset, or runtime schema version constants; does not add executable validators or CI; does not change role authority, runtime file set, or generalized orchestration behavior; and does not weaken requester-return audit gating.
+AUTHORIZED_BY: project_owner
+AUDIT_REQUIRED: yes
+STATUS: proposed
 ```

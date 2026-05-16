@@ -131,7 +131,7 @@ pass`.
 Profile-role transition validation must cross-check
 `STATE_TRANSITION_RULES.md` against every role enum or profile-role set in
 runtime state, task packet, result, gate, validator, and README docs. The
-covered v1.2.0 profile execution role set is:
+current profile execution role set is:
 
 ```text
 requirements_analyst
@@ -337,7 +337,9 @@ Runtime schema parity must compare `RUNTIME_STATE_SCHEMA.md`,
 `CURRENT_GATE_TEMPLATE.md`, `NEXT_ACTION_TEMPLATE.md`,
 `schemas/current_gate.schema.json`, and `schemas/next_action.schema.json`.
 The runtime tuple must explicitly include `CURRENT_GATE.ACTION_SEMANTIC` and
-`NEXT_ACTION.ACTION_SEMANTIC`.
+`NEXT_ACTION.ACTION_SEMANTIC`. Requester-return routing coverage must also
+cross-check `NEXT_ACTION.REQUESTER_RETURN_CONTEXT` and
+`TASK_REGISTRY.requester_return_metadata`.
 `CURRENT_GATE` and `NEXT_ACTION` mandatory fields must be represented directly
 or by documented Markdown section-to-schema mapping.
 

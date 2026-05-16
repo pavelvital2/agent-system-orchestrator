@@ -15,6 +15,9 @@ Canonical path convention:
 project-runtime/bootstrap/TASK_BOOTSTRAP_<TARGET_ROLE>_001.md
 ```
 
+The `<TARGET_ROLE>` placeholder must be populated by the selected bootstrap
+route. It must not be omitted or rendered as an empty role segment.
+
 Examples:
 
 ```text

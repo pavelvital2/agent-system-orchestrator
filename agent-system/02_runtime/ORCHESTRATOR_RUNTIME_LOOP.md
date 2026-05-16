@@ -89,6 +89,10 @@ Canonical first-dispatch path convention:
 project-runtime/bootstrap/TASK_BOOTSTRAP_<TARGET_ROLE>_001.md
 ```
 
+The first profile-agent `NEXT_ACTION` must still include every required field
+from `agent-system/04_state/NEXT_ACTION_TEMPLATE.md`; for ordinary bootstrap
+dispatch, requester-return and blocking/resume contexts are `NONE`.
+
 `TASK_PACKET: NONE` is forbidden for first profile-agent dispatch. A bootstrap
 handoff file is not a task packet substitute unless it is explicitly full
 task-packet-equivalent and satisfies bootstrap task packet validation.

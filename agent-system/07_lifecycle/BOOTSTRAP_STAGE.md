@@ -79,8 +79,36 @@ design architecture, or decompose implementation work.
 - first requirements or design bootstrap task packet under
   `project-runtime/bootstrap/`;
 - initial GAP if source inputs are insufficient;
-- one valid `NEXT_ACTION` using v1.2.0 fields for either
-  `TARGET_ROLE: requirements_analyst` or `TARGET_ROLE: designer`.
+- one valid `NEXT_ACTION` using the current `NEXT_ACTION_TEMPLATE.md` and
+  active runtime schema for either `TARGET_ROLE: requirements_analyst` or
+  `TARGET_ROLE: designer`.
+
+Bootstrap `NEXT_ACTION` output must include:
+
+```text
+ACTION_ID
+ACTION_TYPE
+TARGET_ROLE
+TASK_ID
+TASK_PACKET
+DEPENDENCY_STATUS
+BLOCKED_BY
+ACTION_SEMANTIC
+REQUESTER_RETURN_CONTEXT
+BLOCKING_OR_RESUME_CONTEXT
+REQUIRED_UNIVERSAL_DOCS
+REQUIRED_PROJECT_DOCS
+EXPECTED_RESULT
+INSTRUCTION_FOR_ORCHESTRATOR
+```
+
+For ordinary first bootstrap dispatch:
+
+```text
+ACTION_SEMANTIC: normal
+REQUESTER_RETURN_CONTEXT: NONE
+BLOCKING_OR_RESUME_CONTEXT: NONE
+```
 
 ## Exit criteria
 
