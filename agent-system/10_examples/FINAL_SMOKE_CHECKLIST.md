@@ -221,7 +221,16 @@ REASONING_LEVEL_ALIGNMENT:
   never lower below gate-required floor. Low is forbidden for design,
   requirements, audit, correction after failed audit, lifecycle/state/transition
   changes, security/secrets policy, launch/release readiness, final acceptance,
-  and cross-link validation.
+  and cross-link validation. Before profile-agent dispatch, the orchestrator
+  resolves role_default_reasoning_level, task_packet_reasoning_level,
+  gate_required_floor, final_required_dispatch_level, and
+  actual_spawned_reasoning_level. Dispatch records must include
+  REASONING_LEVEL_REQUIRED, REASONING_LEVEL_SOURCE, REASONING_LEVEL_ACTUAL,
+  REASONING_LEVEL_COMPLIANCE, and SPAWN_LOG_REF or HANDOFF_LOG_REF. Actual
+  spawned reasoning below required is invalid dispatch: worker RESULT is
+  invalid, auditor pass is forbidden, checkpoint is forbidden after
+  reasoning-level mismatch, and commit/push are forbidden after
+  reasoning-level mismatch.
 
 RUNTIME_FILE_SET_ALIGNMENT:
   Mandatory runtime file lists in start, runtime loop, runtime state schema,
@@ -402,6 +411,25 @@ UPG_ASU_130_002_BOOTSTRAP_V13_CONSISTENCY_FIX:
   next_action.schema.json, avoid obsolete runtime-field wording in bootstrap
   outputs, preserve the 1.3.0 / 1.3.0 / 1.2.0 active tuple, and keep the
   requester-return audit gate mandatory before requester continuation.
+
+UPG_ASU_130_003_DISPATCH_REASONING_AND_BOOTSTRAP_SMOKE_FIX:
+  Smoke evidence must verify no current normative blank-role bootstrap
+  placeholder references remain; the canonical bootstrap path uses
+  project-runtime/bootstrap/TASK_BOOTSTRAP_<TARGET_ROLE>_001.md; concrete
+  TASK_BOOTSTRAP_REQUIREMENTS_ANALYST_001 and TASK_BOOTSTRAP_DESIGNER_001
+  examples remain; bootstrap NEXT_ACTION examples include ACTION_ID,
+  ACTION_TYPE, TARGET_ROLE, TASK_ID, TASK_PACKET, DEPENDENCY_STATUS,
+  BLOCKED_BY, ACTION_SEMANTIC, REQUESTER_RETURN_CONTEXT,
+  BLOCKING_OR_RESUME_CONTEXT, REQUIRED_UNIVERSAL_DOCS,
+  REQUIRED_PROJECT_DOCS, EXPECTED_RESULT, and INSTRUCTION_FOR_ORCHESTRATOR.
+  Smoke evidence must also verify actual spawned reasoning is recorded through
+  REASONING_LEVEL_ACTUAL and REASONING_LEVEL_COMPLIANCE, actual spawned
+  reasoning below required invalidates the worker RESULT, auditor must check
+  reasoning-level execution compliance, checkpoint/commit/push are forbidden
+  after reasoning mismatch, requester-return tuple coverage includes
+  NEXT_ACTION.REQUESTER_RETURN_CONTEXT and
+  TASK_REGISTRY.requester_return_metadata, and the active version tuple remains
+  1.3.0 / 1.3.0 / 1.2.0.
 ```
 
 ## Final smoke evidence format

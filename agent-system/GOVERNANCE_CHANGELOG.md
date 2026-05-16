@@ -616,4 +616,44 @@ MIGRATION_NOTE: This bounded correction reconciles v1.3.0 bootstrap/runtime docu
 AUTHORIZED_BY: project_owner
 AUDIT_REQUIRED: yes
 STATUS: proposed
+
+CHANGE_ID: GOV-2026-05-16-010
+CHANGE_TITLE: UPG_ASU_130_003_DISPATCH_REASONING_AND_BOOTSTRAP_SMOKE_FIX
+DATE: 2026-05-16
+PACKAGE_VERSION_BEFORE: 1.3.0
+PACKAGE_VERSION_AFTER: 1.3.0
+CHANGE_TYPE: patch
+AFFECTED_FILES:
+- agent-system/01_roles/AUDITOR.md
+- agent-system/02_runtime/ORCHESTRATOR_RUNTIME_LOOP.md
+- agent-system/02_runtime/POST_AUDIT_GIT_CHECKPOINT.md
+- agent-system/02_runtime/STATE_TRANSITION_RULES.md
+- agent-system/03_templates/ORCHESTRATOR_TASK_HANDOFF_TEMPLATE.md
+- agent-system/04_state/RUNTIME_STATE_SCHEMA.md
+- agent-system/09_validators/REASONING_LEVEL_VALIDATION_RULES.md
+- agent-system/10_examples/FINAL_SMOKE_CHECKLIST.md
+- agent-system/GOVERNANCE_CHANGELOG.md
+AFFECTED_INVARIANTS:
+- UPG_ASU_130_002 was invalidated as clean baseline due to reasoning-level dispatch mismatch.
+- UPG_ASU_130_002 also left stale bootstrap placeholder references.
+- UPG_ASU_130_003 fixes dispatch reasoning enforcement and bootstrap smoke consistency.
+- orchestrator must resolve role default, task packet reasoning, gate-required floor, final required dispatch level, and actual spawned reasoning level before RESULT routing
+- REASONING_LEVEL_ACTUAL and REASONING_LEVEL_COMPLIANCE must be recorded with SPAWN_LOG_REF or HANDOFF_LOG_REF evidence
+- actual spawned reasoning below required invalidates worker RESULT and forbids auditor pass
+- checkpoint, commit, and push are forbidden after reasoning-level mismatch
+- auditor must validate reasoning-level execution compliance from task packet, role default, gate floor, and spawn/handoff evidence
+- requester-return runtime tuple coverage explicitly includes NEXT_ACTION.REQUESTER_RETURN_CONTEXT and TASK_REGISTRY.requester_return_metadata
+- active version tuple remains 1.3.0 / 1.3.0 / 1.2.0
+AFFECTED_TRANSITIONS:
+- profile-agent create_agent dispatch -> reasoning-level resolution and recording before RESULT routing
+- invalid dispatch from actual spawned reasoning below required -> governed correction
+- invalid reasoning dispatch -> audit fail or blocked, no pass
+- reasoning-level mismatch -> no post-audit checkpoint, no commit, no push
+- runtime tuple validation -> correction routing when requester return context or requester return metadata is missing or contradictory
+SCHEMA_TEMPLATE_IMPACT: template_update_required
+MIGRATION_REQUIRED: no
+MIGRATION_NOTE: This bounded correction hardens v1.3.0 dispatch reasoning enforcement, auditor compliance checks, requester-return tuple documentation, final smoke coverage, and changelog traceability only. It preserves the active package, governance ruleset, and runtime schema tuple 1.3.0 / 1.3.0 / 1.2.0; does not add executable validators or CI; does not change the runtime nine-file set, role authority, DAG/parallel orchestration, requester-return audit gate, or version constants.
+AUTHORIZED_BY: project_owner
+AUDIT_REQUIRED: yes
+STATUS: proposed
 ```

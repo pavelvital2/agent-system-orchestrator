@@ -50,12 +50,18 @@ The orchestrator must not stage, commit, or push after:
 - auditor `STATUS: gap`;
 - formally invalid profile-agent RESULT;
 - formally invalid auditor RESULT;
+- reasoning-level dispatch mismatch where actual spawned reasoning is below
+  required;
 - pending correction for the same work;
 - unaudited research dependency output or research audit fail/blocked/gap when
   requester continuation is waiting;
 - suspected secret or credential risk in changed, staged, logged, or generated
   checkpoint material;
 - out-of-scope changed files.
+
+After a reasoning-level mismatch, checkpoint is forbidden. Commit is forbidden
+after reasoning-level mismatch, and push is forbidden after reasoning-level
+mismatch.
 
 ## Allowed checkpoint commands
 

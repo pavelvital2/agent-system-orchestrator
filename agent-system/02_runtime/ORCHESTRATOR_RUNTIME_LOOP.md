@@ -229,6 +229,22 @@ informal context.
 - не переводить pipeline в wait_for_owner.
 
 8. Если следующий шаг требует агента:
+   - before spawning a profile agent, resolve dispatch reasoning:
+     `role_default_reasoning_level`, `task_packet_reasoning_level`,
+     `gate_required_floor`, `final_required_dispatch_level`, and
+     `actual_spawned_reasoning_level`;
+   - compute `final_required_dispatch_level` as the highest applicable level
+     among role default, task packet `REASONING_LEVEL`, and gate-required
+     floor, using `low < default < high < maximum`;
+   - record `TARGET_ROLE`, `TASK_ID`, `TASK_PACKET`,
+     `REASONING_LEVEL_REQUIRED`, `REASONING_LEVEL_SOURCE`,
+     `REASONING_LEVEL_ACTUAL`, `REASONING_LEVEL_COMPLIANCE`, and
+     `SPAWN_LOG_REF` or `HANDOFF_LOG_REF` in the handoff, spawn log, or
+     orchestrator transcript before RESULT routing;
+   - if the actual spawned reasoning level is below required, classify the
+     spawn as invalid dispatch: the worker RESULT is invalid, audit must fail
+     or block, post-audit checkpoint is forbidden, commit/push are forbidden,
+     and routing must enter governed correction;
    - создать нового агента;
    - назначить ровно одну задачу;
    - передать универсальные инструкции роли;
@@ -363,9 +379,15 @@ Before any `create_agent`, `route_result`, `update_state`, `correction`, `finali
 13. role/file permissions match `FILESYSTEM_GOVERNANCE.md`;
 14. task packet `REASONING_LEVEL` is valid for allowed values, role default,
     and gate-required floor;
-15. `TASK_KIND: research_dependency` and requester continuation routing are
+15. profile-agent dispatch reasoning is resolved and prepared for recording:
+    `role_default_reasoning_level`, `task_packet_reasoning_level`,
+    `gate_required_floor`, `final_required_dispatch_level`, and
+    `actual_spawned_reasoning_level`; `final_required_dispatch_level` must be
+    the highest applicable level among role default, task packet
+    `REASONING_LEVEL`, and gate-required floor;
+16. `TASK_KIND: research_dependency` and requester continuation routing are
     valid under `REQUESTER_RETURN_PROTOCOL.md`;
-16. requested action is valid under governance-freeze rules.
+17. requested action is valid under governance-freeze rules.
 
 If any validation fails, dispatch is forbidden.
 

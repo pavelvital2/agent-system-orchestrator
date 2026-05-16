@@ -127,7 +127,11 @@ the auditor returns `STATUS: pass`.
 - post-audit Git checkpoint before required auditor pass;
 - post-audit Git checkpoint that stages files outside the audited task allowed scope;
 - post-audit Git checkpoint that stages suspected secret or credential material;
+- post-audit Git checkpoint after reasoning-level mismatch or invalid dispatch
+  where actual spawned reasoning is below required;
 - push after commit failure or checkpoint validation failure;
+- commit or push after reasoning-level mismatch or invalid dispatch where
+  actual spawned reasoning is below required;
 - research_dependency result routed to requester continuation before independent auditor pass;
 - audit fail, blocked, or gap for research_dependency routed to requester continuation;
 - requester return target inferred from informal context instead of explicit return metadata;
@@ -218,6 +222,10 @@ true:
   `RETURN_TO_ROLE_AFTER_AUDIT_PASS`, and
   `RETURN_TASK_AFTER_AUDIT_PASS`;
 - `NEXT_ACTION` routes exactly to the recorded return role and return task.
+- `NEXT_ACTION.REQUESTER_RETURN_CONTEXT` preserves the requester return
+  context required for the continuation route.
+- `TASK_REGISTRY.requester_return_metadata` matches the task packet return
+  metadata and the requester continuation target.
 
 If audit returns `fail`, `blocked`, or `gap`, requester continuation remains
 blocked and routing must use correction, blocked/GAP handling, governed
@@ -360,6 +368,8 @@ Enter correction if any of the following are detected:
 - auditor fail followed by `DEPENDENCY_STATUS: ready` for dependent work.
 - checkpoint_done without commit hash, branch, push status, accepted files, or audit reference;
 - checkpoint after auditor fail, blocked, gap, invalid RESULT, or pending correction;
+- checkpoint, commit, or push after reasoning-level mismatch where actual
+  spawned reasoning is below required;
 - checkpoint push attempted after commit failure;
 - checkpoint record or event containing unredacted secret values.
 

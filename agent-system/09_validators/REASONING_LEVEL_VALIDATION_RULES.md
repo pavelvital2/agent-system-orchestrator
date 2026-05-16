@@ -64,3 +64,65 @@ cross-link validation: high
   validation.
 
 Violations must block dispatch and route through governed correction.
+
+## Dispatch execution compliance
+
+Before spawning any profile agent, the orchestrator must resolve:
+
+```text
+role_default_reasoning_level
+task_packet_reasoning_level
+gate_required_floor
+final_required_dispatch_level
+actual_spawned_reasoning_level
+```
+
+`final_required_dispatch_level` is the highest applicable level among role
+default, task packet `REASONING_LEVEL`, and gate-required floor, using:
+
+```text
+low < default < high < maximum
+```
+
+The handoff, spawn log, or orchestrator transcript must record:
+
+```text
+TARGET_ROLE
+TASK_ID
+TASK_PACKET
+REASONING_LEVEL_REQUIRED
+REASONING_LEVEL_SOURCE
+REASONING_LEVEL_ACTUAL
+REASONING_LEVEL_COMPLIANCE
+SPAWN_LOG_REF or HANDOFF_LOG_REF
+```
+
+If the actual spawned reasoning level is below required, this is invalid
+dispatch:
+
+- worker RESULT is invalid;
+- audit must fail or block and must not pass;
+- post-audit checkpoint is forbidden;
+- commit/push are forbidden;
+- routing must enter governed correction.
+
+## Auditor compliance check
+
+The auditor must verify reasoning-level execution compliance from task packet,
+role defaults, gate-required floor, and evidence of the actual spawned
+reasoning level from spawn log, handoff, or orchestrator transcript.
+
+Auditor validation must check:
+
+```text
+task packet REASONING_LEVEL
+role default
+gate-required floor
+actual spawned reasoning level
+no downgrade below required level
+evidence from spawn log, handoff, or orchestrator transcript
+```
+
+If the actual spawned reasoning level is lower than the resolved required level
+and the required level is available, auditor `STATUS: pass` is invalid. The
+auditor must return `STATUS: fail` or `STATUS: blocked`.
