@@ -235,4 +235,69 @@ MIGRATION_NOTE: Active package and governance ruleset versions changed to 1.2.0 
 AUTHORIZED_BY: project_owner
 AUDIT_REQUIRED: yes
 STATUS: accepted
+
+CHANGE_ID: GOV-2026-05-16-001
+DATE: 2026-05-16
+PACKAGE_VERSION_BEFORE: 1.2.0
+PACKAGE_VERSION_AFTER: 1.2.0
+CHANGE_TYPE: patch
+AFFECTED_FILES:
+- agent-system/GOVERNANCE_CHANGELOG.md
+- agent-system/PACKAGE_VERSIONING.md
+- agent-system/README.md
+- agent-system/00_start/ORCHESTRATOR_START.md
+- agent-system/01_roles/ORCHESTRATOR.md
+- agent-system/02_runtime/ORCHESTRATOR_RUNTIME_LOOP.md
+- agent-system/02_runtime/ALLOWED_ORCHESTRATOR_ACTIONS.md
+- agent-system/02_runtime/ACTION_STATE_SEMANTICS.md
+- agent-system/02_runtime/FILESYSTEM_GOVERNANCE.md
+- agent-system/02_runtime/GOVERNANCE_AUTHORITY.md
+- agent-system/02_runtime/STATE_TRANSITION_RULES.md
+- agent-system/02_runtime/VIOLATION_RECOVERY.md
+- agent-system/02_runtime/ACCEPTED_STATE_LOCKING.md
+- agent-system/02_runtime/POST_AUDIT_GIT_CHECKPOINT.md
+- agent-system/02_runtime/AGENT_LIFECYCLE.md
+- agent-system/02_runtime/HANDOFF_PROTOCOL.md
+- agent-system/03_templates/TASK_PACKET_TEMPLATE.md
+- agent-system/03_templates/ORCHESTRATOR_TASK_HANDOFF_TEMPLATE.md
+- agent-system/03_templates/AGENT_RESULT_TEMPLATE.md
+- agent-system/04_state/RUNTIME_STATE_SCHEMA.md
+- agent-system/04_state/PROJECT_STATE_TEMPLATE.md
+- agent-system/04_state/CURRENT_GATE_TEMPLATE.md
+- agent-system/04_state/NEXT_ACTION_TEMPLATE.md
+- agent-system/04_state/TASK_REGISTRY_TEMPLATE.md
+- agent-system/04_state/ACCEPTED_ARTIFACTS_TEMPLATE.md
+- agent-system/05_gap_flow/GAP_FLOW.md
+- agent-system/05_gap_flow/GAP_REGISTER_TEMPLATE.md
+- agent-system/06_logs/AGENT_RESULTS_LOG_TEMPLATE.md
+- agent-system/06_logs/ORCHESTRATOR_EVENTS_LOG_TEMPLATE.md
+- agent-system/06_logs/STATUS_SUMMARY_TEMPLATE.md
+- agent-system/07_lifecycle/PROJECT_LIFECYCLE.md
+- agent-system/07_lifecycle/DOCUMENTATION_STAGE.md
+- agent-system/09_validators/VALIDATOR_SPEC.md
+- agent-system/09_validators/RUNTIME_CONSISTENCY_RULES.md
+- agent-system/09_validators/RESULT_VALIDATION_RULES.md
+- agent-system/09_validators/TASK_PACKET_VALIDATION_RULES.md
+- agent-system/09_validators/TRANSITION_VALIDATION_RULES.md
+- agent-system/09_validators/GIT_CHECKPOINT_VALIDATION_RULES.md
+- agent-system/09_validators/schemas/result.schema.json
+- agent-system/10_examples/FINAL_SMOKE_CHECKLIST.md
+AFFECTED_INVARIANTS:
+- runtime file set synchronization
+- role and task enum synchronization
+- RESULT next-action field normalization
+- documentation stage reconciliation
+- final smoke and cross-link validation hardening
+- package version tuple compatibility
+AFFECTED_TRANSITIONS:
+- bootstrap/runtime validation -> correction or wait when mandatory runtime files are missing
+- RESULT validation -> AGENT_RESULTS_LOG persistence -> STATUS routing
+- documentation stage completion -> handover readiness when required
+- final smoke validation -> final auditor or correction routing
+SCHEMA_TEMPLATE_IMPACT: template_update_required
+MIGRATION_REQUIRED: yes
+MIGRATION_NOTE: This correction records completion of the v1.2.0 correction chain without advancing the active tuple. Existing runtime state must be checked against the synchronized nine-file runtime set, updated role/task enums, canonical NEXT_RECOMMENDED_ACTION RESULT field, documentation stage linkage, and final smoke/cross-link checks before normal dispatch.
+AUTHORIZED_BY: project_owner
+AUDIT_REQUIRED: yes
+STATUS: accepted
 ```

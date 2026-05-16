@@ -25,12 +25,15 @@ agent-system/02_runtime/ORCHESTRATOR_RUNTIME_LOOP.md
 agent-system/02_runtime/ALLOWED_ORCHESTRATOR_ACTIONS.md
 agent-system/02_runtime/STATE_TRANSITION_RULES.md
 agent-system/02_runtime/ACTION_STATE_SEMANTICS.md
+agent-system/02_runtime/AGENT_LIFECYCLE.md
 agent-system/02_runtime/FILESYSTEM_GOVERNANCE.md
 agent-system/02_runtime/GOVERNANCE_AUTHORITY.md
+agent-system/02_runtime/HANDOFF_PROTOCOL.md
 agent-system/02_runtime/ACCEPTED_STATE_LOCKING.md
 agent-system/02_runtime/VIOLATION_RECOVERY.md
 agent-system/02_runtime/POST_AUDIT_GIT_CHECKPOINT.md
 agent-system/03_templates/TASK_PACKET_TEMPLATE.md
+agent-system/03_templates/ORCHESTRATOR_TASK_HANDOFF_TEMPLATE.md
 agent-system/03_templates/AGENT_RESULT_TEMPLATE.md
 agent-system/03_templates/HANDOFF_TEMPLATE.md
 agent-system/03_templates/OWNER_DECISION_TEMPLATE.md
@@ -140,6 +143,12 @@ RUNTIME_FILE_SET_ALIGNMENT:
   project-runtime/ACCEPTED_ARTIFACTS.md
   project-runtime/ORCHESTRATOR_EVENTS_LOG.md
   project-runtime/STATUS_SUMMARY.md
+
+PACKAGE_DOCUMENT_COVERAGE:
+  Required package document existence checks include mandatory runtime and
+  governance docs referenced by start/runtime loading rules, plus previously
+  missing package docs such as AGENT_LIFECYCLE, HANDOFF_PROTOCOL,
+  ORCHESTRATOR_TASK_HANDOFF_TEMPLATE, and DOCUMENTATION_STAGE.
 
 AUDIT_CHECKPOINT_ALIGNMENT:
   Audit pass is required before accepted-state checkpoint. Audit fail,

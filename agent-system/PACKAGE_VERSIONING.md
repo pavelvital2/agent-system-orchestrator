@@ -26,6 +26,26 @@ CURRENT_RUNTIME_SCHEMA_VERSION: 1.1.0
 
 These constants define the active package/governance/schema tuple for runtime validation. They are policy constants, not a release manifest.
 
+## Correction semantics
+
+Owner-authorized corrections may reconcile internally inconsistent artifacts
+inside the active package version when the intended public package capability is
+already v1.2.0. Such corrections are recorded in `GOVERNANCE_CHANGELOG.md` and
+must state whether the active tuple changed.
+
+The v1.2.0 correction chain keeps the active tuple unchanged:
+
+```text
+CURRENT_PACKAGE_VERSION: 1.2.0
+CURRENT_GOVERNANCE_RULESET_VERSION: 1.2.0
+CURRENT_RUNTIME_SCHEMA_VERSION: 1.1.0
+```
+
+Runtime file set synchronization, role/task enum synchronization, RESULT field
+normalization, documentation stage reconciliation, and final smoke/cross-link
+hardening in that chain are treated as v1.2.0 correction metadata, not as a new
+package installation.
+
 ## Version semantics
 
 ```text
