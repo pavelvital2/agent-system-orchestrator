@@ -29,6 +29,7 @@ agent-system/02_runtime/AGENT_LIFECYCLE.md
 agent-system/02_runtime/FILESYSTEM_GOVERNANCE.md
 agent-system/02_runtime/GOVERNANCE_AUTHORITY.md
 agent-system/02_runtime/HANDOFF_PROTOCOL.md
+agent-system/02_runtime/REQUESTER_RETURN_PROTOCOL.md
 agent-system/02_runtime/ACCEPTED_STATE_LOCKING.md
 agent-system/02_runtime/VIOLATION_RECOVERY.md
 agent-system/02_runtime/POST_AUDIT_GIT_CHECKPOINT.md
@@ -44,6 +45,9 @@ agent-system/03_templates/SETUP_TASK_TEMPLATE.md
 agent-system/03_templates/RUN_SMOKE_CHECKLIST_TEMPLATE.md
 agent-system/03_templates/LAUNCH_READINESS_CHECKLIST_TEMPLATE.md
 agent-system/03_templates/HANDOVER_CHECKLIST_TEMPLATE.md
+agent-system/03_templates/RESEARCH_REQUEST_TEMPLATE.md
+agent-system/03_templates/RESEARCH_RESULT_TEMPLATE.md
+agent-system/03_templates/DESIGN_CONTINUATION_TASK_TEMPLATE.md
 agent-system/04_state/RUNTIME_STATE_SCHEMA.md
 agent-system/04_state/PROJECT_STATE_TEMPLATE.md
 agent-system/04_state/CURRENT_GATE_TEMPLATE.md
@@ -59,6 +63,7 @@ agent-system/07_lifecycle/PROJECT_LIFECYCLE.md
 agent-system/07_lifecycle/BOOTSTRAP_STAGE.md
 agent-system/07_lifecycle/REQUIREMENTS_STAGE.md
 agent-system/07_lifecycle/DESIGN_STAGE.md
+agent-system/07_lifecycle/DESIGN_RESEARCH_LOOP.md
 agent-system/07_lifecycle/IMPLEMENTATION_STAGE.md
 agent-system/07_lifecycle/TESTING_STAGE.md
 agent-system/07_lifecycle/SETUP_STAGE.md
@@ -85,11 +90,14 @@ agent-system/09_validators/TASK_PACKET_VALIDATION_RULES.md
 agent-system/09_validators/TRANSITION_VALIDATION_RULES.md
 agent-system/09_validators/GIT_CHECKPOINT_VALIDATION_RULES.md
 agent-system/09_validators/CROSS_LINK_VALIDATION_RULES.md
+agent-system/09_validators/RESEARCH_RETURN_VALIDATION_RULES.md
+agent-system/09_validators/REASONING_LEVEL_VALIDATION_RULES.md
 agent-system/09_validators/schemas/project_state.schema.json
 agent-system/09_validators/schemas/current_gate.schema.json
 agent-system/09_validators/schemas/next_action.schema.json
 agent-system/09_validators/schemas/task_packet.schema.json
 agent-system/09_validators/schemas/result.schema.json
+agent-system/09_validators/schemas/research_result.schema.json
 agent-system/09_validators/schemas/task_registry.schema.json
 agent-system/09_validators/schemas/accepted_artifacts.schema.json
 agent-system/09_validators/schemas/orchestrator_event.schema.json
@@ -123,10 +131,15 @@ BOOTSTRAP_REQUIREMENTS_ROUTING:
   ORCHESTRATOR_START and BOOTSTRAP_STAGE do not hard-code designer as the only
   first profile agent. They route incomplete, ambiguous, or uncertain input to
   requirements_analyst and allow direct designer routing only for sufficiently
-  structured input. Routing examples use v1.2.0 NEXT_ACTION fields:
-  ACTION_TYPE, TARGET_ROLE, TASK_ID, TASK_PACKET, DEPENDENCY_STATUS, and
-  BLOCKED_BY. The first profile-agent TASK_PACKET is a valid bootstrap task
-  packet using the canonical path convention
+  structured input. Routing examples use current NEXT_ACTION fields:
+  ACTION_ID, ACTION_TYPE, TARGET_ROLE, TASK_ID, TASK_PACKET,
+  DEPENDENCY_STATUS, BLOCKED_BY, ACTION_SEMANTIC,
+  REQUESTER_RETURN_CONTEXT, BLOCKING_OR_RESUME_CONTEXT,
+  REQUIRED_UNIVERSAL_DOCS, REQUIRED_PROJECT_DOCS, EXPECTED_RESULT, and
+  INSTRUCTION_FOR_ORCHESTRATOR. Ordinary bootstrap examples use
+  ACTION_SEMANTIC: normal, REQUESTER_RETURN_CONTEXT: NONE, and
+  BLOCKING_OR_RESUME_CONTEXT: NONE. The first profile-agent TASK_PACKET is a
+  valid bootstrap task packet using the canonical path convention
   project-runtime/bootstrap/TASK_BOOTSTRAP_<TARGET_ROLE>_001.md, never
   TASK_PACKET: NONE, and never a plain handoff-only file.
   This is the only active task packet exception outside ACTIVE_DOC_ROOT;
@@ -157,9 +170,9 @@ TASK_RESULT_ALIGNMENT:
 
 RESULT_ACTION_FIELD_ALIGNMENT:
   AGENT_RESULT_TEMPLATE, RESULT_VALIDATION_RULES, runtime loop, and result
-  schema require NEXT_RECOMMENDED_ACTION as the canonical v1.2.0 RESULT field.
+  schema require NEXT_RECOMMENDED_ACTION as the canonical RESULT field.
   NEXT_REQUIRED_ACTION appears only as a documented legacy alias and is not
-  required by v1.2.0 validators.
+  required by current validators.
 
 STATE_ALIGNMENT:
   runtime state templates, task registry, accepted artifacts registry, logs,
@@ -173,9 +186,53 @@ STATE_ALIGNMENT:
   BLOCKING_STATUS, and NOTES.
   RUNTIME_STATE_SCHEMA, NEXT_ACTION_TEMPLATE, and next_action.schema.json
   represent the same NEXT_ACTION mandatory fields, including ACTION_SEMANTIC,
+  REQUESTER_RETURN_CONTEXT,
   BLOCKING_OR_RESUME_CONTEXT, REQUIRED_UNIVERSAL_DOCS,
   REQUIRED_PROJECT_DOCS, EXPECTED_RESULT, and
   INSTRUCTION_FOR_ORCHESTRATOR.
+  Runtime tuple validation explicitly includes CURRENT_GATE.ACTION_SEMANTIC
+  and NEXT_ACTION.ACTION_SEMANTIC. Requester-return tuple coverage explicitly
+  includes NEXT_ACTION.REQUESTER_RETURN_CONTEXT and
+  TASK_REGISTRY.requester_return_metadata.
+
+RESEARCH_DEPENDENCY_LOOP:
+  REQUESTER_RETURN_PROTOCOL, DESIGN_RESEARCH_LOOP, RESEARCH_REQUEST_TEMPLATE,
+  RESEARCH_RESULT_TEMPLATE, DESIGN_CONTINUATION_TASK_TEMPLATE,
+  RESEARCH_RETURN_VALIDATION_RULES, task_packet.schema.json,
+  result.schema.json, research_result.schema.json, next_action.schema.json, and
+  task_registry.schema.json all represent research dependency routing. Smoke
+  evidence must confirm that
+  RESEARCH_DEPENDENCY is distinct from GAP and BLOCKER, exact questions and
+  allowed/forbidden sources are required, expected evidence/output are
+  required, and requester continuation is blocked until independent audit pass.
+  Audit fail, blocked, or gap must route to correction/blocked/GAP handling,
+  not requester continuation.
+
+REQUESTER_RETURN_PROTOCOL_ALIGNMENT:
+  Task packets, task registry entries, and NEXT_ACTION preserve
+  REQUESTED_BY_ROLE, REQUESTED_BY_TASK,
+  RETURN_TO_REQUESTER_AFTER_AUDIT_PASS,
+  RETURN_TO_ROLE_AFTER_AUDIT_PASS, and
+  RETURN_TASK_AFTER_AUDIT_PASS where applicable. The orchestrator must not
+  infer return targets from informal context.
+
+REASONING_LEVEL_ALIGNMENT:
+  Allowed levels are low, default, high, maximum, and role_default. Role
+  defaults include tester: high. Task packets may raise reasoning level freely,
+  may lower it only for mechanical bounded tasks with OVERRIDE_REASON, and may
+  never lower below gate-required floor. Low is forbidden for design,
+  requirements, audit, correction after failed audit, lifecycle/state/transition
+  changes, security/secrets policy, launch/release readiness, final acceptance,
+  and cross-link validation. Before profile-agent dispatch, the orchestrator
+  resolves role_default_reasoning_level, task_packet_reasoning_level,
+  gate_required_floor, final_required_dispatch_level, and
+  actual_spawned_reasoning_level. Dispatch records must include
+  REASONING_LEVEL_REQUIRED, REASONING_LEVEL_SOURCE, REASONING_LEVEL_ACTUAL,
+  REASONING_LEVEL_COMPLIANCE, and SPAWN_LOG_REF or HANDOFF_LOG_REF. Actual
+  spawned reasoning below required is invalid dispatch: worker RESULT is
+  invalid, auditor pass is forbidden, checkpoint is forbidden after
+  reasoning-level mismatch, and commit/push are forbidden after
+  reasoning-level mismatch.
 
 RUNTIME_FILE_SET_ALIGNMENT:
   Mandatory runtime file lists in start, runtime loop, runtime state schema,
@@ -226,14 +283,14 @@ AUDIT_CHECKPOINT_ALIGNMENT:
   auditor before any next profile role, lifecycle phase, terminal completion,
   or Git checkpoint. Requirements analyst, devops/setup engineer, and release
   manager pass routing examples are explicitly covered by transition rules.
-  Smoke evidence must list each v1.2.0 profile execution role covered by
+  Smoke evidence must list each current profile execution role covered by
   mandatory-audit transition rules:
   requirements_analyst, designer, developer, tester, technical_writer,
   devops_setup_engineer, and release_manager.
 
 MINIMAL_FIXTURE_SCHEMA_ALIGNMENT:
-  MINIMAL_EXAMPLE_FIXTURE uses the active v1.2.0 runtime tuple, the canonical
-  nine runtime file dependencies, v1.2.0 NEXT_ACTION fields, and task packet
+  MINIMAL_EXAMPLE_FIXTURE uses the active v1.3.0 runtime tuple, the canonical
+  nine runtime file dependencies, current NEXT_ACTION fields, and task packet
   fields compatible with TASK_PACKET_TEMPLATE and task_packet.schema.json.
   Example task packets route outcomes through MANDATORY_WORKFLOW,
   NEXT_ROLE_ON_PASS, NEXT_ROLE_ON_FAIL, NEXT_ROLE_ON_BLOCKED, and
@@ -283,8 +340,9 @@ PROJECT_AGNOSTIC_ALIGNMENT:
   universal core docs remain free of project-specific business implementation
   and named external-platform terminology.
 
-PRE_1_2_1_CORRECTION_CHAIN_COVERAGE:
-  Final smoke evidence must explicitly cover CORR_ASU_120_017 through
+HISTORICAL_PRE_1_2_1_CORRECTION_CHAIN_COVERAGE:
+  Historical smoke evidence for the v1.2.0 correction chain must cover
+  CORR_ASU_120_017 through
   CORR_ASU_120_021. Coverage must show that bootstrap first profile dispatch
   uses a valid bootstrap task packet protocol; example profile-agent outputs
   stay under an active documentation root and do not allow writes to
@@ -292,9 +350,8 @@ PRE_1_2_1_CORRECTION_CHAIN_COVERAGE:
   sidecar lists; STATUS_SUMMARY sidecar policy is explicit; and
   ACTION_SEMANTIC plus SEMANTIC_REASON have parity across PROJECT_STATE
   template, runtime schema, JSON schema, runtime consistency validation, and
-  smoke validation. This correction-chain smoke coverage does not install
-  v1.2.1, does not alter reasoning-level policy, and preserves the rule that
-  profile agents never commit or push.
+  smoke validation. This historical correction-chain coverage did not install
+  v1.2.1 and preserved the rule that profile agents never commit or push.
 
 BOOTSTRAP_ACTIVE_DOC_ROOT_EXCEPTION_SYNC:
   Smoke evidence must verify that the only active task packet exception outside
@@ -305,7 +362,7 @@ BOOTSTRAP_ACTIVE_DOC_ROOT_EXCEPTION_SYNC:
   without a task packet, and multiple simultaneously active first bootstrap
   task packets are invalid.
 
-FINAL_PRE_1_2_1_READINESS_SMOKE:
+VERSIONED_READINESS_SMOKE:
   Final smoke evidence must explicitly verify the bootstrap canonical path
   convention in ORCHESTRATOR_START, BOOTSTRAP_STAGE,
   BOOTSTRAP_TASK_PACKET_TEMPLATE, runtime loop, filesystem governance, state
@@ -317,35 +374,64 @@ FINAL_PRE_1_2_1_READINESS_SMOKE:
   TASK_PACKET_TEMPLATE and schemas/task_packet.schema.json, including
   MANDATORY_WORKFLOW and NEXT_ROLE_ON_* routing fields, and must confirm that
   task packet examples do not include RESULT-only NEXT_RECOMMENDED_ACTION.
-  Evidence must also confirm changelog traceability for the current accepted
-  correction chain, canonical nine-file runtime set stability, version tuple
-  stability, v1.2.1 absence, and reasoning-level policy absence.
+  Evidence must also confirm changelog traceability, canonical nine-file
+  runtime set stability, active version tuple, and whether the current versioned
+  task changes reasoning-level policy.
 
 CHANGELOG_TRACEABILITY_SYNC:
   Governance changelog evidence must explicitly cover CORR_ASU_120_017 through
   CORR_ASU_120_021 and CORR_ASU_120_022 through CORR_ASU_120_026 or the
   current accepted scope of that chain. Coverage must include representative
-  affected files, affected invariants, version tuple stability, v1.2.1 absence,
-  and reasoning-level policy absence.
+  affected files, affected invariants, version tuple impact, and
+  reasoning-level policy impact for the relevant versioned task.
 
 CORR_ASU_120_027_FINAL_PRE_121_CONSISTENCY_CLEANUP:
   Final smoke evidence must explicitly verify removal of standalone REQUESTER
   and standalone NEXT_RECOMMENDED_ACTION from
   BOOTSTRAP_TASK_PACKET_TEMPLATE, explicit bootstrap role-doc mapping to
-  REQUIREMENTS_ANALYST.md and DESIGNER.md, canonical bootstrap placeholder
+  REQUIREMENTS_ANALYST.md and DESIGNER.md, canonical bootstrap task packet path convention
   project-runtime/bootstrap/TASK_BOOTSTRAP_<TARGET_ROLE>_001.md plus concrete
   REQUIREMENTS_ANALYST and DESIGNER examples, CURRENT_GATE and NEXT_ACTION
   runtime schema parity with templates and schema sidecars, PROJECT_LIFECYCLE
   AUDIT and FINAL_ACCEPTANCE aliases, CROSS_LINK_VALIDATION_RULES coverage, and
   GOVERNANCE_CHANGELOG traceability for CORR_ASU_120_027.
 
-NEXT_VERSION_ABSENCE:
-  final smoke and cross-link corrections do not install next-version feature
-  docs, fields, roles, runtime enums, or version constants.
+V1_3_0_VERSION_ALIGNMENT:
+  active package tuple is CURRENT_PACKAGE_VERSION: 1.3.0,
+  CURRENT_GOVERNANCE_RULESET_VERSION: 1.3.0, and
+  CURRENT_RUNTIME_SCHEMA_VERSION: 1.2.0. This feature upgrade must not use
+  1.2.1 as the active tuple.
 
-REASONING_LEVEL_POLICY_ABSENCE:
-  final smoke and cross-link corrections do not change reasoning-level policy
-  or add reasoning-level fields, roles, validators, or runtime requirements.
+UPG_ASU_130_002_BOOTSTRAP_V13_CONSISTENCY_FIX:
+  Smoke evidence must verify that current normative docs contain no stale
+  blank-role bootstrap placeholder, use
+  project-runtime/bootstrap/TASK_BOOTSTRAP_<TARGET_ROLE>_001.md as the
+  canonical bootstrap task packet path convention, preserve the concrete
+  project-runtime/bootstrap/TASK_BOOTSTRAP_REQUIREMENTS_ANALYST_001.md and
+  project-runtime/bootstrap/TASK_BOOTSTRAP_DESIGNER_001.md examples, align
+  bootstrap NEXT_ACTION examples with NEXT_ACTION_TEMPLATE.md and
+  next_action.schema.json, avoid obsolete runtime-field wording in bootstrap
+  outputs, preserve the 1.3.0 / 1.3.0 / 1.2.0 active tuple, and keep the
+  requester-return audit gate mandatory before requester continuation.
+
+UPG_ASU_130_003_DISPATCH_REASONING_AND_BOOTSTRAP_SMOKE_FIX:
+  Smoke evidence must verify no current normative blank-role bootstrap
+  placeholder references remain; the canonical bootstrap path uses
+  project-runtime/bootstrap/TASK_BOOTSTRAP_<TARGET_ROLE>_001.md; concrete
+  TASK_BOOTSTRAP_REQUIREMENTS_ANALYST_001 and TASK_BOOTSTRAP_DESIGNER_001
+  examples remain; bootstrap NEXT_ACTION examples include ACTION_ID,
+  ACTION_TYPE, TARGET_ROLE, TASK_ID, TASK_PACKET, DEPENDENCY_STATUS,
+  BLOCKED_BY, ACTION_SEMANTIC, REQUESTER_RETURN_CONTEXT,
+  BLOCKING_OR_RESUME_CONTEXT, REQUIRED_UNIVERSAL_DOCS,
+  REQUIRED_PROJECT_DOCS, EXPECTED_RESULT, and INSTRUCTION_FOR_ORCHESTRATOR.
+  Smoke evidence must also verify actual spawned reasoning is recorded through
+  REASONING_LEVEL_ACTUAL and REASONING_LEVEL_COMPLIANCE, actual spawned
+  reasoning below required invalidates the worker RESULT, auditor must check
+  reasoning-level execution compliance, checkpoint/commit/push are forbidden
+  after reasoning mismatch, requester-return tuple coverage includes
+  NEXT_ACTION.REQUESTER_RETURN_CONTEXT and
+  TASK_REGISTRY.requester_return_metadata, and the active version tuple remains
+  1.3.0 / 1.3.0 / 1.2.0.
 ```
 
 ## Final smoke evidence format

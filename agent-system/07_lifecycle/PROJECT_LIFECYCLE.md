@@ -10,6 +10,10 @@ This document defines the universal project lifecycle for the agent-system packa
 
 Audit is a mandatory gate after design and implementation work. Additional audit gates may be required by task packets.
 
+Design may enter the [Design Research Loop](DESIGN_RESEARCH_LOOP.md) when the
+designer cannot safely continue without factual evidence. Research dependency
+output returns to design continuation only after independent audit pass.
+
 ## Stage map
 
 | Stage | Main role | Output |
@@ -44,6 +48,7 @@ A project must not move forward when:
 - `agent-system/07_lifecycle/BOOTSTRAP_STAGE.md`
 - `agent-system/07_lifecycle/REQUIREMENTS_STAGE.md`
 - `agent-system/07_lifecycle/DESIGN_STAGE.md`
+- `agent-system/07_lifecycle/DESIGN_RESEARCH_LOOP.md`
 - `agent-system/07_lifecycle/IMPLEMENTATION_STAGE.md`
 - `agent-system/07_lifecycle/TESTING_STAGE.md`
 - `agent-system/07_lifecycle/SETUP_STAGE.md`

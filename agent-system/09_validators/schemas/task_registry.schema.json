@@ -25,10 +25,17 @@
         "TASK_ID",
         "TASK_TITLE",
         "TASK_TYPE",
+        "TASK_KIND",
         "OWNER_ROLE",
         "STATUS",
         "TASK_PACKET",
         "DEPENDENCIES",
+        "REQUESTED_BY_ROLE",
+        "REQUESTED_BY_TASK",
+        "RETURN_TO_REQUESTER_AFTER_AUDIT_PASS",
+        "RETURN_TO_ROLE_AFTER_AUDIT_PASS",
+        "RETURN_TASK_AFTER_AUDIT_PASS",
+        "RESEARCH_QUESTION_ID",
         "RESULT_REFS",
         "AUDIT_REFS",
         "CORRECTION_LINKS",
@@ -46,6 +53,10 @@
         "TASK_TYPE": {
           "type": "string",
           "enum": ["requirements_analyst", "designer", "developer", "auditor", "tester", "technical_writer", "devops_setup_engineer", "release_manager"]
+        },
+        "TASK_KIND": {
+          "type": "string",
+          "enum": ["normal", "research_dependency", "design_continuation", "task_continuation", "correction", "audit", "testing", "setup", "launch", "handover"]
         },
         "OWNER_ROLE": {
           "type": "string",
@@ -68,6 +79,18 @@
         },
         "TASK_PACKET": { "type": "string" },
         "DEPENDENCIES": { "$ref": "#/$defs/listOrNone" },
+        "REQUESTED_BY_ROLE": {
+          "type": "string",
+          "enum": ["requirements_analyst", "designer", "developer", "auditor", "tester", "technical_writer", "devops_setup_engineer", "release_manager", "NONE"]
+        },
+        "REQUESTED_BY_TASK": { "type": "string" },
+        "RETURN_TO_REQUESTER_AFTER_AUDIT_PASS": { "type": "string", "enum": ["yes", "no"] },
+        "RETURN_TO_ROLE_AFTER_AUDIT_PASS": {
+          "type": "string",
+          "enum": ["requirements_analyst", "designer", "developer", "auditor", "tester", "technical_writer", "devops_setup_engineer", "release_manager", "none"]
+        },
+        "RETURN_TASK_AFTER_AUDIT_PASS": { "type": "string" },
+        "RESEARCH_QUESTION_ID": { "type": "string" },
         "RESULT_REFS": { "$ref": "#/$defs/listOrNone" },
         "AUDIT_REFS": { "$ref": "#/$defs/listOrNone" },
         "CORRECTION_LINKS": { "$ref": "#/$defs/listOrNone" },

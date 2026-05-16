@@ -67,6 +67,11 @@
 
 3. Классифицировать причину отсутствия файла по взаимоисключающим правилам.
 
+The following snippets are classification deltas only. The resulting
+`project-runtime/NEXT_ACTION.md` must still include every required field from
+`agent-system/04_state/NEXT_ACTION_TEMPLATE.md`; inapplicable context fields
+must use the canonical `NONE` or `[]` values from that template.
+
 Если отсутствует или недоступно ТЗ проекта, предоставляемое владельцем:
 
 ```text
@@ -90,7 +95,8 @@ DEPENDENCY_STATUS: blocked
 BLOCKED_BY: invalid_or_missing_package_file
 ```
 
-4. В `NEXT_ACTION.md` выставить только одну из этих веток.
+4. В `NEXT_ACTION.md` выставить полный v1.3.0 `NEXT_ACTION` record with
+   exactly one selected classification branch.
 
 5. В handoff-файле явно указать, какие файлы отсутствуют.
 
@@ -110,23 +116,27 @@ BLOCKED_BY: invalid_or_missing_package_file
 6. `agent-system/02_runtime/AGENT_LIFECYCLE.md`
 7. `agent-system/02_runtime/FILESYSTEM_GOVERNANCE.md`
 8. `agent-system/02_runtime/GOVERNANCE_AUTHORITY.md`
-9. `agent-system/02_runtime/STATE_TRANSITION_RULES.md`
-10. `agent-system/02_runtime/VIOLATION_RECOVERY.md`
-11. `agent-system/02_runtime/ACCEPTED_STATE_LOCKING.md`
-12. `agent-system/03_templates/ORCHESTRATOR_TASK_HANDOFF_TEMPLATE.md`
-13. `agent-system/03_templates/AGENT_RESULT_TEMPLATE.md`
-14. `agent-system/03_templates/BOOTSTRAP_TASK_PACKET_TEMPLATE.md`
-15. `agent-system/04_state/RUNTIME_STATE_SCHEMA.md`
-16. `agent-system/04_state/PROJECT_STATE_TEMPLATE.md`
-17. `agent-system/04_state/CURRENT_GATE_TEMPLATE.md`
-18. `agent-system/04_state/NEXT_ACTION_TEMPLATE.md`
-19. `agent-system/05_gap_flow/GAP_FLOW.md`
-20. `agent-system/05_gap_flow/GAP_REGISTER_TEMPLATE.md`
-21. `agent-system/06_logs/AGENT_RESULTS_LOG_TEMPLATE.md`
-22. `agent-system/04_state/TASK_REGISTRY_TEMPLATE.md`
-23. `agent-system/04_state/ACCEPTED_ARTIFACTS_TEMPLATE.md`
-24. `agent-system/06_logs/ORCHESTRATOR_EVENTS_LOG_TEMPLATE.md`
-25. `agent-system/06_logs/STATUS_SUMMARY_TEMPLATE.md`
+9. `agent-system/02_runtime/REQUESTER_RETURN_PROTOCOL.md`
+10. `agent-system/02_runtime/STATE_TRANSITION_RULES.md`
+11. `agent-system/02_runtime/VIOLATION_RECOVERY.md`
+12. `agent-system/02_runtime/ACCEPTED_STATE_LOCKING.md`
+13. `agent-system/03_templates/ORCHESTRATOR_TASK_HANDOFF_TEMPLATE.md`
+14. `agent-system/03_templates/AGENT_RESULT_TEMPLATE.md`
+15. `agent-system/03_templates/BOOTSTRAP_TASK_PACKET_TEMPLATE.md`
+16. `agent-system/03_templates/RESEARCH_REQUEST_TEMPLATE.md`
+17. `agent-system/03_templates/RESEARCH_RESULT_TEMPLATE.md`
+18. `agent-system/03_templates/DESIGN_CONTINUATION_TASK_TEMPLATE.md`
+19. `agent-system/04_state/RUNTIME_STATE_SCHEMA.md`
+20. `agent-system/04_state/PROJECT_STATE_TEMPLATE.md`
+21. `agent-system/04_state/CURRENT_GATE_TEMPLATE.md`
+22. `agent-system/04_state/NEXT_ACTION_TEMPLATE.md`
+23. `agent-system/05_gap_flow/GAP_FLOW.md`
+24. `agent-system/05_gap_flow/GAP_REGISTER_TEMPLATE.md`
+25. `agent-system/06_logs/AGENT_RESULTS_LOG_TEMPLATE.md`
+26. `agent-system/04_state/TASK_REGISTRY_TEMPLATE.md`
+27. `agent-system/04_state/ACCEPTED_ARTIFACTS_TEMPLATE.md`
+28. `agent-system/06_logs/ORCHESTRATOR_EVENTS_LOG_TEMPLATE.md`
+29. `agent-system/06_logs/STATUS_SUMMARY_TEMPLATE.md`
 
 ---
 
@@ -184,19 +194,45 @@ project-runtime/bootstrap/TASK_BOOTSTRAP_DESIGNER_001.md
 
 ```text
 if project input is sufficiently structured for design:
+  ACTION_ID: NEXT_BOOTSTRAP_DESIGNER_001
   ACTION_TYPE: create_agent
   TARGET_ROLE: designer
   TASK_ID: TASK_BOOTSTRAP_DESIGNER_001
   TASK_PACKET: project-runtime/bootstrap/TASK_BOOTSTRAP_DESIGNER_001.md
   DEPENDENCY_STATUS: ready
   BLOCKED_BY: NONE
+  ACTION_SEMANTIC: normal
+  REQUESTER_RETURN_CONTEXT: NONE
+  BLOCKING_OR_RESUME_CONTEXT: NONE
+  REQUIRED_UNIVERSAL_DOCS:
+  - agent-system/01_roles/DESIGNER.md
+  - agent-system/03_templates/AGENT_RESULT_TEMPLATE.md
+  - agent-system/07_lifecycle/BOOTSTRAP_STAGE.md
+  REQUIRED_PROJECT_DOCS:
+  - project-input/TZ.md
+  EXPECTED_RESULT:
+  - agent-system/03_templates/AGENT_RESULT_TEMPLATE.md
+  INSTRUCTION_FOR_ORCHESTRATOR: Dispatch exactly one designer bootstrap task.
 else:
+  ACTION_ID: NEXT_BOOTSTRAP_REQUIREMENTS_ANALYST_001
   ACTION_TYPE: create_agent
   TARGET_ROLE: requirements_analyst
   TASK_ID: TASK_BOOTSTRAP_REQUIREMENTS_ANALYST_001
   TASK_PACKET: project-runtime/bootstrap/TASK_BOOTSTRAP_REQUIREMENTS_ANALYST_001.md
   DEPENDENCY_STATUS: ready
   BLOCKED_BY: NONE
+  ACTION_SEMANTIC: normal
+  REQUESTER_RETURN_CONTEXT: NONE
+  BLOCKING_OR_RESUME_CONTEXT: NONE
+  REQUIRED_UNIVERSAL_DOCS:
+  - agent-system/01_roles/REQUIREMENTS_ANALYST.md
+  - agent-system/03_templates/AGENT_RESULT_TEMPLATE.md
+  - agent-system/07_lifecycle/BOOTSTRAP_STAGE.md
+  REQUIRED_PROJECT_DOCS:
+  - project-input/TZ.md
+  EXPECTED_RESULT:
+  - agent-system/03_templates/AGENT_RESULT_TEMPLATE.md
+  INSTRUCTION_FOR_ORCHESTRATOR: Dispatch exactly one requirements analyst bootstrap task.
 ```
 
 Input is sufficiently structured for direct design only when it contains enough
@@ -236,8 +272,13 @@ It must route the failure through exactly one deterministic branch.
 `NEXT_ACTION.md` must contain exactly one action. It must not contain alternative
 `ACTION_TYPE`, `TARGET_ROLE`, or `DEPENDENCY_STATUS` values.
 
+The branch snippets below are classification deltas only. The resulting
+`project-runtime/NEXT_ACTION.md` must still include every required field from
+`agent-system/04_state/NEXT_ACTION_TEMPLATE.md`; inapplicable context fields
+must use the canonical `NONE` or `[]` values from that template.
+
 If validation fails because owner-provided bootstrap input is missing or inaccessible,
-the orchestrator must set:
+the orchestrator must set this classification delta:
 
 ```text
 ACTION_TYPE: wait_for_owner
@@ -248,7 +289,7 @@ BLOCKED_BY: missing_bootstrap_input
 
 If validation fails because a required `agent-system/` package, runtime,
 template, or governance file is missing, inaccessible, malformed, or internally
-invalid, the orchestrator must set:
+invalid, the orchestrator must set this classification delta:
 
 ```text
 ACTION_TYPE: correction
@@ -261,7 +302,7 @@ If validation fails because runtime file creation, runtime schema validation,
 template parity validation, governance validation, `NEXT_ACTION.md` validation,
 or governance freeze state validation failed after required package files were
 available,
-the orchestrator must set:
+the orchestrator must set this classification delta:
 
 ```text
 ACTION_TYPE: correction

@@ -8,6 +8,7 @@
   "required": [
     "TASK_ID",
     "TASK_STATUS",
+    "TASK_KIND",
     "SUPERSEDES",
     "SUPERSEDED_BY",
     "CORRECTION_OF",
@@ -17,8 +18,21 @@
     "TASK_TITLE",
     "TASK_TYPE",
     "TARGET_ROLE",
+    "REASONING_LEVEL",
     "DEPENDENCIES",
     "DEPENDENCY_STATUS",
+    "REQUESTED_BY_ROLE",
+    "REQUESTED_BY_TASK",
+    "RESEARCH_QUESTION_ID",
+    "RESEARCH_PURPOSE",
+    "RESEARCH_QUESTIONS",
+    "ALLOWED_SOURCES",
+    "FORBIDDEN_SOURCES",
+    "EXPECTED_EVIDENCE",
+    "EXPECTED_OUTPUT",
+    "RETURN_TO_REQUESTER_AFTER_AUDIT_PASS",
+    "RETURN_TO_ROLE_AFTER_AUDIT_PASS",
+    "RETURN_TASK_AFTER_AUDIT_PASS",
     "PURPOSE",
     "SOURCE_OF_TRUTH",
     "SCOPE_IN",
@@ -52,6 +66,10 @@
   "properties": {
     "TASK_ID": { "type": "string", "minLength": 1 },
     "TASK_STATUS": { "type": "string", "enum": ["active", "completed", "superseded", "deprecated"] },
+    "TASK_KIND": {
+      "type": "string",
+      "enum": ["normal", "research_dependency", "design_continuation", "task_continuation", "correction", "audit", "testing", "setup", "launch", "handover"]
+    },
     "SUPERSEDES": { "type": "string" },
     "SUPERSEDED_BY": { "type": "string" },
     "CORRECTION_OF": { "type": "string" },
@@ -70,8 +88,29 @@
       "type": "string",
       "enum": ["requirements_analyst", "designer", "developer", "auditor", "tester", "technical_writer", "devops_setup_engineer", "release_manager"]
     },
+    "REASONING_LEVEL": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["VALUE", "OVERRIDE_REASON"],
+      "properties": {
+        "VALUE": { "type": "string", "enum": ["low", "default", "high", "maximum", "role_default"] },
+        "OVERRIDE_REASON": { "type": "string" }
+      }
+    },
     "DEPENDENCIES": { "$ref": "#/$defs/listOrNone" },
     "DEPENDENCY_STATUS": { "type": "string", "enum": ["ready", "blocked", "pending", "none"] },
+    "REQUESTED_BY_ROLE": { "$ref": "#/$defs/requesterRoleOrNone" },
+    "REQUESTED_BY_TASK": { "type": "string" },
+    "RESEARCH_QUESTION_ID": { "type": "string" },
+    "RESEARCH_PURPOSE": { "type": "string" },
+    "RESEARCH_QUESTIONS": { "$ref": "#/$defs/listOrNone" },
+    "ALLOWED_SOURCES": { "$ref": "#/$defs/listOrNone" },
+    "FORBIDDEN_SOURCES": { "$ref": "#/$defs/listOrNone" },
+    "EXPECTED_EVIDENCE": { "$ref": "#/$defs/listOrNone" },
+    "EXPECTED_OUTPUT": { "$ref": "#/$defs/listOrNone" },
+    "RETURN_TO_REQUESTER_AFTER_AUDIT_PASS": { "type": "string", "enum": ["yes", "no"] },
+    "RETURN_TO_ROLE_AFTER_AUDIT_PASS": { "$ref": "#/$defs/requesterReturnRole" },
+    "RETURN_TASK_AFTER_AUDIT_PASS": { "type": "string" },
     "PURPOSE": { "type": "string" },
     "SOURCE_OF_TRUTH": { "$ref": "#/$defs/listOrNone" },
     "SCOPE_IN": { "$ref": "#/$defs/nonEmptyList" },
@@ -106,6 +145,15 @@
     {
       "if": { "properties": { "DEPENDENCY_STATUS": { "const": "none" } }, "required": ["DEPENDENCY_STATUS"] },
       "then": { "properties": { "DEPENDENCIES": { "const": "NONE" } } }
+    },
+    {
+      "if": { "properties": { "TASK_KIND": { "const": "research_dependency" } }, "required": ["TASK_KIND"] },
+      "then": {
+        "properties": {
+          "AUDIT_REQUIREMENTS": { "const": "mandatory" },
+          "RETURN_TO_REQUESTER_AFTER_AUDIT_PASS": { "const": "yes" }
+        }
+      }
     }
   ],
   "$defs": {
@@ -123,6 +171,14 @@
     "nextRole": {
       "type": "string",
       "enum": ["orchestrator", "requirements_analyst", "designer", "developer", "auditor", "tester", "technical_writer", "devops_setup_engineer", "release_manager", "project_owner", "none"]
+    },
+    "requesterRoleOrNone": {
+      "type": "string",
+      "enum": ["requirements_analyst", "designer", "developer", "auditor", "tester", "technical_writer", "devops_setup_engineer", "release_manager", "NONE"]
+    },
+    "requesterReturnRole": {
+      "type": "string",
+      "enum": ["requirements_analyst", "designer", "developer", "auditor", "tester", "technical_writer", "devops_setup_engineer", "release_manager", "none"]
     }
   }
 }

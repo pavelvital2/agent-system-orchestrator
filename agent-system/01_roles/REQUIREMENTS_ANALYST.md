@@ -91,5 +91,5 @@ If `STATUS: pass`, the next action must request design or requirements audit acc
 Recommended reasoning level:
 
 ```text
-high
+maximum
 ```

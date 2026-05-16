@@ -88,5 +88,5 @@ If `STATUS: pass`, the next action must request setup audit, testing, release re
 Recommended reasoning level:
 
 ```text
-default
+high
 ```

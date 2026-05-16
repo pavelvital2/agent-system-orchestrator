@@ -515,4 +515,296 @@ MIGRATION_NOTE: This bounded correction updates documentation parity and smoke c
 AUTHORIZED_BY: project_owner
 AUDIT_REQUIRED: yes
 STATUS: accepted
+
+CHANGE_ID: GOV-2026-05-16-008
+CHANGE_TITLE: UPG_ASU_130_001 research return protocol and reasoning model
+DATE: 2026-05-16
+PACKAGE_VERSION_BEFORE: 1.2.0
+PACKAGE_VERSION_AFTER: 1.3.0
+CHANGE_TYPE: minor
+AFFECTED_FILES:
+- agent-system/README.md
+- agent-system/PACKAGE_VERSIONING.md
+- agent-system/GOVERNANCE_CHANGELOG.md
+- agent-system/01_roles/ORCHESTRATOR.md
+- agent-system/01_roles/DESIGNER.md
+- agent-system/02_runtime/REQUESTER_RETURN_PROTOCOL.md
+- agent-system/02_runtime/ORCHESTRATOR_RUNTIME_LOOP.md
+- agent-system/02_runtime/STATE_TRANSITION_RULES.md
+- agent-system/02_runtime/FILESYSTEM_GOVERNANCE.md
+- agent-system/02_runtime/POST_AUDIT_GIT_CHECKPOINT.md
+- agent-system/03_templates/TASK_PACKET_TEMPLATE.md
+- agent-system/03_templates/BOOTSTRAP_TASK_PACKET_TEMPLATE.md
+- agent-system/03_templates/AGENT_RESULT_TEMPLATE.md
+- agent-system/03_templates/ORCHESTRATOR_TASK_HANDOFF_TEMPLATE.md
+- agent-system/03_templates/RESEARCH_REQUEST_TEMPLATE.md
+- agent-system/03_templates/RESEARCH_RESULT_TEMPLATE.md
+- agent-system/03_templates/DESIGN_CONTINUATION_TASK_TEMPLATE.md
+- agent-system/04_state/RUNTIME_STATE_SCHEMA.md
+- agent-system/04_state/NEXT_ACTION_TEMPLATE.md
+- agent-system/04_state/TASK_REGISTRY_TEMPLATE.md
+- agent-system/07_lifecycle/PROJECT_LIFECYCLE.md
+- agent-system/07_lifecycle/DESIGN_STAGE.md
+- agent-system/07_lifecycle/DESIGN_RESEARCH_LOOP.md
+- agent-system/09_validators/VALIDATOR_SPEC.md
+- agent-system/09_validators/TASK_PACKET_VALIDATION_RULES.md
+- agent-system/09_validators/RESULT_VALIDATION_RULES.md
+- agent-system/09_validators/TRANSITION_VALIDATION_RULES.md
+- agent-system/09_validators/CROSS_LINK_VALIDATION_RULES.md
+- agent-system/09_validators/RUNTIME_CONSISTENCY_RULES.md
+- agent-system/09_validators/RESEARCH_RETURN_VALIDATION_RULES.md
+- agent-system/09_validators/REASONING_LEVEL_VALIDATION_RULES.md
+- agent-system/09_validators/schemas/task_packet.schema.json
+- agent-system/09_validators/schemas/result.schema.json
+- agent-system/09_validators/schemas/next_action.schema.json
+- agent-system/09_validators/schemas/task_registry.schema.json
+- agent-system/10_examples/FINAL_SMOKE_CHECKLIST.md
+- agent-system/10_examples/EXPECTED_FLOW_EXAMPLE.md
+AFFECTED_INVARIANTS:
+- Research Dependency Loop distinguishes RESEARCH_DEPENDENCY from GAP and BLOCKER.
+- Design Research Loop requires designer not to guess when factual evidence is missing.
+- Requester Return Protocol requires explicit return metadata and independent audit pass before requester continuation.
+- Reasoning level model defines low/default/high/maximum/role_default, role defaults, and gate-required floors.
+- Runtime tuple validation explicitly includes CURRENT_GATE.ACTION_SEMANTIC and NEXT_ACTION.ACTION_SEMANTIC.
+- Profile agents still never commit or push.
+- One-agent-one-task, fresh context, audit gate, and bootstrap canonical path invariants remain unchanged.
+AFFECTED_TRANSITIONS:
+- requester task -> research_dependency -> research RESULT -> auditor -> audit pass -> requester continuation
+- research audit fail/blocked/gap -> correction, blocked/GAP handling, governed update_state, or owner handling; no requester continuation
+- designer missing factual evidence -> research_dependency -> audited research -> design_continuation
+- reasoning level below gate-required floor -> dispatch blocked and governed correction
+SCHEMA_TEMPLATE_IMPACT: both
+MIGRATION_REQUIRED: yes
+MIGRATION_NOTE: Active package and governance ruleset versions change to 1.3.0 and runtime schema version changes to 1.2.0. Existing runtime state and task registries must be checked for requester return context, task kind, reasoning level fields, task registry return metadata, and ACTION_SEMANTIC tuple parity before normal dispatch. This feature upgrade must not use 1.2.1 as the active tuple.
+AUTHORIZED_BY: project_owner
+AUDIT_REQUIRED: yes
+STATUS: proposed
+
+CHANGE_ID: GOV-2026-05-16-009
+CHANGE_TITLE: UPG_ASU_130_002_BOOTSTRAP_V13_CONSISTENCY_FIX
+DATE: 2026-05-16
+PACKAGE_VERSION_BEFORE: 1.3.0
+PACKAGE_VERSION_AFTER: 1.3.0
+CHANGE_TYPE: patch
+AFFECTED_FILES:
+- agent-system/00_start/ORCHESTRATOR_START.md
+- agent-system/02_runtime/ORCHESTRATOR_RUNTIME_LOOP.md
+- agent-system/02_runtime/FILESYSTEM_GOVERNANCE.md
+- agent-system/02_runtime/STATE_TRANSITION_RULES.md
+- agent-system/03_templates/BOOTSTRAP_TASK_PACKET_TEMPLATE.md
+- agent-system/07_lifecycle/BOOTSTRAP_STAGE.md
+- agent-system/09_validators/TASK_PACKET_VALIDATION_RULES.md
+- agent-system/09_validators/CROSS_LINK_VALIDATION_RULES.md
+- agent-system/10_examples/EXPECTED_FLOW_EXAMPLE.md
+- agent-system/10_examples/FINAL_SMOKE_CHECKLIST.md
+- agent-system/GOVERNANCE_CHANGELOG.md
+AFFECTED_INVARIANTS:
+- stale bootstrap placeholder removed from current normative docs
+- bootstrap NEXT_ACTION examples aligned with current runtime schema fields
+- requester-return runtime tuple coverage strengthened for NEXT_ACTION.REQUESTER_RETURN_CONTEXT and TASK_REGISTRY.requester_return_metadata
+- stale version wording removed from bootstrap and role-set validation text
+- canonical bootstrap placeholder and concrete REQUIREMENTS_ANALYST/DESIGNER examples preserved
+- requester-return audit gate remains mandatory before requester continuation
+- active version tuple remains 1.3.0 / 1.3.0 / 1.2.0
+AFFECTED_TRANSITIONS:
+- bootstrap intake -> first profile-agent create_agent with complete NEXT_ACTION fields
+- runtime tuple validation -> correction routing for missing requester-return context or task registry metadata
+- research dependency audit pass -> requester continuation only through explicit return metadata after required audit gate
+SCHEMA_TEMPLATE_IMPACT: template_update_required
+MIGRATION_REQUIRED: no
+MIGRATION_NOTE: This bounded correction reconciles v1.3.0 bootstrap/runtime documentation consistency only. It does not change active package, governance ruleset, or runtime schema version constants; does not add executable validators or CI; does not change role authority, runtime file set, or generalized orchestration behavior; and does not weaken requester-return audit gating.
+AUTHORIZED_BY: project_owner
+AUDIT_REQUIRED: yes
+STATUS: proposed
+
+CHANGE_ID: GOV-2026-05-16-010
+CHANGE_TITLE: UPG_ASU_130_003_DISPATCH_REASONING_AND_BOOTSTRAP_SMOKE_FIX
+DATE: 2026-05-16
+PACKAGE_VERSION_BEFORE: 1.3.0
+PACKAGE_VERSION_AFTER: 1.3.0
+CHANGE_TYPE: patch
+AFFECTED_FILES:
+- agent-system/01_roles/AUDITOR.md
+- agent-system/02_runtime/ORCHESTRATOR_RUNTIME_LOOP.md
+- agent-system/02_runtime/POST_AUDIT_GIT_CHECKPOINT.md
+- agent-system/02_runtime/STATE_TRANSITION_RULES.md
+- agent-system/03_templates/ORCHESTRATOR_TASK_HANDOFF_TEMPLATE.md
+- agent-system/04_state/RUNTIME_STATE_SCHEMA.md
+- agent-system/09_validators/REASONING_LEVEL_VALIDATION_RULES.md
+- agent-system/10_examples/FINAL_SMOKE_CHECKLIST.md
+- agent-system/GOVERNANCE_CHANGELOG.md
+AFFECTED_INVARIANTS:
+- UPG_ASU_130_002 was invalidated as clean baseline due to reasoning-level dispatch mismatch.
+- UPG_ASU_130_002 also left stale bootstrap placeholder references.
+- UPG_ASU_130_003 fixes dispatch reasoning enforcement and bootstrap smoke consistency.
+- orchestrator must resolve role default, task packet reasoning, gate-required floor, final required dispatch level, and actual spawned reasoning level before RESULT routing
+- REASONING_LEVEL_ACTUAL and REASONING_LEVEL_COMPLIANCE must be recorded with SPAWN_LOG_REF or HANDOFF_LOG_REF evidence
+- actual spawned reasoning below required invalidates worker RESULT and forbids auditor pass
+- checkpoint, commit, and push are forbidden after reasoning-level mismatch
+- auditor must validate reasoning-level execution compliance from task packet, role default, gate floor, and spawn/handoff evidence
+- requester-return runtime tuple coverage explicitly includes NEXT_ACTION.REQUESTER_RETURN_CONTEXT and TASK_REGISTRY.requester_return_metadata
+- active version tuple remains 1.3.0 / 1.3.0 / 1.2.0
+AFFECTED_TRANSITIONS:
+- profile-agent create_agent dispatch -> reasoning-level resolution and recording before RESULT routing
+- invalid dispatch from actual spawned reasoning below required -> governed correction
+- invalid reasoning dispatch -> audit fail or blocked, no pass
+- reasoning-level mismatch -> no post-audit checkpoint, no commit, no push
+- runtime tuple validation -> correction routing when requester return context or requester return metadata is missing or contradictory
+SCHEMA_TEMPLATE_IMPACT: template_update_required
+MIGRATION_REQUIRED: no
+MIGRATION_NOTE: This bounded correction hardens v1.3.0 dispatch reasoning enforcement, auditor compliance checks, requester-return tuple documentation, final smoke coverage, and changelog traceability only. It preserves the active package, governance ruleset, and runtime schema tuple 1.3.0 / 1.3.0 / 1.2.0; does not add executable validators or CI; does not change the runtime nine-file set, role authority, DAG/parallel orchestration, requester-return audit gate, or version constants.
+AUTHORIZED_BY: project_owner
+AUDIT_REQUIRED: yes
+STATUS: proposed
+
+CHANGE_ID: GOV-2026-05-16-011
+CHANGE_TITLE: CORR_ASU_130_004_FULL_REMEDIATION
+STATUS: accepted
+DATE: 2026-05-16
+PACKAGE_VERSION_BEFORE: 1.3.0
+PACKAGE_VERSION_AFTER: 1.3.0
+CHANGE_TYPE: patch
+TRACEABILITY_SUMMARY: affected files, invariants preserved, and independent audit requirement are recorded in this entry.
+AFFECTED_FILES:
+- agent-system/GOVERNANCE_CHANGELOG.md
+- agent-system/00_start/ORCHESTRATOR_START.md
+- agent-system/03_templates/ORCHESTRATOR_TASK_HANDOFF_TEMPLATE.md
+- agent-system/03_templates/RESEARCH_REQUEST_TEMPLATE.md
+- agent-system/03_templates/DESIGN_CONTINUATION_TASK_TEMPLATE.md
+- agent-system/04_state/NEXT_ACTION_TEMPLATE.md
+- agent-system/04_state/PROJECT_STATE_TEMPLATE.md
+- agent-system/09_validators/TASK_PACKET_VALIDATION_RULES.md
+- agent-system/09_validators/CROSS_LINK_VALIDATION_RULES.md
+- agent-system/09_validators/RESULT_VALIDATION_RULES.md
+- agent-system/09_validators/RESEARCH_RETURN_VALIDATION_RULES.md
+- agent-system/09_validators/REASONING_LEVEL_VALIDATION_RULES.md
+- agent-system/09_validators/VALIDATOR_SPEC.md
+- agent-system/09_validators/schemas/project_state.schema.json
+- agent-system/09_validators/schemas/research_result.schema.json
+- agent-system/10_examples/EXPECTED_FLOW_EXAMPLE.md
+- agent-system/10_examples/MINIMAL_EXAMPLE_FIXTURE.md
+- agent-system/10_examples/FINAL_SMOKE_CHECKLIST.md
+DEFECTS_FIXED:
+- ASU130-F001: verified stale blank-role bootstrap placeholder absent under agent-system.
+- ASU130-F002: bootstrap NEXT_ACTION examples remain aligned with current v1.3.0 fields.
+- ASU130-F003: MINIMAL_EXAMPLE_FIXTURE NEXT_ACTION now contains the current required field set.
+- ASU130-F004: v1.3.0 correction chain has this accepted closure entry while preserving proposed history for prior entries.
+- ASU130-F005 and ASU130-F006: research and design continuation templates are explicit schema-invalid extension sections unless embedded in a full task packet.
+- ASU130-F008: active PROJECT_STATE ACTION_SEMANTIC enum now uses completed_state_transition.
+- ASU130-F009: research RESULT extension fields are machine-checkable through research_result.schema.json.
+- ASU130-F010: missing or unknown reasoning evidence now invalidates auditor pass.
+- ASU130-F011: dispatch reasoning metadata uses DISPATCH_TASK_ID, leaving task payload TASK_ID unambiguous.
+AFFECTED_INVARIANTS:
+- one-agent-one-task and fresh-context execution preserved
+- Research Dependency Loop preserved as sequential dependency routing, not GAP/BLOCKER substitution or generalized DAG orchestration
+- Requester Return Protocol remains audit-pass gated and explicit-metadata based
+- reasoning-level governance remains auditable through required/actual/compliance spawn evidence
+- profile agents still cannot commit or push
+- orchestrator authority remains limited to routing/state/checkpoint governance and does not design, implement, audit, or test
+AFFECTED_TRANSITIONS:
+- first bootstrap dispatch -> complete NEXT_ACTION field validation
+- research_dependency RESULT -> result.schema.json plus research_result.schema.json validation before audited requester return
+- profile-agent dispatch -> reasoning evidence validation before auditor pass acceptance
+- finalization semantic update -> completed_state_transition as the active terminal-state semantic
+SCHEMA_TEMPLATE_IMPACT: both
+MIGRATION_REQUIRED: no
+MIGRATION_NOTE: This bounded remediation preserves the active 1.3.0 / 1.3.0 / 1.2.0 tuple. Existing runtime state that still uses the legacy completed-state semantic must be corrected to completed_state_transition before normal dispatch. Research dependency RESULT validation should apply research_result.schema.json alongside result.schema.json when task context is TASK_KIND: research_dependency.
+COMPATIBILITY_NOTE: RESEARCH_REQUEST_TEMPLATE.md and DESIGN_CONTINUATION_TASK_TEMPLATE.md are extension sections only; standalone dispatch remains invalid unless the content is embedded in a full TASK_PACKET_TEMPLATE-compatible packet.
+AUDIT_REQUIREMENT: Independent audit is required using TASK_PKG_AUD_ASU_130_004_FULL_REMEDIATION.md before accepted package checkpoint.
+RELATION_TO_PRIOR_UPGRADES:
+- UPG_ASU_130_001 installed the intended v1.3.0 feature surface but remains historically recorded as proposed in this changelog.
+- UPG_ASU_130_002 remains explicitly invalidated as a clean baseline by UPG_ASU_130_003 findings; this entry does not rewrite that history.
+- UPG_ASU_130_003 remains historically proposed and is superseded for closure purposes by this full remediation entry.
+AUTHORIZED_BY: project_owner
+AUDIT_REQUIRED: yes
+
+CHANGE_ID: GOV-2026-05-16-012
+CHANGE_TITLE: CORR_ASU_130_005_FINAL_BOOTSTRAP_PLACEHOLDER_CLEANUP
+STATUS: accepted
+DATE: 2026-05-16
+PACKAGE_VERSION_BEFORE: 1.3.0
+PACKAGE_VERSION_AFTER: 1.3.0
+CHANGE_TYPE: patch
+AFFECTED_FILES:
+- agent-system/GOVERNANCE_CHANGELOG.md
+- agent-system/09_validators/CROSS_LINK_VALIDATION_RULES.md
+- agent-system/10_examples/FINAL_SMOKE_CHECKLIST.md
+AFFECTED_INVARIANTS:
+- stale blank-role bootstrap placeholder is absent from current agent-system markdown and JSON package docs
+- generic bootstrap task packet path convention uses project-runtime/bootstrap/TASK_BOOTSTRAP_<TARGET_ROLE>_001.md
+- concrete bootstrap examples remain project-runtime/bootstrap/TASK_BOOTSTRAP_REQUIREMENTS_ANALYST_001.md and project-runtime/bootstrap/TASK_BOOTSTRAP_DESIGNER_001.md
+- CORR_ASU_130_004 is recorded as incomplete for the stale blank-role bootstrap placeholder finding despite its accepted closure entry
+- active version tuple remains 1.3.0 / 1.3.0 / 1.2.0
+- no schema, runtime file set, role authority, requester-return audit gate, or reasoning-level policy change
+AFFECTED_TRANSITIONS:
+- bootstrap intake -> first profile-agent task packet validation through project-runtime/bootstrap/TASK_BOOTSTRAP_<TARGET_ROLE>_001.md
+- task packet validation -> correction routing if a blank-role bootstrap placeholder or contradictory canonical bootstrap wording reappears
+- final smoke validation -> correction routing if canonical bootstrap path convention or concrete examples regress
+SCHEMA_TEMPLATE_IMPACT: none
+MIGRATION_REQUIRED: no
+MIGRATION_NOTE: This bounded correction finalizes residual bootstrap placeholder cleanup only. It preserves the active package, governance ruleset, and runtime schema tuple 1.3.0 / 1.3.0 / 1.2.0 and does not install new package behavior.
+AUTHORIZED_BY: project_owner
+AUDIT_REQUIRED: yes
+
+CHANGE_ID: GOV-2026-05-16-013
+CHANGE_TITLE: CORR_ASU_130_006_FINAL_FAIL_CLOSED_REMEDIATION
+STATUS: accepted
+DATE: 2026-05-16
+PACKAGE_VERSION_BEFORE: 1.3.0
+PACKAGE_VERSION_AFTER: 1.3.0
+CHANGE_TYPE: patch
+AFFECTED_FILES:
+- agent-system/02_runtime/ORCHESTRATOR_RUNTIME_LOOP.md
+- agent-system/02_runtime/POST_AUDIT_GIT_CHECKPOINT.md
+- agent-system/07_lifecycle/BOOTSTRAP_STAGE.md
+- agent-system/09_validators/GIT_CHECKPOINT_VALIDATION_RULES.md
+- agent-system/GOVERNANCE_CHANGELOG.md
+AFFECTED_INVARIANTS:
+- blank-role bootstrap placeholder is absent from current agent-system package docs
+- canonical generic bootstrap path uses project-runtime/bootstrap/TASK_BOOTSTRAP_<TARGET_ROLE>_001.md
+- concrete bootstrap examples remain project-runtime/bootstrap/TASK_BOOTSTRAP_REQUIREMENTS_ANALYST_001.md and project-runtime/bootstrap/TASK_BOOTSTRAP_DESIGNER_001.md
+- checkpoint validation now requires both working-tree and committed HEAD validation before push
+- CORR_ASU_130_004 and CORR_ASU_130_005 were incomplete for this residual placeholder defect
+- active version tuple remains 1.3.0 / 1.3.0 / 1.2.0
+AFFECTED_TRANSITIONS:
+- bootstrap intake -> first profile-agent task packet validation through project-runtime/bootstrap/TASK_BOOTSTRAP_<TARGET_ROLE>_001.md
+- package invariant validation -> governed correction if a blank-role bootstrap placeholder or contradictory canonical bootstrap wording appears
+- auditor STATUS: pass -> post-audit Git checkpoint -> working-tree validation -> commit -> committed HEAD validation -> push
+SCHEMA_TEMPLATE_IMPACT: none
+MIGRATION_REQUIRED: no
+MIGRATION_NOTE: This bounded correction records the final residual placeholder remediation and hardens checkpoint validation semantics without changing active package, governance ruleset, or runtime schema version constants. It does not change role authority, runtime file set, requester-return audit gating, or reasoning-level policy.
+AUTHORIZED_BY: project_owner
+AUDIT_REQUIRED: yes
+
+CHANGE_ID: GOV-2026-05-16-014
+CHANGE_TITLE: CORR_ASU_130_007_FINAL_V13_ACTIVATION_TRACEABILITY
+DATE: 2026-05-16
+PACKAGE_VERSION_BEFORE: 1.2.0
+PACKAGE_VERSION_AFTER: 1.3.0
+GOVERNANCE_RULESET_BEFORE: 1.2.0
+GOVERNANCE_RULESET_AFTER: 1.3.0
+RUNTIME_SCHEMA_BEFORE: 1.1.0
+RUNTIME_SCHEMA_AFTER: 1.2.0
+CHANGE_TYPE: minor_release_acceptance
+AFFECTED_FILES:
+- agent-system/GOVERNANCE_CHANGELOG.md
+AFFECTED_INVARIANTS:
+- active package/governance/runtime tuple has an accepted v1.3.0 activation record
+- UPG_ASU_130_001 remains historically recorded as a proposed implementation entry
+- UPG_ASU_130_002 and UPG_ASU_130_003 remain historically recorded as proposed/incomplete correction entries
+- CORR_ASU_130_004, CORR_ASU_130_005, and CORR_ASU_130_006 are accepted remediation closure records
+- this entry is the accepted release activation record for package/governance v1.3.0 after remediation closure
+- active version tuple remains 1.3.0 / 1.3.0 / 1.2.0
+- no new runtime behavior, role authority, filesystem authority, or schema behavior is introduced
+- merge to main remains forbidden until independent audit pass and post-commit --head / pushed --ref verification pass
+AFFECTED_TRANSITIONS:
+- final v1.3.0 audit gate -> accepted release activation traceability -> merge readiness review
+- missing accepted activation traceability -> governed correction before main merge
+SCHEMA_TEMPLATE_IMPACT: none
+MIGRATION_REQUIRED: no
+MIGRATION_NOTE: This entry ratifies the installed v1.3.0 package/governance tuple after accepted remediation closure. No runtime migration or active tuple change is introduced by this correction.
+TRACEABILITY_NOTE: UPG_ASU_130_001 remains historically proposed as the initial implementation proposal. UPG_ASU_130_002 and UPG_ASU_130_003 remain historically recorded as proposed/incomplete correction entries. This CORR_ASU_130_007 entry is the accepted release activation record for package/governance v1.3.0 after CORR_ASU_130_004, CORR_ASU_130_005, and CORR_ASU_130_006 remediation closure.
+AUTHORIZED_BY: project_owner
+AUDIT_REQUIRED: yes
+STATUS: accepted
 ```

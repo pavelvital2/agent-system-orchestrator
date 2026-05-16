@@ -21,7 +21,7 @@ These fields are mandatory and must remain in parity with
 `agent-system/09_validators/schemas/project_state.schema.json`.
 
 ```text
-ACTION_SEMANTIC: normal | wait_for_owner | pause | stop_terminal | completed_state
+ACTION_SEMANTIC: normal | wait_for_owner | pause | stop_terminal | completed_state_transition
 SEMANTIC_REASON:
 ```
 

@@ -38,6 +38,10 @@
 - проверить, что агент не выполнил работу вне своей роли;
 - проверить, что заявленные changed files соответствуют задаче;
 - проверить, что next action логически следует из результата;
+- проверить reasoning-level execution compliance: task packet
+  `REASONING_LEVEL`, role default, gate-required floor, actual spawned
+  reasoning level, and evidence from spawn log, handoff, or orchestrator
+  transcript;
 - зафиксировать pass, fail, blocked или gap.
 
 ---
@@ -131,8 +135,13 @@ STATUS: fail
 - формат RESULT;
 - обязательный workflow;
 - запрет на додумывание требований.
+- actual spawned reasoning level below the resolved required level.
 
 В `NEXT_RECOMMENDED_ACTION` аудитор должен рекомендовать, какому агенту нужно вернуть задачу на исправление через оркестратора.
+
+If the required reasoning level is available and the actual spawned reasoning
+level is below required, auditor `STATUS: pass` is forbidden. The auditor must
+return `STATUS: fail` or `STATUS: blocked`.
 
 ---
 
@@ -144,7 +153,8 @@ STATUS: fail
 STATUS: pass
 ```
 
-только если проверяемый результат соответствует задаче, scope и обязательным правилам.
+только если проверяемый результат соответствует задаче, scope и обязательным
+правилам, including reasoning-level execution compliance.
 
 ---
 

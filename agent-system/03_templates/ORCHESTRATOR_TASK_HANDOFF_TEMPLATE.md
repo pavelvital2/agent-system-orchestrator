@@ -7,7 +7,19 @@ ROLE:
 <requirements_analyst | designer | developer | auditor | tester | technical_writer | devops_setup_engineer | release_manager>
 
 REASONING_LEVEL:
-<default | high | maximum>
+VALUE: low | default | high | maximum | role_default
+OVERRIDE_REASON: <reason | NONE>
+
+DISPATCH_REASONING_RECORD:
+TARGET_ROLE: <same as ROLE>
+DISPATCH_TASK_ID: <TASK_ID>
+TASK_PACKET: <path | NONE>
+REASONING_LEVEL_REQUIRED: low | default | high | maximum
+REASONING_LEVEL_SOURCE: role_default | task_packet | gate_required_floor | highest_applicable
+REASONING_LEVEL_ACTUAL: low | default | high | maximum | unknown
+REASONING_LEVEL_COMPLIANCE: compliant | non_compliant | unknown
+SPAWN_LOG_REF: <spawn log, orchestrator transcript ref, or NONE>
+HANDOFF_LOG_REF: <handoff log ref or NONE>
 
 TASK_ID:
 <TASK_ID>
@@ -48,6 +60,11 @@ MANDATORY_RULES:
 - If task packet conflicts with governance or scope, return STATUS: blocked or gap.
 - NEXT_RECOMMENDED_ACTION is advisory, not authoritative; orchestrator validates it before routing.
 - Return result strictly using AGENT_RESULT_TEMPLATE.
+- Follow the assigned REASONING_LEVEL only when it satisfies role default and gate-required floor governance.
+- The handoff must record the resolved required reasoning level and the actual spawned reasoning level as soon as the spawn is known.
+- REASONING_LEVEL_REQUIRED must be the highest applicable level among role default, task packet REASONING_LEVEL, and gate-required floor.
+- If REASONING_LEVEL_ACTUAL is below REASONING_LEVEL_REQUIRED, dispatch is non_compliant and the worker RESULT is invalid.
+- Do not use unaudited research as accepted input; requester return requires independent audit pass.
 
 EXPECTED_RESULT_FORMAT:
 Use:

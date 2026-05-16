@@ -17,6 +17,7 @@
    - `agent-system/02_runtime/ALLOWED_ORCHESTRATOR_ACTIONS.md`
    - `agent-system/02_runtime/FILESYSTEM_GOVERNANCE.md`
    - `agent-system/02_runtime/GOVERNANCE_AUTHORITY.md`
+   - `agent-system/02_runtime/REQUESTER_RETURN_PROTOCOL.md`
    - `agent-system/02_runtime/ACTION_STATE_SEMANTICS.md`
    - `agent-system/02_runtime/STATE_TRANSITION_RULES.md`
    - `agent-system/02_runtime/POST_AUDIT_GIT_CHECKPOINT.md`
@@ -25,6 +26,9 @@
    - `agent-system/02_runtime/AGENT_LIFECYCLE.md`
    - `agent-system/03_templates/TASK_PACKET_TEMPLATE.md`
    - `agent-system/03_templates/BOOTSTRAP_TASK_PACKET_TEMPLATE.md`
+   - `agent-system/03_templates/RESEARCH_REQUEST_TEMPLATE.md`
+   - `agent-system/03_templates/RESEARCH_RESULT_TEMPLATE.md`
+   - `agent-system/03_templates/DESIGN_CONTINUATION_TASK_TEMPLATE.md`
    - `agent-system/03_templates/ORCHESTRATOR_TASK_HANDOFF_TEMPLATE.md`
    - `agent-system/03_templates/AGENT_RESULT_TEMPLATE.md`
    - `agent-system/04_state/RUNTIME_STATE_SCHEMA.md`
@@ -33,6 +37,8 @@
    - `agent-system/06_logs/AGENT_RESULTS_LOG_TEMPLATE.md`
    - `agent-system/06_logs/ORCHESTRATOR_EVENTS_LOG_TEMPLATE.md`
    - `agent-system/09_validators/GIT_CHECKPOINT_VALIDATION_RULES.md`
+   - `agent-system/09_validators/RESEARCH_RETURN_VALIDATION_RULES.md`
+   - `agent-system/09_validators/REASONING_LEVEL_VALIDATION_RULES.md`
    - `project-runtime/PROJECT_STATE.md`
    - `project-runtime/CURRENT_GATE.md`
    - `project-runtime/NEXT_ACTION.md`
@@ -83,6 +89,14 @@ Canonical first-dispatch path convention:
 project-runtime/bootstrap/TASK_BOOTSTRAP_<TARGET_ROLE>_001.md
 ```
 
+The `<TARGET_ROLE>` segment is mandatory. Any blank-role bootstrap placeholder
+in current package docs, runtime state, task packets, or checkpointed content is
+invalid and must route to governed correction before dispatch or push.
+
+The first profile-agent `NEXT_ACTION` must still include every required field
+from `agent-system/04_state/NEXT_ACTION_TEMPLATE.md`; for ordinary bootstrap
+dispatch, requester-return and blocking/resume contexts are `NONE`.
+
 `TASK_PACKET: NONE` is forbidden for first profile-agent dispatch. A bootstrap
 handoff file is not a task packet substitute unless it is explicitly full
 task-packet-equivalent and satisfies bootstrap task packet validation.
@@ -100,6 +114,9 @@ task-packet-equivalent and satisfies bootstrap task packet validation.
 ```text
 project-runtime/bootstrap/TASK_BOOTSTRAP_<TARGET_ROLE>_001.md
 ```
+
+The bootstrap exception is valid only when the role segment is populated by the
+selected first profile route.
 
 Ordinary task packets outside `ACTIVE_DOC_ROOT` remain invalid.
 
@@ -187,6 +204,19 @@ allowed only after auditor `STATUS: pass`.
 - record branch, commit hash, push status, and accepted files;
 - route to the next governed task only after successful checkpoint completion.
 
+If the audited task has `TASK_KIND: research_dependency` and
+`RETURN_TO_REQUESTER_AFTER_AUDIT_PASS: yes`, the next governed task after audit
+pass and any required checkpoint must be the exact requester continuation
+encoded by:
+
+```text
+RETURN_TO_ROLE_AFTER_AUDIT_PASS
+RETURN_TASK_AFTER_AUDIT_PASS
+```
+
+The orchestrator must not infer requester return targets from memory or
+informal context.
+
 7. Проверить routing blocked/gap issues.
 
 Если blocked/gap относится к:
@@ -206,6 +236,22 @@ allowed only after auditor `STATUS: pass`.
 - не переводить pipeline в wait_for_owner.
 
 8. Если следующий шаг требует агента:
+   - before spawning a profile agent, resolve dispatch reasoning:
+     `role_default_reasoning_level`, `task_packet_reasoning_level`,
+     `gate_required_floor`, `final_required_dispatch_level`, and
+     `actual_spawned_reasoning_level`;
+   - compute `final_required_dispatch_level` as the highest applicable level
+     among role default, task packet `REASONING_LEVEL`, and gate-required
+     floor, using `low < default < high < maximum`;
+   - record `TARGET_ROLE`, `TASK_ID`, `TASK_PACKET`,
+     `REASONING_LEVEL_REQUIRED`, `REASONING_LEVEL_SOURCE`,
+     `REASONING_LEVEL_ACTUAL`, `REASONING_LEVEL_COMPLIANCE`, and
+     `SPAWN_LOG_REF` or `HANDOFF_LOG_REF` in the handoff, spawn log, or
+     orchestrator transcript before RESULT routing;
+   - if the actual spawned reasoning level is below required, classify the
+     spawn as invalid dispatch: the worker RESULT is invalid, audit must fail
+     or block, post-audit checkpoint is forbidden, commit/push are forbidden,
+     and routing must enter governed correction;
    - создать нового агента;
    - назначить ровно одну задачу;
    - передать универсальные инструкции роли;
@@ -338,7 +384,17 @@ Before any `create_agent`, `route_result`, `update_state`, `correction`, `finali
 11. if task-packet validation is required, REQUIRED_DOCS do not include deprecated/archive documents;
 12. if task-packet validation is not required, `TASK_PACKET: NONE` is valid only for `wait_for_owner`, `update_state`, `finalize`, `stop`, or `correction` when allowed by `STATE_TRANSITION_RULES.md`;
 13. role/file permissions match `FILESYSTEM_GOVERNANCE.md`;
-14. requested action is valid under governance-freeze rules.
+14. task packet `REASONING_LEVEL` is valid for allowed values, role default,
+    and gate-required floor;
+15. profile-agent dispatch reasoning is resolved and prepared for recording:
+    `role_default_reasoning_level`, `task_packet_reasoning_level`,
+    `gate_required_floor`, `final_required_dispatch_level`, and
+    `actual_spawned_reasoning_level`; `final_required_dispatch_level` must be
+    the highest applicable level among role default, task packet
+    `REASONING_LEVEL`, and gate-required floor;
+16. `TASK_KIND: research_dependency` and requester continuation routing are
+    valid under `REQUESTER_RETURN_PROTOCOL.md`;
+17. requested action is valid under governance-freeze rules.
 
 If any validation fails, dispatch is forbidden.
 

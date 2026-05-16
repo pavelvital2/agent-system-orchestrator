@@ -15,6 +15,7 @@ after any state update.
 agent-system/04_state/RUNTIME_STATE_SCHEMA.md
 agent-system/02_runtime/STATE_TRANSITION_RULES.md
 agent-system/02_runtime/ACTION_STATE_SEMANTICS.md
+agent-system/02_runtime/REQUESTER_RETURN_PROTOCOL.md
 agent-system/02_runtime/VIOLATION_RECOVERY.md
 ```
 
@@ -52,6 +53,10 @@ The tuple is invalid when:
   `schemas/project_state.schema.json`;
 - `CURRENT_PHASE`, `PROJECT_STATUS`, `CURRENT_GATE`, and `NEXT_ACTION` are
   semantically incompatible;
+- `CURRENT_GATE.ACTION_SEMANTIC` or `NEXT_ACTION.ACTION_SEMANTIC` is missing
+  from runtime tuple validation;
+- requester return metadata differs between task packet, task registry, and
+  `NEXT_ACTION` for a research dependency or continuation route;
 - `NEXT_ACTION` contains more than one instruction;
 - `TASK_ID` or `TASK_PACKET` differs between `CURRENT_GATE` and `NEXT_ACTION`
   without an explicit governed handoff;
@@ -127,6 +132,15 @@ when it allows commit, push, normal next task dispatch, terminal completion, or
 dependent work marked `ready`. The only valid recovery path is correction,
 governed update_state, GAP/blocked handling, or genuine owner handling when the
 full runtime tuple permits it.
+
+### Research return cannot bypass audit
+
+Runtime state is invalid if `TASK_KIND: research_dependency` output is routed
+to requester continuation before independent auditor `STATUS: pass`.
+
+Runtime state is also invalid if research audit `fail`, `blocked`, or `gap`
+marks requester continuation `ready`, or if the return target is inferred
+without explicit requester return metadata.
 
 ### Last accepted result cannot be fail
 

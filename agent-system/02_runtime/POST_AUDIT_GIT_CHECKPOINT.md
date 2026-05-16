@@ -16,6 +16,11 @@ after all preconditions pass.
 Profile agents never commit or push. Task packets cannot grant commit or push
 authority to profile agents.
 
+Research dependency results follow the same audit-pass checkpoint rule. If a
+research dependency task requires checkpointing, requester continuation may be
+marked ready only after the independent auditor passes and this checkpoint
+completes successfully.
+
 The orchestrator must not inspect, print, copy, modify, stage, commit, or push
 credentials, secret values, token values, private keys, cookies, or local
 environment files.
@@ -33,6 +38,8 @@ A post-audit Git checkpoint may start only when all conditions are true:
 - changed files match the task packet `ALLOWED_FILE_CHANGES`;
 - changed files do not match the task packet `FORBIDDEN_FILE_CHANGES`;
 - runtime state has no active blocker or GAP that blocks the accepted work;
+- working-tree validation for the task-specific invariants passes before
+  staging or committing;
 - `GIT_CHECKPOINT_VALIDATION_RULES.md` passes.
 
 ## Forbidden conditions
@@ -45,10 +52,18 @@ The orchestrator must not stage, commit, or push after:
 - auditor `STATUS: gap`;
 - formally invalid profile-agent RESULT;
 - formally invalid auditor RESULT;
+- reasoning-level dispatch mismatch where actual spawned reasoning is below
+  required;
 - pending correction for the same work;
+- unaudited research dependency output or research audit fail/blocked/gap when
+  requester continuation is waiting;
 - suspected secret or credential risk in changed, staged, logged, or generated
   checkpoint material;
 - out-of-scope changed files.
+
+After a reasoning-level mismatch, checkpoint is forbidden. Commit is forbidden
+after reasoning-level mismatch, and push is forbidden after reasoning-level
+mismatch.
 
 ## Allowed checkpoint commands
 
@@ -66,6 +81,11 @@ git rev-parse HEAD
 git push
 ```
 
+After commit and before push, the orchestrator must validate the committed
+`HEAD` content against the same accepted task-specific invariants that were
+validated in the working tree. Push is forbidden when committed `HEAD` fails
+that validation, even if the pre-commit working-tree check passed.
+
 The orchestrator must not run commands that print secret values or inspect
 credential stores.
 
@@ -82,6 +102,8 @@ BRANCH:
 COMMIT_HASH:
 PUSH_STATUS: not_attempted | pushed | failed
 CHECKPOINT_STATUS: passed | failed | blocked
+WORKING_TREE_VALIDATION_REF:
+HEAD_VALIDATION_REF:
 FAILURE_REASON:
 RECOVERY_ROUTE:
 ```
@@ -93,7 +115,9 @@ Successful checkpoint records must include:
 - push status;
 - accepted files;
 - accepted task id;
-- audit reference.
+- audit reference;
+- working-tree validation reference;
+- committed `HEAD` validation reference.
 
 Failed checkpoint records must not include secret values.
 

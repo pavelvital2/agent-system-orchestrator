@@ -178,6 +178,9 @@ project-docs/
 project-runtime/bootstrap/TASK_BOOTSTRAP_<TARGET_ROLE>_001.md
 ```
 
+The `<TARGET_ROLE>` segment is required and must resolve to the selected first
+profile route.
+
 Это исключение допустимо только для первого bootstrap dispatch одного
 profile-agent и только если файл является полным bootstrap task packet по
 `agent-system/03_templates/BOOTSTRAP_TASK_PACKET_TEMPLATE.md`. Обычные task
@@ -458,6 +461,31 @@ SUPERSEDED_BY: <TASK_ID | NONE>
 ```
 
 Only `TASK_STATUS: active` task packets may be selected by `NEXT_ACTION`.
+
+Task packets must also declare:
+
+```text
+TASK_KIND: normal | research_dependency | design_continuation | task_continuation | correction | audit | testing | setup | launch | handover
+```
+
+`TASK_KIND: research_dependency` must remain a bounded sequential dependency.
+It does not authorize generalized DAG/parallel orchestration, does not replace
+GAP handling for owner decisions, and does not replace BLOCKER handling for
+technical execution obstacles.
+
+Research dependency task packets must keep requester return metadata in the
+task packet and task registry:
+
+```text
+REQUESTED_BY_ROLE
+REQUESTED_BY_TASK
+RETURN_TO_REQUESTER_AFTER_AUDIT_PASS
+RETURN_TO_ROLE_AFTER_AUDIT_PASS
+RETURN_TASK_AFTER_AUDIT_PASS
+```
+
+Research results must not be routed to requester continuation until an
+independent auditor returns `STATUS: pass`.
 
 Если task packet заменён новым:
 - старый task packet должен быть помечен superseded/deprecated;

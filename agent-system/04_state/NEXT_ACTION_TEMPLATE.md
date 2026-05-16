@@ -2,6 +2,25 @@
 
 ## Next action
 
+Required structured fields:
+
+```text
+ACTION_ID:
+ACTION_TYPE:
+TARGET_ROLE:
+TASK_ID:
+TASK_PACKET:
+DEPENDENCY_STATUS:
+BLOCKED_BY:
+ACTION_SEMANTIC:
+REQUESTER_RETURN_CONTEXT:
+BLOCKING_OR_RESUME_CONTEXT:
+REQUIRED_UNIVERSAL_DOCS:
+REQUIRED_PROJECT_DOCS:
+EXPECTED_RESULT:
+INSTRUCTION_FOR_ORCHESTRATOR:
+```
+
 ```text
 ACTION_ID:
 ACTION_TYPE: create_agent | route_result | update_state | wait_for_owner | correction | finalize | stop
@@ -11,6 +30,22 @@ TASK_PACKET:
 DEPENDENCY_STATUS: ready | blocked | completed | not_applicable
 BLOCKED_BY:
 ACTION_SEMANTIC: normal | wait_for_owner | pause | stop_terminal | completed_state_transition
+```
+
+## Requester return context
+
+Required when routing a research dependency, accepted research return, or
+requester continuation. Otherwise use `NONE`.
+
+```text
+REQUESTED_BY_ROLE:
+REQUESTED_BY_TASK:
+RETURN_TO_REQUESTER_AFTER_AUDIT_PASS: yes | no
+RETURN_TO_ROLE_AFTER_AUDIT_PASS:
+RETURN_TASK_AFTER_AUDIT_PASS:
+RESEARCH_QUESTION_ID:
+ACCEPTED_RESEARCH_RESULT_REF:
+ACCEPTED_RESEARCH_AUDIT_REF:
 ```
 
 ## Blocking or resume context
@@ -62,4 +97,6 @@ One instruction only.
 - `ACTION_SEMANTIC: stop_terminal` requires `ACTION_TYPE: stop` and must not be used for temporary holds.
 - `ACTION_SEMANTIC: completed_state_transition` is allowed only for governed finalization updates before terminal stop.
 - Audit fail must not set `DEPENDENCY_STATUS: ready` for dependent work.
+- Research dependency return must not set requester continuation ready before independent audit pass.
+- Requester return routing must use explicit return metadata and must not be inferred from context.
 - If multiple actions are needed, each action must become a separate `NEXT_ACTION.md` update after the previous one completes.
