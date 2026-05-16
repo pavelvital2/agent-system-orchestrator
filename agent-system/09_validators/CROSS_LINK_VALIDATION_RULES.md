@@ -272,6 +272,39 @@ task packet to bypass the orchestrator-owned post-audit Git checkpoint, commit
 or push without auditor `STATUS: pass`, or stage files outside the audited task
 allowed scope.
 
+## Final pre-1.2.1 readiness checks
+
+Final pre-1.2.1 readiness validation must cross-check the final smoke checklist
+against the bootstrap, task packet, runtime, validator, example, README,
+versioning, and changelog documents. It is a documentation-level package smoke
+check and must not install a new package version or require runtime
+initialization.
+
+The readiness check fails if any current package document contradicts the
+canonical bootstrap task packet path:
+
+```text
+project-runtime/bootstrap/TASK_BOOTSTRAP_<TARGET_ROLE>_001.md
+```
+
+The readiness check also fails if the bootstrap exception is not propagated
+consistently as the only active task packet exception outside
+`ACTIVE_DOC_ROOT`, if ordinary task packets outside `ACTIVE_DOC_ROOT` are
+treated as valid, if handoff files are treated as task packets, if first
+profile-agent dispatch can use `TASK_PACKET: NONE`, or if examples allow
+profile agents to write runtime-owned state paths.
+
+Task packet example/schema parity must be verified by comparing examples with
+`TASK_PACKET_TEMPLATE.md` and `schemas/task_packet.schema.json`. Example task
+packets must use task-packet routing fields such as `MANDATORY_WORKFLOW` and
+`NEXT_ROLE_ON_*`; they must not use RESULT-only routing fields such as
+`NEXT_RECOMMENDED_ACTION`.
+
+Changelog traceability must verify that accepted governance changelog entries
+cover the current correction-chain scope, representative affected files,
+affected invariants, unchanged active version tuple, absence of v1.2.1
+installation, and absence of reasoning-level policy changes.
+
 ## Changelog traceability checks
 
 Governance changelog validation must cross-check

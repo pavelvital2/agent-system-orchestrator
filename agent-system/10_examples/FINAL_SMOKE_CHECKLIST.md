@@ -289,6 +289,22 @@ BOOTSTRAP_ACTIVE_DOC_ROOT_EXCEPTION_SYNC:
   without a task packet, and multiple simultaneously active first bootstrap
   task packets are invalid.
 
+FINAL_PRE_1_2_1_READINESS_SMOKE:
+  Final smoke evidence must explicitly verify the bootstrap canonical path
+  convention in ORCHESTRATOR_START, BOOTSTRAP_STAGE,
+  BOOTSTRAP_TASK_PACKET_TEMPLATE, runtime loop, filesystem governance, state
+  transition rules, task packet validation rules, cross-link validation rules,
+  and examples. It must verify that the bootstrap exception propagates only to
+  the first bootstrap profile-agent task packet and not to ordinary task
+  packets, handoff files, or profile-agent dispatch without a task packet.
+  Evidence must compare example task packet fields against
+  TASK_PACKET_TEMPLATE and schemas/task_packet.schema.json, including
+  MANDATORY_WORKFLOW and NEXT_ROLE_ON_* routing fields, and must confirm that
+  task packet examples do not include RESULT-only NEXT_RECOMMENDED_ACTION.
+  Evidence must also confirm changelog traceability for the current accepted
+  correction chain, canonical nine-file runtime set stability, version tuple
+  stability, v1.2.1 absence, and reasoning-level policy absence.
+
 CHANGELOG_TRACEABILITY_SYNC:
   Governance changelog evidence must explicitly cover CORR_ASU_120_017 through
   CORR_ASU_120_021 and CORR_ASU_120_022 through CORR_ASU_120_026 or the
