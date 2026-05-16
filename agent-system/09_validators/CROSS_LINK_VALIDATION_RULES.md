@@ -60,6 +60,11 @@ Lifecycle validation must cover the documented lifecycle order and the stage
 document list. A stage reference is invalid when the order mentions a stage but
 neither the stage document list nor an explicit alias accounts for it.
 
+Lifecycle validation must confirm that `PROJECT_LIFECYCLE.md` explicitly aliases
+`AUDIT` without `AUDIT_STAGE.md` and `FINAL_ACCEPTANCE` without
+`FINAL_ACCEPTANCE_STAGE.md`. These aliases must not create new standalone stage
+documents or new profile-role authority.
+
 Bootstrap lifecycle validation must also cross-check:
 
 ```text
@@ -299,6 +304,22 @@ Task packet example/schema parity must be verified by comparing examples with
 packets must use task-packet routing fields such as `MANDATORY_WORKFLOW` and
 `NEXT_ROLE_ON_*`; they must not use RESULT-only routing fields such as
 `NEXT_RECOMMENDED_ACTION`.
+
+Bootstrap task packet parity must also compare
+`BOOTSTRAP_TASK_PACKET_TEMPLATE.md` with `schemas/task_packet.schema.json`.
+The bootstrap template must not include standalone non-schema task-packet fields
+such as `REQUESTER`, must not include standalone RESULT-only fields such as
+`NEXT_RECOMMENDED_ACTION`, must use the canonical placeholder
+`project-runtime/bootstrap/TASK_BOOTSTRAP_<TARGET_ROLE>_001.md`, and must map
+bootstrap role documents explicitly to
+`agent-system/01_roles/REQUIREMENTS_ANALYST.md` and
+`agent-system/01_roles/DESIGNER.md`.
+
+Runtime schema parity must compare `RUNTIME_STATE_SCHEMA.md`,
+`CURRENT_GATE_TEMPLATE.md`, `NEXT_ACTION_TEMPLATE.md`,
+`schemas/current_gate.schema.json`, and `schemas/next_action.schema.json`.
+`CURRENT_GATE` and `NEXT_ACTION` mandatory fields must be represented directly
+or by documented Markdown section-to-schema mapping.
 
 Changelog traceability must verify that accepted governance changelog entries
 cover the current correction-chain scope, representative affected files,

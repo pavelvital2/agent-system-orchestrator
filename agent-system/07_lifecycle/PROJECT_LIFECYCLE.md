@@ -52,6 +52,16 @@ A project must not move forward when:
 - `agent-system/07_lifecycle/DOCUMENTATION_STAGE.md`
 - `agent-system/07_lifecycle/HANDOVER_STAGE.md`
 
+## Lifecycle aliases without standalone stage documents
+
+`AUDIT` does not have `AUDIT_STAGE.md`. It is a mandatory gate alias governed
+by auditor role instructions, task packet `AUDIT_REQUIREMENTS`, transition
+rules, and post-audit checkpoint rules.
+
+`FINAL_ACCEPTANCE` does not have `FINAL_ACCEPTANCE_STAGE.md`. It is an
+orchestrator-controlled final acceptance gate alias governed by the final
+acceptance rule below and runtime finalization state.
+
 ## Final acceptance rule
 
 Final acceptance requires accepted evidence for requirements, design, implementation, required audits, testing, setup, run readiness, launch readiness, documentation, and handover. The orchestrator routes this state; profile agents do not mark the whole project completed by themselves.

@@ -83,18 +83,6 @@ none
 Bootstrap intake for <requirements analysis | design>
 ```
 
-## REQUESTER
-
-```text
-orchestrator
-```
-
-Rules:
-
-- `REQUESTER` records that the orchestrator created this runtime input during
-  bootstrap;
-- it does not make `orchestrator` a valid profile execution role.
-
 ## TASK_TYPE
 
 ```text
@@ -145,10 +133,23 @@ source input and universal package governance.
 
 ```text
 - project-input/TZ.md
-- agent-system/01_roles/<TARGET_ROLE>.md
+- agent-system/01_roles/REQUIREMENTS_ANALYST.md when TARGET_ROLE is requirements_analyst
+- agent-system/01_roles/DESIGNER.md when TARGET_ROLE is designer
 - agent-system/03_templates/AGENT_RESULT_TEMPLATE.md
 - agent-system/07_lifecycle/BOOTSTRAP_STAGE.md
 ```
+
+Role document mapping:
+
+```text
+TARGET_ROLE: requirements_analyst
+Role doc: agent-system/01_roles/REQUIREMENTS_ANALYST.md
+
+TARGET_ROLE: designer
+Role doc: agent-system/01_roles/DESIGNER.md
+```
+
+Do not derive role document paths by lower-case `TARGET_ROLE` interpolation.
 
 ## INPUTS
 
@@ -356,16 +357,12 @@ agent-system/03_templates/AGENT_RESULT_TEMPLATE.md
 NONE
 ```
 
-## NEXT_RECOMMENDED_ACTION
-
-```text
-- create matching auditor task after profile-agent STATUS: pass;
-- route blocked or gap results according to orchestrator governance.
-```
-
 ## NOTES
 
 ```text
-This packet is for bootstrap intake only and must not introduce
-project-specific implementation terms into universal package governance.
+This packet is for bootstrap intake only and must not introduce project-specific
+implementation terms into universal package governance.
+
+Created by orchestrator during bootstrap. This does not make orchestrator a
+profile execution role.
 ```

@@ -137,7 +137,11 @@ BOOTSTRAP_REQUIREMENTS_ROUTING:
   owner input; direct designer route is valid only for sufficiently structured
   owner input; no bootstrap document presents designer as the universal first
   profile agent; BOOTSTRAP_TASK_PACKET_TEMPLATE includes full task packet
-  fields and governance boundaries.
+  fields and governance boundaries; bootstrap role docs map explicitly to
+  agent-system/01_roles/REQUIREMENTS_ANALYST.md and
+  agent-system/01_roles/DESIGNER.md instead of lower-case role interpolation.
+  BOOTSTRAP_TASK_PACKET_TEMPLATE must not include standalone REQUESTER or
+  standalone RESULT-only NEXT_RECOMMENDED_ACTION task-packet fields.
 
 ROLE_ALIGNMENT:
   Role documents keep authority boundaries distinct. Profile agents do not
@@ -163,6 +167,15 @@ STATE_ALIGNMENT:
   PROJECT_STATE_TEMPLATE, RUNTIME_STATE_SCHEMA, and project_state.schema.json
   all require ACTION_SEMANTIC and SEMANTIC_REASON, and validators cover parity
   for those fields.
+  RUNTIME_STATE_SCHEMA, CURRENT_GATE_TEMPLATE, and current_gate.schema.json
+  represent the same CURRENT_GATE mandatory fields, including ACTION_SEMANTIC,
+  ENTRY_CRITERIA, EXIT_CRITERIA, REQUIRED_NEXT_ROLE, GATE_EVIDENCE,
+  BLOCKING_STATUS, and NOTES.
+  RUNTIME_STATE_SCHEMA, NEXT_ACTION_TEMPLATE, and next_action.schema.json
+  represent the same NEXT_ACTION mandatory fields, including ACTION_SEMANTIC,
+  BLOCKING_OR_RESUME_CONTEXT, REQUIRED_UNIVERSAL_DOCS,
+  REQUIRED_PROJECT_DOCS, EXPECTED_RESULT, and
+  INSTRUCTION_FOR_ORCHESTRATOR.
 
 RUNTIME_FILE_SET_ALIGNMENT:
   Mandatory runtime file lists in start, runtime loop, runtime state schema,
@@ -184,6 +197,9 @@ GATE_RUNTIME_ALIGNMENT:
   CURRENT_GATE template, lifecycle stages, transition rules, setup/run/launch/
   handover templates, and final acceptance wording use compatible gate names,
   owner roles, evidence states, and pass/fail/blocked/gap routing semantics.
+  PROJECT_LIFECYCLE documents explicit lifecycle aliases for AUDIT and
+  FINAL_ACCEPTANCE when there is no AUDIT_STAGE.md or
+  FINAL_ACCEPTANCE_STAGE.md.
 
 PACKAGE_DOCUMENT_COVERAGE:
   Required package document existence checks include mandatory runtime and
@@ -311,6 +327,17 @@ CHANGELOG_TRACEABILITY_SYNC:
   current accepted scope of that chain. Coverage must include representative
   affected files, affected invariants, version tuple stability, v1.2.1 absence,
   and reasoning-level policy absence.
+
+CORR_ASU_120_027_FINAL_PRE_121_CONSISTENCY_CLEANUP:
+  Final smoke evidence must explicitly verify removal of standalone REQUESTER
+  and standalone NEXT_RECOMMENDED_ACTION from
+  BOOTSTRAP_TASK_PACKET_TEMPLATE, explicit bootstrap role-doc mapping to
+  REQUIREMENTS_ANALYST.md and DESIGNER.md, canonical bootstrap placeholder
+  project-runtime/bootstrap/TASK_BOOTSTRAP_<TARGET_ROLE>_001.md plus concrete
+  REQUIREMENTS_ANALYST and DESIGNER examples, CURRENT_GATE and NEXT_ACTION
+  runtime schema parity with templates and schema sidecars, PROJECT_LIFECYCLE
+  AUDIT and FINAL_ACCEPTANCE aliases, CROSS_LINK_VALIDATION_RULES coverage, and
+  GOVERNANCE_CHANGELOG traceability for CORR_ASU_120_027.
 
 NEXT_VERSION_ABSENCE:
   final smoke and cross-link corrections do not install next-version feature

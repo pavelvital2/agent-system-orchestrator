@@ -267,6 +267,25 @@ STATUS:
 OWNER_ROLE:
 TASK_ID:
 TASK_PACKET:
+ACTION_SEMANTIC:
+ENTRY_CRITERIA:
+EXIT_CRITERIA:
+REQUIRED_NEXT_ROLE:
+GATE_EVIDENCE:
+BLOCKING_STATUS:
+NOTES:
+```
+
+Markdown section-to-schema mapping:
+
+```text
+## Current gate -> GATE_ID, GATE_NAME, GATE_TYPE, STATUS, OWNER_ROLE, TASK_ID, TASK_PACKET, ACTION_SEMANTIC
+## Entry criteria -> ENTRY_CRITERIA
+## Exit criteria -> EXIT_CRITERIA
+## Required next role -> REQUIRED_NEXT_ROLE
+## Gate evidence -> GATE_EVIDENCE
+## Blocking status -> BLOCKING_STATUS
+## Notes -> NOTES
 ```
 
 ## GATE_TYPE допустимые значения
@@ -319,6 +338,16 @@ project_owner
 `OWNER_ROLE` may identify a profile execution role, the orchestrator, or the
 project owner for the current gate. `none` is reserved for routing fields that
 explicitly permit no next role.
+
+## ACTION_SEMANTIC допустимые значения
+
+```text
+normal
+wait_for_owner
+pause
+stop_terminal
+completed_state_transition
+```
 
 ## Entry criteria
 
@@ -376,6 +405,42 @@ control/routing pseudo-roles, not profile task types.
 - NONE
 ```
 
+## Blocking status
+
+Секция обязательна:
+
+```text
+## Blocking status
+BLOCKER_ID:
+BLOCKER_TYPE: owner_decision | pause | audit_fail | gap | runtime | dependency | governance | other
+BLOCKS:
+BLOCKED_BY:
+RESOLUTION_PATH:
+```
+
+Required when `STATUS` is `blocked` or `failed`.
+
+Если gate is not blocked or failed:
+
+```text
+NONE
+```
+
+## Notes
+
+Секция обязательна:
+
+```text
+## Notes
+- <note>
+```
+
+Если нет:
+
+```text
+- NONE
+```
+
 ---
 
 # NEXT_ACTION.md schema
@@ -396,6 +461,23 @@ TASK_ID:
 TASK_PACKET:
 DEPENDENCY_STATUS:
 BLOCKED_BY:
+ACTION_SEMANTIC:
+BLOCKING_OR_RESUME_CONTEXT:
+REQUIRED_UNIVERSAL_DOCS:
+REQUIRED_PROJECT_DOCS:
+EXPECTED_RESULT:
+INSTRUCTION_FOR_ORCHESTRATOR:
+```
+
+Markdown section-to-schema mapping:
+
+```text
+## Next action -> ACTION_ID, ACTION_TYPE, TARGET_ROLE, TASK_ID, TASK_PACKET, DEPENDENCY_STATUS, BLOCKED_BY, ACTION_SEMANTIC
+## Blocking or resume context -> BLOCKING_OR_RESUME_CONTEXT
+## REQUIRED_UNIVERSAL_DOCS -> REQUIRED_UNIVERSAL_DOCS
+## REQUIRED_PROJECT_DOCS -> REQUIRED_PROJECT_DOCS
+## EXPECTED_RESULT -> EXPECTED_RESULT
+## Instruction for orchestrator -> INSTRUCTION_FOR_ORCHESTRATOR
 ```
 
 ## ACTION_TYPE допустимые значения
@@ -438,6 +520,39 @@ ready
 blocked
 completed
 not_applicable
+```
+
+## ACTION_SEMANTIC допустимые значения
+
+```text
+normal
+wait_for_owner
+pause
+stop_terminal
+completed_state_transition
+```
+
+## Blocking or resume context
+
+Секция обязательна:
+
+```text
+## Blocking or resume context
+BLOCKER_ID:
+BLOCKER_TYPE: owner_decision | pause | audit_fail | gap | runtime | dependency | governance | other
+BLOCKS:
+RESOLUTION_PATH:
+OWNER_QUESTION:
+RESUME_CONDITION:
+```
+
+Required when `DEPENDENCY_STATUS: blocked`, `ACTION_TYPE: wait_for_owner`, or
+`ACTION_SEMANTIC: pause`.
+
+Если отсутствует blocking or resume context:
+
+```text
+NONE
 ```
 
 ## REQUIRED_UNIVERSAL_DOCS

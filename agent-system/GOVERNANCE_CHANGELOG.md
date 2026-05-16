@@ -478,4 +478,41 @@ MIGRATION_NOTE: This traceability sync records the current pre-1.2.1 correction 
 AUTHORIZED_BY: project_owner
 AUDIT_REQUIRED: yes
 STATUS: accepted
+
+CHANGE_ID: GOV-2026-05-16-007
+CHANGE_TITLE: CORR_ASU_120_027 final pre-1.2.1 consistency cleanup
+DATE: 2026-05-16
+PACKAGE_VERSION_BEFORE: 1.2.0
+PACKAGE_VERSION_AFTER: 1.2.0
+CHANGE_TYPE: patch
+AFFECTED_FILES:
+- agent-system/03_templates/BOOTSTRAP_TASK_PACKET_TEMPLATE.md
+- agent-system/04_state/RUNTIME_STATE_SCHEMA.md
+- agent-system/07_lifecycle/PROJECT_LIFECYCLE.md
+- agent-system/09_validators/CROSS_LINK_VALIDATION_RULES.md
+- agent-system/10_examples/FINAL_SMOKE_CHECKLIST.md
+- agent-system/GOVERNANCE_CHANGELOG.md
+AFFECTED_INVARIANTS:
+- bootstrap task packet schema parity excludes standalone REQUESTER and RESULT-only NEXT_RECOMMENDED_ACTION
+- bootstrap role documents map explicitly to REQUIREMENTS_ANALYST.md and DESIGNER.md
+- bootstrap canonical placeholder remains project-runtime/bootstrap/TASK_BOOTSTRAP_<TARGET_ROLE>_001.md with concrete REQUIREMENTS_ANALYST and DESIGNER examples
+- CURRENT_GATE runtime schema documentation matches template and schema sidecar mandatory fields
+- NEXT_ACTION runtime schema documentation matches template and schema sidecar mandatory fields
+- PROJECT_LIFECYCLE accounts for AUDIT and FINAL_ACCEPTANCE through explicit aliases without standalone stage documents
+- final smoke and cross-link validation cover the corrected pre-1.2.1 consistency checks
+- package version tuple compatibility remains unchanged
+- no v1.2.1 installation
+- no prohibited design-loop or requester-return feature scope, runtime file set change, executable validator, or generalized DAG/parallel orchestration
+AFFECTED_TRANSITIONS:
+- bootstrap intake -> first profile-agent task packet validation
+- current gate validation -> correction routing for schema/template drift
+- next action validation -> correction routing for schema/template drift
+- lifecycle cross-link validation -> correction routing for unresolved stage aliases
+- final smoke validation -> final auditor or correction routing
+SCHEMA_TEMPLATE_IMPACT: template_update_required
+MIGRATION_REQUIRED: no
+MIGRATION_NOTE: This bounded correction updates documentation parity and smoke coverage only. It preserves the active 1.2.0 package version, 1.2.0 governance ruleset version, and 1.1.0 runtime schema version, and does not install v1.2.1 features.
+AUTHORIZED_BY: project_owner
+AUDIT_REQUIRED: yes
+STATUS: accepted
 ```
