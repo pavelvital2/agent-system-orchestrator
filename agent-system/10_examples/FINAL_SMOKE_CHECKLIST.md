@@ -157,6 +157,9 @@ RESULT_ACTION_FIELD_ALIGNMENT:
 STATE_ALIGNMENT:
   runtime state templates, task registry, accepted artifacts registry, logs,
   and transition rules use compatible statuses and routing terms.
+  PROJECT_STATE_TEMPLATE, RUNTIME_STATE_SCHEMA, and project_state.schema.json
+  all require ACTION_SEMANTIC and SEMANTIC_REASON, and validators cover parity
+  for those fields.
 
 RUNTIME_FILE_SET_ALIGNMENT:
   Mandatory runtime file lists in start, runtime loop, runtime state schema,

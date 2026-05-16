@@ -162,6 +162,13 @@ fields, uses stale `NEXT_ACTION` field names, omits canonical runtime file
 dependencies, or shows a task packet shape that conflicts with the current task
 packet template.
 
+PROJECT_STATE semantic field validation must compare
+`PROJECT_STATE_TEMPLATE.md`, `RUNTIME_STATE_SCHEMA.md`, and
+`schemas/project_state.schema.json`. `ACTION_SEMANTIC` and `SEMANTIC_REASON`
+must have the same mandatory status in all three sources, and any example that
+directly enumerates `PROJECT_STATE` fields must include them or explicitly
+delegate to the template.
+
 ## Validator link checks
 
 Every validator document referenced by `VALIDATOR_SPEC.md`, README, or the

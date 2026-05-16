@@ -46,6 +46,10 @@ The tuple is invalid when:
 
 - a mandatory field is missing;
 - a field uses a value outside the allowed set;
+- `PROJECT_STATE.md` omits mandatory semantic fields `ACTION_SEMANTIC` or
+  `SEMANTIC_REASON`, or their required/optional status differs between
+  `PROJECT_STATE_TEMPLATE.md`, `RUNTIME_STATE_SCHEMA.md`, and
+  `schemas/project_state.schema.json`;
 - `CURRENT_PHASE`, `PROJECT_STATUS`, `CURRENT_GATE`, and `NEXT_ACTION` are
   semantically incompatible;
 - `NEXT_ACTION` contains more than one instruction;

@@ -73,6 +73,10 @@ GOVERNANCE_RULESET_VERSION: 1.2.0
 RUNTIME_SCHEMA_VERSION: 1.1.0
 CURRENT_PHASE: bootstrap
 PROJECT_STATUS: active
+ACTION_SEMANTIC: normal
+SEMANTIC_REASON:
+Initial bootstrap runtime seed has no blocker, owner wait, pause, or terminal
+condition.
 ACCEPTED_ARTIFACTS_REF: project-runtime/example/ACCEPTED_ARTIFACTS.md
 TASK_REGISTRY_REF: project-runtime/example/TASK_REGISTRY.md
 

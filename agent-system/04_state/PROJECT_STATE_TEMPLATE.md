@@ -16,6 +16,10 @@ PROJECT_STATUS: active | blocked | completed | archived
 
 ## Runtime semantic state
 
+These fields are mandatory and must remain in parity with
+`agent-system/04_state/RUNTIME_STATE_SCHEMA.md` and
+`agent-system/09_validators/schemas/project_state.schema.json`.
+
 ```text
 ACTION_SEMANTIC: normal | wait_for_owner | pause | stop_terminal | completed_state
 SEMANTIC_REASON:
