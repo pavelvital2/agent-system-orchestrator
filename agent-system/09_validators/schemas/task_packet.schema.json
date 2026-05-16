@@ -43,6 +43,8 @@
     "AUDIT_REQUIREMENTS",
     "TESTING_REQUIREMENTS",
     "DOCUMENTATION_REQUIREMENTS",
+    "FILESYSTEM_GOVERNANCE",
+    "RUNTIME_GOVERNANCE",
     "RESULT_FORMAT",
     "TERMINAL_CONDITIONS",
     "NOTES"
@@ -94,6 +96,8 @@
     "AUDIT_REQUIREMENTS": { "type": "string", "enum": ["mandatory", "optional", "none"] },
     "TESTING_REQUIREMENTS": { "type": "string", "enum": ["mandatory", "optional", "none"] },
     "DOCUMENTATION_REQUIREMENTS": { "type": "string", "enum": ["mandatory", "optional", "none"] },
+    "FILESYSTEM_GOVERNANCE": { "$ref": "#/$defs/nonEmptyList" },
+    "RUNTIME_GOVERNANCE": { "$ref": "#/$defs/nonEmptyList" },
     "RESULT_FORMAT": { "type": "string" },
     "TERMINAL_CONDITIONS": { "$ref": "#/$defs/listOrNone" },
     "NOTES": { "$ref": "#/$defs/listOrNone" }
