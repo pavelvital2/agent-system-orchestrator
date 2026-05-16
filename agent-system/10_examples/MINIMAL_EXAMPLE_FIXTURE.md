@@ -204,9 +204,6 @@ agent-system/02_runtime/ORCHESTRATOR_RUNTIME_LOOP.md
 RESULT_FORMAT:
 agent-system/03_templates/AGENT_RESULT_TEMPLATE.md
 
-NEXT_RECOMMENDED_ACTION:
-- create matching auditor agent.
-
 TERMINAL_CONDITIONS:
 NONE
 

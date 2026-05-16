@@ -169,14 +169,19 @@ Minimal fixture validation must cross-check:
 
 ```text
 agent-system/10_examples/MINIMAL_EXAMPLE_FIXTURE.md
+agent-system/10_examples/EXPECTED_FLOW_EXAMPLE.md
 agent-system/04_state/RUNTIME_STATE_SCHEMA.md
 agent-system/03_templates/TASK_PACKET_TEMPLATE.md
+agent-system/09_validators/schemas/task_packet.schema.json
 ```
 
 The fixture is inconsistent if its runtime seed omits active version tuple
 fields, uses stale `NEXT_ACTION` field names, omits canonical runtime file
 dependencies, or shows a task packet shape that conflicts with the current task
-packet template.
+packet template or schema. Example task packets must use
+`MANDATORY_WORKFLOW`, `NEXT_ROLE_ON_PASS`, `NEXT_ROLE_ON_FAIL`,
+`NEXT_ROLE_ON_BLOCKED`, and `NEXT_ROLE_ON_GAP` for outcome routing, and must
+not include RESULT-only fields such as `NEXT_RECOMMENDED_ACTION`.
 
 PROJECT_STATE semantic field validation must compare
 `PROJECT_STATE_TEMPLATE.md`, `RUNTIME_STATE_SCHEMA.md`, and

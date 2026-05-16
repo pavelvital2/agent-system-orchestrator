@@ -92,6 +92,12 @@ TASK_PACKET:
   DEPENDENCY_STATUS: ready
   ALLOWED_FILE_CHANGES:
   - project-docs/example/07_reports/*
+  MANDATORY_WORKFLOW:
+  - developer -> auditor
+  NEXT_ROLE_ON_PASS: auditor
+  NEXT_ROLE_ON_FAIL: orchestrator
+  NEXT_ROLE_ON_BLOCKED: orchestrator
+  NEXT_ROLE_ON_GAP: orchestrator
   AUDIT_REQUIREMENTS: mandatory
   TESTING_REQUIREMENTS: none
   DOCUMENTATION_REQUIREMENTS: optional

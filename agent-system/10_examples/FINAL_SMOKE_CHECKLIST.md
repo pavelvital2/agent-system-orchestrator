@@ -218,7 +218,11 @@ AUDIT_CHECKPOINT_ALIGNMENT:
 MINIMAL_FIXTURE_SCHEMA_ALIGNMENT:
   MINIMAL_EXAMPLE_FIXTURE uses the active v1.2.0 runtime tuple, the canonical
   nine runtime file dependencies, v1.2.0 NEXT_ACTION fields, and task packet
-  fields compatible with TASK_PACKET_TEMPLATE and runtime schema sidecars.
+  fields compatible with TASK_PACKET_TEMPLATE and task_packet.schema.json.
+  Example task packets route outcomes through MANDATORY_WORKFLOW,
+  NEXT_ROLE_ON_PASS, NEXT_ROLE_ON_FAIL, NEXT_ROLE_ON_BLOCKED, and
+  NEXT_ROLE_ON_GAP, and do not include the RESULT-only
+  NEXT_RECOMMENDED_ACTION field.
   It must not depend on deployment, credentials, external repositories, or
   project-specific business terms.
 
