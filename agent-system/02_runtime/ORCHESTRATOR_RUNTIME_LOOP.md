@@ -94,7 +94,14 @@ task-packet-equivalent and satisfies bootstrap task packet validation.
 - запретом на использование `project-archive/` как active source;
 - запретом на изменение `project-runtime/` обычными агентами;
 - запретом на изменение `agent-system/` обычными агентами;
-- правилом, что task packets должны находиться внутри `ACTIVE_DOC_ROOT`.
+- правилом, что task packets должны находиться внутри `ACTIVE_DOC_ROOT`, кроме
+  единственного первого bootstrap task packet:
+
+```text
+project-runtime/bootstrap/TASK_BOOTSTRAP_<TARGET_ROLE>_001.md
+```
+
+Ordinary task packets outside `ACTIVE_DOC_ROOT` remain invalid.
 
 Если planned action нарушает filesystem governance:
 - dispatch агента запрещён;
@@ -327,7 +334,7 @@ Before any `create_agent`, `route_result`, `update_state`, `correction`, `finali
 7. `NEXT_ACTION.md` contains exactly one action;
 8. `NEXT_ACTION.md` does not conflict with `GOVERNANCE_AUTHORITY.md`;
 9. if `NEXT_ACTION.ACTION_TYPE` is `create_agent` or `NEXT_ACTION.TASK_PACKET` is not `NONE`, target task packet is active, not superseded, not deprecated;
-10. if task-packet validation is required, target task packet is inside `ACTIVE_DOC_ROOT` unless it is explicitly governed as system/bootstrap/package correction material;
+10. if task-packet validation is required, target task packet is inside `ACTIVE_DOC_ROOT` unless it is the governed first bootstrap task packet at `project-runtime/bootstrap/TASK_BOOTSTRAP_<TARGET_ROLE>_001.md` or explicitly governed as system/package correction material;
 11. if task-packet validation is required, REQUIRED_DOCS do not include deprecated/archive documents;
 12. if task-packet validation is not required, `TASK_PACKET: NONE` is valid only for `wait_for_owner`, `update_state`, `finalize`, `stop`, or `correction` when allowed by `STATE_TRANSITION_RULES.md`;
 13. role/file permissions match `FILESYSTEM_GOVERNANCE.md`;

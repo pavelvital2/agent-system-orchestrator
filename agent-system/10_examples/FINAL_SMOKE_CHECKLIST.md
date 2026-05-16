@@ -129,6 +129,9 @@ BOOTSTRAP_REQUIREMENTS_ROUTING:
   packet using the canonical path convention
   project-runtime/bootstrap/TASK_BOOTSTRAP_<TARGET_ROLE>_001.md, never
   TASK_PACKET: NONE, and never a plain handoff-only file.
+  This is the only active task packet exception outside ACTIVE_DOC_ROOT;
+  ordinary task packets outside ACTIVE_DOC_ROOT remain invalid, and more than
+  one active first bootstrap task packet at the same time is invalid.
   Smoke evidence must explicitly verify all of these bootstrap paths:
   requirements_analyst route is valid for incomplete, ambiguous, or uncertain
   owner input; direct designer route is valid only for sufficiently structured
@@ -272,6 +275,15 @@ PRE_1_2_1_CORRECTION_CHAIN_COVERAGE:
   smoke validation. This correction-chain smoke coverage does not install
   v1.2.1, does not alter reasoning-level policy, and preserves the rule that
   profile agents never commit or push.
+
+BOOTSTRAP_ACTIVE_DOC_ROOT_EXCEPTION_SYNC:
+  Smoke evidence must verify that the only active task packet exception outside
+  ACTIVE_DOC_ROOT is
+  project-runtime/bootstrap/TASK_BOOTSTRAP_<TARGET_ROLE>_001.md for the first
+  bootstrap profile-agent dispatch. Ordinary task packets outside
+  ACTIVE_DOC_ROOT, handoff files used as task packets, profile-agent dispatch
+  without a task packet, and multiple simultaneously active first bootstrap
+  task packets are invalid.
 
 NEXT_VERSION_ABSENCE:
   final smoke and cross-link corrections do not install next-version feature

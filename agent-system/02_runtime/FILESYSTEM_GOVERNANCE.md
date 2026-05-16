@@ -172,6 +172,17 @@ project-docs/
 - агенты не должны использовать документы вне ACTIVE_DOC_ROOT, если они не указаны явно в REQUIRED_DOCS;
 - при смене ACTIVE_DOC_ROOT обязателен audit.
 
+Единственное исключение для active task packet вне `ACTIVE_DOC_ROOT`:
+
+```text
+project-runtime/bootstrap/TASK_BOOTSTRAP_<TARGET_ROLE>_001.md
+```
+
+Это исключение допустимо только для первого bootstrap dispatch одного
+profile-agent и только если файл является полным bootstrap task packet по
+`agent-system/03_templates/BOOTSTRAP_TASK_PACKET_TEMPLATE.md`. Обычные task
+packets вне `ACTIVE_DOC_ROOT` остаются invalid.
+
 ---
 
 ## Рекомендуемая bounded-doc структура
@@ -417,7 +428,14 @@ Terminal completion remains orchestrator-controlled.
 
 Каждая bounded-задача должна иметь отдельный task packet.
 
-Task packets должны находиться внутри ACTIVE_DOC_ROOT.
+Task packets должны находиться внутри ACTIVE_DOC_ROOT, кроме единственного
+первого bootstrap task packet:
+
+```text
+project-runtime/bootstrap/TASK_BOOTSTRAP_<TARGET_ROLE>_001.md
+```
+
+Любой ordinary task packet вне ACTIVE_DOC_ROOT invalid.
 
 Рекомендуемая папка:
 

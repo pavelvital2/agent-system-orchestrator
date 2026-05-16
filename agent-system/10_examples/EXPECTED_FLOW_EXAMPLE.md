@@ -74,7 +74,12 @@ SUFFICIENTLY_STRUCTURED_INPUT:
 
 Bootstrap `TASK_PACKET` must never be `NONE` for these first profile-agent
 routes. Orchestrator-owned runtime seed, state, and log notes may support
-bootstrap routing, but they are not task packet substitutes.
+bootstrap routing, but they are not task packet substitutes. The canonical
+`project-runtime/bootstrap/TASK_BOOTSTRAP_<TARGET_ROLE>_001.md` path is the
+only active task packet exception outside `ACTIVE_DOC_ROOT`, and only for the
+first bootstrap profile-agent dispatch. Ordinary task packets outside
+`ACTIVE_DOC_ROOT` remain invalid, and only one first bootstrap task packet may
+be active at a time.
 
 ## Minimal task/audit/checkpoint cycle
 
@@ -151,6 +156,8 @@ The following shortcuts contradict the universal flow:
 profile agent pass -> commit without audit
 first profile create_agent -> TASK_PACKET: NONE
 first profile TASK_PACKET -> plain handoff-only file
+ordinary task packet outside ACTIVE_DOC_ROOT
+multiple active first bootstrap task packets at the same time
 audit fail -> commit accepted state
 setup/run/launch/handover -> skipped when required evidence is missing
 handover agent -> marks whole project completed directly

@@ -45,6 +45,18 @@ For ordinary project work:
 - deprecated or superseded docs cannot be in `REQUIRED_DOCS`;
 - `NEXT_ACTION` cannot dispatch deprecated or superseded task packets.
 
+The only active task packet exception outside `ACTIVE_DOC_ROOT` is the first
+bootstrap profile-agent dispatch packet:
+
+```text
+project-runtime/bootstrap/TASK_BOOTSTRAP_<TARGET_ROLE>_001.md
+```
+
+Validators must reject any ordinary task packet outside `ACTIVE_DOC_ROOT`.
+They must also reject handoff files used as task packets, profile-agent
+dispatch without a task packet, and more than one active first bootstrap task
+packet at the same time.
+
 Universal package upgrade tasks may change `agent-system/` only when a bounded
 task packet explicitly authorizes that scope.
 

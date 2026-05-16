@@ -74,6 +74,22 @@ if they make designer the only valid first profile agent, omit the
 requirements_analyst route for incomplete, ambiguous, or uncertain owner input,
 or allow direct designer routing without sufficiently structured owner input.
 
+Bootstrap task packet path validation must cross-check
+`FILESYSTEM_GOVERNANCE.md`, `STATE_TRANSITION_RULES.md`,
+`ORCHESTRATOR_RUNTIME_LOOP.md`, `TASK_PACKET_VALIDATION_RULES.md`,
+`FINAL_SMOKE_CHECKLIST.md`, and `EXPECTED_FLOW_EXAMPLE.md`. These documents are
+inconsistent if they allow any active task packet outside `ACTIVE_DOC_ROOT`
+other than the single governed first bootstrap packet:
+
+```text
+project-runtime/bootstrap/TASK_BOOTSTRAP_<TARGET_ROLE>_001.md
+```
+
+They are also inconsistent if they treat ordinary task packets outside
+`ACTIVE_DOC_ROOT` as valid, treat a handoff file as a task packet substitute,
+allow profile-agent dispatch without a task packet, or allow more than one
+active first bootstrap task packet at the same time.
+
 ## Role link checks
 
 Every role referenced in templates, state files, transition rules, validator

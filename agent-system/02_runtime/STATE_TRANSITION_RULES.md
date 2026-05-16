@@ -106,7 +106,9 @@ the auditor returns `STATUS: pass`.
 - technical writer pass directly to completed;
 - profile agent RESULT directly setting project completed;
 - create_agent while runtime schema invalid;
-- create_agent for task outside ACTIVE_DOC_ROOT;
+- create_agent for task outside ACTIVE_DOC_ROOT, except the single governed
+  first bootstrap task packet at
+  `project-runtime/bootstrap/TASK_BOOTSTRAP_<TARGET_ROLE>_001.md`;
 - create_agent for deprecated/superseded task;
 - dependent dispatch while active blocking GAP exists;
 - use of project-archive as active source;
@@ -304,7 +306,9 @@ Enter correction if any of the following are detected:
 - NEXT_ACTION contains multiple instructions;
 - phase/gate/action mismatch;
 - task packet absent or invalid when ACTION_TYPE requires a task packet;
-- task packet outside ACTIVE_DOC_ROOT;
+- task packet outside ACTIVE_DOC_ROOT, except the single governed first
+  bootstrap task packet at
+  `project-runtime/bootstrap/TASK_BOOTSTRAP_<TARGET_ROLE>_001.md`;
 - task packet deprecated or superseded;
 - REQUIRED_DOCS includes deprecated/archive doc;
 - active gap without blocked dependent branch;
