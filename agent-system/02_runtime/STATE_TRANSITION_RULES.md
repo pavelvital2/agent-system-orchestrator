@@ -30,18 +30,38 @@ PROJECT_STATE.ACTIVE_DOC_ROOT
 PROJECT_STATE.PACKAGE_VERSION
 PROJECT_STATE.GOVERNANCE_RULESET_VERSION
 PROJECT_STATE.RUNTIME_SCHEMA_VERSION
+PROJECT_STATE.PROJECT_SLUG
+PROJECT_STATE.WORKSPACE_TYPE
+PROJECT_STATE.WORKSPACE_IDENTITY_REF
+PROJECT_STATE.REPOSITORY_LOCK_REF
+PROJECT_STATE.EXPECTED_GIT_REMOTE
+PROJECT_STATE.ACTUAL_GIT_REMOTE
+PROJECT_STATE.EXPECTED_BRANCH
+PROJECT_STATE.ACTUAL_BRANCH
+PROJECT_STATE.PUSH_ALLOWED
+PROJECT_STATE.IDENTITY_VALIDATION_STATUS
+PROJECT_STATE.IDENTITY_VALIDATION_ERROR
+PROJECT_STATE.REPOSITORY_LOCK_STATUS
+PROJECT_STATE.CHECKPOINT_ELIGIBILITY
+PROJECT_STATE.CHECKPOINT_BLOCKED_BY
 CURRENT_GATE.GATE_TYPE
 CURRENT_GATE.STATUS
 CURRENT_GATE.OWNER_ROLE
 CURRENT_GATE.TASK_ID
 CURRENT_GATE.TASK_PACKET
 CURRENT_GATE.ACTION_SEMANTIC
+CURRENT_GATE.WORKSPACE_IDENTITY_STATUS
+CURRENT_GATE.REPOSITORY_LOCK_STATUS
+CURRENT_GATE.CHECKPOINT_ELIGIBILITY
 NEXT_ACTION.ACTION_TYPE
 NEXT_ACTION.TARGET_ROLE
 NEXT_ACTION.TASK_ID
 NEXT_ACTION.TASK_PACKET
 NEXT_ACTION.DEPENDENCY_STATUS
 NEXT_ACTION.ACTION_SEMANTIC
+NEXT_ACTION.WORKSPACE_IDENTITY_REQUIRED
+NEXT_ACTION.REPOSITORY_LOCK_REQUIRED
+NEXT_ACTION.CHECKPOINT_POLICY
 NEXT_ACTION.REQUESTER_RETURN_CONTEXT
 GAP_REGISTER.active_gaps
 TASK_REGISTRY.requester_return_metadata
@@ -129,6 +149,16 @@ the auditor returns `STATUS: pass`.
 - post-audit Git checkpoint that stages suspected secret or credential material;
 - post-audit Git checkpoint after reasoning-level mismatch or invalid dispatch
   where actual spawned reasoning is below required;
+- profile-agent dispatch before workspace identity validation passes;
+- runtime initialization that infers identity from folder name, inherited `.git`
+  metadata, or raw remote strings without a workspace identity record;
+- post-audit Git checkpoint before workspace identity validation and repository
+  lock validation pass;
+- checkpoint, commit, or push when `repository_identity_mismatch`,
+  `repository_branch_mismatch`, `workspace_identity_leakage`, or
+  `unapproved_ssh_host_alias` is active;
+- push when `PUSH_ALLOWED` is not true under an accepted repository lock;
+- push from `WORKSPACE_TYPE: test_fixture`;
 - push after commit failure or checkpoint validation failure;
 - commit or push after reasoning-level mismatch or invalid dispatch where
   actual spawned reasoning is below required;
@@ -189,6 +219,10 @@ When an auditor returns `STATUS: pass` for required audited work:
 
 - `POST_AUDIT_GIT_CHECKPOINT.md` must run before normal dependent work is
   marked `ready`;
+- workspace identity validation must pass before checkpoint eligibility is
+  evaluated;
+- repository lock validation must pass before any push is attempted;
+- wrong remote or wrong branch is a hard blocker for push;
 - Git checkpoint validation must pass before staging, committing, or pushing;
 - only accepted files from the audited task allowed scope may be staged;
 - successful checkpoint must record branch, commit hash, push status, accepted
@@ -251,6 +285,60 @@ When secret or credential risk is detected:
 - staging, commit, and push are forbidden;
 - logs and RESULT summaries must not include secret values;
 - routing must use governed correction or owner handling.
+
+## Workspace identity and repository lock routing
+
+Workspace identity validation is required before any dispatch, checkpoint,
+commit, or push. The orchestrator must compare canonical repository identity:
+
+```text
+EXPECTED_GIT_REMOTE
+ACTUAL_GIT_REMOTE
+```
+
+Raw remote strings may differ only when both normalize to the same canonical
+GitHub repository identity under
+`agent-system/09_validators/WORKSPACE_IDENTITY_VALIDATION_RULES.md`.
+
+If an SSH host alias appears in `ACTUAL_REMOTE`, it is valid only when accepted
+in the repository lock or when bounded evidence proves that the alias resolves
+to `github.com`.
+
+If the identity gate fails:
+
+```text
+PROJECT_STATUS: blocked
+CURRENT_PHASE: correction | blocked
+CURRENT_GATE.STATUS: blocked
+NEXT_ACTION.ACTION_TYPE: correction | wait_for_owner | update_state | stop
+```
+
+The following blockers must stop dependent dispatch and checkpoint:
+
+```text
+repository_identity_mismatch
+repository_branch_mismatch
+workspace_identity_leakage
+unapproved_ssh_host_alias
+repository_lock_missing
+push_without_repository_lock
+```
+
+Push is allowed only when:
+
+```text
+IDENTITY_VALIDATION_STATUS: passed
+REPOSITORY_LOCK_STATUS: accepted
+PUSH_ALLOWED: true
+CHECKPOINT_ELIGIBILITY: push_allowed
+WORKSPACE_TYPE: package_repo | project_workspace | implementation_repo
+```
+
+`WORKSPACE_TYPE: test_fixture` must always keep `PUSH_ALLOWED: false`.
+
+Commit is forbidden after wrong remote or wrong branch unless the active
+repository lock and active task packet explicitly allow a governed local-only
+checkpoint. That local-only exception must not push.
 
 ## Phase/action compatibility
 
@@ -370,6 +458,15 @@ Enter correction if any of the following are detected:
 - checkpoint after auditor fail, blocked, gap, invalid RESULT, or pending correction;
 - checkpoint, commit, or push after reasoning-level mismatch where actual
   spawned reasoning is below required;
+- profile-agent dispatch, checkpoint, commit, or push before workspace identity
+  validation passes;
+- missing workspace identity or repository lock fields in v2.0.0 runtime state;
+- `repository_identity_mismatch`;
+- `repository_branch_mismatch`;
+- `workspace_identity_leakage`;
+- `unapproved_ssh_host_alias`;
+- `PUSH_ALLOWED: true` without accepted repository lock;
+- `WORKSPACE_TYPE: test_fixture` with `PUSH_ALLOWED: true`;
 - checkpoint push attempted after commit failure;
 - checkpoint record or event containing unredacted secret values.
 

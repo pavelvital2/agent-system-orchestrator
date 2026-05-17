@@ -11,6 +11,9 @@ OWNER_ROLE: orchestrator | requirements_analyst | designer | developer | auditor
 TASK_ID:
 TASK_PACKET:
 ACTION_SEMANTIC: normal | wait_for_owner | pause | stop_terminal | completed_state_transition
+WORKSPACE_IDENTITY_STATUS: not_checked | passed | failed | blocked
+REPOSITORY_LOCK_STATUS: absent | draft | accepted | revoked | blocked | not_required
+CHECKPOINT_ELIGIBILITY: blocked | local_only | push_allowed | not_applicable
 ```
 
 ## Entry criteria
@@ -33,6 +36,10 @@ requirements_analyst | designer | developer | auditor | tester | technical_write
 
 Profile execution roles may own task gates. `orchestrator`, `project_owner`,
 and `none` are control/routing pseudo-roles, not profile task types.
+
+Workspace identity status, repository lock status, and checkpoint eligibility
+are mandatory gate fields. A gate cannot pass checkpoint, commit, or push
+eligibility while workspace identity is `not_checked`, `failed`, or `blocked`.
 
 ## Gate evidence
 

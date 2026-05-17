@@ -30,12 +30,15 @@
    - `agent-system/03_templates/RESEARCH_RESULT_TEMPLATE.md`
    - `agent-system/03_templates/DESIGN_CONTINUATION_TASK_TEMPLATE.md`
    - `agent-system/03_templates/ORCHESTRATOR_TASK_HANDOFF_TEMPLATE.md`
+   - `agent-system/03_templates/WORKSPACE_IDENTITY_TEMPLATE.md`
+   - `agent-system/03_templates/REPOSITORY_LOCK_TEMPLATE.md`
    - `agent-system/03_templates/AGENT_RESULT_TEMPLATE.md`
    - `agent-system/04_state/RUNTIME_STATE_SCHEMA.md`
    - `agent-system/05_gap_flow/GAP_FLOW.md`
    - `agent-system/05_gap_flow/GAP_REGISTER_TEMPLATE.md`
    - `agent-system/06_logs/AGENT_RESULTS_LOG_TEMPLATE.md`
    - `agent-system/06_logs/ORCHESTRATOR_EVENTS_LOG_TEMPLATE.md`
+   - `agent-system/09_validators/WORKSPACE_IDENTITY_VALIDATION_RULES.md`
    - `agent-system/09_validators/GIT_CHECKPOINT_VALIDATION_RULES.md`
    - `agent-system/09_validators/RESEARCH_RETURN_VALIDATION_RULES.md`
    - `agent-system/09_validators/REASONING_LEVEL_VALIDATION_RULES.md`
@@ -48,6 +51,39 @@
    - `project-runtime/ACCEPTED_ARTIFACTS.md`
    - `project-runtime/ORCHESTRATOR_EVENTS_LOG.md`
    - `project-runtime/STATUS_SUMMARY.md`
+
+Before trusting `NEXT_ACTION.md` for dispatch or checkpoint routing, the
+orchestrator must run the workspace identity gate from:
+
+```text
+agent-system/09_validators/WORKSPACE_IDENTITY_VALIDATION_RULES.md
+```
+
+The gate must validate `PROJECT_NAME`, `PROJECT_SLUG`, `WORKSPACE_TYPE`,
+`PROJECT_ROOT_EXPECTED`, `GIT_TOPLEVEL_ACTUAL`, `EXPECTED_REMOTE`,
+`ACTUAL_REMOTE`, `EXPECTED_GIT_REMOTE`, `ACTUAL_GIT_REMOTE`,
+`EXPECTED_BRANCH`, `ACTUAL_BRANCH`, and `PUSH_ALLOWED`.
+
+The gate compares canonical repository identity, not raw remote strings.
+Accepted equivalent raw remote forms are:
+
+```text
+https://github.com/OWNER/REPO
+https://github.com/OWNER/REPO.git
+git@github.com:OWNER/REPO.git
+git@<approved_ssh_host_alias>:OWNER/REPO.git
+```
+
+The SSH host alias form is valid only when the alias is explicitly accepted in
+the repository lock or bounded evidence proves it resolves to `github.com`.
+
+If the gate returns `repository_identity_mismatch`,
+`repository_branch_mismatch`, `workspace_identity_leakage`,
+`unapproved_ssh_host_alias`, `repository_lock_missing`, or
+`push_without_repository_lock`, then profile-agent dispatch, checkpoint, commit,
+and push are forbidden. Commit may proceed only as a governed local-only
+checkpoint when the repository lock and active task packet explicitly permit
+that exception.
 
 
 2. Определить следующий шаг только из `NEXT_ACTION.md`.
@@ -369,34 +405,52 @@ NEXT_RECOMMENDED_ACTION: correction
 
 ## Mandatory validation order
 
-Before any `create_agent`, `route_result`, `update_state`, `correction`, `finalize`, or `stop` action, the orchestrator must validate in this order:
+Before any `create_agent`, `route_result`, `update_state`, `correction`,
+`finalize`, or `stop` action, and before any post-audit checkpoint, commit, or
+push, the orchestrator must validate in this order:
 
 1. universal package files exist;
 2. package version / governance ruleset / runtime schema are compatible;
 3. mandatory runtime files exist;
-4. runtime state matches `RUNTIME_STATE_SCHEMA.md`;
-5. full runtime state tuple is valid under `STATE_TRANSITION_RULES.md`;
-6. action/state semantics are valid under `ACTION_STATE_SEMANTICS.md`;
-7. `NEXT_ACTION.md` contains exactly one action;
-8. `NEXT_ACTION.md` does not conflict with `GOVERNANCE_AUTHORITY.md`;
-9. if `NEXT_ACTION.ACTION_TYPE` is `create_agent` or `NEXT_ACTION.TASK_PACKET` is not `NONE`, target task packet is active, not superseded, not deprecated;
-10. if task-packet validation is required, target task packet is inside `ACTIVE_DOC_ROOT` unless it is the governed first bootstrap task packet at `project-runtime/bootstrap/TASK_BOOTSTRAP_<TARGET_ROLE>_001.md` or explicitly governed as system/package correction material;
-11. if task-packet validation is required, REQUIRED_DOCS do not include deprecated/archive documents;
-12. if task-packet validation is not required, `TASK_PACKET: NONE` is valid only for `wait_for_owner`, `update_state`, `finalize`, `stop`, or `correction` when allowed by `STATE_TRANSITION_RULES.md`;
-13. role/file permissions match `FILESYSTEM_GOVERNANCE.md`;
-14. task packet `REASONING_LEVEL` is valid for allowed values, role default,
+4. workspace identity and repository lock fields exist in runtime state or
+   initialization material;
+5. workspace identity gate passes under
+   `WORKSPACE_IDENTITY_VALIDATION_RULES.md`;
+6. canonical `EXPECTED_GIT_REMOTE` and `ACTUAL_GIT_REMOTE` match, using
+   approved SSH alias evidence when an alias is present;
+7. `EXPECTED_BRANCH` and `ACTUAL_BRANCH` match;
+8. `PUSH_ALLOWED` is false unless an accepted repository lock authorizes the
+   current workspace type, canonical repository identity, branch, and
+   checkpoint policy;
+9. runtime state matches `RUNTIME_STATE_SCHEMA.md`;
+10. full runtime state tuple is valid under `STATE_TRANSITION_RULES.md`;
+11. action/state semantics are valid under `ACTION_STATE_SEMANTICS.md`;
+12. `NEXT_ACTION.md` contains exactly one action;
+13. `NEXT_ACTION.md` does not conflict with `GOVERNANCE_AUTHORITY.md`;
+14. if `NEXT_ACTION.ACTION_TYPE` is `create_agent` or `NEXT_ACTION.TASK_PACKET` is not `NONE`, target task packet is active, not superseded, not deprecated;
+15. if task-packet validation is required, target task packet is inside `ACTIVE_DOC_ROOT` unless it is the governed first bootstrap task packet at `project-runtime/bootstrap/TASK_BOOTSTRAP_<TARGET_ROLE>_001.md` or explicitly governed as system/package correction material;
+16. if task-packet validation is required, REQUIRED_DOCS do not include deprecated/archive documents;
+17. if task-packet validation is not required, `TASK_PACKET: NONE` is valid only for `wait_for_owner`, `update_state`, `finalize`, `stop`, or `correction` when allowed by `STATE_TRANSITION_RULES.md`;
+18. role/file permissions match `FILESYSTEM_GOVERNANCE.md`;
+19. task packet `REASONING_LEVEL` is valid for allowed values, role default,
     and gate-required floor;
-15. profile-agent dispatch reasoning is resolved and prepared for recording:
+20. profile-agent dispatch reasoning is resolved and prepared for recording:
     `role_default_reasoning_level`, `task_packet_reasoning_level`,
     `gate_required_floor`, `final_required_dispatch_level`, and
     `actual_spawned_reasoning_level`; `final_required_dispatch_level` must be
     the highest applicable level among role default, task packet
     `REASONING_LEVEL`, and gate-required floor;
-16. `TASK_KIND: research_dependency` and requester continuation routing are
+21. `TASK_KIND: research_dependency` and requester continuation routing are
     valid under `REQUESTER_RETURN_PROTOCOL.md`;
-17. requested action is valid under governance-freeze rules.
+22. requested action is valid under governance-freeze rules.
 
 If any validation fails, dispatch is forbidden.
+
+For a governed `correction`, `update_state`, `wait_for_owner`, or `stop` action
+whose explicit purpose is to create or repair missing workspace identity or
+repository lock records, a failed identity gate still blocks normal dispatch,
+checkpoint, commit, and push, but it does not block the governed recovery
+action itself when transition rules permit that recovery route.
 
 Freeze absence is not a required validation condition for recovery actions.
 

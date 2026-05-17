@@ -44,6 +44,11 @@ may validate an equivalent YAML or JSON object that preserves the same fields.
 Executable parsing or rendering support is future/optional unless separately
 implemented by an accepted package task.
 
+For v2.0.0 workspace identity hardening, the Markdown schema and templates are
+the controlling source for mandatory identity and checkpoint fields. A stale
+sidecar that lacks these fields must not be used to accept legacy runtime state
+that omits them.
+
 ---
 
 ## Обязательные runtime files
@@ -97,12 +102,31 @@ Runtime state:
 
 ```text
 PROJECT_NAME:
+PROJECT_SLUG:
 PROJECT_ROOT:
 TZ_PATH:
 ACTIVE_DOC_ROOT:
 PACKAGE_VERSION:
 GOVERNANCE_RULESET_VERSION:
 RUNTIME_SCHEMA_VERSION:
+WORKSPACE_TYPE:
+WORKSPACE_IDENTITY_REF:
+REPOSITORY_LOCK_REF:
+PROJECT_ROOT_EXPECTED:
+GIT_TOPLEVEL_ACTUAL:
+EXPECTED_REMOTE:
+ACTUAL_REMOTE:
+EXPECTED_GIT_REMOTE:
+ACTUAL_GIT_REMOTE:
+EXPECTED_BRANCH:
+ACTUAL_BRANCH:
+PUSH_ALLOWED:
+IDENTITY_VALIDATION_STATUS:
+IDENTITY_VALIDATION_ERROR:
+IDENTITY_VALIDATION_EVIDENCE:
+REPOSITORY_LOCK_STATUS:
+CHECKPOINT_ELIGIBILITY:
+CHECKPOINT_BLOCKED_BY:
 CURRENT_PHASE:
 PROJECT_STATUS:
 ACTION_SEMANTIC:
@@ -140,6 +164,45 @@ blocked
 completed
 archived
 ```
+
+## Workspace identity and repository lock
+
+`PROJECT_STATE.md` must contain the current workspace identity and repository
+lock fields. These fields are mandatory in runtime schema version `2.0.0`.
+
+```text
+PROJECT_SLUG:
+WORKSPACE_TYPE: package_repo | project_workspace | implementation_repo | test_fixture
+WORKSPACE_IDENTITY_REF:
+REPOSITORY_LOCK_REF:
+PROJECT_ROOT_EXPECTED:
+GIT_TOPLEVEL_ACTUAL:
+EXPECTED_REMOTE:
+ACTUAL_REMOTE:
+EXPECTED_GIT_REMOTE:
+ACTUAL_GIT_REMOTE:
+EXPECTED_BRANCH:
+ACTUAL_BRANCH:
+PUSH_ALLOWED: true | false
+IDENTITY_VALIDATION_STATUS: not_checked | passed | failed | blocked
+IDENTITY_VALIDATION_ERROR: NONE | repository_identity_mismatch | repository_branch_mismatch | workspace_identity_leakage | unapproved_ssh_host_alias | missing_identity_manifest | repository_lock_missing | push_without_repository_lock
+IDENTITY_VALIDATION_EVIDENCE:
+REPOSITORY_LOCK_STATUS: absent | draft | accepted | revoked | blocked
+CHECKPOINT_ELIGIBILITY: blocked | local_only | push_allowed | not_applicable
+CHECKPOINT_BLOCKED_BY:
+```
+
+`EXPECTED_GIT_REMOTE` and `ACTUAL_GIT_REMOTE` are canonical repository identity
+fields. Validators must compare them instead of comparing raw remote strings
+only. Accepted equivalent raw remotes are defined by:
+
+```text
+agent-system/09_validators/WORKSPACE_IDENTITY_VALIDATION_RULES.md
+```
+
+`PUSH_ALLOWED` defaults to `false` unless an accepted repository lock validates
+the current workspace type, canonical repository identity, branch, and identity
+leakage status.
 
 ## Branches
 
@@ -269,6 +332,9 @@ OWNER_ROLE:
 TASK_ID:
 TASK_PACKET:
 ACTION_SEMANTIC:
+WORKSPACE_IDENTITY_STATUS:
+REPOSITORY_LOCK_STATUS:
+CHECKPOINT_ELIGIBILITY:
 ENTRY_CRITERIA:
 EXIT_CRITERIA:
 REQUIRED_NEXT_ROLE:
@@ -280,7 +346,7 @@ NOTES:
 Markdown section-to-schema mapping:
 
 ```text
-## Current gate -> GATE_ID, GATE_NAME, GATE_TYPE, STATUS, OWNER_ROLE, TASK_ID, TASK_PACKET, ACTION_SEMANTIC
+## Current gate -> GATE_ID, GATE_NAME, GATE_TYPE, STATUS, OWNER_ROLE, TASK_ID, TASK_PACKET, ACTION_SEMANTIC, WORKSPACE_IDENTITY_STATUS, REPOSITORY_LOCK_STATUS, CHECKPOINT_ELIGIBILITY
 ## Entry criteria -> ENTRY_CRITERIA
 ## Exit criteria -> EXIT_CRITERIA
 ## Required next role -> REQUIRED_NEXT_ROLE
@@ -348,6 +414,35 @@ wait_for_owner
 pause
 stop_terminal
 completed_state_transition
+```
+
+## WORKSPACE_IDENTITY_STATUS допустимые значения
+
+```text
+not_checked
+passed
+failed
+blocked
+```
+
+## REPOSITORY_LOCK_STATUS допустимые значения
+
+```text
+absent
+draft
+accepted
+revoked
+blocked
+not_required
+```
+
+## CHECKPOINT_ELIGIBILITY допустимые значения
+
+```text
+blocked
+local_only
+push_allowed
+not_applicable
 ```
 
 ## Entry criteria
@@ -463,6 +558,9 @@ TASK_PACKET:
 DEPENDENCY_STATUS:
 BLOCKED_BY:
 ACTION_SEMANTIC:
+WORKSPACE_IDENTITY_REQUIRED:
+REPOSITORY_LOCK_REQUIRED:
+CHECKPOINT_POLICY:
 REQUESTER_RETURN_CONTEXT:
 BLOCKING_OR_RESUME_CONTEXT:
 REQUIRED_UNIVERSAL_DOCS:
@@ -474,7 +572,7 @@ INSTRUCTION_FOR_ORCHESTRATOR:
 Markdown section-to-schema mapping:
 
 ```text
-## Next action -> ACTION_ID, ACTION_TYPE, TARGET_ROLE, TASK_ID, TASK_PACKET, DEPENDENCY_STATUS, BLOCKED_BY, ACTION_SEMANTIC
+## Next action -> ACTION_ID, ACTION_TYPE, TARGET_ROLE, TASK_ID, TASK_PACKET, DEPENDENCY_STATUS, BLOCKED_BY, ACTION_SEMANTIC, WORKSPACE_IDENTITY_REQUIRED, REPOSITORY_LOCK_REQUIRED, CHECKPOINT_POLICY
 ## Requester return context -> REQUESTER_RETURN_CONTEXT
 ## Blocking or resume context -> BLOCKING_OR_RESUME_CONTEXT
 ## REQUIRED_UNIVERSAL_DOCS -> REQUIRED_UNIVERSAL_DOCS
@@ -533,6 +631,37 @@ wait_for_owner
 pause
 stop_terminal
 completed_state_transition
+```
+
+## WORKSPACE_IDENTITY_REQUIRED допустимые значения
+
+```text
+yes
+no
+```
+
+`WORKSPACE_IDENTITY_REQUIRED` must be `yes` for normal runtime
+initialization, profile-agent dispatch, checkpoint, commit, or push. It may be
+`no` only for governed correction or owner-wait actions that exist to create or
+repair missing identity records.
+
+## REPOSITORY_LOCK_REQUIRED допустимые значения
+
+```text
+yes
+no
+```
+
+`REPOSITORY_LOCK_REQUIRED` must be `yes` before commit or push. Push still
+requires an accepted lock with `PUSH_ALLOWED: true`.
+
+## CHECKPOINT_POLICY допустимые значения
+
+```text
+forbidden
+local_only
+commit_and_push
+no_checkpoint
 ```
 
 ## Requester return context
@@ -1090,18 +1219,38 @@ PROJECT_STATE.ACTIVE_DOC_ROOT
 PROJECT_STATE.PACKAGE_VERSION
 PROJECT_STATE.GOVERNANCE_RULESET_VERSION
 PROJECT_STATE.RUNTIME_SCHEMA_VERSION
+PROJECT_STATE.PROJECT_SLUG
+PROJECT_STATE.WORKSPACE_TYPE
+PROJECT_STATE.WORKSPACE_IDENTITY_REF
+PROJECT_STATE.REPOSITORY_LOCK_REF
+PROJECT_STATE.EXPECTED_GIT_REMOTE
+PROJECT_STATE.ACTUAL_GIT_REMOTE
+PROJECT_STATE.EXPECTED_BRANCH
+PROJECT_STATE.ACTUAL_BRANCH
+PROJECT_STATE.PUSH_ALLOWED
+PROJECT_STATE.IDENTITY_VALIDATION_STATUS
+PROJECT_STATE.IDENTITY_VALIDATION_ERROR
+PROJECT_STATE.REPOSITORY_LOCK_STATUS
+PROJECT_STATE.CHECKPOINT_ELIGIBILITY
+PROJECT_STATE.CHECKPOINT_BLOCKED_BY
 CURRENT_GATE.GATE_TYPE
 CURRENT_GATE.STATUS
 CURRENT_GATE.OWNER_ROLE
 CURRENT_GATE.TASK_ID
 CURRENT_GATE.TASK_PACKET
 CURRENT_GATE.ACTION_SEMANTIC
+CURRENT_GATE.WORKSPACE_IDENTITY_STATUS
+CURRENT_GATE.REPOSITORY_LOCK_STATUS
+CURRENT_GATE.CHECKPOINT_ELIGIBILITY
 NEXT_ACTION.ACTION_TYPE
 NEXT_ACTION.TARGET_ROLE
 NEXT_ACTION.TASK_ID
 NEXT_ACTION.TASK_PACKET
 NEXT_ACTION.DEPENDENCY_STATUS
 NEXT_ACTION.ACTION_SEMANTIC
+NEXT_ACTION.WORKSPACE_IDENTITY_REQUIRED
+NEXT_ACTION.REPOSITORY_LOCK_REQUIRED
+NEXT_ACTION.CHECKPOINT_POLICY
 NEXT_ACTION.REQUESTER_RETURN_CONTEXT
 GAP_REGISTER.active_gaps
 TASK_REGISTRY.task_statuses
@@ -1143,6 +1292,14 @@ agent-system/05_gap_flow/GAP_REGISTER_TEMPLATE.md
 agent-system/06_logs/AGENT_RESULTS_LOG_TEMPLATE.md
 agent-system/06_logs/ORCHESTRATOR_EVENTS_LOG_TEMPLATE.md
 agent-system/06_logs/STATUS_SUMMARY_TEMPLATE.md
+```
+
+Workspace identity and repository lock fields in `PROJECT_STATE.md` must also
+remain compatible with:
+
+```text
+agent-system/03_templates/WORKSPACE_IDENTITY_TEMPLATE.md
+agent-system/03_templates/REPOSITORY_LOCK_TEMPLATE.md
 ```
 
 If schema and templates conflict, bootstrap is invalid and governance freeze applies.

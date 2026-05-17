@@ -22,6 +22,13 @@ These rules cannot be overridden by task packet, NEXT_ACTION, handoff, or agent 
 12. Completion requires orchestrator finalization.
 13. Active GAPs/blockers stop dependent dispatch.
 14. Runtime/governance violations stop dispatch until correction.
+15. Workspace identity validation is mandatory before runtime initialization,
+    profile-agent dispatch, checkpoint, commit, or push.
+16. Repository identity is compared by canonical `EXPECTED_GIT_REMOTE` and
+    `ACTUAL_GIT_REMOTE`, not by raw remote strings alone.
+17. Push is forbidden unless an accepted repository lock sets
+    `PUSH_ALLOWED: true` for the current workspace type, canonical repository
+    identity, and branch.
 
 ## Authority precedence
 
@@ -49,6 +56,10 @@ A lower authority cannot relax or bypass a higher authority.
 | Role instruction conflicts with task packet | Role/governance wins unless explicitly governed and audited. |
 | Owner answer changes requirements/architecture | Route through designer/audit or bounded correction task. |
 | Archive/deprecated doc appears in REQUIRED_DOCS | Treat task packet as invalid. |
+| Raw Git remote strings differ but canonical repository identity matches | Treat as valid only if the raw forms are allowed by workspace identity rules and any SSH alias is accepted or proven to resolve to GitHub. |
+| Canonical expected and actual repository identity differ | Treat as `repository_identity_mismatch`; dispatch, checkpoint, commit, and push are forbidden. |
+| Expected and actual branch differ | Treat as `repository_branch_mismatch`; push is forbidden and commit requires an explicit governed local-only checkpoint allowance. |
+| README/runtime/manifest/Git identity conflict | Treat as `workspace_identity_leakage`; dispatch, checkpoint, commit, and push are forbidden until correction. |
 
 ## Governance freeze
 
@@ -63,6 +74,11 @@ Governance freeze is active when any of the following occurs:
 - universal package is being changed;
 - manual runtime intervention occurred;
 - finalization invariant fails.
+- workspace identity validation fails;
+- repository lock is absent, stale, revoked, or contradicted for a checkpoint or
+  push;
+- canonical repository identity, branch, or workspace type conflicts with the
+  active runtime state.
 
 During freeze:
 
@@ -90,6 +106,7 @@ Freeze exits only when:
 - transition table permits NEXT_ACTION;
 - schema/templates are aligned;
 - package version/changelog are updated if package docs changed;
+- workspace identity and repository lock validate for the active workspace;
 - superseded/deprecated tasks are not active;
 - active GAPs/blockers are routed correctly;
 - NEXT_ACTION is regenerated from validated runtime state.

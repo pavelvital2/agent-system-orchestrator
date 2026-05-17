@@ -807,4 +807,49 @@ TRACEABILITY_NOTE: UPG_ASU_130_001 remains historically proposed as the initial 
 AUTHORIZED_BY: project_owner
 AUDIT_REQUIRED: yes
 STATUS: accepted
+
+CHANGE_ID: GOV-2026-05-17-001
+CHANGE_TITLE: ASO_25_GOVERNANCE_HARDENING_V2_0_0_WORKSPACE_IDENTITY_GATE
+DATE: 2026-05-17
+PACKAGE_VERSION_BEFORE: 1.3.0
+PACKAGE_VERSION_AFTER: 2.0.0
+GOVERNANCE_RULESET_BEFORE: 1.3.0
+GOVERNANCE_RULESET_AFTER: 2.0.0
+RUNTIME_SCHEMA_BEFORE: 1.2.0
+RUNTIME_SCHEMA_AFTER: 2.0.0
+CHANGE_TYPE: major
+AFFECTED_FILES:
+- agent-system/PACKAGE_VERSIONING.md
+- agent-system/GOVERNANCE_CHANGELOG.md
+- agent-system/02_runtime/ORCHESTRATOR_RUNTIME_LOOP.md
+- agent-system/02_runtime/FILESYSTEM_GOVERNANCE.md
+- agent-system/02_runtime/GOVERNANCE_AUTHORITY.md
+- agent-system/02_runtime/STATE_TRANSITION_RULES.md
+- agent-system/04_state/RUNTIME_STATE_SCHEMA.md
+- agent-system/04_state/PROJECT_STATE_TEMPLATE.md
+- agent-system/04_state/CURRENT_GATE_TEMPLATE.md
+- agent-system/04_state/NEXT_ACTION_TEMPLATE.md
+- agent-system/03_templates/WORKSPACE_IDENTITY_TEMPLATE.md
+- agent-system/03_templates/REPOSITORY_LOCK_TEMPLATE.md
+- agent-system/09_validators/WORKSPACE_IDENTITY_VALIDATION_RULES.md
+AFFECTED_INVARIANTS:
+- Fix 1: workspace identity gate is mandatory before dispatch, runtime initialization, checkpoint, commit, or push.
+- Fix 2: workspace identity manifest/template declares identity, workspace type, expected remote, branch, push policy, allowed identity fields, and version tuple compatibility.
+- Fix 3: repository lock defaults PUSH_ALLOWED to false until explicitly accepted and validated.
+- Fix 4: package_repo, project_workspace, implementation_repo, and test_fixture behavior are defined.
+- Fix 5: wrong remote or wrong branch is a hard blocker for push, and commit requires an explicit governed local-only exception.
+- Fix 7: identity leakage across README, runtime, manifest, Git remote, branch, and workspace type is a blocker.
+- canonical repository identity comparison is required; raw remote string comparison alone is insufficient.
+- SSH host aliases are accepted only when explicitly locked or proven to resolve to github.com.
+AFFECTED_TRANSITIONS:
+- runtime validation -> workspace identity gate before any dispatchable action.
+- profile-agent dispatch -> blocked when repository_identity_mismatch, repository_branch_mismatch, workspace_identity_leakage, or unapproved_ssh_host_alias is active.
+- auditor pass -> post-audit checkpoint eligibility still requires workspace identity and repository lock validation.
+- checkpoint/commit/push -> blocked unless repository identity, branch, workspace type, and PUSH_ALLOWED policy validate.
+SCHEMA_TEMPLATE_IMPACT: both
+MIGRATION_REQUIRED: yes
+MIGRATION_NOTE: Existing runtime states must add workspace identity, repository lock, and checkpoint eligibility fields before normal dispatch. Missing or contradictory identity fields must route to correction or owner wait; the orchestrator must not infer identity from folder name, copied .git metadata, or raw remote strings.
+AUTHORIZED_BY: project_owner
+AUDIT_REQUIRED: yes
+STATUS: proposed
 ```

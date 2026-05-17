@@ -188,6 +188,84 @@ packets вне `ACTIVE_DOC_ROOT` остаются invalid.
 
 ---
 
+## Workspace identity governance
+
+Every active workspace must have an explicit workspace identity record based on:
+
+```text
+agent-system/03_templates/WORKSPACE_IDENTITY_TEMPLATE.md
+```
+
+The orchestrator must validate workspace identity before runtime
+initialization, profile-agent dispatch, checkpoint, commit, or push. It must
+not trust folder name, inherited `.git` metadata, README wording, runtime state
+alone, or raw Git remote strings as sufficient identity proof.
+
+The workspace identity model must include:
+
+```text
+PROJECT_NAME
+PROJECT_SLUG
+WORKSPACE_TYPE
+PROJECT_ROOT_EXPECTED
+GIT_TOPLEVEL_ACTUAL
+EXPECTED_REMOTE
+ACTUAL_REMOTE
+EXPECTED_GIT_REMOTE
+ACTUAL_GIT_REMOTE
+EXPECTED_BRANCH
+ACTUAL_BRANCH
+PUSH_ALLOWED
+```
+
+Canonical repository identity comparison is required. `EXPECTED_GIT_REMOTE` and
+`ACTUAL_GIT_REMOTE` must match after normalization under
+`agent-system/09_validators/WORKSPACE_IDENTITY_VALIDATION_RULES.md`.
+
+Equivalent GitHub remote forms are limited to:
+
+```text
+https://github.com/OWNER/REPO
+https://github.com/OWNER/REPO.git
+git@github.com:OWNER/REPO.git
+git@<approved_ssh_host_alias>:OWNER/REPO.git
+```
+
+The SSH host alias form is valid only when the alias is explicitly accepted in
+the repository lock or bounded evidence proves the alias resolves to
+`github.com`.
+
+## Workspace types
+
+```text
+package_repo:
+  Universal agent-system package repository. Only owner-authorized
+  package-governance tasks may change agent-system files. Push requires an
+  accepted repository lock.
+
+project_workspace:
+  Project orchestration workspace containing project-input, project-runtime,
+  project docs, and package instructions. It must not inherit identity from a
+  copied package checkout. Push requires an accepted repository lock.
+
+implementation_repo:
+  Product/source repository for implementation work. Code checkpoint requires
+  matching canonical repository identity and branch. Push requires an accepted
+  repository lock.
+
+test_fixture:
+  Disposable validation fixture. PUSH_ALLOWED must remain false, and fixture
+  identity cannot authorize package, project workspace, or implementation repo
+  checkpoint.
+```
+
+If workspace type conflicts with README, runtime state, manifest, Git remote,
+Git branch, or repository lock, classify the condition as
+`workspace_identity_leakage`. Dispatch, checkpoint, commit, and push are
+forbidden until governed correction resolves the conflict.
+
+---
+
 ## Рекомендуемая bounded-doc структура
 
 Проектировщик может использовать базовую структуру:
@@ -548,6 +626,23 @@ authority to profile agents.
 
 The post-audit Git checkpoint is orchestrator-owned only and may run only after
 the required auditor returns `STATUS: pass`.
+
+Auditor `STATUS: pass` is not sufficient for commit or push. Before any
+orchestrator-owned checkpoint, commit, or push, the orchestrator must validate:
+
+```text
+- workspace identity gate passed;
+- canonical EXPECTED_GIT_REMOTE equals ACTUAL_GIT_REMOTE;
+- EXPECTED_BRANCH equals ACTUAL_BRANCH;
+- WORKSPACE_TYPE permits the requested checkpoint behavior;
+- REPOSITORY_LOCK_STATUS is accepted when push is requested;
+- PUSH_ALLOWED is true only under the accepted repository lock.
+```
+
+Wrong remote, wrong branch, identity leakage, missing repository lock, or
+`PUSH_ALLOWED: false` is a hard blocker for push. Commit is also forbidden
+unless a governed local-only checkpoint is explicitly allowed by the repository
+lock and active task packet.
 
 ## Secret handling
 
