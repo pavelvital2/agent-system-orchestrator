@@ -88,6 +88,24 @@ If any required status is `failed`, `blocked`,
 `potential_secret_exposure`, missing, unknown, or contradicted by available
 evidence, auditor `STATUS: pass` is forbidden.
 
+For bootstrap results, auditor `STATUS: pass` is also forbidden unless the
+auditor records:
+
+```text
+BOOTSTRAP_CONTINUATION_STATUS: downstream_task_packet | gap | blocked | wait_for_owner
+BOOTSTRAP_CONTINUATION_CHECK: passed | failed | blocked
+```
+
+`BOOTSTRAP_CONTINUATION_CHECK` passes only when the result contains a valid
+schema-checked downstream dispatchable task packet, explicit GAP, explicit
+BLOCKED route, or explicit wait_for_owner route. Missing, `NONE`, architecture
+intake only, malformed task packet, or an orchestrator project-task creation
+route with `TASK_PACKET: NONE` must fail or block the audit with:
+
+```text
+bootstrap_continuation_missing
+```
+
 When executable shell or Python scripts changed and the required syntax
 evidence is absent, failed, stale, or not tied to the changed paths, auditor
 `STATUS: pass` is forbidden. The auditor must return `STATUS: fail` or

@@ -47,9 +47,9 @@ Options:
   --role ROLE                       Expected target role override.
   --workspace-type TYPE             Workspace type override.
   --expected-remote REMOTE          Expected remote override.
-  --actual-remote REMOTE            Actual remote override.
+  --actual-remote REMOTE            Deprecated compatibility option; live git origin is used.
   --expected-branch BRANCH          Expected branch override.
-  --actual-branch BRANCH            Actual branch override.
+  --actual-branch BRANCH            Deprecated compatibility option; live git branch is used.
   --push-requested yes|no|auto      Validate push target and lock.
   --include-untracked               Include untracked files in file-scope and secret checks.
   --help                            Show this help.
@@ -153,6 +153,11 @@ canonical_remote() {
     return 0
   fi
 
+  if [[ "$raw" =~ ^github\.com/([^/]+)/([^/]+)(\.git)?$ ]]; then
+    canonical_github_path "${BASH_REMATCH[1]}/${BASH_REMATCH[2]}" || return 2
+    return 0
+  fi
+
   if [[ "$raw" =~ ^git@([^:]+):(.+)$ ]]; then
     host="${BASH_REMATCH[1]}"
     path="${BASH_REMATCH[2]}"
@@ -243,6 +248,7 @@ runtime_schema_check() {
   )
   local field
   local audit_status
+  local preflight_ref
 
   [[ -f "$RUNTIME_SCHEMA_FILE" ]] || {
     add_failure "runtime_schema_check: runtime_schema_missing"
@@ -264,10 +270,16 @@ runtime_schema_check() {
 
   audit_status="$(field_value "$PROJECT_STATE_FILE" "AUDIT_STATUS")"
   [[ "$audit_status" == "passed" ]] || add_failure "runtime_schema_check: audit_status_not_passed"
+
+  preflight_ref="$(field_value "$PROJECT_STATE_FILE" "CHECKPOINT_PREFLIGHT_REF")"
+  if [[ "${preflight_ref,,}" == *"manual preflight"* ]]; then
+    add_failure "checkpoint_preflight_evidence_check: manual_preflight_ref_insufficient"
+  fi
 }
 
 identity_and_git_target_check() {
   local git_top=""
+  local expected_git_top=""
   local expected_remote=""
   local actual_remote=""
   local expected_branch=""
@@ -284,16 +296,23 @@ identity_and_git_target_check() {
     add_failure "identity_check: not_inside_git_worktree"
     return
   }
+  expected_git_top="$(field_value "$PROJECT_STATE_FILE" "PROJECT_ROOT_EXPECTED")"
+  if [[ -n "$expected_git_top" && "$expected_git_top" != "NONE" ]]; then
+    if [[ "$(cd "$git_top" && pwd -P)" != "$(cd "$expected_git_top" 2>/dev/null && pwd -P)" ]]; then
+      add_failure "identity_check: git_toplevel_mismatch"
+    fi
+  fi
 
   expected_remote="${EXPECTED_REMOTE_OVERRIDE:-$(field_value "$PROJECT_STATE_FILE" "EXPECTED_GIT_REMOTE")}"
   [[ -n "$expected_remote" ]] || expected_remote="$(field_value "$PROJECT_STATE_FILE" "EXPECTED_REMOTE")"
-  actual_remote="${ACTUAL_REMOTE_OVERRIDE:-$(field_value "$PROJECT_STATE_FILE" "ACTUAL_GIT_REMOTE")}"
-  [[ -n "$actual_remote" ]] || actual_remote="$(field_value "$PROJECT_STATE_FILE" "ACTUAL_REMOTE")"
-  [[ -n "$actual_remote" ]] || actual_remote="$(git config --get remote.origin.url 2>/dev/null || true)"
+  actual_remote="$(git config --get remote.origin.url 2>/dev/null || true)"
 
   expected_branch="${EXPECTED_BRANCH_OVERRIDE:-$(field_value "$PROJECT_STATE_FILE" "EXPECTED_BRANCH")}"
-  actual_branch="${ACTUAL_BRANCH_OVERRIDE:-$(field_value "$PROJECT_STATE_FILE" "ACTUAL_BRANCH")}"
-  [[ -n "$actual_branch" ]] || actual_branch="$(git rev-parse --abbrev-ref HEAD 2>/dev/null || true)"
+  actual_branch="$(git rev-parse --abbrev-ref HEAD 2>/dev/null || true)"
+
+  if [[ -n "$ACTUAL_REMOTE_OVERRIDE" || -n "$ACTUAL_BRANCH_OVERRIDE" ]]; then
+    add_note "identity_check: deprecated_actual_overrides_ignored_live_git_used"
+  fi
 
   workspace_type="${WORKSPACE_TYPE_OVERRIDE:-$(field_value "$PROJECT_STATE_FILE" "WORKSPACE_TYPE")}"
   identity_status="$(field_value "$PROJECT_STATE_FILE" "IDENTITY_VALIDATION_STATUS")"
@@ -328,6 +347,44 @@ identity_and_git_target_check() {
   fi
 }
 
+baseline_policy_allows_untracked_project_input_tz() {
+  local policy
+
+  policy="$(field_value "$PROJECT_STATE_FILE" "PROJECT_INPUT_TRACKING_POLICY")"
+  [[ "${policy,,}" == *"owner-private"* || "${policy,,}" == *"untracked"* ]]
+}
+
+is_untracked_path() {
+  local path="$1"
+  git ls-files --others --exclude-standard -- "$path" 2>/dev/null | grep -Fxq "$path"
+}
+
+baseline_tracking_check() {
+  local path
+  local untracked=()
+
+  mapfile -t untracked < <(git ls-files --others --exclude-standard 2>/dev/null | sed '/^[[:space:]]*$/d')
+
+  for path in "${untracked[@]}"; do
+    case "$path" in
+      agent-system|agent-system/*)
+        add_failure "baseline_tracking_check: untracked_critical_baseline:${path}"
+        ;;
+      project-runtime/WORKSPACE_IDENTITY.md|project-runtime/REPOSITORY_LOCK.md|project-runtime/PROJECT_STATE.md|project-runtime/NEXT_ACTION.md|project-runtime/CURRENT_GATE.md|project-runtime/runtime-state/*)
+        add_failure "baseline_tracking_check: untracked_critical_baseline:${path}"
+        ;;
+      .gitignore)
+        add_failure "baseline_tracking_check: untracked_critical_baseline:${path}"
+        ;;
+      project-input/TZ.md)
+        if ! baseline_policy_allows_untracked_project_input_tz; then
+          add_failure "baseline_tracking_check: untracked_project_input_tz_without_policy:${path}"
+        fi
+        ;;
+    esac
+  done
+}
+
 collect_changed_files() {
   local tmp
   tmp="$(mktemp)"
@@ -360,6 +417,12 @@ file_scope_check() {
   fi
 
   for path in "${changed_files[@]}"; do
+    if [[ "$path" == "project-input/TZ.md" ]] &&
+      is_untracked_path "$path" &&
+      baseline_policy_allows_untracked_project_input_tz; then
+      add_note "changed_files_scope_check: project_input_tz_owner_private_untracked_policy:${path}"
+      continue
+    fi
     if matches_any_pattern "$path" "${forbidden_patterns[@]}"; then
       add_failure "changed_files_scope_check: forbidden_path:${path}"
       continue
@@ -540,6 +603,7 @@ done
 task_packet_check
 runtime_schema_check
 identity_and_git_target_check
+baseline_tracking_check
 file_scope_check
 secret_scan_check
 emit_receipt

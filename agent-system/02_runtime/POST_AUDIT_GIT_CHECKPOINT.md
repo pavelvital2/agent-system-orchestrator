@@ -203,6 +203,25 @@ FAILURE_REASON:
 RECOVERY_ROUTE:
 ```
 
+For runtime schema `2.0.0` and later, `CHECKPOINT_PREFLIGHT_REF` must identify
+an executable preflight invocation or saved receipt/output from
+`agent-system/scripts/checkpoint_preflight.sh`. Human-only references such as
+`orchestrator manual preflight <date>` are insufficient checkpoint evidence and
+must block with:
+
+```text
+manual_preflight_ref_insufficient
+```
+
+Bootstrap checkpoint eligibility has an additional continuation gate.
+`BOOTSTRAP_CONTINUATION_STATUS` must identify a valid downstream task packet,
+explicit GAP, explicit BLOCKED route, or explicit wait_for_owner route. Missing
+or invalid bootstrap continuation blocks with:
+
+```text
+bootstrap_continuation_missing
+```
+
 Successful checkpoint records must include:
 
 - commit hash;

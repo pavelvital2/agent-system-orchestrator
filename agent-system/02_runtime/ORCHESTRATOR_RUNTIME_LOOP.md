@@ -78,6 +78,7 @@ Accepted equivalent raw remote forms are:
 ```text
 https://github.com/OWNER/REPO
 https://github.com/OWNER/REPO.git
+github.com/OWNER/REPO
 git@github.com:OWNER/REPO.git
 git@<approved_ssh_host_alias>:OWNER/REPO.git
 ```
@@ -511,28 +512,35 @@ push, the orchestrator must validate in this order:
    `WORKSPACE_IDENTITY_VALIDATION_RULES.md`;
 6. canonical `EXPECTED_GIT_REMOTE` and `ACTUAL_GIT_REMOTE` match, using
    approved SSH alias evidence when an alias is present;
-7. `EXPECTED_BRANCH` and `ACTUAL_BRANCH` match;
-8. `PUSH_ALLOWED` is false unless an accepted repository lock authorizes the
+7. actual remote, branch, and toplevel are read from live Git commands for real
+   repository checks, not trusted from cached runtime `ACTUAL_*` fields;
+8. `EXPECTED_BRANCH` and live actual branch match;
+9. critical baseline paths are tracked before first profile-agent dispatch and
+   before first accepted checkpoint, unless explicit owner policy records the
+   allowed exception;
+10. `PUSH_ALLOWED` is false unless an accepted repository lock authorizes the
    current workspace type, canonical repository identity, branch, and
    checkpoint policy;
-9. runtime state matches `RUNTIME_STATE_SCHEMA.md`;
-10. full runtime state tuple is valid under `STATE_TRANSITION_RULES.md`;
-11. action/state semantics are valid under `ACTION_STATE_SEMANTICS.md`;
-12. `NEXT_ACTION.md` contains exactly one action;
-13. `NEXT_ACTION.md` does not conflict with `GOVERNANCE_AUTHORITY.md`;
-14. if `NEXT_ACTION.ACTION_TYPE` is `create_agent` or `NEXT_ACTION.TASK_PACKET` is not `NONE`, target task artifact declares `# TASK PACKET`, not `# TASK PROPOSAL`, and passes `TASK_PACKET_SCHEMA_VALIDATION_RULES.md`;
-15. if `NEXT_ACTION.ACTION_TYPE` is `create_agent` or `NEXT_ACTION.TASK_PACKET` is not `NONE`, target task packet is active, not superseded, not deprecated;
-16. if task-packet validation is required, target task packet is inside `ACTIVE_DOC_ROOT` unless it is the governed first bootstrap task packet at `project-runtime/bootstrap/TASK_BOOTSTRAP_<TARGET_ROLE>_001.md` or explicitly governed as system/package correction material;
-17. if task-packet validation is required, REQUIRED_DOCS do not include deprecated/archive documents;
-18. if task-packet validation is not required, `TASK_PACKET: NONE` is valid only for `wait_for_owner`, `update_state`, `finalize`, `stop`, or `correction` when allowed by `STATE_TRANSITION_RULES.md`;
-18a. if `TASK_PACKET: NONE` is present, enforce
+11. runtime state matches `RUNTIME_STATE_SCHEMA.md`;
+12. full runtime state tuple is valid under `STATE_TRANSITION_RULES.md`;
+13. action/state semantics are valid under `ACTION_STATE_SEMANTICS.md`;
+14. `NEXT_ACTION.md` contains exactly one action;
+15. `NEXT_ACTION.md` does not conflict with `GOVERNANCE_AUTHORITY.md`;
+16. if `NEXT_ACTION.ACTION_TYPE` is `create_agent` or `NEXT_ACTION.TASK_PACKET` is not `NONE`, target task artifact declares `# TASK PACKET`, not `# TASK PROPOSAL`, and passes `TASK_PACKET_SCHEMA_VALIDATION_RULES.md`;
+17. if `NEXT_ACTION.ACTION_TYPE` is `create_agent` or `NEXT_ACTION.TASK_PACKET` is not `NONE`, target task packet is active, not superseded, not deprecated;
+18. if task-packet validation is required, target task packet is inside `ACTIVE_DOC_ROOT` unless it is the governed first bootstrap task packet at `project-runtime/bootstrap/TASK_BOOTSTRAP_<TARGET_ROLE>_001.md` or explicitly governed as system/package correction material;
+19. if task-packet validation is required, REQUIRED_DOCS do not include deprecated/archive documents;
+20. if task-packet validation is not required, `TASK_PACKET: NONE` is valid only for `wait_for_owner`, `update_state`, `finalize`, `stop`, or `correction` when allowed by `STATE_TRANSITION_RULES.md`;
+20a. if `TASK_PACKET: NONE` is present, enforce
     `TASK_PACKET_NONE_FILE_CHANGES_FORBIDDEN` from
     `INCIDENT_RECOVERY.md`: no file-changing correction may proceed without a
     full correction task packet;
-19. role/file permissions match `FILESYSTEM_GOVERNANCE.md`;
-20. task packet `REASONING_LEVEL` is valid for allowed values, role default,
+20b. if `TASK_PACKET: NONE` is paired with `TARGET_ROLE: orchestrator`, enforce
+     `orchestrator_task_packet_none_project_artifact_route_forbidden`;
+21. role/file permissions match `FILESYSTEM_GOVERNANCE.md`;
+22. task packet `REASONING_LEVEL` is valid for allowed values, role default,
     and gate-required floor;
-21. profile-agent dispatch reasoning is resolved and prepared for recording:
+23. profile-agent dispatch reasoning is resolved and prepared for recording:
     `role_default_reasoning_level`, `task_packet_reasoning_level`,
     `gate_required_floor`, `final_required_dispatch_level`, and
     `actual_spawned_reasoning_level`; `final_required_dispatch_level` must be

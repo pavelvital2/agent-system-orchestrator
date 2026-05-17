@@ -54,6 +54,9 @@
 - does not directly repair profile-agent artifacts outside governed
   runtime/routing metadata;
 - does not use `TASK_PACKET: NONE` for file-changing corrections.
+- does not use `TASK_PACKET: NONE` to create project task packets, project
+  design artifacts, requirements artifacts, implementation plans, or other
+  project-owned non-runtime files.
 
 ## Главный принцип
 
@@ -78,6 +81,11 @@ before normal routing resumes.
 for pure coordination or orchestrator-owned runtime operations. It is
 forbidden for corrections that create, edit, delete, restore, revert, redact,
 or replace non-runtime files.
+
+It is also forbidden when the expected correction result is creation of project
+task packets or project design artifacts. That route must be replaced by a
+bounded profile task packet, explicit GAP, explicit BLOCKED route, or explicit
+wait_for_owner route.
 
 ## Источник истины для оркестратора
 

@@ -69,6 +69,7 @@ Accepted equivalent raw remote forms:
 ```text
 https://github.com/OWNER/REPO
 https://github.com/OWNER/REPO.git
+github.com/OWNER/REPO
 git@github.com:OWNER/REPO.git
 git@<approved_ssh_host_alias>:OWNER/REPO.git
 ```
@@ -109,6 +110,39 @@ alias evidence.
 11. Run identity leakage checks across README, runtime state, manifest, Git
     remote, Git branch, and workspace type.
 12. Validate repository lock and `PUSH_ALLOWED` before any push.
+
+## Baseline tracking gate
+
+Before first profile-agent dispatch and before first accepted checkpoint, the
+workspace must be reproducible from tracked Git baseline files unless an
+explicit owner policy says otherwise.
+
+Critical baseline paths:
+
+```text
+agent-system/
+project-runtime/WORKSPACE_IDENTITY.md
+project-runtime/REPOSITORY_LOCK.md
+project-runtime/PROJECT_STATE.md
+project-runtime/NEXT_ACTION.md
+project-runtime/CURRENT_GATE.md
+project-runtime/runtime-state/
+.gitignore when used
+```
+
+Untracked critical baseline paths block with:
+
+```text
+untracked_critical_baseline
+```
+
+`project-input/TZ.md` may remain untracked only when the runtime state records
+an explicit owner-private/untracked project input tracking policy. Without that
+policy, untracked `project-input/TZ.md` blocks with:
+
+```text
+untracked_project_input_tz_without_policy
+```
 
 ## Safe initialization validation
 

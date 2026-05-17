@@ -90,6 +90,9 @@ and task packets cannot grant commit or push authority to profile agents.
   correction or incident recovery;
 - use `TASK_PACKET: NONE` for file-changing corrections
   (`TASK_PACKET_NONE_FILE_CHANGES_FORBIDDEN`);
+- use `TASK_PACKET: NONE` with `TARGET_ROLE: orchestrator` to create project
+  task packets, project design artifacts, requirements artifacts,
+  implementation plans, or other project-owned non-runtime files;
 - mark project completed before orchestrator finalization invariants pass;
 - accept forbidden file changes as valid output.
 - run post-audit Git checkpoint after profile-agent pass without required auditor pass;

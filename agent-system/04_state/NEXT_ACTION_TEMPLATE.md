@@ -131,3 +131,9 @@ One instruction only.
 - `CHECKPOINT_PREFLIGHT_REQUIRED: yes` and `CHECKPOINT_RECEIPT_REQUIRED: yes`
   are required before any local-only or commit-and-push checkpoint.
 - If multiple actions are needed, each action must become a separate `NEXT_ACTION.md` update after the previous one completes.
+- `orchestrator_task_packet_none_project_artifact_route_forbidden`:
+  `TARGET_ROLE: orchestrator` with `TASK_PACKET: NONE` must not request
+  creation of project task packets, project design artifacts, requirements
+  artifacts, implementation plans, or other project-owned non-runtime files.
+  Such correction routes are invalid and must be replaced by a bounded
+  dispatchable task packet or explicit GAP/BLOCKED/wait_for_owner route.
