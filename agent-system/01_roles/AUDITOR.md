@@ -41,9 +41,11 @@
 - проверить, что changed downstream task-like artifacts are explicitly
   classified and schema-valid before audit pass;
 - проверить reasoning-level execution compliance: task packet
-  `REASONING_LEVEL`, role default, gate-required floor, actual spawned
-  reasoning level, and evidence from spawn log, handoff, or orchestrator
-  transcript;
+  `REASONING_LEVEL`, role default, gate-required floor, resolved required
+  reasoning level, requested/configured runner reasoning, and
+  `RUNNER_CONFIG_EVIDENCE` from spawn log, handoff, or orchestrator transcript;
+  do not claim internal actual reasoning unless the runner provides verifiable
+  evidence;
 - зафиксировать pass, fail, blocked или gap.
 
 ## Mandatory audit evidence checks
@@ -79,7 +81,8 @@ The audit check must cover:
 - secret exposure risk in changed files, RESULT summaries, logs, and evidence
   without printing or copying suspected secret values;
 - reasoning-level execution compliance from task packet, role default,
-  gate-required floor, and spawn/handoff/orchestrator evidence.
+  gate-required floor, `REASONING_LEVEL_RESOLVED`, requested/configured runner
+  reasoning, and `RUNNER_CONFIG_EVIDENCE`.
 - executable script syntax evidence when changed files include shell or Python
   scripts: changed `.sh` files require `bash -n <path>` evidence, and changed
   `.py` files require `python3 -m py_compile <path>` evidence.
@@ -244,7 +247,7 @@ STATUS: fail
 - формат RESULT;
 - обязательный workflow;
 - запрет на додумывание требований.
-- actual spawned reasoning level below the resolved required level.
+- requested/configured runner reasoning below the resolved required level.
 - downstream dispatchable task packets are invalid, ambiguous, unclassified, or
   selected from a non-dispatchable `TASK_PROPOSAL`.
 - required audit evidence status is missing, failed, blocked, contradicted, or
@@ -252,9 +255,11 @@ STATUS: fail
 
 В `NEXT_RECOMMENDED_ACTION` аудитор должен рекомендовать, какому агенту нужно вернуть задачу на исправление через оркестратора.
 
-If the required reasoning level is available and the actual spawned reasoning
-level is below required, auditor `STATUS: pass` is forbidden. The auditor must
-return `STATUS: fail` or `STATUS: blocked`.
+If the resolved required reasoning level is available and the
+requested/configured runner reasoning level is below required, auditor
+`STATUS: pass` is forbidden. If runner configuration evidence is missing or not
+verifiable, auditor `STATUS: pass` is also forbidden. The auditor must return
+`STATUS: fail` or `STATUS: blocked`.
 
 ---
 

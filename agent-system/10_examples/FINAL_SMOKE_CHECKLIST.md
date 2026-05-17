@@ -219,7 +219,7 @@ REQUESTER_RETURN_PROTOCOL_ALIGNMENT:
   infer return targets from informal context.
 
 REASONING_LEVEL_ALIGNMENT:
-  Allowed levels are low, default, high, maximum, and role_default. Role
+  Allowed levels are low, medium, high, and xhigh. Role
   defaults include tester: high. Task packets may raise reasoning level freely,
   may lower it only for mechanical bounded tasks with OVERRIDE_REASON, and may
   never lower below gate-required floor. Low is forbidden for design,
@@ -228,13 +228,15 @@ REASONING_LEVEL_ALIGNMENT:
   and cross-link validation. Before profile-agent dispatch, the orchestrator
   resolves role_default_reasoning_level, task_packet_reasoning_level,
   gate_required_floor, final_required_dispatch_level, and
-  actual_spawned_reasoning_level. Dispatch records must include
-  REASONING_LEVEL_REQUIRED, REASONING_LEVEL_SOURCE, REASONING_LEVEL_ACTUAL,
-  REASONING_LEVEL_COMPLIANCE, and SPAWN_LOG_REF or HANDOFF_LOG_REF. Actual
-  spawned reasoning below required is invalid dispatch: worker RESULT is
-  invalid, auditor pass is forbidden, checkpoint is forbidden after
-  reasoning-level mismatch, and commit/push are forbidden after
-  reasoning-level mismatch.
+  requested_or_configured_reasoning_level. Dispatch records must include
+  REASONING_LEVEL_REQUIRED, REASONING_LEVEL_SOURCE, REASONING_LEVEL_RESOLVED,
+  RUNNER_CONFIG_EVIDENCE, REASONING_LEVEL_COMPLIANCE, and SPAWN_LOG_REF or
+  HANDOFF_LOG_REF. Requested/configured runner reasoning below resolved
+  required is invalid dispatch: worker RESULT is invalid, auditor pass is
+  forbidden, checkpoint is forbidden after reasoning-level mismatch, and
+  commit/push are forbidden after reasoning-level mismatch. The orchestrator
+  must not claim internal actual reasoning unless the runner provides
+  verifiable evidence.
 
 RUNTIME_FILE_SET_ALIGNMENT:
   Mandatory runtime file lists in start, runtime loop, runtime state schema,
@@ -426,11 +428,13 @@ UPG_ASU_130_003_DISPATCH_REASONING_AND_BOOTSTRAP_SMOKE_FIX:
   BLOCKED_BY, ACTION_SEMANTIC, REQUESTER_RETURN_CONTEXT,
   BLOCKING_OR_RESUME_CONTEXT, REQUIRED_UNIVERSAL_DOCS,
   REQUIRED_PROJECT_DOCS, EXPECTED_RESULT, and INSTRUCTION_FOR_ORCHESTRATOR.
-  Smoke evidence must also verify actual spawned reasoning is recorded through
-  REASONING_LEVEL_ACTUAL and REASONING_LEVEL_COMPLIANCE, actual spawned
-  reasoning below required invalidates the worker RESULT, auditor must check
-  reasoning-level execution compliance, checkpoint/commit/push are forbidden
-  after reasoning mismatch, requester-return tuple coverage includes
+  Smoke evidence must also verify resolved required reasoning and runner
+  configuration evidence through REASONING_LEVEL_RESOLVED,
+  RUNNER_CONFIG_EVIDENCE, and REASONING_LEVEL_COMPLIANCE,
+  requested/configured runner reasoning below resolved required invalidates the
+  worker RESULT, auditor must check reasoning-level execution compliance,
+  checkpoint/commit/push are forbidden after reasoning mismatch,
+  requester-return tuple coverage includes
   NEXT_ACTION.REQUESTER_RETURN_CONTEXT and
   TASK_REGISTRY.requester_return_metadata, and the active version tuple remains
   1.3.0 / 1.3.0 / 1.2.0.

@@ -1,0 +1,216 @@
+# RUNTIME_FILE_TAXONOMY
+
+## Purpose
+
+This document defines the stable taxonomy for project input, stable project
+documentation, and runtime execution artifacts.
+
+The goal is to prevent runtime files from looking like duplicate project
+documentation and to keep future migration work non-destructive.
+
+## Top-level roots
+
+The project filesystem uses these roots:
+
+```text
+project-docs     = stable documentation
+project-runtime  = execution state/artifacts
+project-input    = owner input/TZ/upgrade packages
+```
+
+### project-docs
+
+`project-docs/` contains durable project documentation that remains useful
+after a task attempt finishes.
+
+Allowed content includes:
+
+```text
+- architecture documents
+- accepted design documents
+- stage plans
+- user-facing documentation
+- stable project reference material
+```
+
+`project-docs/` must not become a dump for every task packet, worker result,
+audit result, checkpoint receipt, or stale runtime state record.
+
+### project-runtime
+
+`project-runtime/` contains execution state and operational evidence used by
+the orchestrator, auditors, validators, and checkpoint flow.
+
+Runtime artifacts include:
+
+```text
+- active runtime state
+- task queues and task lifecycle records
+- worker results
+- audit results
+- agent lifecycle events
+- checkpoint receipts
+- generated status, lint, archive, and smoke reports
+```
+
+Profile agents do not own `project-runtime/` writes unless a bounded task
+explicitly grants a narrow universal-governance correction scope. Normal
+runtime state updates remain orchestrator-owned.
+
+### project-input
+
+`project-input/` contains owner-supplied input and package material.
+
+Allowed content includes:
+
+```text
+- original TZ and owner instructions
+- upgrade packages
+- package task packets supplied by the owner
+- owner-provided source material for downstream project work
+```
+
+Agents may read `project-input/` only when the task packet or runtime handoff
+explicitly lists the relevant files. Agents must not rewrite owner input unless
+a separate bounded normalization or package-correction task grants that scope.
+
+## Recommended project-runtime structure
+
+New runtime-producing work should prefer this structure:
+
+```text
+project-runtime/
+  tasks/
+    pending/
+    active/
+    completed/
+    superseded/
+
+  results/
+    worker/
+    audit/
+
+  agents/
+    instances.jsonl
+
+  checkpoints/
+
+  reports/
+```
+
+Recommended meanings:
+
+```text
+project-runtime/tasks/pending     = prepared but not currently dispatched
+project-runtime/tasks/active      = selected or dispatchable active task packets
+project-runtime/tasks/completed   = completed task packets retained for traceability
+project-runtime/tasks/superseded  = replaced task packets with supersession metadata
+project-runtime/results/worker    = profile-agent RESULT records
+project-runtime/results/audit     = auditor AUDIT_RESULT records
+project-runtime/agents/instances.jsonl = one-task profile-agent lifecycle events
+project-runtime/checkpoints       = checkpoint eligibility and checkpoint receipts
+project-runtime/reports           = generated status, lint, archive, and smoke reports
+```
+
+## Naming conventions
+
+Task packets:
+
+```text
+TASK_<ROLE>_<AREA>_<ACTION>_<NNN>.md
+```
+
+Worker results:
+
+```text
+RESULT_<TASK_ID>_ATTEMPT_<NNN>.md
+```
+
+Audit results:
+
+```text
+AUDIT_RESULT_<TASK_ID>_ATTEMPT_<NNN>.md
+```
+
+Checkpoint receipts:
+
+```text
+CHECKPOINT_<TASK_ID>.json
+CHECKPOINT_<TASK_ID>.md
+```
+
+Task, result, and audit records should not share an untyped basename. Use the
+`TASK_`, `RESULT_`, and `AUDIT_RESULT_` prefixes so humans and validators can
+distinguish packet, worker evidence, and audit evidence at a glance.
+
+## Compatibility policy
+
+Existing runtime layouts remain compatible.
+
+The following existing paths are still valid unless a future bounded migration
+task supersedes them:
+
+```text
+project-runtime/agent-results/
+project-runtime/audits/
+project-runtime/bootstrap/
+project-runtime/archive/
+project-runtime/state/
+project-runtime/PROJECT_STATE.md
+project-runtime/CURRENT_GATE.md
+project-runtime/NEXT_ACTION.md
+project-runtime/GAP_REGISTER.md
+project-runtime/TASK_REGISTRY.md
+project-runtime/ACCEPTED_ARTIFACTS.md
+project-runtime/AGENT_RESULTS_LOG.md
+project-runtime/ORCHESTRATOR_EVENTS_LOG.md
+project-runtime/STATUS_SUMMARY.md
+project-runtime/WORKSPACE_IDENTITY.md
+project-runtime/REPOSITORY_LOCK.md
+```
+
+This taxonomy is a preferred layout for new runtime artifacts, not permission
+to delete, rewrite, or relocate historical execution evidence.
+
+Validators and archive tools may accept both old and recommended locations
+during the migration window. In particular, legacy worker results under
+`project-runtime/agent-results/` remain valid evidence while new worker results
+may use `project-runtime/results/worker/`.
+
+## Future migration path
+
+Migration to the recommended structure must be separate, audited, and
+non-destructive.
+
+A future migration task should:
+
+```text
+1. inventory existing runtime artifacts and accepted references;
+2. define an explicit mapping from old paths to recommended paths;
+3. update registries and accepted artifact references in one bounded change;
+4. preserve historical files or add archive/supersession records before any move;
+5. update validators to read both old and new paths until all references migrate;
+6. record migration evidence under project-runtime/reports/ or checkpoints/;
+7. run lint, archive verification, and governance smoke checks where applicable.
+```
+
+No destructive cleanup is authorized by this taxonomy task. Deletion of
+historical runtime artifacts requires a dedicated archive or supersede workflow
+with owner-visible evidence.
+
+## Lint expectations
+
+Runtime lint should detect or queue checks for:
+
+```text
+- task packet/result/audit result with the same basename and no type prefix;
+- result without a referenced task;
+- audit result without a referenced worker result;
+- completed task still in an active folder;
+- superseded task without superseded_by metadata;
+- accepted artifact path missing;
+- stale checkpoint_pending or audit_pending statuses after aggregate checkpoint.
+```
+
+These checks may be implemented incrementally, but their target behavior is
+part of the taxonomy policy.

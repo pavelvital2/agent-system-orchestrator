@@ -8,22 +8,25 @@ This document defines validation checks for explicit reasoning level governance.
 
 ```text
 low
-default
+medium
 high
-maximum
-role_default
+xhigh
 ```
+
+`default`, `maximum`, and `role_default` are deprecated values and must not be
+used as `REASONING_LEVEL.VALUE` in new task packets. `role_default` may be used
+only as source/policy metadata, not as a level value.
 
 ## Role defaults
 
 ```text
-orchestrator: default
-requirements_analyst: maximum
-designer: maximum
-developer: default
-auditor: high
+orchestrator: high
+requirements_analyst: high
+designer: xhigh
+developer: high
+auditor: xhigh
 tester: high
-technical_writer: default
+technical_writer: medium
 devops_setup_engineer: high
 release_manager: high
 ```
@@ -31,25 +34,28 @@ release_manager: high
 ## Gate-required floors
 
 ```text
-requirements gate: maximum
-design gate: maximum
-audit gate: high
-final audit: maximum
+requirements gate: xhigh
+design gate: xhigh
+audit gate: xhigh
+final audit: xhigh
 testing gate: high
 setup gate: high
 launch gate: high
-final acceptance: maximum
+final acceptance: xhigh
 correction after audit fail: high
-governance correction: maximum
-lifecycle/state/transition changes: maximum
+governance correction: xhigh
+lifecycle/state/transition changes: xhigh
 security/secrets policy: high
 cross-link validation: high
 ```
 
 ## Validation rules
 
-- `REASONING_LEVEL.VALUE` must be one of the allowed levels.
-- `role_default` resolves to the target role default before gate-floor checks.
+- `REASONING_LEVEL.VALUE` must be one of the allowed levels:
+  `low`, `medium`, `high`, or `xhigh`.
+- `role_default` must not be used as `REASONING_LEVEL.VALUE`; it is valid only
+  as source/policy metadata that resolves to the target role default before
+  gate-floor checks.
 - A task packet may raise reasoning level without `OVERRIDE_REASON`.
 - A task packet may lower reasoning level only for mechanical bounded tasks and
   must include `OVERRIDE_REASON`.
@@ -74,14 +80,15 @@ role_default_reasoning_level
 task_packet_reasoning_level
 gate_required_floor
 final_required_dispatch_level
-actual_spawned_reasoning_level
+requested_or_configured_reasoning_level
+runner_config_evidence
 ```
 
 `final_required_dispatch_level` is the highest applicable level among role
 default, task packet `REASONING_LEVEL`, and gate-required floor, using:
 
 ```text
-low < default < high < maximum
+low < medium < high < xhigh
 ```
 
 The handoff, spawn log, or orchestrator transcript must record:
@@ -92,13 +99,14 @@ TASK_ID
 TASK_PACKET
 REASONING_LEVEL_REQUIRED
 REASONING_LEVEL_SOURCE
-REASONING_LEVEL_ACTUAL
+REASONING_LEVEL_RESOLVED
+RUNNER_CONFIG_EVIDENCE
 REASONING_LEVEL_COMPLIANCE
 SPAWN_LOG_REF or HANDOFF_LOG_REF
 ```
 
-If the actual spawned reasoning level is below required, this is invalid
-dispatch:
+If the requested or configured runner reasoning level is below required, this
+is invalid dispatch:
 
 - worker RESULT is invalid;
 - audit must fail or block and must not pass;
@@ -109,8 +117,10 @@ dispatch:
 ## Auditor compliance check
 
 The auditor must verify reasoning-level execution compliance from task packet,
-role defaults, gate-required floor, and evidence of the actual spawned
-reasoning level from spawn log, handoff, or orchestrator transcript.
+role defaults, gate-required floor, and available runner configuration evidence
+from spawn log, handoff, or orchestrator transcript. The system must not claim
+knowledge of the agent's internal reasoning level unless the runner provides
+verifiable evidence.
 
 Auditor validation must check:
 
@@ -118,16 +128,14 @@ Auditor validation must check:
 task packet REASONING_LEVEL
 role default
 gate-required floor
-actual spawned reasoning level
+requested or configured runner reasoning level
 no downgrade below required level
 evidence from spawn log, handoff, or orchestrator transcript
 ```
 
-If the actual spawned reasoning level is lower than the resolved required level
-or if evidence for the actual spawned reasoning level is missing, unknown, or
-not traceable to `SPAWN_LOG_REF`, `HANDOFF_LOG_REF`, or an orchestrator
-transcript, auditor `STATUS: pass` is invalid. The auditor must return
-`STATUS: fail` or `STATUS: blocked`.
+If the requested or configured runner reasoning level is lower than the
+resolved required level, auditor `STATUS: pass` is invalid. The auditor must
+return `STATUS: fail` or `STATUS: blocked`.
 
 Auditor evidence must record:
 

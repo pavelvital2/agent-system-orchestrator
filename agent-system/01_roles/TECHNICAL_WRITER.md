@@ -290,7 +290,7 @@ Return blocker to orchestrator for routing.
 Рекомендуемый reasoning level для техрайтера:
 
 ```text
-default
+medium
 ```
 
 Если documentation task требует новой архитектурной интерпретации или изменения продукта, техрайтер обязан вернуть GAP.

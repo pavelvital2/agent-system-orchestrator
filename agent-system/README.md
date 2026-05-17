@@ -30,6 +30,10 @@ termination rules are documented in
 [PROFILE_AGENT_LIFECYCLE.md](02_runtime/PROFILE_AGENT_LIFECYCLE.md).
 
 The filesystem is the source of truth. Runtime state, gates, registries, logs, task packets, results, audit results, handoffs, and accepted artifacts are represented as files governed by the package rules.
+The top-level taxonomy is documented in
+[RUNTIME_FILE_TAXONOMY.md](02_runtime/RUNTIME_FILE_TAXONOMY.md):
+`project-docs` is stable documentation, `project-runtime` is execution
+state/artifacts, and `project-input` is owner input, TZ, and upgrade packages.
 
 Research dependencies use a controlled extension of the same sequence:
 
@@ -80,6 +84,7 @@ Key rules cover:
 - runtime loop behavior;
 - profile-agent lifecycle and termination;
 - filesystem governance;
+- runtime file taxonomy;
 - handoff protocol;
 - accepted-state locking;
 - violation recovery;

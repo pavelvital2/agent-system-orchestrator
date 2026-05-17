@@ -210,13 +210,14 @@ Rules:
 ## REASONING_LEVEL
 
 ```text
-VALUE: low | default | high | maximum | role_default
+VALUE: low | medium | high | xhigh
 OVERRIDE_REASON: <reason | NONE>
 ```
 
 Rules:
 
-- `role_default` resolves to the default for `TARGET_ROLE`;
+- `role_default` is valid only as source/policy metadata, not as
+  `REASONING_LEVEL.VALUE`;
 - a task packet may raise reasoning level freely;
 - a task packet may lower below role default only for mechanical bounded tasks
   and must include `OVERRIDE_REASON`;

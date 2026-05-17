@@ -369,19 +369,23 @@ informal context.
    - before spawning a profile agent, resolve dispatch reasoning:
      `role_default_reasoning_level`, `task_packet_reasoning_level`,
      `gate_required_floor`, `final_required_dispatch_level`, and
-     `actual_spawned_reasoning_level`;
+     `requested_or_configured_reasoning_level` with
+     `runner_config_evidence`;
    - compute `final_required_dispatch_level` as the highest applicable level
      among role default, task packet `REASONING_LEVEL`, and gate-required
-     floor, using `low < default < high < maximum`;
+     floor, using `low < medium < high < xhigh`;
    - record `TARGET_ROLE`, `TASK_ID`, `TASK_PACKET`,
      `REASONING_LEVEL_REQUIRED`, `REASONING_LEVEL_SOURCE`,
-     `REASONING_LEVEL_ACTUAL`, `REASONING_LEVEL_COMPLIANCE`, and
+     `REASONING_LEVEL_RESOLVED`, `RUNNER_CONFIG_EVIDENCE`,
+     `REASONING_LEVEL_COMPLIANCE`, and
      `SPAWN_LOG_REF` or `HANDOFF_LOG_REF` in the handoff, spawn log, or
      orchestrator transcript before RESULT routing;
-   - if the actual spawned reasoning level is below required, classify the
-     spawn as invalid dispatch: the worker RESULT is invalid, audit must fail
-     or block, post-audit checkpoint is forbidden, commit/push are forbidden,
-     and routing must enter governed correction;
+   - do not claim knowledge of the profile agent's internal actual reasoning
+     level unless the runner provides verifiable evidence;
+   - if the requested or configured runner reasoning level is below required,
+     classify the spawn as invalid dispatch: the worker RESULT is invalid,
+     audit must fail or block, post-audit checkpoint is forbidden, commit/push
+     are forbidden, and routing must enter governed correction;
    - создать нового агента;
    - назначить ровно одну задачу;
    - передать универсальные инструкции роли;
@@ -555,9 +559,12 @@ push, the orchestrator must validate in this order:
 23. profile-agent dispatch reasoning is resolved and prepared for recording:
     `role_default_reasoning_level`, `task_packet_reasoning_level`,
     `gate_required_floor`, `final_required_dispatch_level`, and
-    `actual_spawned_reasoning_level`; `final_required_dispatch_level` must be
-    the highest applicable level among role default, task packet
-    `REASONING_LEVEL`, and gate-required floor;
+    `requested_or_configured_reasoning_level` with
+    `runner_config_evidence`; `final_required_dispatch_level` must be the
+    highest applicable level among role default, task packet `REASONING_LEVEL`,
+    and gate-required floor, using `low < medium < high < xhigh`; runner
+    compliance must be based on runner configuration evidence, and the runtime
+    must not claim internal actual reasoning unless runner evidence exists;
 22. `TASK_KIND: research_dependency` and requester continuation routing are
     valid under `REQUESTER_RETURN_PROTOCOL.md`;
 23. for design audit acceptance, changed downstream task-like artifacts are

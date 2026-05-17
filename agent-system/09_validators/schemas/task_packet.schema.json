@@ -93,7 +93,7 @@
       "additionalProperties": false,
       "required": ["VALUE", "OVERRIDE_REASON"],
       "properties": {
-        "VALUE": { "type": "string", "enum": ["low", "default", "high", "maximum", "role_default"] },
+        "VALUE": { "type": "string", "enum": ["low", "medium", "high", "xhigh"] },
         "OVERRIDE_REASON": { "type": "string" }
       }
     },

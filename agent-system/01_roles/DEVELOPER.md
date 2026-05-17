@@ -223,7 +223,7 @@ Return blocker to orchestrator for routing.
 Рекомендуемый reasoning level для разработчика:
 
 ```text
-default
+high
 ```
 
 Если task packet требует сложного архитектурного решения, разработчик не повышает reasoning самостоятельно, а возвращает GAP или blocked для вызова проектировщика.

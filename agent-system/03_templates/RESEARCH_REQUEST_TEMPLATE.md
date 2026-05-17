@@ -49,7 +49,7 @@ requirements_analyst | designer | developer | auditor | tester | technical_write
 ## REASONING_LEVEL
 
 ```text
-VALUE: role_default | high | maximum
+VALUE: high | xhigh
 OVERRIDE_REASON: NONE
 ```
 

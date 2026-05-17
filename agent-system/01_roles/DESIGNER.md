@@ -412,7 +412,7 @@ return `STATUS: gap` or create a non-dispatchable `TASK_PROPOSAL`.
 Рекомендуемый reasoning level для проектировщика:
 
 ```text
-maximum
+xhigh
 ```
 
 ---

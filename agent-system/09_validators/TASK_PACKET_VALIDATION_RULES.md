@@ -133,11 +133,13 @@ Allowed levels are:
 
 ```text
 low
-default
+medium
 high
-maximum
-role_default
+xhigh
 ```
+
+`default`, `maximum`, and `role_default` are deprecated as level values;
+`role_default` may be used only as source/policy metadata.
 
 Task packets may raise reasoning level freely. They may lower below role
 default only for mechanical bounded tasks and only with `OVERRIDE_REASON`.

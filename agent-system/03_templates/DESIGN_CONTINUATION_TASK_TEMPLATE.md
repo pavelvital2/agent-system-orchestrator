@@ -48,7 +48,7 @@ designer
 ## REASONING_LEVEL
 
 ```text
-VALUE: maximum
+VALUE: xhigh
 OVERRIDE_REASON: NONE
 ```
 

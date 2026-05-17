@@ -56,7 +56,7 @@ FAILURE_TYPE_VALUES = {
     "none",
 }
 
-REASONING_LEVEL_VALUES = {"low", "default", "high", "maximum", "role_default"}
+REASONING_LEVEL_VALUES = {"low", "medium", "high", "xhigh"}
 DEPENDENCY_STATUS_VALUES = {"ready", "blocked", "pending", "none"}
 REQUIREMENT_VALUES = {"mandatory", "optional", "none"}
 YES_NO_VALUES = {"yes", "no"}

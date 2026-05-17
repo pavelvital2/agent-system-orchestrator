@@ -25,6 +25,19 @@
 
 Ни один агент не имеет права создавать или менять файлы вне своего scope.
 
+Top-level runtime taxonomy is governed by
+`agent-system/02_runtime/RUNTIME_FILE_TAXONOMY.md`:
+
+```text
+project-docs     = stable documentation
+project-runtime  = execution state/artifacts
+project-input    = owner input/TZ/upgrade packages
+```
+
+That taxonomy defines the preferred new `project-runtime/` task, result,
+agent, checkpoint, and report layout while preserving compatibility with
+existing runtime paths.
+
 ---
 
 ## Bootstrap filesystem
@@ -63,6 +76,7 @@ project-archive/
 - входное ТЗ проекта;
 - дополнительные входные материалы владельца проекта;
 - исходные файлы, которые должны быть переданы проектировщику.
+- upgrade packages and owner-provided package task packets.
 
 Пример:
 
@@ -87,7 +101,9 @@ project-input/TZ.md
 - next action;
 - agent handoff files;
 - agent result logs;
-- GAP register.
+- GAP register;
+- execution artifacts, task lifecycle records, result records, audit records,
+  checkpoint receipts, agent lifecycle events, and generated runtime reports.
 
 Примеры:
 
@@ -108,6 +124,25 @@ Checkpoint eligibility receipts are orchestrator-owned runtime evidence under:
 ```text
 project-runtime/checkpoints/CHECKPOINT_ELIGIBILITY_<TASK_ID>_<ATTEMPT_NO>.md
 ```
+
+Recommended new runtime artifact structure:
+
+```text
+project-runtime/tasks/pending/
+project-runtime/tasks/active/
+project-runtime/tasks/completed/
+project-runtime/tasks/superseded/
+project-runtime/results/worker/
+project-runtime/results/audit/
+project-runtime/agents/instances.jsonl
+project-runtime/checkpoints/
+project-runtime/reports/
+```
+
+Existing paths such as `project-runtime/agent-results/`,
+`project-runtime/audits/`, `project-runtime/bootstrap/`, and root-level
+runtime state files remain compatible. Moving or deleting historical runtime
+artifacts requires a separate archive or supersede workflow.
 
 Кто может менять:
 - оркестратор;
@@ -154,6 +189,10 @@ Project filesystem появляется после работы проектир
 ```text
 project-docs/
 ```
+
+`project-docs/` is for stable documentation. It must not be used as a runtime
+dump for every worker result, audit result, checkpoint receipt, or stale state
+artifact.
 
 Если проектировщик предлагает другой root, он должен явно зафиксировать это в runtime state и пройти audit.
 

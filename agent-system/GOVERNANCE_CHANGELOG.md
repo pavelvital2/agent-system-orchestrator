@@ -637,16 +637,16 @@ AFFECTED_INVARIANTS:
 - UPG_ASU_130_002 was invalidated as clean baseline due to reasoning-level dispatch mismatch.
 - UPG_ASU_130_002 also left stale bootstrap placeholder references.
 - UPG_ASU_130_003 fixes dispatch reasoning enforcement and bootstrap smoke consistency.
-- orchestrator must resolve role default, task packet reasoning, gate-required floor, final required dispatch level, and actual spawned reasoning level before RESULT routing
-- REASONING_LEVEL_ACTUAL and REASONING_LEVEL_COMPLIANCE must be recorded with SPAWN_LOG_REF or HANDOFF_LOG_REF evidence
-- actual spawned reasoning below required invalidates worker RESULT and forbids auditor pass
+- orchestrator must resolve role default, task packet reasoning, gate-required floor, `REASONING_LEVEL_RESOLVED`, requested/configured runner reasoning, and `RUNNER_CONFIG_EVIDENCE` before RESULT routing
+- `REASONING_LEVEL_RESOLVED`, `RUNNER_CONFIG_EVIDENCE`, and `REASONING_LEVEL_COMPLIANCE` must be recorded with SPAWN_LOG_REF or HANDOFF_LOG_REF evidence
+- requested/configured runner reasoning below `REASONING_LEVEL_RESOLVED` invalidates worker RESULT and forbids auditor pass
 - checkpoint, commit, and push are forbidden after reasoning-level mismatch
 - auditor must validate reasoning-level execution compliance from task packet, role default, gate floor, and spawn/handoff evidence
 - requester-return runtime tuple coverage explicitly includes NEXT_ACTION.REQUESTER_RETURN_CONTEXT and TASK_REGISTRY.requester_return_metadata
 - active version tuple remains 1.3.0 / 1.3.0 / 1.2.0
 AFFECTED_TRANSITIONS:
-- profile-agent create_agent dispatch -> reasoning-level resolution and recording before RESULT routing
-- invalid dispatch from actual spawned reasoning below required -> governed correction
+- profile-agent create_agent dispatch -> reasoning-level resolution, requested/configured runner reasoning, and runner configuration evidence recording before RESULT routing
+- invalid dispatch from requested/configured runner reasoning below `REASONING_LEVEL_RESOLVED` -> governed correction
 - invalid reasoning dispatch -> audit fail or blocked, no pass
 - reasoning-level mismatch -> no post-audit checkpoint, no commit, no push
 - runtime tuple validation -> correction routing when requester return context or requester return metadata is missing or contradictory

@@ -128,7 +128,7 @@ developer
 
 ## REASONING_LEVEL
 \`\`\`text
-VALUE: default
+VALUE: high
 OVERRIDE_REASON: NONE
 \`\`\`
 

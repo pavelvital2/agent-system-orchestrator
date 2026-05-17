@@ -111,31 +111,35 @@ Allowed reasoning levels:
 
 ```text
 low
-default
+medium
 high
-maximum
-role_default
+xhigh
 ```
 
 Role defaults:
 
 ```text
-orchestrator: default
-requirements_analyst: maximum
-designer: maximum
-developer: default
-auditor: high
-tester: high
-technical_writer: default
+orchestrator: high
+solution_architect: xhigh
+designer: xhigh
+researcher: high
+developer: high
+auditor: xhigh
+qa: high
+documenter: medium
+summarizer: medium
+simple_file_operator: low
 devops_setup_engineer: high
 release_manager: high
 ```
 
-If a task packet sets `REASONING_LEVEL.VALUE: role_default`, the orchestrator
-must resolve it to the default for `TARGET_ROLE` before gate-floor validation.
+Role defaults are source/policy metadata only. A task packet must not set
+`REASONING_LEVEL.VALUE` to `role_default`; when role-default policy is used,
+the orchestrator records source metadata and resolves the concrete value before
+gate-floor validation.
 
-Task packets may raise reasoning level freely. A task packet may lower below
-the role default only for mechanical bounded tasks and only with
+Task packets may request a concrete reasoning level freely. A task packet may
+lower below the role default only for mechanical bounded tasks and only with
 `OVERRIDE_REASON`.
 
 The orchestrator must reject dispatch when the requested level is below a

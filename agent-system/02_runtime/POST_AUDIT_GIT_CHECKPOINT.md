@@ -76,8 +76,8 @@ The orchestrator must not stage, commit, or push after:
   artifacts;
 - ambiguous downstream task artifact classification;
 - `TASK_PROPOSAL` selected as a dispatchable task packet;
-- reasoning-level dispatch mismatch where actual spawned reasoning is below
-  required;
+- reasoning-level dispatch mismatch where requested/configured runner reasoning
+  is below the resolved required level;
 - pending correction for the same work;
 - unaudited research dependency output or research audit fail/blocked/gap when
   requester continuation is waiting;

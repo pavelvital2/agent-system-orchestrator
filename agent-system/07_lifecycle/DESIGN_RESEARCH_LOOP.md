@@ -75,7 +75,7 @@ The continuation task must use:
 ```text
 TASK_KIND: design_continuation
 TARGET_ROLE: designer
-REASONING_LEVEL.VALUE: maximum
+REASONING_LEVEL.VALUE: xhigh
 ```
 
 It must include accepted research and audit refs in `DEPENDENCIES`, `INPUTS`,

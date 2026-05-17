@@ -157,7 +157,8 @@ the auditor returns `STATUS: pass`.
 - `TASK_PACKET: NONE` for any file-changing correction
   (`TASK_PACKET_NONE_FILE_CHANGES_FORBIDDEN`);
 - post-audit Git checkpoint after reasoning-level mismatch or invalid dispatch
-  where actual spawned reasoning is below required;
+  where requested/configured runner reasoning is below the resolved required
+  level;
 - profile-agent dispatch before workspace identity validation passes;
 - runtime initialization that infers identity from folder name, inherited `.git`
   metadata, or raw remote strings without a workspace identity record;
@@ -170,7 +171,7 @@ the auditor returns `STATUS: pass`.
 - push from `WORKSPACE_TYPE: test_fixture`;
 - push after commit failure or checkpoint validation failure;
 - commit or push after reasoning-level mismatch or invalid dispatch where
-  actual spawned reasoning is below required;
+  requested/configured runner reasoning is below the resolved required level;
 - research_dependency result routed to requester continuation before independent auditor pass;
 - audit fail, blocked, or gap for research_dependency routed to requester continuation;
 - requester return target inferred from informal context instead of explicit return metadata;

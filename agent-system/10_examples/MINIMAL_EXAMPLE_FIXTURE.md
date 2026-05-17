@@ -118,7 +118,7 @@ TASK_TITLE: Create requirements baseline
 TASK_TYPE: requirements_analyst
 TARGET_ROLE: requirements_analyst
 REASONING_LEVEL:
-  VALUE: maximum
+  VALUE: xhigh
   OVERRIDE_REASON: NONE
 DEPENDENCIES:
 - NONE

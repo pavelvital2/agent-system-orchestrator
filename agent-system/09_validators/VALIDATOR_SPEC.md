@@ -142,10 +142,10 @@ before_git_checkpoint:
 
 Reasoning-level validation is auditable evidence. Validators must check the
 dispatch record, handoff, spawn log, or orchestrator transcript for
-`REASONING_LEVEL_REQUIRED`, `REASONING_LEVEL_ACTUAL`,
-`REASONING_LEVEL_COMPLIANCE`, and `SPAWN_LOG_REF` or `HANDOFF_LOG_REF`.
-Missing evidence, unknown evidence, or an actual level below the required floor
-must fail or block the audit according to
+`REASONING_LEVEL_REQUIRED`, `REASONING_LEVEL_RESOLVED`,
+`RUNNER_CONFIG_EVIDENCE`, `REASONING_LEVEL_COMPLIANCE`, and `SPAWN_LOG_REF` or
+`HANDOFF_LOG_REF`. A requested or configured runner level below the required
+floor must fail or block the audit according to
 `REASONING_LEVEL_VALIDATION_RULES.md`.
 
 ## Role enum validation baseline
