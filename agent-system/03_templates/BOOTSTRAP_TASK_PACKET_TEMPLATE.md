@@ -277,6 +277,8 @@ Do not derive role document paths by lower-case `TARGET_ROLE` interpolation.
 
 ```text
 - RESULT according to agent-system/03_templates/AGENT_RESULT_TEMPLATE.md
+- BOOTSTRAP_CONTINUATION_STATUS: downstream_task_packet | gap | blocked | wait_for_owner
+- BOOTSTRAP_CONTINUATION_REF: path or route reference
 ```
 
 ## ALLOWED_FILE_CHANGES
@@ -313,6 +315,12 @@ For `designer`:
 - RESULT uses agent-system/03_templates/AGENT_RESULT_TEMPLATE.md;
 - changed files, if any, are within ALLOWED_FILE_CHANGES;
 - gaps or blockers are reported instead of guessed;
+- bootstrap output cannot be accepted unless it contains a valid downstream
+  dispatchable TASK_PACKET, explicit GAP, explicit BLOCKED route, or explicit
+  wait_for_owner route;
+- when research or design continuation is needed, the designer must create a
+  full schema-valid downstream research/design continuation task packet or
+  return GAP/BLOCKED/wait_for_owner;
 - no forbidden file changes are made;
 - no profile agent commits or pushes.
 ```
@@ -431,6 +439,9 @@ Rules:
 - first profile dispatch must reference this valid bootstrap task packet path;
 - first profile dispatch must not use `TASK_PACKET: NONE`;
 - a handoff file is not a task packet substitute;
+- post-bootstrap accepted checkpoint is blocked by
+  `bootstrap_continuation_missing` when `BOOTSTRAP_CONTINUATION_STATUS` is
+  absent, invalid, or not backed by a valid continuation route;
 - post-audit Git checkpoint remains orchestrator-owned and audit-pass only.
 
 ## RESULT_FORMAT

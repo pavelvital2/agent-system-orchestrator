@@ -929,4 +929,56 @@ TRACEABILITY_NOTE: Corrects AUDIT_ASO_PATCH_V2_0_0_FAIL_NON_REPRODUCIBLE_SMOKE_A
 AUTHORIZED_BY: project_owner
 AUDIT_REQUIRED: yes
 STATUS: accepted
+
+CHANGE_ID: GOV-2026-05-17-010
+CHANGE_TITLE: ASO_CORR_200_002_BOOTSTRAP_CONTINUATION_BASELINE_GATE
+DATE: 2026-05-17
+PACKAGE_VERSION_BEFORE: 2.0.0
+PACKAGE_VERSION_AFTER: 2.0.0
+GOVERNANCE_RULESET_BEFORE: 2.0.0
+GOVERNANCE_RULESET_AFTER: 2.0.0
+RUNTIME_SCHEMA_BEFORE: 2.0.0
+RUNTIME_SCHEMA_AFTER: 2.0.0
+CHANGE_TYPE: correction
+AFFECTED_FILES:
+- agent-system/01_roles/AUDITOR.md
+- agent-system/01_roles/DESIGNER.md
+- agent-system/01_roles/ORCHESTRATOR.md
+- agent-system/02_runtime/ALLOWED_ORCHESTRATOR_ACTIONS.md
+- agent-system/02_runtime/GOVERNANCE_AUTHORITY.md
+- agent-system/02_runtime/ORCHESTRATOR_RUNTIME_LOOP.md
+- agent-system/02_runtime/POST_AUDIT_GIT_CHECKPOINT.md
+- agent-system/02_runtime/STATE_TRANSITION_RULES.md
+- agent-system/03_templates/BOOTSTRAP_TASK_PACKET_TEMPLATE.md
+- agent-system/04_state/CURRENT_GATE_TEMPLATE.md
+- agent-system/04_state/NEXT_ACTION_TEMPLATE.md
+- agent-system/04_state/PROJECT_STATE_TEMPLATE.md
+- agent-system/04_state/RUNTIME_STATE_SCHEMA.md
+- agent-system/07_lifecycle/BOOTSTRAP_STAGE.md
+- agent-system/09_validators/GIT_CHECKPOINT_VALIDATION_RULES.md
+- agent-system/09_validators/WORKSPACE_IDENTITY_VALIDATION_RULES.md
+- agent-system/scripts/checkpoint_preflight.sh
+- agent-system/scripts/init_project_workspace.sh
+- agent-system/scripts/run_governance_smoke_tests.sh
+- agent-system/tests/fixtures/*
+AFFECTED_INVARIANTS:
+- Bootstrap audit/checkpoint acceptance requires a valid downstream task packet, explicit GAP, explicit BLOCKED route, or explicit wait_for_owner route.
+- Orchestrator/TASK_PACKET:NONE correction routes cannot create project task packets or project design artifacts.
+- Baseline tracking gate blocks untracked critical agent-system/project-runtime baseline paths unless an explicit owner policy records the allowed exception.
+- Smoke fixtures are self-contained under agent-system/tests/fixtures and do not depend on top-level tests/fixtures or owner project-input.
+- checkpoint_preflight.sh accepts canonical github.com/OWNER/REPO remote fields and reads actual remote, branch, and toplevel from live Git commands.
+- Manual preflight descriptions are insufficient checkpoint evidence.
+- Active version tuple remains 2.0.0 / 2.0.0 / 2.0.0.
+AFFECTED_TRANSITIONS:
+- bootstrap audit pass -> blocked when BOOTSTRAP_CONTINUATION_STATUS is missing or invalid.
+- first profile-agent dispatch/checkpoint -> blocked on untracked critical baseline without policy exception.
+- checkpoint preflight -> live Git actual state is authoritative over cached runtime ACTUAL_* fields.
+- checkpoint evidence -> manual preflight references block checkpoint eligibility.
+SCHEMA_TEMPLATE_IMPACT: both
+MIGRATION_REQUIRED: yes
+MIGRATION_NOTE: Existing v2.0.0 project workspaces must track the installed agent-system and critical project-runtime identity/lock/state baseline before normal dispatch/checkpoint, or record an explicit owner policy exception for private project input. Existing cached ACTUAL_* runtime fields remain evidence but are not authoritative for real Git checks.
+TRACEABILITY_NOTE: Corrects AUDIT_MARKETS_V2_TEST_RUN_FAIL_BOOTSTRAP_DEAD_END_AND_BASELINE_GOVERNANCE_GAP through TASK_ASO_CORR_200_002_BOOTSTRAP_CONTINUATION_BASELINE_GATE after mandatory auditor pass and orchestrator-owned checkpoint.
+AUTHORIZED_BY: project_owner
+AUDIT_REQUIRED: yes
+STATUS: accepted
 ```

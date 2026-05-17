@@ -13,6 +13,7 @@ TASK_PACKET:
 ACTION_SEMANTIC: normal | wait_for_owner | pause | stop_terminal | completed_state_transition
 WORKSPACE_IDENTITY_STATUS: not_checked | passed | failed | blocked
 REPOSITORY_LOCK_STATUS: absent | draft | accepted | revoked | blocked | not_required
+BASELINE_TRACKING_STATUS: not_checked | passed | blocked | owner_action_required
 CHECKPOINT_ELIGIBILITY: blocked | local_only | push_allowed | not_applicable
 CHECKPOINT_ELIGIBILITY_STATUS: not_checked | eligible | ineligible | blocked
 PROJECT_CHECKPOINT_STATUS: not_required | pending | passed | failed | blocked
@@ -42,6 +43,10 @@ and `none` are control/routing pseudo-roles, not profile task types.
 Workspace identity status, repository lock status, and checkpoint eligibility
 are mandatory gate fields. A gate cannot pass checkpoint, commit, or push
 eligibility while workspace identity is `not_checked`, `failed`, or `blocked`.
+First profile-agent dispatch and first accepted checkpoint are blocked while
+`BASELINE_TRACKING_STATUS` is `not_checked`, `blocked`, or
+`owner_action_required`, except for owner wait or governed correction routes
+that create/track the baseline.
 `CHECKPOINT_ELIGIBILITY_STATUS` must remain separate from audit status; auditor
 `STATUS: pass` is a prerequisite, not a checkpoint decision.
 

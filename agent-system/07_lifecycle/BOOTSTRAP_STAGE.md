@@ -118,3 +118,35 @@ BLOCKING_OR_RESUME_CONTEXT: NONE
 
 Bootstrap exits when the orchestrator has a valid next bounded task packet and
 enough source material to dispatch the next role.
+
+## Continuation gate
+
+An accepted bootstrap audit and checkpoint is forbidden unless the bootstrap
+result records one valid continuation route:
+
+```text
+BOOTSTRAP_CONTINUATION_STATUS: downstream_task_packet | gap | blocked | wait_for_owner
+BOOTSTRAP_CONTINUATION_REF:
+```
+
+Valid continuation routes are:
+
+- `downstream_task_packet`: a full schema-valid dispatchable `# TASK PACKET`
+  exists under the active task packet root and can be selected by
+  `NEXT_ACTION.TASK_PACKET`;
+- `gap`: the result returns `STATUS: gap` with owner-decision questions;
+- `blocked`: the result returns `STATUS: blocked` with a concrete blocker and
+  recovery route;
+- `wait_for_owner`: the next action is an explicit owner wait route with
+  bounded owner questions and resume conditions.
+
+If `BOOTSTRAP_CONTINUATION_STATUS` is missing, `NONE`, contradictory, or points
+only to architecture/intake documentation, checkpoint eligibility is blocked by:
+
+```text
+bootstrap_continuation_missing
+```
+
+Bootstrap may not be accepted into a runtime state where the next route asks
+the orchestrator to create project task packets or project design artifacts
+with `TASK_PACKET: NONE`.

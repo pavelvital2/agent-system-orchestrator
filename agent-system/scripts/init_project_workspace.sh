@@ -93,7 +93,7 @@ canonical_github_path() {
   [[ -n "$repo" ]] || return 1
   [[ "$repo" != */* ]] || return 1
 
-  printf 'github.com/%s/%s\n' "$owner" "$repo"
+  printf 'github.com/%s/%s\n' "${owner,,}" "${repo,,}"
 }
 
 canonical_remote() {
@@ -109,6 +109,11 @@ canonical_remote() {
     path="${BASH_REMATCH[2]}"
     [[ "$host" == "github.com" ]] || return 2
     canonical_github_path "$path" || return 2
+    return 0
+  fi
+
+  if [[ "$raw" =~ ^github\.com/([^/]+)/([^/]+)(\.git)?$ ]]; then
+    canonical_github_path "${BASH_REMATCH[1]}/${BASH_REMATCH[2]}" || return 2
     return 0
   fi
 
@@ -227,6 +232,12 @@ $IDENTITY_VALIDATION_ERROR
 
 INITIALIZATION_COPY_POLICY:
 agent-system copied without .git; project-input, project-runtime, and project-archive created locally.
+
+BASELINE_TRACKING_STATUS:
+$BASELINE_TRACKING_STATUS
+
+NEXT_REQUIRED_OWNER_ACTION:
+$NEXT_REQUIRED_OWNER_ACTION
 EOF
 }
 
@@ -287,6 +298,13 @@ LOCK_ACCEPTANCE_REQUIREMENTS:
 
 COPY_PROTECTION:
 The package repository .git directory was not copied or reused.
+
+BASELINE_TRACKING_REQUIREMENTS:
+- Track agent-system/ in the project repository before first profile-agent dispatch.
+- Track project-runtime/WORKSPACE_IDENTITY.md and project-runtime/REPOSITORY_LOCK.md before first profile-agent dispatch.
+- Track runtime state records before first accepted checkpoint.
+- Track .gitignore when it is used to govern baseline reproducibility.
+- project-input/TZ.md may remain untracked only when owner-private/untracked input policy is explicit.
 EOF
 }
 
@@ -462,6 +480,8 @@ REPOSITORY_LOCK_STATUS="pending"
 IDENTITY_VALIDATION_STATUS="blocked"
 IDENTITY_VALIDATION_ERROR="repository_lock_missing"
 EFFECTIVE_PUSH_ALLOWED="false"
+BASELINE_TRACKING_STATUS="owner_action_required"
+NEXT_REQUIRED_OWNER_ACTION="Commit or otherwise explicitly track the initialized governance baseline before orchestrator launch: agent-system/, project-runtime/WORKSPACE_IDENTITY.md, project-runtime/REPOSITORY_LOCK.md, runtime state records as applicable, and .gitignore if used. Keep project-input/TZ.md untracked only with explicit owner-private/untracked input policy."
 
 if [[ "$ACCEPT_REPOSITORY_LOCK" == "true" ]]; then
   [[ "$TARGET_HAS_OWN_GIT" == "true" ]] || die "repository_lock_missing: target .git must exist before lock acceptance"
@@ -489,3 +509,5 @@ printf 'Initialized workspace: %s\n' "$TARGET_ROOT"
 printf 'Workspace identity: %s\n' "$TARGET_ROOT/project-runtime/WORKSPACE_IDENTITY.md"
 printf 'Repository lock: %s\n' "$TARGET_ROOT/project-runtime/REPOSITORY_LOCK.md"
 printf 'Repository lock status: %s\n' "$REPOSITORY_LOCK_STATUS"
+printf 'Baseline tracking status: %s\n' "$BASELINE_TRACKING_STATUS"
+printf 'NEXT_REQUIRED_OWNER_ACTION: %s\n' "$NEXT_REQUIRED_OWNER_ACTION"

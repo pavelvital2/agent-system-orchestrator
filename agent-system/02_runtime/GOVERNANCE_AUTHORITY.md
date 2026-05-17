@@ -29,6 +29,11 @@ These rules cannot be overridden by task packet, NEXT_ACTION, handoff, or agent 
 17. Push is forbidden unless an accepted repository lock sets
     `PUSH_ALLOWED: true` for the current workspace type, canonical repository
     identity, and branch.
+18. Critical governance/runtime baseline paths must be tracked before first
+    profile-agent dispatch and first accepted checkpoint unless an explicit
+    owner policy records the allowed exception.
+19. Bootstrap cannot be accepted without a valid downstream task packet,
+    explicit GAP, explicit BLOCKED route, or explicit wait_for_owner route.
 
 ## Authority precedence
 
@@ -60,6 +65,8 @@ A lower authority cannot relax or bypass a higher authority.
 | Canonical expected and actual repository identity differ | Treat as `repository_identity_mismatch`; dispatch, checkpoint, commit, and push are forbidden. |
 | Expected and actual branch differ | Treat as `repository_branch_mismatch`; push is forbidden and commit requires an explicit governed local-only checkpoint allowance. |
 | README/runtime/manifest/Git identity conflict | Treat as `workspace_identity_leakage`; dispatch, checkpoint, commit, and push are forbidden until correction. |
+| Untracked critical baseline path | Treat as `untracked_critical_baseline`; first dispatch and checkpoint are forbidden until tracked or explicitly exempted by owner policy. |
+| Bootstrap result has no valid continuation route | Treat as `bootstrap_continuation_missing`; accepted checkpoint and normal next dispatch are forbidden. |
 
 ## Governance freeze
 

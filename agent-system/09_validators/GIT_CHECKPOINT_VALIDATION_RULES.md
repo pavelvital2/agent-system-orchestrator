@@ -56,6 +56,11 @@ A Git checkpoint is valid only when all conditions are true:
   `AUDIT_STATUS`;
 - `CHECKPOINT_PREFLIGHT_STATUS: passed` is recorded with a bounded preflight
   reference.
+- `CHECKPOINT_PREFLIGHT_REF` identifies an executable
+  `agent-system/scripts/checkpoint_preflight.sh` invocation or saved receipt;
+  manual descriptions are insufficient.
+- critical baseline paths are tracked, or an explicit owner policy records the
+  allowed exception.
 - auditor evidence contains passing `CHANGED_FILES_SCOPE_STATUS`,
   `TASK_PACKET_SCHEMA_STATUS`, `SECRET_EXPOSURE_STATUS`,
   `REPOSITORY_IDENTITY_STATUS`, `FORBIDDEN_PATH_STATUS`,
@@ -90,6 +95,10 @@ Checkpoint is forbidden after:
 - `SECRET_SCAN_STATUS: potential_secret_exposure`;
 - missing checkpoint eligibility receipt for a local-only or commit-and-push
   checkpoint.
+- manual preflight references such as `orchestrator manual preflight <date>`;
+- untracked critical baseline paths without explicit policy exception;
+- bootstrap results missing a valid downstream task packet, explicit GAP,
+  explicit BLOCKED route, or explicit wait_for_owner route;
 - unresolved `AUDIT_FALSE_PASS_DETECTED`;
 - pending correction with `FAILURE_TYPE: audit_miss`.
 
@@ -101,10 +110,11 @@ these checks in order:
 ```text
 1. identity_check
 2. git_target_check
-3. changed_files_scope_check
-4. task_packet_schema_check
-5. runtime_schema_check
-6. secret_scan_check
+3. baseline_tracking_check
+4. changed_files_scope_check
+5. task_packet_schema_check
+6. runtime_schema_check
+7. secret_scan_check
 ```
 
 Preflight evidence must record these status labels:
@@ -143,6 +153,9 @@ Checkpoint preflight passes only when all of the following are true:
 - workspace identity status passed;
 - canonical expected and actual Git remotes match;
 - expected and actual branches match;
+- actual Git remote, branch, and toplevel are read from live Git commands for
+  real repository checks, not trusted from cached runtime `ACTUAL_*` fields;
+- no critical baseline path is untracked without explicit owner policy;
 - push target is not required, or `LAST_PUSH_TARGET_STATUS: matched`;
 - changed files are allowed by task packet scope and
   `CHANGED_FILES_SCOPE_MATRIX.md`;
@@ -160,6 +173,8 @@ Checkpoint preflight passes only when all of the following are true:
 - secret scan returns no `potential_secret_exposure`.
 - syntax evidence for changed `.sh` and `.py` files is present and passing
   before checkpoint eligibility is granted.
+- bootstrap continuation status is present and valid before a bootstrap
+  checkpoint is accepted.
 
 If checkpoint preflight detects a blocker after auditor `STATUS: pass` and the
 blocker belongs to changed file scope, task packet schema, repository identity,

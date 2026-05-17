@@ -409,6 +409,16 @@ implementation, task-packet, profile-result, committed, or other non-runtime
 artifacts. Any correction that changes non-runtime files requires a full
 correction task packet.
 
+`orchestrator_task_packet_none_project_artifact_route_forbidden`:
+`ACTION_TYPE: correction`, `TARGET_ROLE: orchestrator`, and
+`TASK_PACKET: NONE` must not be used when `EXPECTED_RESULT`,
+`INSTRUCTION_FOR_ORCHESTRATOR`, or blocking context asks the orchestrator to
+create project task packets, project design artifacts, requirements artifacts,
+implementation plans, or other project-owned non-runtime files. That route is
+invalid and must be blocked before dispatch/checkpoint. Project task packets
+and design artifacts require a bounded profile task packet and independent
+audit, or an explicit GAP/BLOCKED/wait_for_owner route.
+
 ## Incident recovery routing
 
 Incident recovery is entered when any incident class from

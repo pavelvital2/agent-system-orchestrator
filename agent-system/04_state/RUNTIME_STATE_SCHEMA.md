@@ -132,6 +132,8 @@ IDENTITY_VALIDATION_STATUS:
 IDENTITY_VALIDATION_ERROR:
 IDENTITY_VALIDATION_EVIDENCE:
 REPOSITORY_LOCK_STATUS:
+BASELINE_TRACKING_STATUS:
+PROJECT_INPUT_TRACKING_POLICY:
 CHECKPOINT_ELIGIBILITY:
 AUDIT_STATUS:
 CHECKPOINT_ELIGIBILITY_STATUS:
@@ -209,6 +211,8 @@ IDENTITY_VALIDATION_STATUS: not_checked | passed | failed | blocked
 IDENTITY_VALIDATION_ERROR: NONE | repository_identity_mismatch | repository_branch_mismatch | workspace_identity_leakage | unapproved_ssh_host_alias | missing_identity_manifest | repository_lock_missing | push_without_repository_lock
 IDENTITY_VALIDATION_EVIDENCE:
 REPOSITORY_LOCK_STATUS: absent | draft | accepted | revoked | blocked
+BASELINE_TRACKING_STATUS: not_checked | passed | blocked | owner_action_required
+PROJECT_INPUT_TRACKING_POLICY: tracked | owner-private/untracked | not_set
 CHECKPOINT_ELIGIBILITY: blocked | local_only | push_allowed | not_applicable
 AUDIT_STATUS: not_applicable | pending | passed | failed | blocked | gap
 CHECKPOINT_ELIGIBILITY_STATUS: not_checked | eligible | ineligible | blocked
@@ -386,6 +390,7 @@ TASK_PACKET:
 ACTION_SEMANTIC:
 WORKSPACE_IDENTITY_STATUS:
 REPOSITORY_LOCK_STATUS:
+BASELINE_TRACKING_STATUS:
 CHECKPOINT_ELIGIBILITY:
 CHECKPOINT_ELIGIBILITY_STATUS:
 PROJECT_CHECKPOINT_STATUS:

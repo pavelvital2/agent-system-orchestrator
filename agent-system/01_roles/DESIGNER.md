@@ -143,6 +143,21 @@ Research output must not influence design continuation until an independent
 auditor returns `STATUS: pass`. After accepted research, the orchestrator
 creates or dispatches a bounded `TASK_KIND: design_continuation` task.
 
+During bootstrap design intake, the designer must make the continuation route
+explicit before audit can pass:
+
+```text
+BOOTSTRAP_CONTINUATION_STATUS: downstream_task_packet | gap | blocked | wait_for_owner
+BOOTSTRAP_CONTINUATION_REF:
+```
+
+If research is required, the bootstrap designer must create or request a full
+schema-valid downstream `TASK_KIND: research_dependency` task packet, or return
+`STATUS: gap`, `STATUS: blocked`, or an explicit owner wait route. If design
+continuation is required after accepted research or owner input, the route must
+be a full schema-valid `TASK_KIND: design_continuation` task packet. A design
+intake document alone is not a continuation route.
+
 The design research loop is governed by:
 
 ```text

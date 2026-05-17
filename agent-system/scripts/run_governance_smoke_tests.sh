@@ -14,7 +14,7 @@ RECEIPT_TEMPLATE="${REPO_ROOT}/agent-system/03_templates/CHECKPOINT_ELIGIBILITY_
 CHANGELOG="${REPO_ROOT}/agent-system/GOVERNANCE_CHANGELOG.md"
 PACKAGE_VERSIONING="${REPO_ROOT}/agent-system/PACKAGE_VERSIONING.md"
 PACKAGE_README="${REPO_ROOT}/agent-system/README.md"
-FIXTURES_ROOT="${REPO_ROOT}/tests/fixtures"
+FIXTURES_ROOT="${REPO_ROOT}/agent-system/tests/fixtures"
 PYTHON_BIN="${PYTHON_BIN:-python3}"
 
 TMP_ROOT=""
@@ -232,7 +232,7 @@ Exercise checkpoint preflight governance smoke behavior.
 
 ## INPUTS
 \`\`\`text
-- tests/fixtures/${task_id}
+- agent-system/tests/fixtures/${task_id}
 \`\`\`
 
 ## READ_INPUTS
@@ -352,6 +352,38 @@ Owner-authorized package governance smoke fixture generated in a temporary local
 EOF
 }
 
+fixture_field_value() {
+  local file="$1"
+  local key="$2"
+
+  awk -v key="$key" '
+    $0 ~ "^" key ":" {
+      sub("^" key ":[[:space:]]*", "", $0)
+      print
+      exit
+    }
+  ' "$file"
+}
+
+configure_fixture_git_target() {
+  local repo_dir="$1"
+  local name="$2"
+  local project_state="$3"
+  local expected_remote
+
+  expected_remote="$(fixture_field_value "$project_state" "EXPECTED_GIT_REMOTE")"
+  [[ -n "$expected_remote" ]] || expected_remote="$(fixture_field_value "$project_state" "EXPECTED_REMOTE")"
+
+  case "$name" in
+    wrong_remote)
+      git -C "$repo_dir" remote add origin "https://github.com/pavelvital2/not-agent-system-orchestrator.git"
+      ;;
+    *)
+      git -C "$repo_dir" remote add origin "$expected_remote"
+      ;;
+  esac
+}
+
 expect_blocked_output() {
   local name="$1"
   local expected="$2"
@@ -386,6 +418,7 @@ run_preflight_fixture() {
   repo_dir="${TMP_ROOT}/${name}"
   task_packet="${repo_dir}/project-docs/03_tasks/TASK_PACKET_${name}.md"
   init_local_git_repo "$repo_dir"
+  configure_fixture_git_target "$repo_dir" "$name" "$project_state"
   mkdir -p "$(dirname "$task_packet")"
 
   payload_dir="$(dirname "${repo_dir}/${changed_path}")"
@@ -426,6 +459,7 @@ run_invalid_task_packet_fixture() {
   expected_blocker="$(fixture_value "${fixture_dir}/expected_blocker.txt")"
   repo_dir="${TMP_ROOT}/${name}"
   init_local_git_repo "$repo_dir"
+  configure_fixture_git_target "$repo_dir" "$name" "$project_state"
 
   set +e
   output="$(
@@ -460,6 +494,7 @@ run_approved_ssh_alias_fixture() {
   repo_dir="${TMP_ROOT}/${name}"
   task_packet="${repo_dir}/project-docs/03_tasks/TASK_PACKET_${name}.md"
   init_local_git_repo "$repo_dir"
+  configure_fixture_git_target "$repo_dir" "$name" "$project_state"
   mkdir -p "$(dirname "$task_packet")"
 
   payload_dir="$(dirname "${repo_dir}/${changed_path}")"
@@ -499,6 +534,201 @@ run_approved_ssh_alias_fixture() {
   PASS_COUNT=$((PASS_COUNT + 1))
 }
 
+run_canonical_remote_fixture() {
+  local name="$1"
+  local expected_blocker="${2:-}"
+  local expect_pass="$3"
+  local fixture_dir="${FIXTURES_ROOT}/${name}"
+  local project_state="${fixture_dir}/project_state.md"
+  local repo_dir task_packet output status
+
+  [[ -f "$project_state" ]] || die "${name} fixture missing project_state.md"
+  repo_dir="${TMP_ROOT}/${name}"
+  task_packet="${repo_dir}/project-docs/03_tasks/TASK_PACKET_${name}.md"
+  init_local_git_repo "$repo_dir"
+  git -C "$repo_dir" remote add origin "https://github.com/pavelvital2/agent-system-orchestrator.git"
+  mkdir -p "$(dirname "$task_packet")" "${repo_dir}/smoke"
+  printf 'canonical remote fixture\n' >"${repo_dir}/smoke/${name}.txt"
+  write_preflight_task_packet "$task_packet" "SMOKE_${name^^}" "smoke/*"
+  commit_fixture_baseline "$repo_dir" "$task_packet"
+
+  set +e
+  output="$(
+    cd "$repo_dir" &&
+      bash "$PREFLIGHT" \
+        --dry-run \
+        --task-packet "$task_packet" \
+        --project-state "$project_state" \
+        --runtime-schema "$RUNTIME_SCHEMA" \
+        --scope-matrix "$SCOPE_MATRIX" \
+        --secret-rules "$SECRET_RULES" \
+        --receipt-template "$RECEIPT_TEMPLATE" \
+        --include-untracked \
+        --push-requested "yes" 2>&1
+  )"
+  status=$?
+  set -e
+
+  if [[ "$expect_pass" == "yes" ]]; then
+    if [[ "$status" -ne 0 ]]; then
+      printf '%s\n' "$output" >&2
+      die "${name} unexpectedly failed"
+    fi
+    printf 'PASS: canonical github.com/OWNER/REPO expected remote accepted using live git origin\n'
+    PASS_COUNT=$((PASS_COUNT + 1))
+    return
+  fi
+
+  expect_blocked_output "$name" "$expected_blocker" "$status" "$output"
+}
+
+run_baseline_tracking_fixture() {
+  local name="untracked_critical_baseline"
+  local fixture_dir="${FIXTURES_ROOT}/${name}"
+  local project_state="${fixture_dir}/project_state.md"
+  local expected_blocker repo_dir task_packet output status
+
+  [[ -f "$project_state" ]] || die "${name} fixture missing project_state.md"
+  expected_blocker="$(fixture_value "${fixture_dir}/expected_blocker.txt")"
+  repo_dir="${TMP_ROOT}/${name}"
+  task_packet="${repo_dir}/project-docs/03_tasks/TASK_PACKET_${name}.md"
+  init_local_git_repo "$repo_dir"
+  git -C "$repo_dir" remote add origin "https://github.com/pavelvital2/agent-system-orchestrator.git"
+  mkdir -p "$(dirname "$task_packet")" "${repo_dir}/agent-system" "${repo_dir}/work"
+  printf 'critical baseline should be tracked\n' >"${repo_dir}/agent-system/README.md"
+  printf 'normal work payload\n' >"${repo_dir}/work/change.txt"
+  write_preflight_task_packet "$task_packet" "SMOKE_${name^^}" "work/*"
+  commit_fixture_baseline "$repo_dir" "$task_packet"
+
+  set +e
+  output="$(
+    cd "$repo_dir" &&
+      bash "$PREFLIGHT" \
+        --dry-run \
+        --task-packet "$task_packet" \
+        --project-state "$project_state" \
+        --runtime-schema "$RUNTIME_SCHEMA" \
+        --scope-matrix "$SCOPE_MATRIX" \
+        --secret-rules "$SECRET_RULES" \
+        --receipt-template "$RECEIPT_TEMPLATE" \
+        --include-untracked \
+        --push-requested "no" 2>&1
+  )"
+  status=$?
+  set -e
+
+  expect_blocked_output "$name" "$expected_blocker" "$status" "$output"
+}
+
+run_project_input_tz_policy_fixture() {
+  local name="project_input_tz_policy"
+  local fixture_dir="${FIXTURES_ROOT}/${name}"
+  local project_state="${fixture_dir}/project_state.md"
+  local repo_dir task_packet output status
+
+  [[ -f "$project_state" ]] || die "${name} fixture missing project_state.md"
+  repo_dir="${TMP_ROOT}/${name}"
+  task_packet="${repo_dir}/project-docs/03_tasks/TASK_PACKET_${name}.md"
+  init_local_git_repo "$repo_dir"
+  git -C "$repo_dir" remote add origin "https://github.com/pavelvital2/agent-system-orchestrator.git"
+  mkdir -p "$(dirname "$task_packet")" "${repo_dir}/project-input"
+  printf 'owner-private source brief placeholder\n' >"${repo_dir}/project-input/TZ.md"
+  write_preflight_task_packet "$task_packet" "SMOKE_${name^^}" "work/*"
+  commit_fixture_baseline "$repo_dir" "$task_packet"
+
+  set +e
+  output="$(
+    cd "$repo_dir" &&
+      bash "$PREFLIGHT" \
+        --dry-run \
+        --task-packet "$task_packet" \
+        --project-state "$project_state" \
+        --runtime-schema "$RUNTIME_SCHEMA" \
+        --scope-matrix "$SCOPE_MATRIX" \
+        --secret-rules "$SECRET_RULES" \
+        --receipt-template "$RECEIPT_TEMPLATE" \
+        --include-untracked \
+        --push-requested "no" 2>&1
+  )"
+  status=$?
+  set -e
+
+  if [[ "$status" -ne 0 ]]; then
+    printf '%s\n' "$output" >&2
+    die "${name} unexpectedly failed with explicit owner-private untracked policy"
+  fi
+
+  printf 'PASS: project-input/TZ.md may remain untracked only with explicit owner-private/untracked policy\n'
+  PASS_COUNT=$((PASS_COUNT + 1))
+}
+
+run_manual_preflight_fixture() {
+  local name="manual_preflight_ref"
+  local fixture_dir="${FIXTURES_ROOT}/${name}"
+  local project_state="${fixture_dir}/project_state.md"
+  local expected_blocker repo_dir task_packet output status
+
+  [[ -f "$project_state" ]] || die "${name} fixture missing project_state.md"
+  expected_blocker="$(fixture_value "${fixture_dir}/expected_blocker.txt")"
+  repo_dir="${TMP_ROOT}/${name}"
+  task_packet="${repo_dir}/project-docs/03_tasks/TASK_PACKET_${name}.md"
+  init_local_git_repo "$repo_dir"
+  git -C "$repo_dir" remote add origin "https://github.com/pavelvital2/agent-system-orchestrator.git"
+  mkdir -p "$(dirname "$task_packet")" "${repo_dir}/work"
+  printf 'manual preflight should not satisfy checkpoint evidence\n' >"${repo_dir}/work/change.txt"
+  write_preflight_task_packet "$task_packet" "SMOKE_${name^^}" "work/*"
+  commit_fixture_baseline "$repo_dir" "$task_packet"
+
+  set +e
+  output="$(
+    cd "$repo_dir" &&
+      bash "$PREFLIGHT" \
+        --dry-run \
+        --task-packet "$task_packet" \
+        --project-state "$project_state" \
+        --runtime-schema "$RUNTIME_SCHEMA" \
+        --scope-matrix "$SCOPE_MATRIX" \
+        --secret-rules "$SECRET_RULES" \
+        --receipt-template "$RECEIPT_TEMPLATE" \
+        --include-untracked \
+        --push-requested "no" 2>&1
+  )"
+  status=$?
+  set -e
+
+  expect_blocked_output "$name" "$expected_blocker" "$status" "$output"
+}
+
+assert_bootstrap_and_none_route_governance() {
+  grep -Rqs "BOOTSTRAP_CONTINUATION_STATUS" \
+    "$REPO_ROOT/agent-system/01_roles/AUDITOR.md" \
+    "$REPO_ROOT/agent-system/03_templates/BOOTSTRAP_TASK_PACKET_TEMPLATE.md" \
+    "$REPO_ROOT/agent-system/07_lifecycle/BOOTSTRAP_STAGE.md" ||
+    die "bootstrap continuation governance missing BOOTSTRAP_CONTINUATION_STATUS"
+  grep -Rqs "bootstrap_continuation_missing" \
+    "$REPO_ROOT/agent-system/01_roles/AUDITOR.md" \
+    "$REPO_ROOT/agent-system/02_runtime/POST_AUDIT_GIT_CHECKPOINT.md" \
+    "$REPO_ROOT/agent-system/07_lifecycle/BOOTSTRAP_STAGE.md" ||
+    die "bootstrap continuation governance missing bootstrap_continuation_missing blocker"
+  grep -Rqs "orchestrator_task_packet_none_project_artifact_route_forbidden" \
+    "$REPO_ROOT/agent-system/02_runtime/STATE_TRANSITION_RULES.md" \
+    "$REPO_ROOT/agent-system/04_state/NEXT_ACTION_TEMPLATE.md" ||
+    die "orchestrator TASK_PACKET:NONE project artifact route blocker missing"
+
+  printf 'PASS: bootstrap continuation missing is blocked by bootstrap_continuation_missing\n'
+  printf 'PASS: invalid orchestrator TASK_PACKET:NONE project-task correction route is blocked\n'
+  PASS_COUNT=$((PASS_COUNT + 2))
+}
+
+assert_smoke_self_contained() {
+  if [[ "$FIXTURES_ROOT" != "${REPO_ROOT}/agent-system/tests/fixtures" ]]; then
+    die "smoke still depends on top-level tests/fixtures"
+  fi
+  printf 'PASS: smoke fixtures are self-contained under agent-system/tests/fixtures\n'
+  printf 'PASS: smoke runner does not require top-level tests/fixtures or owner project-input\n'
+  PASS_COUNT=$((PASS_COUNT + 2))
+}
+
 assert_coverage_matrix() {
   local fix_rows
 
@@ -518,14 +748,17 @@ assert_version_changelog_coherence() {
   grep -Fq "CURRENT_RUNTIME_SCHEMA_VERSION: 2.0.0" "$PACKAGE_VERSIONING" || die "PACKAGE_VERSIONING missing runtime schema 2.0.0"
   grep -Fq "CURRENT_PACKAGE_VERSION: 2.0.0" "$PACKAGE_README" || die "README missing package 2.0.0"
   grep -Fq "TASK_ASO_PATCH_008_GOVERNANCE_SMOKE_TESTS" "$CHANGELOG" || die "changelog missing TASK_ASO_PATCH_008_GOVERNANCE_SMOKE_TESTS"
+  grep -Fq "ASO_CORR_200_002_BOOTSTRAP_CONTINUATION_BASELINE_GATE" "$CHANGELOG" || die "changelog missing ASO_CORR_200_002"
   grep -Fq "PACKAGE_VERSION_AFTER: 2.0.0" "$CHANGELOG" || die "changelog missing PACKAGE_VERSION_AFTER: 2.0.0"
   awk '
     /CHANGE_ID: GOV-2026-05-17-001/ { entry="001" }
     /CHANGE_ID: GOV-2026-05-17-008/ { entry="008" }
+    /CHANGE_ID: GOV-2026-05-17-010/ { entry="010" }
     entry == "001" && /STATUS: accepted/ { found_001=1 }
     entry == "008" && /STATUS: accepted/ { found_008=1 }
-    END { exit(found_001 && found_008 ? 0 : 1) }
-  ' "$CHANGELOG" || die "changelog missing accepted status for v2.0.0 patch entries"
+    entry == "010" && /STATUS: accepted/ { found_010=1 }
+    END { exit(found_001 && found_008 && found_010 ? 0 : 1) }
+  ' "$CHANGELOG" || die "changelog missing accepted status for v2.0.0 patch/correction entries"
 
   printf 'PASS: version_changelog coherent for 2.0.0 with accepted status\n'
   PASS_COUNT=$((PASS_COUNT + 1))
@@ -545,6 +778,13 @@ main() {
   run_preflight_fixture "push_not_allowed" "yes"
   run_preflight_fixture "secret_file_present" "no"
   run_approved_ssh_alias_fixture
+  run_canonical_remote_fixture "canonical_remote_expected" "" "yes"
+  run_canonical_remote_fixture "canonical_remote_mismatch" "git_target_check: repository_identity_mismatch" "no"
+  run_baseline_tracking_fixture
+  run_project_input_tz_policy_fixture
+  run_manual_preflight_fixture
+  assert_bootstrap_and_none_route_governance
+  assert_smoke_self_contained
   assert_coverage_matrix
   assert_version_changelog_coherence
   printf 'SMOKE_RESULT: passed (%s assertions)\n' "$PASS_COUNT"
