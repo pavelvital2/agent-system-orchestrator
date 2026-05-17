@@ -6,7 +6,7 @@ REPO_ROOT="$(cd "${SCRIPT_DIR}/../.." && pwd)"
 
 PREFLIGHT="${REPO_ROOT}/agent-system/scripts/checkpoint_preflight.sh"
 VALIDATOR="${REPO_ROOT}/agent-system/scripts/validate_task_packet.py"
-COVERAGE_MATRIX="${REPO_ROOT}/project-input/PATCH_ASO_25_GOVERNANCE_HARDENING_V2_0_0/COVERAGE_MATRIX.md"
+COVERAGE_MATRIX="${REPO_ROOT}/agent-system/10_examples/ASO_25_GOVERNANCE_HARDENING_COVERAGE_MATRIX.md"
 RUNTIME_SCHEMA="${REPO_ROOT}/agent-system/04_state/RUNTIME_STATE_SCHEMA.md"
 SCOPE_MATRIX="${REPO_ROOT}/agent-system/09_validators/CHANGED_FILES_SCOPE_MATRIX.md"
 SECRET_RULES="${REPO_ROOT}/agent-system/09_validators/SECRET_SCAN_RULES.md"
@@ -48,6 +48,16 @@ init_local_git_repo() {
   git -C "$repo_dir" config user.name "Governance Smoke"
 }
 
+commit_fixture_baseline() {
+  local repo_dir="$1"
+  local path="$2"
+  local rel_path
+
+  rel_path="${path#"$repo_dir"/}"
+  git -C "$repo_dir" add "$rel_path"
+  git -C "$repo_dir" commit -m "smoke fixture baseline" >/dev/null 2>&1
+}
+
 write_preflight_task_packet() {
   local packet_path="$1"
   local task_id="$2"
@@ -71,9 +81,136 @@ active
 correction
 \`\`\`
 
+## SUPERSEDES
+\`\`\`text
+NONE
+\`\`\`
+
+## SUPERSEDED_BY
+\`\`\`text
+NONE
+\`\`\`
+
+## CORRECTION_OF
+\`\`\`text
+NONE
+\`\`\`
+
+## SOURCE_RESULT_REF
+\`\`\`text
+NONE
+\`\`\`
+
+## ATTEMPT_NO
+\`\`\`text
+1
+\`\`\`
+
+## FAILURE_TYPE
+\`\`\`text
+none
+\`\`\`
+
+## TASK_TITLE
+\`\`\`text
+Governance smoke fixture for ${task_id}
+\`\`\`
+
+## TASK_TYPE
+\`\`\`text
+developer
+\`\`\`
+
 ## TARGET_ROLE
 \`\`\`text
 developer
+\`\`\`
+
+## REASONING_LEVEL
+\`\`\`text
+VALUE: default
+OVERRIDE_REASON: NONE
+\`\`\`
+
+## DEPENDENCIES
+\`\`\`text
+- NONE
+\`\`\`
+
+## DEPENDENCY_STATUS
+\`\`\`text
+none
+\`\`\`
+
+## REQUESTED_BY_ROLE
+\`\`\`text
+NONE
+\`\`\`
+
+## REQUESTED_BY_TASK
+\`\`\`text
+NONE
+\`\`\`
+
+## RESEARCH_QUESTION_ID
+\`\`\`text
+NONE
+\`\`\`
+
+## RESEARCH_PURPOSE
+\`\`\`text
+NONE
+\`\`\`
+
+## RESEARCH_QUESTIONS
+\`\`\`text
+- NONE
+\`\`\`
+
+## ALLOWED_SOURCES
+\`\`\`text
+- Local smoke fixture files.
+\`\`\`
+
+## FORBIDDEN_SOURCES
+\`\`\`text
+- External network.
+- Secrets.
+\`\`\`
+
+## EXPECTED_EVIDENCE
+\`\`\`text
+- checkpoint_preflight.sh dry-run output.
+\`\`\`
+
+## EXPECTED_OUTPUT
+\`\`\`text
+- Deterministic local smoke assertion.
+\`\`\`
+
+## RETURN_TO_REQUESTER_AFTER_AUDIT_PASS
+\`\`\`text
+no
+\`\`\`
+
+## RETURN_TO_ROLE_AFTER_AUDIT_PASS
+\`\`\`text
+none
+\`\`\`
+
+## RETURN_TASK_AFTER_AUDIT_PASS
+\`\`\`text
+NONE
+\`\`\`
+
+## PURPOSE
+\`\`\`text
+Exercise checkpoint preflight governance smoke behavior.
+\`\`\`
+
+## SOURCE_OF_TRUTH
+\`\`\`text
+- agent-system/scripts/checkpoint_preflight.sh
 \`\`\`
 
 ## SCOPE_IN
@@ -93,6 +230,21 @@ developer
 - agent-system/scripts/checkpoint_preflight.sh
 \`\`\`
 
+## INPUTS
+\`\`\`text
+- tests/fixtures/${task_id}
+\`\`\`
+
+## READ_INPUTS
+\`\`\`text
+- NONE
+\`\`\`
+
+## EXPECTED_OUTPUTS
+\`\`\`text
+- Dry-run preflight result.
+\`\`\`
+
 ## ALLOWED_FILE_CHANGES
 \`\`\`text
 - ${allowed_pattern}
@@ -106,6 +258,91 @@ developer
 ## AUDIT_REQUIREMENTS
 \`\`\`text
 mandatory
+\`\`\`
+
+## ACCEPTANCE_CRITERIA
+\`\`\`text
+- Preflight behavior matches the fixture expectation.
+\`\`\`
+
+## EVIDENCE_REQUIREMENTS
+\`\`\`text
+- Dry-run preflight output.
+\`\`\`
+
+## SETUP_HOOKS
+\`\`\`text
+- Initialize temporary local Git repository.
+\`\`\`
+
+## LAUNCH_HOOKS
+\`\`\`text
+- Run checkpoint_preflight.sh in dry-run mode.
+\`\`\`
+
+## RESULT_PATH
+\`\`\`text
+project-runtime/agent-results/${task_id}.md
+\`\`\`
+
+## RISK_REQUIREMENTS
+\`\`\`text
+- Fixture-only smoke; no network push.
+\`\`\`
+
+## MANDATORY_WORKFLOW
+\`\`\`text
+developer -> auditor
+\`\`\`
+
+## NEXT_ROLE_ON_PASS
+\`\`\`text
+auditor
+\`\`\`
+
+## NEXT_ROLE_ON_FAIL
+\`\`\`text
+developer
+\`\`\`
+
+## NEXT_ROLE_ON_BLOCKED
+\`\`\`text
+orchestrator
+\`\`\`
+
+## NEXT_ROLE_ON_GAP
+\`\`\`text
+orchestrator
+\`\`\`
+
+## TESTING_REQUIREMENTS
+\`\`\`text
+mandatory
+\`\`\`
+
+## DOCUMENTATION_REQUIREMENTS
+\`\`\`text
+none
+\`\`\`
+
+## FILESYSTEM_GOVERNANCE
+\`\`\`text
+Owner-authorized package-governance correction/update smoke fixture.
+\`\`\`
+
+## RUNTIME_GOVERNANCE
+\`\`\`text
+No runtime mutation outside the temporary local smoke repository.
+\`\`\`
+
+## RESULT_FORMAT
+\`\`\`text
+agent-system/03_templates/AGENT_RESULT_TEMPLATE.md
+\`\`\`
+
+## TERMINAL_CONDITIONS
+\`\`\`text
+Smoke assertion completes.
 \`\`\`
 
 ## NOTES
@@ -147,14 +384,16 @@ run_preflight_fixture() {
   expected_blocker="$(fixture_value "${fixture_dir}/expected_blocker.txt")"
 
   repo_dir="${TMP_ROOT}/${name}"
-  task_packet="${repo_dir}/TASK_PACKET_${name}.md"
+  task_packet="${repo_dir}/project-docs/03_tasks/TASK_PACKET_${name}.md"
   init_local_git_repo "$repo_dir"
+  mkdir -p "$(dirname "$task_packet")"
 
   payload_dir="$(dirname "${repo_dir}/${changed_path}")"
   [[ "$payload_dir" == "$repo_dir/." ]] || mkdir -p "$payload_dir"
   printf 'placeholder fixture payload for %s; no real secrets\n' "$name" >"${repo_dir}/${changed_path}"
 
   write_preflight_task_packet "$task_packet" "SMOKE_${name^^}" "$allowed_pattern"
+  commit_fixture_baseline "$repo_dir" "$task_packet"
 
   set +e
   output="$(
@@ -179,18 +418,85 @@ run_preflight_fixture() {
 run_invalid_task_packet_fixture() {
   local name="invalid_task_packet"
   local fixture_dir="${FIXTURES_ROOT}/${name}"
+  local project_state="${FIXTURES_ROOT}/push_not_allowed/project_state.md"
   local invalid_packet="${fixture_dir}/TASK_INVALID_MISSING_REQUIRED.md"
-  local expected_blocker output status
+  local expected_blocker repo_dir output status
 
   [[ -f "$invalid_packet" ]] || die "${name} fixture missing TASK_INVALID_MISSING_REQUIRED.md"
   expected_blocker="$(fixture_value "${fixture_dir}/expected_blocker.txt")"
+  repo_dir="${TMP_ROOT}/${name}"
+  init_local_git_repo "$repo_dir"
 
   set +e
-  output="$("$PYTHON_BIN" "$VALIDATOR" --mode dispatch "$invalid_packet" 2>&1)"
+  output="$(
+    cd "$repo_dir" &&
+      bash "$PREFLIGHT" \
+        --dry-run \
+        --task-packet "$invalid_packet" \
+        --project-state "$project_state" \
+        --runtime-schema "$RUNTIME_SCHEMA" \
+        --scope-matrix "$SCOPE_MATRIX" \
+        --secret-rules "$SECRET_RULES" \
+        --receipt-template "$RECEIPT_TEMPLATE" \
+        --include-untracked \
+        --push-requested "no" 2>&1
+  )"
   status=$?
   set -e
 
   expect_blocked_output "$name" "$expected_blocker" "$status" "$output"
+}
+
+run_approved_ssh_alias_fixture() {
+  local name="approved_ssh_alias"
+  local fixture_dir="${FIXTURES_ROOT}/${name}"
+  local project_state="${fixture_dir}/project_state.md"
+  local changed_path allowed_pattern repo_dir task_packet payload_dir output status
+
+  [[ -f "$project_state" ]] || die "${name} fixture missing project_state.md"
+  changed_path="$(fixture_value "${fixture_dir}/changed_path.txt")"
+  allowed_pattern="$(fixture_value "${fixture_dir}/allowed_pattern.txt")"
+
+  repo_dir="${TMP_ROOT}/${name}"
+  task_packet="${repo_dir}/project-docs/03_tasks/TASK_PACKET_${name}.md"
+  init_local_git_repo "$repo_dir"
+  mkdir -p "$(dirname "$task_packet")"
+
+  payload_dir="$(dirname "${repo_dir}/${changed_path}")"
+  [[ "$payload_dir" == "$repo_dir/." ]] || mkdir -p "$payload_dir"
+  printf 'approved ssh alias canonicalization fixture\n' >"${repo_dir}/${changed_path}"
+
+  write_preflight_task_packet "$task_packet" "SMOKE_${name^^}" "$allowed_pattern"
+  commit_fixture_baseline "$repo_dir" "$task_packet"
+
+  set +e
+  output="$(
+    cd "$repo_dir" &&
+      bash "$PREFLIGHT" \
+        --dry-run \
+        --task-packet "$task_packet" \
+        --project-state "$project_state" \
+        --runtime-schema "$RUNTIME_SCHEMA" \
+        --scope-matrix "$SCOPE_MATRIX" \
+        --secret-rules "$SECRET_RULES" \
+        --receipt-template "$RECEIPT_TEMPLATE" \
+        --include-untracked \
+        --push-requested "yes" 2>&1
+  )"
+  status=$?
+  set -e
+
+  if [[ "$status" -ne 0 ]]; then
+    printf '%s\n' "$output" >&2
+    die "${name} unexpectedly failed"
+  fi
+  if grep -Fq "repository_identity_mismatch" <<<"$output"; then
+    printf '%s\n' "$output" >&2
+    die "${name} reported repository_identity_mismatch"
+  fi
+
+  printf 'PASS: approved SSH alias accepted as canonical same GitHub repository\n'
+  PASS_COUNT=$((PASS_COUNT + 1))
 }
 
 assert_coverage_matrix() {
@@ -213,8 +519,15 @@ assert_version_changelog_coherence() {
   grep -Fq "CURRENT_PACKAGE_VERSION: 2.0.0" "$PACKAGE_README" || die "README missing package 2.0.0"
   grep -Fq "TASK_ASO_PATCH_008_GOVERNANCE_SMOKE_TESTS" "$CHANGELOG" || die "changelog missing TASK_ASO_PATCH_008_GOVERNANCE_SMOKE_TESTS"
   grep -Fq "PACKAGE_VERSION_AFTER: 2.0.0" "$CHANGELOG" || die "changelog missing PACKAGE_VERSION_AFTER: 2.0.0"
+  awk '
+    /CHANGE_ID: GOV-2026-05-17-001/ { entry="001" }
+    /CHANGE_ID: GOV-2026-05-17-008/ { entry="008" }
+    entry == "001" && /STATUS: accepted/ { found_001=1 }
+    entry == "008" && /STATUS: accepted/ { found_008=1 }
+    END { exit(found_001 && found_008 ? 0 : 1) }
+  ' "$CHANGELOG" || die "changelog missing accepted status for v2.0.0 patch entries"
 
-  printf 'PASS: version_changelog coherent for 2.0.0 smoke coverage\n'
+  printf 'PASS: version_changelog coherent for 2.0.0 with accepted status\n'
   PASS_COUNT=$((PASS_COUNT + 1))
 }
 
@@ -231,6 +544,7 @@ main() {
   run_invalid_task_packet_fixture
   run_preflight_fixture "push_not_allowed" "yes"
   run_preflight_fixture "secret_file_present" "no"
+  run_approved_ssh_alias_fixture
   assert_coverage_matrix
   assert_version_changelog_coherence
   printf 'SMOKE_RESULT: passed (%s assertions)\n' "$PASS_COUNT"

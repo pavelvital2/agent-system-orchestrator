@@ -1,12 +1,16 @@
 #!/usr/bin/env bash
 set -uo pipefail
 
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
 TASK_PACKET=""
 PROJECT_STATE_FILE="${PROJECT_STATE_FILE:-project-runtime/PROJECT_STATE.md}"
 RUNTIME_SCHEMA_FILE="${RUNTIME_SCHEMA_FILE:-agent-system/04_state/RUNTIME_STATE_SCHEMA.md}"
 SCOPE_MATRIX_FILE="${SCOPE_MATRIX_FILE:-agent-system/09_validators/CHANGED_FILES_SCOPE_MATRIX.md}"
 SECRET_RULES_FILE="${SECRET_RULES_FILE:-agent-system/09_validators/SECRET_SCAN_RULES.md}"
 RECEIPT_TEMPLATE_FILE="${RECEIPT_TEMPLATE_FILE:-agent-system/03_templates/CHECKPOINT_ELIGIBILITY_TEMPLATE.md}"
+TASK_PACKET_VALIDATOR_FILE="${TASK_PACKET_VALIDATOR_FILE:-${SCRIPT_DIR}/validate_task_packet.py}"
+PYTHON_BIN="${PYTHON_BIN:-python3}"
 RECEIPT_PATH=""
 TARGET_ROLE=""
 WORKSPACE_TYPE_OVERRIDE=""
@@ -36,6 +40,7 @@ Options:
   --runtime-schema PATH             Runtime schema doc path.
   --scope-matrix PATH               Changed files scope matrix path.
   --secret-rules PATH               Secret scan rules path.
+  --task-packet-validator PATH      Full TASK_PACKET validator path.
   --receipt-template PATH           Checkpoint eligibility receipt template path.
   --receipt PATH                    Receipt output path.
   --write-receipt                   Write receipt to --receipt path.
@@ -90,27 +95,82 @@ extract_list_section() {
     sed -e '/^```/d' -e 's/^[[:space:]]*- //' -e '/^[[:space:]]*$/d'
 }
 
-normalize_remote() {
-  local remote="$1"
-  local host=""
-  local path=""
+trim() {
+  sed -e 's/^[[:space:]]*//' -e 's/[[:space:]]*$//' <<<"$1"
+}
 
-  remote="${remote%.git}"
-  if [[ "$remote" =~ ^git@([^:]+):(.+)$ ]]; then
-    host="${BASH_REMATCH[1]}"
-    path="${BASH_REMATCH[2]%.git}"
-    printf '%s/%s\n' "${host,,}" "${path,,}"
+alias_is_approved() {
+  local candidate="$1"
+  local aliases
+  local evidence
+  local alias
+
+  aliases="$(field_value "$PROJECT_STATE_FILE" "APPROVED_SSH_HOST_ALIASES")"
+  evidence="$(field_value "$PROJECT_STATE_FILE" "SSH_ALIAS_EVIDENCE")"
+
+  IFS=', ' read -r -a alias_values <<<"$aliases"
+  for alias in "${alias_values[@]}"; do
+    [[ -n "$alias" && "$alias" != "NONE" ]] || continue
+    [[ "$alias" == "$candidate" ]] && return 0
+  done
+
+  [[ "$evidence" == *"hostname github.com"* ]] && return 0
+
+  return 1
+}
+
+canonical_github_path() {
+  local path="$1"
+  local owner
+  local repo
+
+  path="${path%.git}"
+  [[ "$path" == */* ]] || return 1
+
+  owner="${path%%/*}"
+  repo="${path#*/}"
+
+  [[ -n "$owner" ]] || return 1
+  [[ -n "$repo" ]] || return 1
+  [[ "$repo" != */* ]] || return 1
+
+  printf 'github.com/%s/%s\n' "${owner,,}" "${repo,,}"
+}
+
+canonical_remote() {
+  local raw
+  local host
+  local path
+
+  raw="$(trim "$1")"
+  [[ -n "$raw" ]] || return 2
+
+  if [[ "$raw" =~ ^https://([^/]+)/(.+)$ ]]; then
+    host="${BASH_REMATCH[1],,}"
+    path="${BASH_REMATCH[2]}"
+    [[ "$host" == "github.com" ]] || return 2
+    canonical_github_path "$path" || return 2
     return 0
   fi
 
-  if [[ "$remote" =~ ^https?://([^/]+)/(.+)$ ]]; then
+  if [[ "$raw" =~ ^git@([^:]+):(.+)$ ]]; then
     host="${BASH_REMATCH[1]}"
-    path="${BASH_REMATCH[2]%.git}"
-    printf '%s/%s\n' "${host,,}" "${path,,}"
-    return 0
+    path="${BASH_REMATCH[2]}"
+
+    if [[ "${host,,}" == "github.com" ]]; then
+      canonical_github_path "$path" || return 2
+      return 0
+    fi
+
+    if alias_is_approved "$host"; then
+      canonical_github_path "$path" || return 2
+      return 0
+    fi
+
+    return 3
   fi
 
-  printf '%s\n' "${remote,,}"
+  return 2
 }
 
 matches_any_pattern() {
@@ -127,34 +187,41 @@ matches_any_pattern() {
 }
 
 task_packet_check() {
-  local required_sections=(
-    "## TASK_ID"
-    "## TASK_STATUS"
-    "## TASK_KIND"
-    "## TARGET_ROLE"
-    "## SCOPE_IN"
-    "## SCOPE_OUT"
-    "## REQUIRED_DOCS"
-    "## ALLOWED_FILE_CHANGES"
-    "## FORBIDDEN_FILE_CHANGES"
-    "## AUDIT_REQUIREMENTS"
-  )
-  local section
-  local section_key
+  local output
+  local status
+  local line
 
   [[ -f "$TASK_PACKET" ]] || {
     add_failure "task_packet_schema_check: task_packet_missing"
     return
   }
 
-  for section in "${required_sections[@]}"; do
-    section_key="${section#\#\# }"
-    section_key="${section_key// /_}"
-    grep -q "^${section}$" "$TASK_PACKET" || add_failure "task_packet_schema_check: missing_${section_key}"
-  done
+  if [[ ! -f "$TASK_PACKET_VALIDATOR_FILE" ]]; then
+    add_failure "task_packet_schema_check: validator_missing:${TASK_PACKET_VALIDATOR_FILE}"
+    return
+  fi
 
-  if ! section_text "$TASK_PACKET" "## TASK_STATUS" | grep -q "active"; then
-    add_failure "task_packet_schema_check: task_status_not_active"
+  set +e
+  output="$(
+    "$PYTHON_BIN" "$TASK_PACKET_VALIDATOR_FILE" \
+      --mode checkpoint \
+      --allow-first-bootstrap \
+      --allow-system-package-correction \
+      "$TASK_PACKET" 2>&1
+  )"
+  status=$?
+  set +e
+
+  if [[ "$status" -ne 0 ]]; then
+    while IFS= read -r line; do
+      [[ -n "$line" ]] || continue
+      case "$line" in
+        ERROR:*) add_failure "task_packet_schema_check: ${line#ERROR: }" ;;
+      esac
+    done <<<"$output"
+    if ! grep -Fq "invalid_task_packet_schema" <<<"$output"; then
+      add_failure "task_packet_schema_check: invalid_task_packet_schema"
+    fi
   fi
 
   mapfile -t allowed_patterns < <(extract_list_section "$TASK_PACKET" "## ALLOWED_FILE_CHANGES")
@@ -245,9 +312,9 @@ identity_and_git_target_check() {
   [[ -n "$actual_branch" ]] || add_failure "git_target_check: actual_branch_missing"
 
   if [[ -n "$expected_remote" && -n "$actual_remote" ]]; then
-    expected_canonical="$(normalize_remote "$expected_remote")"
-    actual_canonical="$(normalize_remote "$actual_remote")"
-    [[ "$expected_canonical" == "$actual_canonical" ]] || add_failure "git_target_check: repository_identity_mismatch"
+    expected_canonical="$(canonical_remote "$expected_remote" 2>/dev/null || true)"
+    actual_canonical="$(canonical_remote "$actual_remote" 2>/dev/null || true)"
+    [[ -n "$expected_canonical" && -n "$actual_canonical" && "$expected_canonical" == "$actual_canonical" ]] || add_failure "git_target_check: repository_identity_mismatch"
   fi
 
   if [[ -n "$expected_branch" && -n "$actual_branch" ]]; then
@@ -445,6 +512,7 @@ while [[ $# -gt 0 ]]; do
     --runtime-schema) RUNTIME_SCHEMA_FILE="${2:-}"; shift 2 ;;
     --scope-matrix) SCOPE_MATRIX_FILE="${2:-}"; shift 2 ;;
     --secret-rules) SECRET_RULES_FILE="${2:-}"; shift 2 ;;
+    --task-packet-validator) TASK_PACKET_VALIDATOR_FILE="${2:-}"; shift 2 ;;
     --receipt-template) RECEIPT_TEMPLATE_FILE="${2:-}"; shift 2 ;;
     --receipt) RECEIPT_PATH="${2:-}"; shift 2 ;;
     --write-receipt) WRITE_RECEIPT=1; shift ;;

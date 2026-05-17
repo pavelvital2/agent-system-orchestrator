@@ -43,6 +43,9 @@ A Git checkpoint is valid only when all conditions are true:
   checkpointed work.
 - accepted files can be listed without reading or printing secret values;
 - working-tree validation for accepted task-specific invariants has passed.
+- syntax evidence exists for executable script changes: changed `.sh` files
+  have passing `bash -n <path>` evidence, and changed `.py` files have passing
+  `python3 -m py_compile <path>` evidence;
 - changed dispatchable task packet files pass task packet schema validation
   before staging;
 - changed `TASK_PROPOSAL` files pass proposal validation and remain
@@ -57,6 +60,9 @@ A Git checkpoint is valid only when all conditions are true:
   `TASK_PACKET_SCHEMA_STATUS`, `SECRET_EXPOSURE_STATUS`,
   `REPOSITORY_IDENTITY_STATUS`, `FORBIDDEN_PATH_STATUS`,
   `RUNTIME_MUTATION_STATUS`, and `REASONING_LEVEL_COMPLIANCE` where applicable.
+- auditor evidence contains `SYNTAX_EVIDENCE_STATUS: passed` when executable
+  shell or Python files changed, or `SYNTAX_EVIDENCE_STATUS: not_applicable`
+  when no such files changed.
 
 ## Forbidden checkpoint attempts
 
@@ -76,6 +82,8 @@ Checkpoint is forbidden after:
 - direct progress after audit fail;
 - unverified correction result;
 - failed working-tree validation for accepted task-specific invariants;
+- missing, stale, or failed syntax evidence for changed shell or Python
+  scripts;
 - failed committed `HEAD` validation for accepted task-specific invariants.
 - `CHECKPOINT_ELIGIBILITY_STATUS` is `not_checked`, `ineligible`, or
   `blocked`;
@@ -150,6 +158,8 @@ Checkpoint preflight passes only when all of the following are true:
 - any task schema failure is reported as `invalid_task_packet_schema`;
 - runtime schema contains mandatory checkpoint distinction fields;
 - secret scan returns no `potential_secret_exposure`.
+- syntax evidence for changed `.sh` and `.py` files is present and passing
+  before checkpoint eligibility is granted.
 
 If checkpoint preflight detects a blocker after auditor `STATUS: pass` and the
 blocker belongs to changed file scope, task packet schema, repository identity,

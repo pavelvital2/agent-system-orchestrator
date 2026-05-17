@@ -60,6 +60,7 @@ RUNTIME_MUTATION_STATUS: passed | failed | blocked
 EVIDENCE_STATUS: passed | failed | blocked
 SECRET_EXPOSURE_STATUS: passed | potential_secret_exposure | blocked
 REASONING_LEVEL_COMPLIANCE: passed | failed | blocked
+SYNTAX_EVIDENCE_STATUS: passed | failed | blocked | not_applicable
 ```
 
 The audit check must cover:
@@ -79,10 +80,18 @@ The audit check must cover:
   without printing or copying suspected secret values;
 - reasoning-level execution compliance from task packet, role default,
   gate-required floor, and spawn/handoff/orchestrator evidence.
+- executable script syntax evidence when changed files include shell or Python
+  scripts: changed `.sh` files require `bash -n <path>` evidence, and changed
+  `.py` files require `python3 -m py_compile <path>` evidence.
 
 If any required status is `failed`, `blocked`,
 `potential_secret_exposure`, missing, unknown, or contradicted by available
 evidence, auditor `STATUS: pass` is forbidden.
+
+When executable shell or Python scripts changed and the required syntax
+evidence is absent, failed, stale, or not tied to the changed paths, auditor
+`STATUS: pass` is forbidden. The auditor must return `STATUS: fail` or
+`STATUS: blocked` with the missing command evidence identified by path.
 
 When any changed file matches `TASK_*.md`, `TASK_PROPOSAL*.md`, or
 `*_TASK_PACKET*.md`, the auditor must include a bounded
@@ -175,6 +184,7 @@ and the auditor must return `STATUS: blocked`.
   is expected to proceed to post-audit checkpoint;
 - `SECRET_EXPOSURE_STATUS` is not `potential_secret_exposure`;
 - `TASK_PACKET_SCHEMA_STATUS` is `passed` or `not_applicable`;
+- `SYNTAX_EVIDENCE_STATUS` is `passed` or `not_applicable`;
 - реализована ли только поставленная задача;
 - не нарушена ли существующая логика;
 - приложены ли evidence и verify commands;

@@ -56,6 +56,9 @@ A post-audit Git checkpoint may start only when all conditions are true:
   task packet schema, runtime schema, and secret scan checks;
 - working-tree validation for the task-specific invariants passes before
   staging or committing;
+- syntax evidence for executable script changes is present and passing before
+  staging: changed `.sh` files require `bash -n <path>` evidence, and changed
+  `.py` files require `python3 -m py_compile <path>` evidence;
 - `GIT_CHECKPOINT_VALIDATION_RULES.md` passes.
 
 ## Forbidden conditions
@@ -81,6 +84,8 @@ The orchestrator must not stage, commit, or push after:
 - suspected secret or credential risk in changed, staged, logged, or generated
   checkpoint material;
 - `SECRET_SCAN_STATUS: potential_secret_exposure`;
+- missing, stale, or failed syntax evidence for changed shell or Python
+  scripts;
 - missing or stale checkpoint eligibility receipt;
 - `CHECKPOINT_ELIGIBILITY_STATUS` other than `eligible`;
 - out-of-scope changed files.

@@ -851,7 +851,7 @@ MIGRATION_REQUIRED: yes
 MIGRATION_NOTE: Existing runtime states must add workspace identity, repository lock, and checkpoint eligibility fields before normal dispatch. Missing or contradictory identity fields must route to correction or owner wait; the orchestrator must not infer identity from folder name, copied .git metadata, or raw remote strings.
 AUTHORIZED_BY: project_owner
 AUDIT_REQUIRED: yes
-STATUS: proposed
+STATUS: accepted
 
 CHANGE_ID: GOV-2026-05-17-008
 CHANGE_TITLE: ASO_25_GOVERNANCE_HARDENING_V2_0_0_GOVERNANCE_SMOKE_TESTS
@@ -890,5 +890,43 @@ MIGRATION_REQUIRED: no
 MIGRATION_NOTE: Existing runtime states are unaffected by the smoke fixtures. The v2.0.0 workspace identity, repository lock, checkpoint eligibility, task packet validation, and secret-scan migration requirements remain governed by the major package update.
 AUTHORIZED_BY: project_owner
 AUDIT_REQUIRED: yes
-STATUS: proposed
+STATUS: accepted
+
+CHANGE_ID: GOV-2026-05-17-009
+CHANGE_TITLE: ASO_CORR_200_001_REPRODUCIBLE_SMOKE_PREFLIGHT_VALIDATION
+DATE: 2026-05-17
+PACKAGE_VERSION_BEFORE: 2.0.0
+PACKAGE_VERSION_AFTER: 2.0.0
+GOVERNANCE_RULESET_BEFORE: 2.0.0
+GOVERNANCE_RULESET_AFTER: 2.0.0
+RUNTIME_SCHEMA_BEFORE: 2.0.0
+RUNTIME_SCHEMA_AFTER: 2.0.0
+CHANGE_TYPE: patch
+AFFECTED_FILES:
+- agent-system/scripts/checkpoint_preflight.sh
+- agent-system/scripts/run_governance_smoke_tests.sh
+- agent-system/10_examples/ASO_25_GOVERNANCE_HARDENING_COVERAGE_MATRIX.md
+- agent-system/GOVERNANCE_CHANGELOG.md
+- agent-system/00_start/ORCHESTRATOR_START.md
+- agent-system/01_roles/AUDITOR.md
+- agent-system/09_validators/GIT_CHECKPOINT_VALIDATION_RULES.md
+- agent-system/02_runtime/POST_AUDIT_GIT_CHECKPOINT.md
+- tests/fixtures/approved_ssh_alias/*
+AFFECTED_INVARIANTS:
+- Smoke is reproducible from tracked repository files and no longer reads project-input/.
+- Checkpoint preflight delegates task packet validation to validate_task_packet.py.
+- Minimal malformed task packets block checkpoint with invalid_task_packet_schema.
+- Owner-approved SSH alias canonicalization is accepted for the package repository.
+- Smoke verifies accepted v2.0.0 changelog status.
+- Executable shell/Python changes require syntax evidence before auditor pass and checkpoint.
+AFFECTED_TRANSITIONS:
+- auditor pass -> checkpoint preflight -> full task packet schema validation before git add.
+- executable script change -> syntax evidence required before auditor pass and checkpoint eligibility.
+SCHEMA_TEMPLATE_IMPACT: none
+MIGRATION_REQUIRED: no
+MIGRATION_NOTE: This correction changes reproducible package smoke coverage and checkpoint preflight enforcement only. The active version tuple remains 2.0.0 / 2.0.0 / 2.0.0.
+TRACEABILITY_NOTE: Corrects AUDIT_ASO_PATCH_V2_0_0_FAIL_NON_REPRODUCIBLE_SMOKE_AND_PREFLIGHT_VALIDATION_GAP through TASK_ASO_CORR_200_001_REPRODUCIBLE_SMOKE_AND_PREFLIGHT_VALIDATION after mandatory auditor pass and orchestrator-owned checkpoint.
+AUTHORIZED_BY: project_owner
+AUDIT_REQUIRED: yes
+STATUS: accepted
 ```
