@@ -72,6 +72,7 @@ FLOOR_FIELD_NAMES = {
 }
 TERMINAL_TASK_STATUSES = {"checkpoint_done", "completed", "superseded"}
 NONE_VALUES = {"", "NONE", "none", "null", "UNKNOWN"}
+CHECKPOINT_POLICIES = {"local_only", "commit_and_push"}
 AUDIT_RESULT_REF_FIELDS = (
     "SOURCE_RESULT_REF",
     "AUDITED_RESULT_REF",
@@ -449,11 +450,13 @@ def _check_checkpoint_receipt(files: dict[str, RuntimeFile]) -> list[Finding]:
     required = _field(next_action, "CHECKPOINT_RECEIPT_REQUIRED")
     policy = _field(next_action, "CHECKPOINT_POLICY")
     checkpoint_status = _field(project_state, "PROJECT_CHECKPOINT_STATUS")
-    receipt_ref = _field(next_action, "CHECKPOINT_RECEIPT_REF") or _field(project_state, "CHECKPOINT_RECEIPT_REF")
+    next_receipt_ref = _field(next_action, "CHECKPOINT_RECEIPT_REF")
+    project_receipt_ref = _field(project_state, "CHECKPOINT_RECEIPT_REF")
+    receipt_ref = next_receipt_ref if not _is_none(next_receipt_ref) else project_receipt_ref
 
     receipt_needed = (
         required == "yes"
-        or policy in {"local_only", "commit_and_push"}
+        or policy in CHECKPOINT_POLICIES
         or checkpoint_status == "passed"
     )
     if receipt_needed and _is_none(receipt_ref):
@@ -469,6 +472,60 @@ def _check_checkpoint_receipt(files: dict[str, RuntimeFile]) -> list[Finding]:
                 ),
                 ["project-runtime/PROJECT_STATE.md", "project-runtime/NEXT_ACTION.md"],
                 "Record CHECKPOINT_RECEIPT_REF before marking checkpoint receipt requirements satisfied.",
+            )
+        ]
+    return []
+
+
+def _check_post_checkpoint_next_action(files: dict[str, RuntimeFile]) -> list[Finding]:
+    project_state = files["PROJECT_STATE.md"]
+    next_action = files["NEXT_ACTION.md"]
+    current_gate = files["CURRENT_GATE.md"]
+
+    checkpoint_status = _field(project_state, "PROJECT_CHECKPOINT_STATUS")
+    if checkpoint_status != "passed":
+        return []
+
+    policy = _field(next_action, "CHECKPOINT_POLICY")
+    action_type = _field(next_action, "ACTION_TYPE")
+    task_id = _field(next_action, "TASK_ID")
+    gate_task_id = _field(current_gate, "TASK_ID")
+    project_receipt_ref = _field(project_state, "CHECKPOINT_RECEIPT_REF")
+    next_receipt_ref = _field(next_action, "CHECKPOINT_RECEIPT_REF")
+    next_action_is_checkpoint = policy in CHECKPOINT_POLICIES or action_type == "checkpoint"
+
+    same_task_checkpoint = (
+        next_action_is_checkpoint
+        and not _is_none(task_id)
+        and not _is_none(gate_task_id)
+        and task_id == gate_task_id
+    )
+    same_receipt_checkpoint = (
+        next_action_is_checkpoint
+        and not _is_none(project_receipt_ref)
+        and not _is_none(next_receipt_ref)
+        and project_receipt_ref == next_receipt_ref
+    )
+
+    if same_task_checkpoint or same_receipt_checkpoint:
+        return [
+            Finding(
+                "LINT_STATE_009",
+                "error",
+                "Checkpoint passed but NEXT_ACTION still points to the same checkpoint",
+                (
+                    f"PROJECT_CHECKPOINT_STATUS={checkpoint_status}; "
+                    f"NEXT_ACTION.ACTION_TYPE={action_type or 'MISSING'}; "
+                    f"NEXT_ACTION.CHECKPOINT_POLICY={policy or 'MISSING'}; "
+                    f"NEXT_ACTION.TASK_ID={task_id or 'MISSING'}; "
+                    f"CURRENT_GATE.TASK_ID={gate_task_id or 'MISSING'}."
+                ),
+                [
+                    "project-runtime/PROJECT_STATE.md",
+                    "project-runtime/NEXT_ACTION.md",
+                    "project-runtime/CURRENT_GATE.md",
+                ],
+                "Recalculate NEXT_ACTION after checkpoint pass so it routes to the next governed action, not the completed checkpoint.",
             )
         ]
     return []
@@ -1138,6 +1195,7 @@ def _all_lint_findings(root: Path, files: dict[str, RuntimeFile]) -> list[Findin
     findings.extend(_check_checkpoint_gate(files))
     findings.extend(_check_stale_next_action(files))
     findings.extend(_check_checkpoint_receipt(files))
+    findings.extend(_check_post_checkpoint_next_action(files))
     findings.extend(_check_push_allowed(files))
     findings.extend(_check_task_statuses(files))
     findings.extend(_check_accepted_artifacts(root, files))

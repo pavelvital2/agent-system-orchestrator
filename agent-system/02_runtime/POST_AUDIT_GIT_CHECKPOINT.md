@@ -255,6 +255,12 @@ After a successful local-only checkpoint or commit-and-push checkpoint:
 valid `PUSH_STATUS` for the checkpoint policy: `not_required` for local-only,
 or `pushed` for commit-and-push.
 
+Future `aso checkpoint` mutation behavior must follow the ordered transaction
+contract in `TRANSACTIONAL_CHECKPOINT_SPEC.md`. In particular, after a passed
+checkpoint, `CURRENT_GATE` must be closed, `NEXT_ACTION` must be recalculated
+away from the same checkpoint, `CHECKPOINT_RECEIPT_REF` must not be `NONE`, and
+post-check verification must run over the completed runtime tuple.
+
 ## Failure routing
 
 Commit failure:

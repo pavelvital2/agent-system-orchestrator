@@ -307,6 +307,82 @@ STATUS: accepted
             self.assertIn("LINT_TASK_003", result.stdout)
             self.assertIn("LINT_ARTIFACT_002", result.stdout)
 
+    def test_lint_detects_post_checkpoint_transaction_invariants(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            write_runtime(
+                root,
+                {
+                    "PROJECT_STATE.md": """# PROJECT_STATE
+
+PROJECT_STATUS: active
+PROJECT_CHECKPOINT_STATUS: passed
+CHECKPOINT_RECEIPT_REF: NONE
+PUSH_ALLOWED: false
+""",
+                    "CURRENT_GATE.md": """# CURRENT_GATE
+
+STATUS: open
+TASK_ID: TASK_DEMO_001
+""",
+                    "NEXT_ACTION.md": """# NEXT_ACTION
+
+ACTION_TYPE: stop
+TARGET_ROLE: orchestrator
+TASK_ID: TASK_DEMO_001
+TASK_PACKET: NONE
+CHECKPOINT_POLICY: commit_and_push
+CHECKPOINT_RECEIPT_REQUIRED: yes
+CHECKPOINT_RECEIPT_REF: NONE
+""",
+                },
+            )
+
+            result = run_lint(root)
+
+            self.assertEqual(result.returncode, 1, result.stdout + result.stderr)
+            self.assertIn("LINT_STATE_002", result.stdout)
+            self.assertIn("LINT_STATE_007", result.stdout)
+            self.assertIn("LINT_STATE_009", result.stdout)
+
+    def test_lint_allows_passed_checkpoint_after_next_action_recalculation(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            write_runtime(
+                root,
+                {
+                    "PROJECT_STATE.md": """# PROJECT_STATE
+
+PROJECT_STATUS: active
+PROJECT_CHECKPOINT_STATUS: passed
+CHECKPOINT_RECEIPT_REF: project-runtime/checkpoints/CHECKPOINT_TASK_DEMO_001_ATTEMPT_001.md
+PUSH_ALLOWED: false
+""",
+                    "CURRENT_GATE.md": """# CURRENT_GATE
+
+STATUS: closed
+TASK_ID: TASK_DEMO_001
+""",
+                    "NEXT_ACTION.md": """# NEXT_ACTION
+
+ACTION_TYPE: stop
+TARGET_ROLE: orchestrator
+TASK_ID: TASK_DEMO_001
+TASK_PACKET: NONE
+CHECKPOINT_POLICY: no_checkpoint
+CHECKPOINT_RECEIPT_REQUIRED: no
+CHECKPOINT_RECEIPT_REF: NONE
+""",
+                },
+            )
+
+            result = run_lint(root)
+
+            self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+            self.assertNotIn("LINT_STATE_002", result.stdout)
+            self.assertNotIn("LINT_STATE_007", result.stdout)
+            self.assertNotIn("LINT_STATE_009", result.stdout)
+
     def test_strict_fails_on_warning_only_designer_alias(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)

@@ -15,6 +15,7 @@ validator.
 ```text
 agent-system/02_runtime/STATE_TRANSITION_RULES.md
 agent-system/02_runtime/POST_AUDIT_GIT_CHECKPOINT.md
+agent-system/02_runtime/TRANSACTIONAL_CHECKPOINT_SPEC.md
 agent-system/02_runtime/ACCEPTED_STATE_LOCKING.md
 agent-system/02_runtime/FILESYSTEM_GOVERNANCE.md
 agent-system/03_templates/CHECKPOINT_ELIGIBILITY_TEMPLATE.md
@@ -280,6 +281,26 @@ Successful checkpoint validation must ensure the checkpoint records:
 `STATUS: checkpoint_done` in the task registry is invalid unless commit hash,
 branch, commit status, push status appropriate to checkpoint policy, accepted
 files, and checkpoint reference are recorded.
+
+## Post-checkpoint transaction invariants
+
+After a checkpoint passes, validators must reject stale runtime tuples that
+still describe the same active checkpoint. The required post-check invariants
+are:
+
+- `CURRENT_GATE` must not remain active;
+- `NEXT_ACTION` must not point to the same checkpoint;
+- `CHECKPOINT_RECEIPT_REF` must not be `NONE`.
+
+`NEXT_ACTION` points to the same checkpoint when `PROJECT_CHECKPOINT_STATUS:
+passed` is already recorded and `NEXT_ACTION` still requires
+`CHECKPOINT_POLICY: local_only | commit_and_push` for the just-checkpointed
+task, or reuses the completed checkpoint receipt reference as its own pending
+checkpoint reference.
+
+`aso lint` enforces these invariants as read-only checks. It must not repair
+runtime state, commit, push, write checkpoint receipts, or implement
+`aso checkpoint` mutation behavior.
 
 ## Recovery
 
