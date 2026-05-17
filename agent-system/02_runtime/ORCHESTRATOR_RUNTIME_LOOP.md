@@ -392,6 +392,8 @@ informal context.
 
 10. Проверить только формальную корректность RESULT:
    - есть `STATUS`;
+   - есть `TASK_ID`;
+   - есть `AGENT_INSTANCE_ID`;
    - есть `ROLE`;
    - есть `TASK`;
    - есть `SUMMARY`;
@@ -401,18 +403,24 @@ informal context.
    - есть `CREATED_FILES`;
    - есть `DELETED_FILES`;
    - есть `COMMANDS_RUN`;
+   - есть `TESTS_RUN`;
    - есть `EVIDENCE`;
    - есть `SCOPE_VERIFICATION`;
    - есть `FORBIDDEN_CHANGES_CHECK`;
    - есть `RISKS`;
+   - есть `LIMITATIONS`;
    - есть `BLOCKERS`;
    - есть `GAPS`;
-   - есть `NEXT_RECOMMENDED_ACTION`.
+   - есть `NEXT_RECOMMENDED_ACTION`;
+   - есть `REUSE_ALLOWED: false`;
+   - есть `AGENT_TERMINATION_REQUIRED: true`.
 
 Формальная проверка RESULT должна требовать ровно обязательные поля из `AGENT_RESULT_TEMPLATE.md`:
 
 ```text
 STATUS
+TASK_ID
+AGENT_INSTANCE_ID
 ROLE
 TASK
 SUMMARY
@@ -422,13 +430,17 @@ CHANGED_FILES
 CREATED_FILES
 DELETED_FILES
 COMMANDS_RUN
+TESTS_RUN
 EVIDENCE
 SCOPE_VERIFICATION
 FORBIDDEN_CHANGES_CHECK
 RISKS
+LIMITATIONS
 BLOCKERS
 GAPS
 NEXT_RECOMMENDED_ACTION
+REUSE_ALLOWED
+AGENT_TERMINATION_REQUIRED
 ```
 
 `NEXT_RECOMMENDED_ACTION` is an advisory profile-agent recommendation, not an

@@ -26,6 +26,7 @@ agent-system/02_runtime/ALLOWED_ORCHESTRATOR_ACTIONS.md
 agent-system/02_runtime/STATE_TRANSITION_RULES.md
 agent-system/02_runtime/ACTION_STATE_SEMANTICS.md
 agent-system/02_runtime/AGENT_LIFECYCLE.md
+agent-system/02_runtime/PROFILE_AGENT_LIFECYCLE.md
 agent-system/02_runtime/FILESYSTEM_GOVERNANCE.md
 agent-system/02_runtime/GOVERNANCE_AUTHORITY.md
 agent-system/02_runtime/HANDOFF_PROTOCOL.md
@@ -92,6 +93,7 @@ agent-system/09_validators/GIT_CHECKPOINT_VALIDATION_RULES.md
 agent-system/09_validators/CROSS_LINK_VALIDATION_RULES.md
 agent-system/09_validators/RESEARCH_RETURN_VALIDATION_RULES.md
 agent-system/09_validators/REASONING_LEVEL_VALIDATION_RULES.md
+agent-system/09_validators/AGENT_LIFECYCLE_VALIDATION_RULES.md
 agent-system/09_validators/schemas/project_state.schema.json
 agent-system/09_validators/schemas/current_gate.schema.json
 agent-system/09_validators/schemas/next_action.schema.json

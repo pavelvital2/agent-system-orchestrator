@@ -12,9 +12,10 @@ It must not replace runtime state files, task packets, RESULT reports, or audit 
 
 ```text
 DATE:
-EVENT_TYPE: bootstrap | owner_pause | validator_result | checkpoint | manual_intervention | task_dispatch | result_route | audit_route | correction_route | state_update | violation_recovery
+EVENT_TYPE: bootstrap | owner_pause | validator_result | checkpoint | manual_intervention | task_dispatch | result_route | audit_route | correction_route | state_update | violation_recovery | agent_lifecycle
 ACTOR: orchestrator | project_owner | validator | system
 TASK_ID:
+AGENT_INSTANCE_ID:
 GATE_ID:
 ACTION_ID:
 STATUS:
@@ -48,6 +49,9 @@ The log must be able to record:
 ## Field rules
 
 - `TASK_ID`, `GATE_ID`, and `ACTION_ID` may be `NONE` only when the event is not tied to that object.
+- `AGENT_INSTANCE_ID` is required for `agent_lifecycle`, `task_dispatch`, and
+  `result_route` events that involve a profile-agent instance; otherwise use
+  `NONE`.
 - `INPUT_REFS` and `OUTPUT_REFS` must use bounded references and must not include large copied reports.
 - `COMMIT_HASH` is required for successful checkpoint events; otherwise use `NONE`.
 - `BRANCH`, `PUSH_STATUS`, and `ACCEPTED_FILES` are required for checkpoint events.

@@ -20,6 +20,7 @@ Validators help the orchestrator detect:
 - stale or missing package cross-links;
 - unsafe research dependency return routing;
 - invalid reasoning level assignments;
+- invalid profile-agent lifecycle termination or reuse evidence;
 - secret-handling violations.
 
 ## Source of authority
@@ -32,6 +33,7 @@ agent-system/02_runtime/STATE_TRANSITION_RULES.md
 agent-system/02_runtime/VIOLATION_RECOVERY.md
 agent-system/02_runtime/ACCEPTED_STATE_LOCKING.md
 agent-system/02_runtime/FILESYSTEM_GOVERNANCE.md
+agent-system/02_runtime/PROFILE_AGENT_LIFECYCLE.md
 agent-system/03_templates/AGENT_RESULT_TEMPLATE.md
 agent-system/03_templates/TASK_PACKET_TEMPLATE.md
 agent-system/04_state/RUNTIME_STATE_SCHEMA.md
@@ -51,6 +53,7 @@ agent-system/09_validators/GIT_CHECKPOINT_VALIDATION_RULES.md
 agent-system/09_validators/CROSS_LINK_VALIDATION_RULES.md
 agent-system/09_validators/RESEARCH_RETURN_VALIDATION_RULES.md
 agent-system/09_validators/REASONING_LEVEL_VALIDATION_RULES.md
+agent-system/09_validators/AGENT_LIFECYCLE_VALIDATION_RULES.md
 ```
 
 ## Machine-readable schema sidecars
@@ -113,12 +116,14 @@ before_dispatch:
 
 after_agent_result:
   result validity
+  profile-agent lifecycle field and termination validity
   research result schema validity when TASK_KIND is research_dependency
   file-scope validity
   transition validity
 
 before_audit_dispatch:
   runtime consistency
+  previous profile-agent lifecycle termination validity
   audit task packet validity
 
 after_audit_result:

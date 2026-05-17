@@ -24,6 +24,11 @@ TASK_PACKET -> profile agent -> RESULT -> auditor agent -> AUDIT_RESULT -> POST_
 
 The orchestrator coordinates work, but it does not perform profile-agent tasks or audit its own output. Each bounded task is assigned to exactly one fresh-context profile agent. The agent returns a structured `RESULT`, the matching auditor reviews it, and only an audit pass can advance accepted package or project state.
 
+Profile-agent reuse is forbidden. The mandatory one agent = one task = one
+RESULT policy, lifecycle states, required termination event, and logical
+termination rules are documented in
+[PROFILE_AGENT_LIFECYCLE.md](02_runtime/PROFILE_AGENT_LIFECYCLE.md).
+
 The filesystem is the source of truth. Runtime state, gates, registries, logs, task packets, results, audit results, handoffs, and accepted artifacts are represented as files governed by the package rules.
 
 Research dependencies use a controlled extension of the same sequence:
@@ -73,6 +78,7 @@ Key rules cover:
 - action/state semantics;
 - state transitions;
 - runtime loop behavior;
+- profile-agent lifecycle and termination;
 - filesystem governance;
 - handoff protocol;
 - accepted-state locking;
@@ -90,6 +96,8 @@ Research return validation is documented in
 [RESEARCH_RETURN_VALIDATION_RULES.md](09_validators/RESEARCH_RETURN_VALIDATION_RULES.md).
 Reasoning-level validation is documented in
 [REASONING_LEVEL_VALIDATION_RULES.md](09_validators/REASONING_LEVEL_VALIDATION_RULES.md).
+Profile-agent lifecycle validation is documented in
+[AGENT_LIFECYCLE_VALIDATION_RULES.md](09_validators/AGENT_LIFECYCLE_VALIDATION_RULES.md).
 
 ## Safe workspace initialization
 

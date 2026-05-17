@@ -9,6 +9,7 @@ RESULT payloads.
 
 ```text
 agent-system/03_templates/AGENT_RESULT_TEMPLATE.md
+agent-system/02_runtime/PROFILE_AGENT_LIFECYCLE.md
 agent-system/03_templates/RESEARCH_RESULT_TEMPLATE.md
 agent-system/02_runtime/STATE_TRANSITION_RULES.md
 agent-system/02_runtime/FILESYSTEM_GOVERNANCE.md
@@ -26,16 +27,23 @@ At minimum, validators must check:
 ```text
 RESULT:
 STATUS:
+TASK_ID:
+AGENT_INSTANCE_ID:
 ROLE:
 TASK:
 SUMMARY:
 CHANGED_FILES:
 READ_DOCS:
+COMMANDS_RUN:
+TESTS_RUN:
 EVIDENCE:
 RISKS:
+LIMITATIONS:
 BLOCKERS:
 GAPS:
 NEXT_RECOMMENDED_ACTION:
+REUSE_ALLOWED:
+AGENT_TERMINATION_REQUIRED:
 ```
 
 If a newer template adds sections, the validator must follow the template.
@@ -64,6 +72,24 @@ checkpoint_done
 ```
 
 `violation` is reserved for orchestrator recovery classification.
+
+## Lifecycle field validation
+
+Every profile-agent RESULT is invalid unless:
+
+- `TASK_ID` identifies the dispatched task;
+- `AGENT_INSTANCE_ID` identifies the single profile-agent instance used for
+  that task;
+- `REUSE_ALLOWED` is exactly `false`;
+- `AGENT_TERMINATION_REQUIRED` is exactly `true`;
+- `TESTS_RUN` is present and uses `NONE` when no tests or checks were run;
+- `LIMITATIONS` is present and uses `NONE` when no limitation is known.
+
+The orchestrator must validate termination and reuse evidence using:
+
+```text
+agent-system/09_validators/AGENT_LIFECYCLE_VALIDATION_RULES.md
+```
 
 ## Role and task validation
 

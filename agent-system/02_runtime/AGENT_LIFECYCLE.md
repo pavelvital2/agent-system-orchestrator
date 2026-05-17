@@ -4,6 +4,17 @@
 
 Одна задача = один агент = один свежий контекст.
 
+The mandatory profile-agent lifecycle policy is defined in:
+
+```text
+agent-system/02_runtime/PROFILE_AGENT_LIFECYCLE.md
+```
+
+That policy is authoritative for the one agent = one task = one RESULT rule,
+reuse prohibition, required lifecycle states, termination event, RESULT
+lifecycle fields, and the distinction between logical termination and physical
+deletion.
+
 ## Создание агента
 
 При создании агента оркестратор обязан передать:

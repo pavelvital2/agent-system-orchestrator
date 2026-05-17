@@ -62,14 +62,45 @@ STATUS: pending
 
 RESULT = """# RESULT
 
+STATUS: pass
 TASK_ID: TASK_DEMO_001
 AGENT_INSTANCE_ID: agent_TASK_DEMO_001_attempt_001
+ROLE: developer
+TASK: TASK_DEMO_001
 SUMMARY:
 Done.
+READ_DOCS:
+- NONE
+READ_INPUTS:
+- NONE
+CHANGED_FILES:
+- NONE
+CREATED_FILES:
+- NONE
+DELETED_FILES:
+- NONE
+COMMANDS_RUN:
+- NONE
+TESTS_RUN:
+- NONE
+EVIDENCE:
+- NONE
+SCOPE_VERIFICATION:
+- NONE
+FORBIDDEN_CHANGES_CHECK:
+- NONE
+RISKS:
+- NONE
+LIMITATIONS:
+- NONE
+BLOCKERS:
+- NONE
+GAPS:
+- NONE
+NEXT_RECOMMENDED_ACTION:
+- NONE
 REUSE_ALLOWED: false
 AGENT_TERMINATION_REQUIRED: true
-AGENT_TERMINATION_EVIDENCE:
-Closed by orchestrator.
 """
 
 
@@ -96,6 +127,23 @@ def write_runtime(root: Path, overrides: dict[str, str] | None = None) -> list[P
     result_path = results / "RESULT_TASK_DEMO_001_ATTEMPT_001.md"
     result_path.write_text(RESULT, encoding="utf-8")
     paths.append(result_path)
+
+    agents = runtime / "agents"
+    agents.mkdir()
+    instances_path = agents / "instances.jsonl"
+    instances_path.write_text(
+        "\n".join(
+            [
+                '{"event":"agent_instance_created","agent_instance_id":"agent_TASK_DEMO_001_attempt_001","task_id":"TASK_DEMO_001","role":"developer","timestamp_utc":"2026-05-17T10:00:00Z"}',
+                '{"event":"agent_task_dispatched","agent_instance_id":"agent_TASK_DEMO_001_attempt_001","task_id":"TASK_DEMO_001","role":"developer","timestamp_utc":"2026-05-17T10:01:00Z"}',
+                '{"event":"agent_result_received","agent_instance_id":"agent_TASK_DEMO_001_attempt_001","task_id":"TASK_DEMO_001","result_ref":"project-runtime/results/RESULT_TASK_DEMO_001_ATTEMPT_001.md","reuse_allowed":false,"timestamp_utc":"2026-05-17T10:30:00Z"}',
+                '{"event":"agent_instance_terminated","agent_instance_id":"agent_TASK_DEMO_001_attempt_001","task_id":"TASK_DEMO_001","reuse_allowed":false,"timestamp_utc":"2026-05-17T10:31:00Z"}',
+            ]
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+    paths.append(instances_path)
     return paths
 
 
@@ -257,7 +305,30 @@ AGENT_TERMINATION_REQUIRED: false
             self.assertIn("LINT_AGENT_001", result.stdout)
             self.assertIn("LINT_AGENT_002", result.stdout)
             self.assertIn("LINT_AGENT_003", result.stdout)
+            self.assertIn("LINT_AGENT_005", result.stdout)
             self.assertIn("LINT_PRODUCT_001", result.stdout)
+
+    def test_lint_detects_agent_reuse_in_events(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            write_runtime(root)
+            instances_path = root / "project-runtime" / "agents" / "instances.jsonl"
+            instances_path.write_text(
+                "\n".join(
+                    [
+                        '{"event":"agent_result_received","agent_instance_id":"agent_TASK_DEMO_001_attempt_001","task_id":"TASK_DEMO_001","reuse_allowed":true}',
+                        '{"event":"agent_instance_terminated","agent_instance_id":"agent_TASK_DEMO_001_attempt_001","task_id":"TASK_OTHER_002","reuse_allowed":false}',
+                    ]
+                )
+                + "\n",
+                encoding="utf-8",
+            )
+
+            result = run_lint(root)
+
+            self.assertEqual(result.returncode, 1, result.stdout + result.stderr)
+            self.assertIn("LINT_AGENT_004", result.stdout)
+            self.assertIn("LINT_AGENT_006", result.stdout)
 
 
 if __name__ == "__main__":

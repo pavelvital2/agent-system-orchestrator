@@ -6,6 +6,12 @@
 RESULT:
 STATUS: pass | fail | blocked | gap
 
+TASK_ID:
+<TASK_ID>
+
+AGENT_INSTANCE_ID:
+<agent instance id assigned by orchestrator>
+
 ROLE:
 <requirements_analyst | designer | developer | auditor | tester | technical_writer | devops_setup_engineer | release_manager>
 
@@ -33,6 +39,9 @@ DELETED_FILES:
 COMMANDS_RUN:
 - <command and concise result> | NONE
 
+TESTS_RUN:
+- <test/check and concise result> | NONE
+
 EVIDENCE:
 - <command/result/file/report> | NONE
 
@@ -44,6 +53,9 @@ FORBIDDEN_CHANGES_CHECK:
 
 RISKS:
 - <risk> | NONE
+
+LIMITATIONS:
+- <limitation> | NONE
 
 BLOCKERS:
 - <blocker> | NONE
@@ -62,6 +74,9 @@ GAPS:
 
 NEXT_RECOMMENDED_ACTION:
 - <next action>
+
+REUSE_ALLOWED: false
+AGENT_TERMINATION_REQUIRED: true
 ```
 
 For `TASK_KIND: research_dependency`, the RESULT must also include the research
@@ -142,6 +157,8 @@ Every RESULT must include these fields exactly:
 
 ```text
 STATUS
+TASK_ID
+AGENT_INSTANCE_ID
 ROLE
 TASK
 SUMMARY
@@ -151,16 +168,27 @@ CHANGED_FILES
 CREATED_FILES
 DELETED_FILES
 COMMANDS_RUN
+TESTS_RUN
 EVIDENCE
 SCOPE_VERIFICATION
 FORBIDDEN_CHANGES_CHECK
 RISKS
+LIMITATIONS
 BLOCKERS
 GAPS
 NEXT_RECOMMENDED_ACTION
+REUSE_ALLOWED
+AGENT_TERMINATION_REQUIRED
 ```
 
 If a field has no entries, use `NONE`.
+
+`REUSE_ALLOWED` must always be `false`.
+
+`AGENT_TERMINATION_REQUIRED` must always be `true`.
+
+The orchestrator must record lifecycle termination according to
+`agent-system/02_runtime/PROFILE_AGENT_LIFECYCLE.md`.
 
 Legacy RESULT consumers may still display or read `NEXT_REQUIRED_ACTION` as an
 alias for older records, but profile agents must emit

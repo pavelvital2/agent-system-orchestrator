@@ -580,9 +580,9 @@ def _result_files(root: Path) -> list[Path]:
     return paths
 
 
-def _agent_events(root: Path) -> dict[str, set[str]]:
+def _agent_events(root: Path) -> dict[str, dict[str, set[str]]]:
     events_path = root / "project-runtime" / "agents" / "instances.jsonl"
-    events: dict[str, set[str]] = {}
+    events: dict[str, dict[str, set[str]]] = {}
     if not events_path.exists():
         return events
 
@@ -599,15 +599,36 @@ def _agent_events(root: Path) -> dict[str, set[str]]:
         agent_id = str(payload.get("agent_instance_id", "")).strip()
         event = str(payload.get("event", "")).strip()
         if agent_id and event:
-            events.setdefault(agent_id, set()).add(event)
-            if event == "agent_result_received" and str(payload.get("reuse_allowed", "")).lower() not in {"false", ""}:
-                events.setdefault(f"{agent_id}:reuse_violation", set()).add(event)
+            record = events.setdefault(
+                agent_id,
+                {"events": set(), "task_ids": set(), "reuse_violations": set()},
+            )
+            record["events"].add(event)
+            task_id = str(payload.get("task_id", payload.get("TASK_ID", ""))).strip()
+            if task_id:
+                record["task_ids"].add(task_id)
+            reuse_allowed = str(payload.get("reuse_allowed", "")).strip().lower()
+            if event == "agent_result_received" and reuse_allowed != "false":
+                raw_reuse_allowed = str(payload.get("reuse_allowed", "MISSING")).strip()
+                record["reuse_violations"].add(raw_reuse_allowed or "MISSING")
     return events
 
 
 def _check_agent_lifecycle(root: Path) -> list[Finding]:
     findings: list[Finding] = []
     events = _agent_events(root)
+    required_lifecycle_fields = (
+        "TASK_ID",
+        "AGENT_INSTANCE_ID",
+        "SUMMARY",
+        "CHANGED_FILES",
+        "COMMANDS_RUN",
+        "TESTS_RUN",
+        "RISKS",
+        "LIMITATIONS",
+        "REUSE_ALLOWED",
+        "AGENT_TERMINATION_REQUIRED",
+    )
     for path in _result_files(root):
         text, error = _read_text(path)
         if error:
@@ -617,7 +638,21 @@ def _check_agent_lifecycle(root: Path) -> list[Finding]:
         agent_id = fields.get("AGENT_INSTANCE_ID", "")
         reuse_allowed = fields.get("REUSE_ALLOWED", "")
         termination_required = fields.get("AGENT_TERMINATION_REQUIRED", "")
-        termination_evidence = fields.get("AGENT_TERMINATION_EVIDENCE", "")
+        missing_fields = [
+            field for field in required_lifecycle_fields if _is_none(fields.get(field))
+        ]
+
+        if missing_fields:
+            findings.append(
+                Finding(
+                    "LINT_AGENT_005",
+                    "error",
+                    "RESULT is missing lifecycle fields",
+                    f"{relpath} omits required lifecycle fields: {', '.join(missing_fields)}.",
+                    [relpath],
+                    "Add the mandatory profile-agent lifecycle fields from AGENT_RESULT_TEMPLATE.md.",
+                )
+            )
 
         if reuse_allowed != "false":
             findings.append(
@@ -642,28 +677,45 @@ def _check_agent_lifecycle(root: Path) -> list[Finding]:
                 )
             )
         if not _is_none(agent_id):
-            terminated = "agent_instance_terminated" in events.get(agent_id, set())
-            has_inline_evidence = not _is_none(termination_evidence)
-            if not terminated and not has_inline_evidence:
+            event_record = events.get(
+                agent_id,
+                {"events": set(), "task_ids": set(), "reuse_violations": set()},
+            )
+            terminated = "agent_instance_terminated" in event_record["events"]
+            if not terminated:
                 findings.append(
                     Finding(
                         "LINT_AGENT_003",
                         "error",
-                        "Agent termination evidence is missing after RESULT",
-                        f"{relpath} records AGENT_INSTANCE_ID={agent_id} but no termination event/evidence exists.",
+                        "Agent termination event is missing after RESULT",
+                        (
+                            f"{relpath} records AGENT_INSTANCE_ID={agent_id} "
+                            "but no agent_instance_terminated event exists."
+                        ),
                         [relpath, "project-runtime/agents/instances.jsonl"],
-                        "Terminate the profile agent and record agent_instance_terminated or inline termination evidence.",
+                        "Terminate the profile agent and record agent_instance_terminated with reuse_allowed=false.",
                     )
                 )
-            if f"{agent_id}:reuse_violation" in events:
+            if event_record["reuse_violations"]:
                 findings.append(
                     Finding(
                         "LINT_AGENT_004",
                         "error",
                         "Agent result event allows reuse",
-                        f"agent_result_received for {agent_id} does not record reuse_allowed=false.",
+                        f"agent_result_received for {agent_id} has reuse_allowed={', '.join(sorted(event_record['reuse_violations']))}.",
                         ["project-runtime/agents/instances.jsonl"],
                         "Record result receipt with reuse_allowed=false and terminate the agent instance.",
+                    )
+                )
+            if len(event_record["task_ids"]) > 1:
+                findings.append(
+                    Finding(
+                        "LINT_AGENT_006",
+                        "error",
+                        "Agent instance is associated with multiple task ids",
+                        f"{agent_id} appears with task ids: {', '.join(sorted(event_record['task_ids']))}.",
+                        ["project-runtime/agents/instances.jsonl"],
+                        "Use one fresh AGENT_INSTANCE_ID per task.",
                     )
                 )
     return findings

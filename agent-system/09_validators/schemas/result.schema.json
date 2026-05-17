@@ -7,6 +7,8 @@
   "additionalProperties": false,
   "required": [
     "STATUS",
+    "TASK_ID",
+    "AGENT_INSTANCE_ID",
     "ROLE",
     "TASK",
     "SUMMARY",
@@ -16,16 +18,22 @@
     "CREATED_FILES",
     "DELETED_FILES",
     "COMMANDS_RUN",
+    "TESTS_RUN",
     "EVIDENCE",
     "SCOPE_VERIFICATION",
     "FORBIDDEN_CHANGES_CHECK",
     "RISKS",
+    "LIMITATIONS",
     "BLOCKERS",
     "GAPS",
-    "NEXT_RECOMMENDED_ACTION"
+    "NEXT_RECOMMENDED_ACTION",
+    "REUSE_ALLOWED",
+    "AGENT_TERMINATION_REQUIRED"
   ],
   "properties": {
     "STATUS": { "type": "string", "enum": ["pass", "fail", "blocked", "gap"] },
+    "TASK_ID": { "type": "string" },
+    "AGENT_INSTANCE_ID": { "type": "string" },
     "ROLE": { "type": "string", "enum": ["requirements_analyst", "designer", "developer", "auditor", "tester", "technical_writer", "devops_setup_engineer", "release_manager"] },
     "TASK": { "type": "string" },
     "SUMMARY": { "$ref": "#/$defs/nonEmptyList" },
@@ -35,10 +43,12 @@
     "CREATED_FILES": { "$ref": "#/$defs/listOrNone" },
     "DELETED_FILES": { "$ref": "#/$defs/listOrNone" },
     "COMMANDS_RUN": { "$ref": "#/$defs/listOrNone" },
+    "TESTS_RUN": { "$ref": "#/$defs/listOrNone" },
     "EVIDENCE": { "$ref": "#/$defs/listOrNone" },
     "SCOPE_VERIFICATION": { "$ref": "#/$defs/listOrNone" },
     "FORBIDDEN_CHANGES_CHECK": { "$ref": "#/$defs/listOrNone" },
     "RISKS": { "$ref": "#/$defs/listOrNone" },
+    "LIMITATIONS": { "$ref": "#/$defs/listOrNone" },
     "BLOCKERS": { "$ref": "#/$defs/listOrNone" },
     "GAPS": {
       "oneOf": [
@@ -50,6 +60,8 @@
       ]
     },
     "NEXT_RECOMMENDED_ACTION": { "$ref": "#/$defs/listOrNone" },
+    "REUSE_ALLOWED": { "oneOf": [{ "const": false }, { "const": "false" }] },
+    "AGENT_TERMINATION_REQUIRED": { "oneOf": [{ "const": true }, { "const": "true" }] },
     "RESEARCH_QUESTION_ID": { "type": "string" },
     "RESEARCH_SUMMARY": { "$ref": "#/$defs/listOrNone" },
     "SOURCES_USED": { "$ref": "#/$defs/listOrNone" },
