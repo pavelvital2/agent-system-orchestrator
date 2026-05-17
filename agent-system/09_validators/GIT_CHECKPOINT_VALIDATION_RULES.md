@@ -7,7 +7,8 @@ checkpoint attempts.
 
 Git checkpoint validation applies before staging, committing, and pushing.
 It also requires committed `HEAD` validation after commit and before push. It
-does not require a working CLI implementation.
+may be enforced by the package preflight script or by an equivalent governed
+validator.
 
 ## Source documents
 
@@ -16,9 +17,13 @@ agent-system/02_runtime/STATE_TRANSITION_RULES.md
 agent-system/02_runtime/POST_AUDIT_GIT_CHECKPOINT.md
 agent-system/02_runtime/ACCEPTED_STATE_LOCKING.md
 agent-system/02_runtime/FILESYSTEM_GOVERNANCE.md
+agent-system/03_templates/CHECKPOINT_ELIGIBILITY_TEMPLATE.md
 agent-system/04_state/TASK_REGISTRY_TEMPLATE.md
 agent-system/04_state/ACCEPTED_ARTIFACTS_TEMPLATE.md
 agent-system/06_logs/ORCHESTRATOR_EVENTS_LOG_TEMPLATE.md
+agent-system/09_validators/CHANGED_FILES_SCOPE_MATRIX.md
+agent-system/09_validators/SECRET_SCAN_RULES.md
+agent-system/scripts/checkpoint_preflight.sh
 ```
 
 ## Checkpoint preconditions
@@ -36,6 +41,10 @@ A Git checkpoint is valid only when all conditions are true:
   checkpointed work.
 - accepted files can be listed without reading or printing secret values;
 - working-tree validation for accepted task-specific invariants has passed.
+- `CHECKPOINT_ELIGIBILITY_STATUS: eligible` is recorded separately from
+  `AUDIT_STATUS`;
+- `CHECKPOINT_PREFLIGHT_STATUS: passed` is recorded with a bounded preflight
+  reference.
 
 ## Forbidden checkpoint attempts
 
@@ -52,6 +61,59 @@ Checkpoint is forbidden after:
 - unverified correction result;
 - failed working-tree validation for accepted task-specific invariants;
 - failed committed `HEAD` validation for accepted task-specific invariants.
+- `CHECKPOINT_ELIGIBILITY_STATUS` is `not_checked`, `ineligible`, or
+  `blocked`;
+- `SECRET_SCAN_STATUS: potential_secret_exposure`;
+- missing checkpoint eligibility receipt for a local-only or commit-and-push
+  checkpoint.
+
+## Required checkpoint preflight
+
+Before staging any file, checkpoint preflight must deterministically evaluate
+these checks in order:
+
+```text
+1. identity_check
+2. git_target_check
+3. changed_files_scope_check
+4. task_packet_schema_check
+5. runtime_schema_check
+6. secret_scan_check
+```
+
+The preflight may be implemented by:
+
+```text
+agent-system/scripts/checkpoint_preflight.sh
+```
+
+or by an equivalent governed validator that produces the same receipt fields.
+
+The receipt must use this template:
+
+```text
+agent-system/03_templates/CHECKPOINT_ELIGIBILITY_TEMPLATE.md
+```
+
+Receipt path convention:
+
+```text
+project-runtime/checkpoints/CHECKPOINT_ELIGIBILITY_<TASK_ID>_<ATTEMPT_NO>.md
+```
+
+Checkpoint preflight passes only when all of the following are true:
+
+- workspace identity status passed;
+- canonical expected and actual Git remotes match;
+- expected and actual branches match;
+- push target is not required, or `LAST_PUSH_TARGET_STATUS: matched`;
+- changed files are allowed by task packet scope and
+  `CHANGED_FILES_SCOPE_MATRIX.md`;
+- newly created files intended for checkpoint are included in file-scope and
+  secret checks before they are staged;
+- task packet has required schema sections and is active;
+- runtime schema contains mandatory checkpoint distinction fields;
+- secret scan returns no `potential_secret_exposure`.
 
 ## Allowed and forbidden file checks
 
@@ -61,6 +123,7 @@ Before staging, compare changed paths against:
 ALLOWED_FILE_CHANGES
 FORBIDDEN_FILE_CHANGES
 FILESYSTEM_GOVERNANCE
+CHANGED_FILES_SCOPE_MATRIX
 ```
 
 Invalid checkpoint conditions:
@@ -85,6 +148,8 @@ does not include:
 - `.env` values;
 - command outputs containing secret values;
 - unredacted secret material in RESULT, logs, docs, or runtime state.
+- HAR/devtools dumps, session material, or browser profile artifacts;
+- any finding classified as `potential_secret_exposure`.
 
 Validators must not print suspected secret values. Evidence must identify only
 the path, field, or redacted class of issue.
@@ -105,6 +170,7 @@ Push is valid only after the local commit is valid.
 Push must not proceed when:
 
 - checkpoint preconditions fail;
+- `LAST_PUSH_TARGET_STATUS` is not `matched`;
 - working tree contains out-of-scope staged changes;
 - secret-safety checks fail;
 - audit pass is missing;
@@ -120,9 +186,17 @@ Successful checkpoint validation must ensure the checkpoint records:
 - accepted task id;
 - accepted result reference;
 - audit reference;
+- audit status;
+- checkpoint eligibility status;
+- checkpoint preflight status and reference;
+- checkpoint receipt reference;
 - accepted files;
 - branch;
+- commit status;
 - commit hash;
+- push remote and branch when push is attempted;
+- last push target status;
+- project checkpoint status;
 - working-tree validation reference;
 - committed `HEAD` validation reference;
 - push status.
@@ -130,7 +204,8 @@ Successful checkpoint validation must ensure the checkpoint records:
 `PUSH_STATUS: pushed` requires a valid local commit hash and a completed push.
 
 `STATUS: checkpoint_done` in the task registry is invalid unless commit hash,
-branch, pushed status, accepted files, and checkpoint reference are recorded.
+branch, commit status, push status appropriate to checkpoint policy, accepted
+files, and checkpoint reference are recorded.
 
 ## Recovery
 

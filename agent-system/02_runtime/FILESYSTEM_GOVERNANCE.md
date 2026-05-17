@@ -103,6 +103,12 @@ project-runtime/ORCHESTRATOR_EVENTS_LOG.md
 project-runtime/STATUS_SUMMARY.md
 ```
 
+Checkpoint eligibility receipts are orchestrator-owned runtime evidence under:
+
+```text
+project-runtime/checkpoints/CHECKPOINT_ELIGIBILITY_<TASK_ID>_<ATTEMPT_NO>.md
+```
+
 Кто может менять:
 - оркестратор;
 - владелец проекта вручную при emergency correction.
@@ -682,12 +688,33 @@ orchestrator-owned checkpoint, commit, or push, the orchestrator must validate:
 - WORKSPACE_TYPE permits the requested checkpoint behavior;
 - REPOSITORY_LOCK_STATUS is accepted when push is requested;
 - PUSH_ALLOWED is true only under the accepted repository lock.
+- CHECKPOINT_ELIGIBILITY_STATUS is eligible in a bounded receipt;
+- changed files pass CHANGED_FILES_SCOPE_MATRIX;
+- secret scan passes SECRET_SCAN_RULES without potential_secret_exposure.
 ```
 
 Wrong remote, wrong branch, identity leakage, missing repository lock, or
 `PUSH_ALLOWED: false` is a hard blocker for push. Commit is also forbidden
 unless a governed local-only checkpoint is explicitly allowed by the repository
 lock and active task packet.
+
+Changed-file scope validation is governed by:
+
+```text
+agent-system/09_validators/CHANGED_FILES_SCOPE_MATRIX.md
+```
+
+Secret and sensitive artifact validation is governed by:
+
+```text
+agent-system/09_validators/SECRET_SCAN_RULES.md
+```
+
+Checkpoint eligibility receipts must use:
+
+```text
+agent-system/03_templates/CHECKPOINT_ELIGIBILITY_TEMPLATE.md
+```
 
 ## Secret handling
 
@@ -708,8 +735,10 @@ Secrets include:
 - credentials;
 - tokens;
 - cookies;
+- HAR/devtools dumps;
 - private keys;
 - passwords;
+- session material;
 - local secret stores;
 - `.env` files with real values.
 

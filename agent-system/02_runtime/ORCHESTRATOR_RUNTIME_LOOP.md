@@ -32,6 +32,7 @@
    - `agent-system/03_templates/ORCHESTRATOR_TASK_HANDOFF_TEMPLATE.md`
    - `agent-system/03_templates/WORKSPACE_IDENTITY_TEMPLATE.md`
    - `agent-system/03_templates/REPOSITORY_LOCK_TEMPLATE.md`
+   - `agent-system/03_templates/CHECKPOINT_ELIGIBILITY_TEMPLATE.md`
    - `agent-system/03_templates/AGENT_RESULT_TEMPLATE.md`
    - `agent-system/04_state/RUNTIME_STATE_SCHEMA.md`
    - `agent-system/05_gap_flow/GAP_FLOW.md`
@@ -40,8 +41,11 @@
    - `agent-system/06_logs/ORCHESTRATOR_EVENTS_LOG_TEMPLATE.md`
    - `agent-system/09_validators/WORKSPACE_IDENTITY_VALIDATION_RULES.md`
    - `agent-system/09_validators/GIT_CHECKPOINT_VALIDATION_RULES.md`
+   - `agent-system/09_validators/CHANGED_FILES_SCOPE_MATRIX.md`
+   - `agent-system/09_validators/SECRET_SCAN_RULES.md`
    - `agent-system/09_validators/RESEARCH_RETURN_VALIDATION_RULES.md`
    - `agent-system/09_validators/REASONING_LEVEL_VALIDATION_RULES.md`
+   - `agent-system/scripts/checkpoint_preflight.sh`
    - `project-runtime/PROJECT_STATE.md`
    - `project-runtime/CURRENT_GATE.md`
    - `project-runtime/NEXT_ACTION.md`
@@ -246,11 +250,16 @@ allowed only after auditor `STATUS: pass`.
 Если auditor RESULT имеет `STATUS: pass`, оркестратор обязан:
 
 - route first to `POST_AUDIT_GIT_CHECKPOINT.md`;
-- validate `GIT_CHECKPOINT_VALIDATION_RULES.md` before staging;
+- treat auditor pass as necessary but not sufficient for commit or push;
+- run deterministic checkpoint preflight before staging;
+- validate `GIT_CHECKPOINT_VALIDATION_RULES.md`,
+  `CHANGED_FILES_SCOPE_MATRIX.md`, and `SECRET_SCAN_RULES.md`;
+- record `CHECKPOINT_ELIGIBILITY_STATUS` in a checkpoint eligibility receipt;
 - stage only accepted files allowed by the audited task packet;
 - commit only after checkpoint validation passes;
 - push only after a valid local commit exists;
-- record branch, commit hash, push status, and accepted files;
+- record branch, commit hash, commit status, push status, push remote/branch,
+  `LAST_PUSH_TARGET_STATUS`, `PROJECT_CHECKPOINT_STATUS`, and accepted files;
 - route to the next governed task only after successful checkpoint completion.
 
 If the audited task has `TASK_KIND: research_dependency` and
@@ -398,7 +407,7 @@ NEXT_RECOMMENDED_ACTION: correction
 12. Действовать по STATUS:
    - profile-agent `pass` with mandatory audit → перейти к обязательному audit gate;
    - profile-agent `pass` without mandatory audit → route only by validated task packet, task registry, and transition rules;
-   - auditor `pass` → выполнить post-audit Git checkpoint, then перейти к следующему governed gate;
+   - auditor `pass` → выполнить post-audit checkpoint eligibility preflight and, only if eligible, Git checkpoint, then перейти к следующему governed gate;
    - `fail` → вернуть задачу на исправление профильному агенту;
    - `blocked` → зафиксировать блокер;
    - `gap` → зафиксировать GAP и остановить зависимую ветку.
@@ -455,7 +464,13 @@ push, the orchestrator must validate in this order:
     `REASONING_LEVEL`, and gate-required floor;
 21. `TASK_KIND: research_dependency` and requester continuation routing are
     valid under `REQUESTER_RETURN_PROTOCOL.md`;
-22. requested action is valid under governance-freeze rules.
+22. before checkpoint, commit, or push, deterministic checkpoint preflight has
+    run and produced `CHECKPOINT_ELIGIBILITY_STATUS: eligible` in a receipt
+    based on `CHECKPOINT_ELIGIBILITY_TEMPLATE.md`;
+23. checkpoint preflight covers workspace identity, Git target, changed file
+    scope, task packet schema, runtime schema, and secret/sensitive artifact
+    scan;
+24. requested action is valid under governance-freeze rules.
 
 If any validation fails, dispatch is forbidden.
 

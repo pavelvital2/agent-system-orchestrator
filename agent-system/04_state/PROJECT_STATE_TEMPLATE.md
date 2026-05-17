@@ -37,13 +37,34 @@ IDENTITY_VALIDATION_ERROR: NONE | repository_identity_mismatch | repository_bran
 IDENTITY_VALIDATION_EVIDENCE:
 REPOSITORY_LOCK_STATUS: absent | draft | accepted | revoked | blocked
 CHECKPOINT_ELIGIBILITY: blocked | local_only | push_allowed | not_applicable
+AUDIT_STATUS: not_applicable | pending | passed | failed | blocked | gap
+CHECKPOINT_ELIGIBILITY_STATUS: not_checked | eligible | ineligible | blocked
+CHECKPOINT_PREFLIGHT_STATUS: not_run | passed | failed | blocked
+CHECKPOINT_PREFLIGHT_REF:
+CHECKPOINT_RECEIPT_REF:
+COMMIT_STATUS: not_required | not_attempted | committed | failed | blocked
+LAST_COMMIT_HASH:
+LAST_COMMIT_BRANCH:
+PUSH_STATUS: not_required | not_attempted | pushed | failed | blocked
+LAST_PUSH_REMOTE:
+LAST_PUSH_BRANCH:
+LAST_PUSH_TARGET_STATUS: not_checked | matched | mismatched | blocked | not_required
+PROJECT_CHECKPOINT_STATUS: not_required | pending | passed | failed | blocked
 CHECKPOINT_BLOCKED_BY:
+LAST_CHECKPOINT_FAILURE_REASON:
 ```
 
 `EXPECTED_GIT_REMOTE` and `ACTUAL_GIT_REMOTE` are canonical repository identity
 fields. `PUSH_ALLOWED` defaults to `false` unless an accepted repository lock
 authorizes push for the current workspace type, canonical repository identity,
 and branch.
+
+`AUDIT_STATUS` records only the independent audit result. It does not authorize
+checkpoint, commit, or push by itself. `CHECKPOINT_ELIGIBILITY_STATUS` records
+the deterministic post-audit preflight decision, while `COMMIT_STATUS`,
+`PUSH_STATUS`, `LAST_PUSH_TARGET_STATUS`, and `PROJECT_CHECKPOINT_STATUS`
+separate local commit state, technical push state, push target verification, and
+valid project/package checkpoint state.
 
 ## Runtime semantic state
 

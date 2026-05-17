@@ -16,6 +16,10 @@ after all preconditions pass.
 Profile agents never commit or push. Task packets cannot grant commit or push
 authority to profile agents.
 
+Auditor `STATUS: pass` is necessary but not sufficient for commit or push. The
+orchestrator must derive a separate `CHECKPOINT_ELIGIBILITY_STATUS` through
+deterministic checkpoint preflight before staging any file.
+
 Research dependency results follow the same audit-pass checkpoint rule. If a
 research dependency task requires checkpointing, requester continuation may be
 marked ready only after the independent auditor passes and this checkpoint
@@ -38,6 +42,11 @@ A post-audit Git checkpoint may start only when all conditions are true:
 - changed files match the task packet `ALLOWED_FILE_CHANGES`;
 - changed files do not match the task packet `FORBIDDEN_FILE_CHANGES`;
 - runtime state has no active blocker or GAP that blocks the accepted work;
+- `AUDIT_STATUS` for the accepted work is `passed`;
+- `CHECKPOINT_ELIGIBILITY_STATUS` is `eligible` in a bounded checkpoint
+  eligibility receipt;
+- checkpoint preflight has passed identity, Git target, changed file scope,
+  task packet schema, runtime schema, and secret scan checks;
 - working-tree validation for the task-specific invariants passes before
   staging or committing;
 - `GIT_CHECKPOINT_VALIDATION_RULES.md` passes.
@@ -59,11 +68,56 @@ The orchestrator must not stage, commit, or push after:
   requester continuation is waiting;
 - suspected secret or credential risk in changed, staged, logged, or generated
   checkpoint material;
+- `SECRET_SCAN_STATUS: potential_secret_exposure`;
+- missing or stale checkpoint eligibility receipt;
+- `CHECKPOINT_ELIGIBILITY_STATUS` other than `eligible`;
 - out-of-scope changed files.
 
 After a reasoning-level mismatch, checkpoint is forbidden. Commit is forbidden
 after reasoning-level mismatch, and push is forbidden after reasoning-level
 mismatch.
+
+## Required checkpoint preflight
+
+Before `git add`, `git commit`, or `git push`, the orchestrator must run the
+checkpoint preflight defined by:
+
+```text
+agent-system/09_validators/GIT_CHECKPOINT_VALIDATION_RULES.md
+agent-system/09_validators/CHANGED_FILES_SCOPE_MATRIX.md
+agent-system/09_validators/SECRET_SCAN_RULES.md
+agent-system/scripts/checkpoint_preflight.sh
+```
+
+The preflight must produce a deterministic eligibility receipt based on:
+
+```text
+agent-system/03_templates/CHECKPOINT_ELIGIBILITY_TEMPLATE.md
+```
+
+Receipt path convention:
+
+```text
+project-runtime/checkpoints/CHECKPOINT_ELIGIBILITY_<TASK_ID>_<ATTEMPT_NO>.md
+```
+
+The preflight result must set:
+
+```text
+AUDIT_STATUS: passed
+CHECKPOINT_ELIGIBILITY_STATUS: eligible
+CHECKPOINT_PREFLIGHT_STATUS: passed
+PROJECT_CHECKPOINT_STATUS: pending
+```
+
+Any failed identity, Git target, file scope, task packet schema, runtime
+schema, or secret scan check must set `CHECKPOINT_ELIGIBILITY_STATUS:
+ineligible` or `blocked`, keep `PROJECT_CHECKPOINT_STATUS: blocked | failed`,
+and forbid staging, commit, and push. Secret-related failures must use the
+redacted class `potential_secret_exposure` and must not print secret values.
+
+When the accepted task creates new files, those untracked paths must be included
+in file-scope and secret checks before staging.
 
 ## Allowed checkpoint commands
 
@@ -96,11 +150,21 @@ Every checkpoint attempt must create or update bounded records with:
 ```text
 TASK_ID:
 AUDIT_REF:
+AUDIT_STATUS:
 ACCEPTED_RESULT_REF:
 ACCEPTED_FILES:
+CHECKPOINT_ELIGIBILITY_STATUS:
+CHECKPOINT_PREFLIGHT_STATUS:
+CHECKPOINT_PREFLIGHT_REF:
+CHECKPOINT_RECEIPT_REF:
 BRANCH:
+COMMIT_STATUS:
 COMMIT_HASH:
-PUSH_STATUS: not_attempted | pushed | failed
+PUSH_STATUS: not_required | not_attempted | pushed | failed | blocked
+PUSH_REMOTE:
+PUSH_BRANCH:
+LAST_PUSH_TARGET_STATUS: not_checked | matched | mismatched | blocked | not_required
+PROJECT_CHECKPOINT_STATUS: not_required | pending | passed | failed | blocked
 CHECKPOINT_STATUS: passed | failed | blocked
 WORKING_TREE_VALIDATION_REF:
 HEAD_VALIDATION_REF:
@@ -112,7 +176,11 @@ Successful checkpoint records must include:
 
 - commit hash;
 - branch name;
+- commit status;
 - push status;
+- push remote and branch when push is attempted;
+- last push target status;
+- project checkpoint status;
 - accepted files;
 - accepted task id;
 - audit reference;
@@ -123,13 +191,19 @@ Failed checkpoint records must not include secret values.
 
 ## Runtime updates after success
 
-After a successful commit and push:
+After a successful local-only checkpoint or commit-and-push checkpoint:
 
 - set the task registry entry to `STATUS: checkpoint_done`;
-- record `COMMIT_HASH`, `BRANCH`, `PUSH_STATUS`, and accepted files;
+- record `COMMIT_STATUS`, `COMMIT_HASH`, `BRANCH`, `PUSH_STATUS`,
+  `PUSH_REMOTE`, `PUSH_BRANCH`, `LAST_PUSH_TARGET_STATUS`,
+  `PROJECT_CHECKPOINT_STATUS`, and accepted files;
 - update accepted artifact entries with the commit hash;
 - append a `checkpoint` event with `STATUS: passed`;
 - route only to the next task allowed by `STATE_TRANSITION_RULES.md`.
+
+`PROJECT_CHECKPOINT_STATUS: passed` requires `COMMIT_STATUS: committed` and a
+valid `PUSH_STATUS` for the checkpoint policy: `not_required` for local-only,
+or `pushed` for commit-and-push.
 
 ## Failure routing
 

@@ -69,6 +69,13 @@ project-runtime/STATUS_SUMMARY.md
 
 Если какого-либо файла нет, оркестратор обязан создать его из шаблона или остановить pipeline в `wait_for_owner`, если шаблон отсутствует.
 
+Checkpoint eligibility receipts are bounded runtime evidence, not part of the
+minimal always-present runtime file set. Receipt path convention:
+
+```text
+project-runtime/checkpoints/CHECKPOINT_ELIGIBILITY_<TASK_ID>_<ATTEMPT_NO>.md
+```
+
 ---
 
 ## Общие правила runtime state
@@ -126,7 +133,21 @@ IDENTITY_VALIDATION_ERROR:
 IDENTITY_VALIDATION_EVIDENCE:
 REPOSITORY_LOCK_STATUS:
 CHECKPOINT_ELIGIBILITY:
+AUDIT_STATUS:
+CHECKPOINT_ELIGIBILITY_STATUS:
+CHECKPOINT_PREFLIGHT_STATUS:
+CHECKPOINT_PREFLIGHT_REF:
+CHECKPOINT_RECEIPT_REF:
+COMMIT_STATUS:
+LAST_COMMIT_HASH:
+LAST_COMMIT_BRANCH:
+PUSH_STATUS:
+LAST_PUSH_REMOTE:
+LAST_PUSH_BRANCH:
+LAST_PUSH_TARGET_STATUS:
+PROJECT_CHECKPOINT_STATUS:
 CHECKPOINT_BLOCKED_BY:
+LAST_CHECKPOINT_FAILURE_REASON:
 CURRENT_PHASE:
 PROJECT_STATUS:
 ACTION_SEMANTIC:
@@ -189,7 +210,21 @@ IDENTITY_VALIDATION_ERROR: NONE | repository_identity_mismatch | repository_bran
 IDENTITY_VALIDATION_EVIDENCE:
 REPOSITORY_LOCK_STATUS: absent | draft | accepted | revoked | blocked
 CHECKPOINT_ELIGIBILITY: blocked | local_only | push_allowed | not_applicable
+AUDIT_STATUS: not_applicable | pending | passed | failed | blocked | gap
+CHECKPOINT_ELIGIBILITY_STATUS: not_checked | eligible | ineligible | blocked
+CHECKPOINT_PREFLIGHT_STATUS: not_run | passed | failed | blocked
+CHECKPOINT_PREFLIGHT_REF:
+CHECKPOINT_RECEIPT_REF:
+COMMIT_STATUS: not_required | not_attempted | committed | failed | blocked
+LAST_COMMIT_HASH:
+LAST_COMMIT_BRANCH:
+PUSH_STATUS: not_required | not_attempted | pushed | failed | blocked
+LAST_PUSH_REMOTE:
+LAST_PUSH_BRANCH:
+LAST_PUSH_TARGET_STATUS: not_checked | matched | mismatched | blocked | not_required
+PROJECT_CHECKPOINT_STATUS: not_required | pending | passed | failed | blocked
 CHECKPOINT_BLOCKED_BY:
+LAST_CHECKPOINT_FAILURE_REASON:
 ```
 
 `EXPECTED_GIT_REMOTE` and `ACTUAL_GIT_REMOTE` are canonical repository identity
@@ -203,6 +238,23 @@ agent-system/09_validators/WORKSPACE_IDENTITY_VALIDATION_RULES.md
 `PUSH_ALLOWED` defaults to `false` unless an accepted repository lock validates
 the current workspace type, canonical repository identity, branch, and identity
 leakage status.
+
+`AUDIT_STATUS` is necessary evidence for post-audit routing but is not
+sufficient for checkpoint, commit, or push. `CHECKPOINT_ELIGIBILITY_STATUS`
+records the deterministic preflight decision after identity, Git target, file
+scope, task packet schema, runtime schema, and secret scan checks. Runtime
+state must distinguish:
+
+```text
+COMMIT_STATUS: local commit attempt/result
+PUSH_STATUS: technical push attempt/result
+LAST_PUSH_TARGET_STATUS: remote/branch target verification
+PROJECT_CHECKPOINT_STATUS: governed project/package checkpoint outcome
+```
+
+`PROJECT_CHECKPOINT_STATUS: passed` is valid only when checkpoint preflight
+passed, the allowed commit path completed, and push requirements were either
+not required or completed successfully.
 
 ## Branches
 
@@ -335,6 +387,8 @@ ACTION_SEMANTIC:
 WORKSPACE_IDENTITY_STATUS:
 REPOSITORY_LOCK_STATUS:
 CHECKPOINT_ELIGIBILITY:
+CHECKPOINT_ELIGIBILITY_STATUS:
+PROJECT_CHECKPOINT_STATUS:
 ENTRY_CRITERIA:
 EXIT_CRITERIA:
 REQUIRED_NEXT_ROLE:
@@ -346,7 +400,7 @@ NOTES:
 Markdown section-to-schema mapping:
 
 ```text
-## Current gate -> GATE_ID, GATE_NAME, GATE_TYPE, STATUS, OWNER_ROLE, TASK_ID, TASK_PACKET, ACTION_SEMANTIC, WORKSPACE_IDENTITY_STATUS, REPOSITORY_LOCK_STATUS, CHECKPOINT_ELIGIBILITY
+## Current gate -> GATE_ID, GATE_NAME, GATE_TYPE, STATUS, OWNER_ROLE, TASK_ID, TASK_PACKET, ACTION_SEMANTIC, WORKSPACE_IDENTITY_STATUS, REPOSITORY_LOCK_STATUS, CHECKPOINT_ELIGIBILITY, CHECKPOINT_ELIGIBILITY_STATUS, PROJECT_CHECKPOINT_STATUS
 ## Entry criteria -> ENTRY_CRITERIA
 ## Exit criteria -> EXIT_CRITERIA
 ## Required next role -> REQUIRED_NEXT_ROLE
@@ -443,6 +497,25 @@ blocked
 local_only
 push_allowed
 not_applicable
+```
+
+## CHECKPOINT_ELIGIBILITY_STATUS допустимые значения
+
+```text
+not_checked
+eligible
+ineligible
+blocked
+```
+
+## PROJECT_CHECKPOINT_STATUS допустимые значения
+
+```text
+not_required
+pending
+passed
+failed
+blocked
 ```
 
 ## Entry criteria
@@ -561,6 +634,9 @@ ACTION_SEMANTIC:
 WORKSPACE_IDENTITY_REQUIRED:
 REPOSITORY_LOCK_REQUIRED:
 CHECKPOINT_POLICY:
+CHECKPOINT_PREFLIGHT_REQUIRED:
+CHECKPOINT_RECEIPT_REQUIRED:
+CHECKPOINT_RECEIPT_REF:
 REQUESTER_RETURN_CONTEXT:
 BLOCKING_OR_RESUME_CONTEXT:
 REQUIRED_UNIVERSAL_DOCS:
@@ -572,7 +648,7 @@ INSTRUCTION_FOR_ORCHESTRATOR:
 Markdown section-to-schema mapping:
 
 ```text
-## Next action -> ACTION_ID, ACTION_TYPE, TARGET_ROLE, TASK_ID, TASK_PACKET, DEPENDENCY_STATUS, BLOCKED_BY, ACTION_SEMANTIC, WORKSPACE_IDENTITY_REQUIRED, REPOSITORY_LOCK_REQUIRED, CHECKPOINT_POLICY
+## Next action -> ACTION_ID, ACTION_TYPE, TARGET_ROLE, TASK_ID, TASK_PACKET, DEPENDENCY_STATUS, BLOCKED_BY, ACTION_SEMANTIC, WORKSPACE_IDENTITY_REQUIRED, REPOSITORY_LOCK_REQUIRED, CHECKPOINT_POLICY, CHECKPOINT_PREFLIGHT_REQUIRED, CHECKPOINT_RECEIPT_REQUIRED, CHECKPOINT_RECEIPT_REF
 ## Requester return context -> REQUESTER_RETURN_CONTEXT
 ## Blocking or resume context -> BLOCKING_OR_RESUME_CONTEXT
 ## REQUIRED_UNIVERSAL_DOCS -> REQUIRED_UNIVERSAL_DOCS
@@ -662,6 +738,32 @@ forbidden
 local_only
 commit_and_push
 no_checkpoint
+```
+
+## CHECKPOINT_PREFLIGHT_REQUIRED допустимые значения
+
+```text
+yes
+no
+```
+
+`CHECKPOINT_PREFLIGHT_REQUIRED` must be `yes` before checkpoint, commit, or
+push. It may be `no` only when `CHECKPOINT_POLICY: forbidden` or
+`CHECKPOINT_POLICY: no_checkpoint` and no checkpoint attempt will run.
+
+## CHECKPOINT_RECEIPT_REQUIRED допустимые значения
+
+```text
+yes
+no
+```
+
+`CHECKPOINT_RECEIPT_REQUIRED` must be `yes` when `CHECKPOINT_POLICY` is
+`local_only` or `commit_and_push`. `CHECKPOINT_RECEIPT_REF` must point to a
+bounded receipt based on:
+
+```text
+agent-system/03_templates/CHECKPOINT_ELIGIBILITY_TEMPLATE.md
 ```
 
 ## Requester return context
@@ -1232,7 +1334,21 @@ PROJECT_STATE.IDENTITY_VALIDATION_STATUS
 PROJECT_STATE.IDENTITY_VALIDATION_ERROR
 PROJECT_STATE.REPOSITORY_LOCK_STATUS
 PROJECT_STATE.CHECKPOINT_ELIGIBILITY
+PROJECT_STATE.AUDIT_STATUS
+PROJECT_STATE.CHECKPOINT_ELIGIBILITY_STATUS
+PROJECT_STATE.CHECKPOINT_PREFLIGHT_STATUS
+PROJECT_STATE.CHECKPOINT_PREFLIGHT_REF
+PROJECT_STATE.CHECKPOINT_RECEIPT_REF
+PROJECT_STATE.COMMIT_STATUS
+PROJECT_STATE.LAST_COMMIT_HASH
+PROJECT_STATE.LAST_COMMIT_BRANCH
+PROJECT_STATE.PUSH_STATUS
+PROJECT_STATE.LAST_PUSH_REMOTE
+PROJECT_STATE.LAST_PUSH_BRANCH
+PROJECT_STATE.LAST_PUSH_TARGET_STATUS
+PROJECT_STATE.PROJECT_CHECKPOINT_STATUS
 PROJECT_STATE.CHECKPOINT_BLOCKED_BY
+PROJECT_STATE.LAST_CHECKPOINT_FAILURE_REASON
 CURRENT_GATE.GATE_TYPE
 CURRENT_GATE.STATUS
 CURRENT_GATE.OWNER_ROLE
@@ -1242,6 +1358,8 @@ CURRENT_GATE.ACTION_SEMANTIC
 CURRENT_GATE.WORKSPACE_IDENTITY_STATUS
 CURRENT_GATE.REPOSITORY_LOCK_STATUS
 CURRENT_GATE.CHECKPOINT_ELIGIBILITY
+CURRENT_GATE.CHECKPOINT_ELIGIBILITY_STATUS
+CURRENT_GATE.PROJECT_CHECKPOINT_STATUS
 NEXT_ACTION.ACTION_TYPE
 NEXT_ACTION.TARGET_ROLE
 NEXT_ACTION.TASK_ID
@@ -1251,6 +1369,9 @@ NEXT_ACTION.ACTION_SEMANTIC
 NEXT_ACTION.WORKSPACE_IDENTITY_REQUIRED
 NEXT_ACTION.REPOSITORY_LOCK_REQUIRED
 NEXT_ACTION.CHECKPOINT_POLICY
+NEXT_ACTION.CHECKPOINT_PREFLIGHT_REQUIRED
+NEXT_ACTION.CHECKPOINT_RECEIPT_REQUIRED
+NEXT_ACTION.CHECKPOINT_RECEIPT_REF
 NEXT_ACTION.REQUESTER_RETURN_CONTEXT
 GAP_REGISTER.active_gaps
 TASK_REGISTRY.task_statuses
@@ -1300,6 +1421,12 @@ remain compatible with:
 ```text
 agent-system/03_templates/WORKSPACE_IDENTITY_TEMPLATE.md
 agent-system/03_templates/REPOSITORY_LOCK_TEMPLATE.md
+```
+
+Checkpoint eligibility fields must remain compatible with:
+
+```text
+agent-system/03_templates/CHECKPOINT_ELIGIBILITY_TEMPLATE.md
 ```
 
 If schema and templates conflict, bootstrap is invalid and governance freeze applies.

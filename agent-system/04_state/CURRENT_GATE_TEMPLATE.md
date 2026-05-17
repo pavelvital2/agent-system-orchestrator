@@ -14,6 +14,8 @@ ACTION_SEMANTIC: normal | wait_for_owner | pause | stop_terminal | completed_sta
 WORKSPACE_IDENTITY_STATUS: not_checked | passed | failed | blocked
 REPOSITORY_LOCK_STATUS: absent | draft | accepted | revoked | blocked | not_required
 CHECKPOINT_ELIGIBILITY: blocked | local_only | push_allowed | not_applicable
+CHECKPOINT_ELIGIBILITY_STATUS: not_checked | eligible | ineligible | blocked
+PROJECT_CHECKPOINT_STATUS: not_required | pending | passed | failed | blocked
 ```
 
 ## Entry criteria
@@ -40,6 +42,8 @@ and `none` are control/routing pseudo-roles, not profile task types.
 Workspace identity status, repository lock status, and checkpoint eligibility
 are mandatory gate fields. A gate cannot pass checkpoint, commit, or push
 eligibility while workspace identity is `not_checked`, `failed`, or `blocked`.
+`CHECKPOINT_ELIGIBILITY_STATUS` must remain separate from audit status; auditor
+`STATUS: pass` is a prerequisite, not a checkpoint decision.
 
 ## Gate evidence
 
