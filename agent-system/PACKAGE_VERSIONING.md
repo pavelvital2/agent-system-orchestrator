@@ -78,6 +78,12 @@ workspace identity, repository lock, or checkpoint eligibility fields enter
 correction or owner wait flow; the orchestrator must not silently infer those
 fields from folder name, inherited `.git` metadata, or raw remote strings.
 
+The governance smoke-test addition for
+`TASK_ASO_PATCH_008_GOVERNANCE_SMOKE_TESTS` keeps the active tuple unchanged at
+`2.0.0 / 2.0.0 / 2.0.0`. It adds deterministic local fixtures and a dry-run
+runner for the v2.0.0 blocker surface; it is recorded in
+`GOVERNANCE_CHANGELOG.md` and does not install a new package version.
+
 ## Version semantics
 
 ```text

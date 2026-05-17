@@ -173,6 +173,30 @@ gap -> owner decision protocol
 
 Profile agents do not commit or push. Auditors do not replace the checkpoint. Failed audit artifacts are not committed as accepted package state.
 
+## Governance smoke tests
+
+Run local package governance smoke tests with:
+
+```text
+./agent-system/scripts/run_governance_smoke_tests.sh
+```
+
+The smoke runner creates temporary local Git repositories and uses dry-run
+preflight checks only. It does not stage, commit, push, contact a real remote,
+or require real secrets.
+
+Expected pass behavior:
+
+```text
+SMOKE_RESULT: passed
+```
+
+Each fixture is a negative test: wrong remote, wrong branch, package repository
+project-doc pollution, invalid task packet, push without accepted lock, and
+secret-file exposure must all be blocked by the validator or preflight script.
+The smoke runner exits nonzero if any blocked fixture unexpectedly passes or if
+the patch coverage assertion is not `25/25`.
+
 ## Package version
 
 Active package version constants are defined in:

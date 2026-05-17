@@ -852,4 +852,43 @@ MIGRATION_NOTE: Existing runtime states must add workspace identity, repository 
 AUTHORIZED_BY: project_owner
 AUDIT_REQUIRED: yes
 STATUS: proposed
+
+CHANGE_ID: GOV-2026-05-17-008
+CHANGE_TITLE: ASO_25_GOVERNANCE_HARDENING_V2_0_0_GOVERNANCE_SMOKE_TESTS
+DATE: 2026-05-17
+PACKAGE_VERSION_BEFORE: 2.0.0
+PACKAGE_VERSION_AFTER: 2.0.0
+GOVERNANCE_RULESET_BEFORE: 2.0.0
+GOVERNANCE_RULESET_AFTER: 2.0.0
+RUNTIME_SCHEMA_BEFORE: 2.0.0
+RUNTIME_SCHEMA_AFTER: 2.0.0
+CHANGE_TYPE: patch
+AFFECTED_FILES:
+- agent-system/scripts/run_governance_smoke_tests.sh
+- agent-system/scripts/checkpoint_preflight.sh
+- agent-system/README.md
+- agent-system/PACKAGE_VERSIONING.md
+- agent-system/GOVERNANCE_CHANGELOG.md
+- tests/fixtures/wrong_remote/*
+- tests/fixtures/wrong_branch/*
+- tests/fixtures/package_repo_with_project_docs/*
+- tests/fixtures/invalid_task_packet/*
+- tests/fixtures/push_not_allowed/*
+- tests/fixtures/secret_file_present/*
+AFFECTED_INVARIANTS:
+- TASK_ASO_PATCH_008_GOVERNANCE_SMOKE_TESTS covers Fix 25 with deterministic local smoke fixtures.
+- Wrong remote, wrong branch, package/project path pollution, invalid task packet, push without accepted lock, and secret-file exposure are expected blockers.
+- Smoke execution uses dry-run preflight checks and temporary local Git repositories; no real network push or real secret material is required.
+- Final smoke assertion verifies TOTAL_FIXES: 25 and REQUIRED_COVERAGE: 25/25 from the v2.0.0 coverage matrix.
+- Active version tuple remains 2.0.0 / 2.0.0 / 2.0.0.
+AFFECTED_TRANSITIONS:
+- auditor pass -> checkpoint preflight remains blocked when repository identity, branch, repository lock, file scope, or secret-scan blockers are present.
+- invalid task packet -> profile-agent dispatch and checkpoint validation remain blocked.
+- package_repo changed files -> project documentation path pollution remains blocked even when a malformed task packet attempts to allow project-docs paths.
+SCHEMA_TEMPLATE_IMPACT: none
+MIGRATION_REQUIRED: no
+MIGRATION_NOTE: Existing runtime states are unaffected by the smoke fixtures. The v2.0.0 workspace identity, repository lock, checkpoint eligibility, task packet validation, and secret-scan migration requirements remain governed by the major package update.
+AUTHORIZED_BY: project_owner
+AUDIT_REQUIRED: yes
+STATUS: proposed
 ```

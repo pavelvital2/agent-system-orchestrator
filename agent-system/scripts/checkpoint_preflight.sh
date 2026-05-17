@@ -307,6 +307,11 @@ file_scope_check() {
       project-input/*|project-archive/*)
         add_failure "changed_files_scope_check: role_matrix_source_or_archive_forbidden:${path}"
         ;;
+      project-docs/*)
+        if [[ "$workspace_type_effective" == "package_repo" ]]; then
+          add_failure "changed_files_scope_check: package_repo_project_doc_pollution:${path}"
+        fi
+        ;;
       agent-system/*)
         if [[ "$workspace_type_effective" != "package_repo" && "$package_governance_task" -ne 1 ]]; then
           add_failure "changed_files_scope_check: workspace_matrix_agent_system_forbidden:${path}"

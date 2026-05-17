@@ -1,0 +1,17 @@
+WORKSPACE_TYPE: package_repo
+EXPECTED_GIT_REMOTE: https://github.com/pavelvital2/agent-system-orchestrator.git
+ACTUAL_GIT_REMOTE: https://github.com/pavelvital2/agent-system-orchestrator.git
+EXPECTED_BRANCH: patch/aso-governance-hardening-v2.0.0
+ACTUAL_BRANCH: main
+PUSH_ALLOWED: true
+IDENTITY_VALIDATION_STATUS: passed
+REPOSITORY_LOCK_STATUS: accepted
+CHECKPOINT_ELIGIBILITY: push_allowed
+AUDIT_STATUS: passed
+CHECKPOINT_ELIGIBILITY_STATUS: pending
+CHECKPOINT_PREFLIGHT_STATUS: pending
+CHECKPOINT_RECEIPT_REF: NONE
+COMMIT_STATUS: not_attempted
+PUSH_STATUS: not_attempted
+LAST_PUSH_TARGET_STATUS: pending
+PROJECT_CHECKPOINT_STATUS: pending
