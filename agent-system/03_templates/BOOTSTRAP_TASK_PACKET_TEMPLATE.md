@@ -348,7 +348,7 @@ NONE
 ## RESULT_PATH
 
 ```text
-project-runtime/agent-results/TASK_BOOTSTRAP_<TARGET_ROLE>_001.md
+project-runtime/results/worker/RESULT_TASK_BOOTSTRAP_<TARGET_ROLE>_001_ATTEMPT_001.md
 ```
 
 ## RISK_REQUIREMENTS

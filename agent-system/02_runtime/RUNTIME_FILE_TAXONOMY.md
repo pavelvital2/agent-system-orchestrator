@@ -143,6 +143,12 @@ Task, result, and audit records should not share an untyped basename. Use the
 `TASK_`, `RESULT_`, and `AUDIT_RESULT_` prefixes so humans and validators can
 distinguish packet, worker evidence, and audit evidence at a glance.
 
+Worker RESULT records must reference the task they executed with `TASK_ID`.
+Audit RESULT records must reference the audited task with `TASK_ID` and the
+audited worker result with a bounded result reference such as
+`SOURCE_RESULT_REF`, `AUDITED_RESULT_REF`, `RESULT_REF`, or
+`ACCEPTED_RESULT_REF`.
+
 ## Compatibility policy
 
 Existing runtime layouts remain compatible.

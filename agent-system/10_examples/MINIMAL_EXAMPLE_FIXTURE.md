@@ -22,7 +22,7 @@ project-runtime/example/ORCHESTRATOR_EVENTS_LOG.md
 project-runtime/example/STATUS_SUMMARY.md
 project-docs/example/03_tasks/TASK_EXAMPLE_001_REQUIREMENTS.md
 project-docs/example/00_requirements/REQUIREMENTS_BASELINE.md
-project-docs/example/07_reports/TASK_EXAMPLE_001_REQUIREMENTS_RESULT.md
+project-runtime/results/worker/RESULT_TASK_EXAMPLE_001_REQUIREMENTS_ATTEMPT_001.md
 ```
 
 The `project-runtime/example/*` paths above are orchestrator-owned runtime
@@ -193,7 +193,7 @@ LAUNCH_HOOKS:
 NONE
 
 RESULT_PATH:
-project-docs/example/07_reports/TASK_EXAMPLE_001_REQUIREMENTS_RESULT.md
+project-runtime/results/worker/RESULT_TASK_EXAMPLE_001_REQUIREMENTS_ATTEMPT_001.md
 
 RISK_REQUIREMENTS:
 - unresolved or ambiguous owner input.

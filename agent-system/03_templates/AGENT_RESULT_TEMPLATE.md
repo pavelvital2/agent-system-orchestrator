@@ -216,6 +216,22 @@ REASONING_LEVEL_COMPLIANCE
 VALIDATED_TASK_PACKETS
 ```
 
+Auditor RESULT records should also include the audited worker result reference
+inside `EVIDENCE` or `SCOPE_VERIFICATION` with one of these labels:
+
+```text
+SOURCE_RESULT_REF
+AUDITED_RESULT_REF
+RESULT_REF
+ACCEPTED_RESULT_REF
+```
+
+New audit result files should use:
+
+```text
+project-runtime/results/audit/AUDIT_RESULT_<TASK_ID>_ATTEMPT_<NNN>.md
+```
+
 When changed files include `TASK_*.md`, `TASK_PROPOSAL*.md`, or
 `*_TASK_PACKET*.md`, `VALIDATED_TASK_PACKETS` must list each changed
 task-like file with its classification and schema status.

@@ -46,6 +46,12 @@ DEPRECATED_REASONING_LEVELS = {
 }
 TERMINAL_TASK_STATUSES = {"checkpoint_done", "completed", "superseded"}
 NONE_VALUES = {"", "NONE", "none", "null", "UNKNOWN"}
+AUDIT_RESULT_REF_FIELDS = (
+    "SOURCE_RESULT_REF",
+    "AUDITED_RESULT_REF",
+    "RESULT_REF",
+    "ACCEPTED_RESULT_REF",
+)
 
 
 @dataclass(frozen=True)
@@ -514,7 +520,7 @@ def _classified_markdown_files(root: Path) -> list[tuple[str, Path]]:
             rel = _rel(root, path)
             name = path.name
             role = ""
-            if name.startswith("AUDIT_RESULT_") or "/audits/" in f"/{rel}":
+            if name.startswith("AUDIT_RESULT_") or "/audits/" in f"/{rel}" or "/results/audit/" in f"/{rel}":
                 role = "audit"
             elif name.startswith("RESULT_") or "/results/" in f"/{rel}" or "/agent-results/" in f"/{rel}":
                 role = "result"
@@ -568,6 +574,183 @@ def _check_basename_collisions(root: Path) -> list[Finding]:
                 "Use distinct TASK_, RESULT_, and AUDIT_RESULT_ prefixes with attempt suffixes for result records.",
             )
         )
+    return findings
+
+
+def _split_refs(value: str) -> list[str]:
+    if _is_none(value):
+        return []
+    refs: list[str] = []
+    for chunk in re.split(r"[, \n]+", value):
+        ref = chunk.strip().strip("`")
+        if ref and ref not in NONE_VALUES:
+            refs.append(ref)
+    return refs
+
+
+def _read_fields(path: Path) -> dict[str, str]:
+    text, error = _read_text(path)
+    if error:
+        return {}
+    return {occurrence.key: occurrence.value for occurrence in _parse_occurrences(text)}
+
+
+def _field_or_label_refs(path: Path, fields: dict[str, str], field_names: Iterable[str]) -> list[str]:
+    refs: list[str] = []
+    for field_name in field_names:
+        refs.extend(_split_refs(fields.get(field_name, "")))
+
+    text, error = _read_text(path)
+    if error:
+        return refs
+    for field_name in field_names:
+        label_re = re.compile(rf"^\s*-?\s*{re.escape(field_name)}:\s*(.+?)\s*$")
+        for line in text.splitlines():
+            match = label_re.match(line)
+            if match:
+                refs.extend(_split_refs(match.group(1)))
+    return refs
+
+
+def _task_ids(root: Path, files: dict[str, RuntimeFile]) -> set[str]:
+    task_ids: set[str] = set()
+    for path in _task_packet_files(root):
+        fields = _read_fields(path)
+        task_id = fields.get("TASK_ID", "")
+        if not _is_none(task_id):
+            task_ids.add(task_id)
+        elif path.stem.startswith("TASK_"):
+            task_ids.add(path.stem)
+
+    registry = files.get("TASK_REGISTRY.md")
+    if registry:
+        for entry in _entries(registry.occurrences, "TASK_ID"):
+            task_id = entry.get("TASK_ID", "")
+            if not _is_none(task_id):
+                task_ids.add(task_id)
+    return task_ids
+
+
+def _existing_result_refs(root: Path, files: dict[str, RuntimeFile]) -> set[str]:
+    refs: set[str] = set()
+    for path in _result_files(root):
+        rel = _rel(root, path)
+        if "/results/audit/" in f"/{rel}" or "/audits/" in f"/{rel}":
+            continue
+        refs.add(rel)
+        refs.add(path.name)
+        refs.add(path.stem)
+
+    registry = files.get("TASK_REGISTRY.md")
+    if registry:
+        for entry in _entries(registry.occurrences, "TASK_ID"):
+            for ref in _split_refs(entry.get("RESULT_REFS", "")):
+                refs.add(ref)
+                refs.add(Path(ref).name)
+                refs.add(Path(ref).stem)
+    return refs
+
+
+def _audit_result_files(root: Path) -> list[Path]:
+    paths: list[Path] = []
+    for search_root in [root / "project-runtime" / "results" / "audit", root / "project-runtime" / "audits"]:
+        if search_root.exists():
+            paths.extend(sorted(path for path in search_root.rglob("*.md") if path.is_file()))
+    return paths
+
+
+def _check_result_and_audit_references(root: Path, files: dict[str, RuntimeFile]) -> list[Finding]:
+    findings: list[Finding] = []
+    known_task_ids = _task_ids(root, files)
+    known_result_refs = _existing_result_refs(root, files)
+
+    for path in _result_files(root):
+        relpath = _rel(root, path)
+        if "/results/audit/" in f"/{relpath}" or "/audits/" in f"/{relpath}":
+            continue
+        fields = _read_fields(path)
+        task_id = fields.get("TASK_ID", "")
+        if _is_none(task_id):
+            findings.append(
+                Finding(
+                    "LINT_NAMING_004",
+                    "warning",
+                    "RESULT lacks TASK_ID reference",
+                    f"{relpath} does not declare the task it executed.",
+                    [relpath],
+                    "Add TASK_ID pointing to the task packet or registered task.",
+                )
+            )
+        elif task_id not in known_task_ids:
+            findings.append(
+                Finding(
+                    "LINT_NAMING_005",
+                    "warning",
+                    "RESULT references unknown task",
+                    f"{relpath} declares TASK_ID={task_id}, but no task packet or TASK_REGISTRY entry was found.",
+                    [relpath],
+                    "Register the task or keep a compatible task packet reference for traceability.",
+                )
+            )
+
+    for path in _audit_result_files(root):
+        relpath = _rel(root, path)
+        fields = _read_fields(path)
+        task_id = fields.get("TASK_ID", "")
+        result_refs = _field_or_label_refs(path, fields, AUDIT_RESULT_REF_FIELDS)
+
+        if _is_none(task_id):
+            findings.append(
+                Finding(
+                    "LINT_NAMING_006",
+                    "warning",
+                    "AUDIT_RESULT lacks TASK_ID reference",
+                    f"{relpath} does not declare the audited task.",
+                    [relpath],
+                    "Add TASK_ID pointing to the audited task packet or registered task.",
+                )
+            )
+        elif task_id not in known_task_ids:
+            findings.append(
+                Finding(
+                    "LINT_NAMING_007",
+                    "warning",
+                    "AUDIT_RESULT references unknown task",
+                    f"{relpath} declares TASK_ID={task_id}, but no task packet or TASK_REGISTRY entry was found.",
+                    [relpath],
+                    "Register the audited task or keep a compatible task packet reference for traceability.",
+                )
+            )
+
+        if not result_refs:
+            findings.append(
+                Finding(
+                    "LINT_NAMING_008",
+                    "warning",
+                    "AUDIT_RESULT lacks worker RESULT reference",
+                    f"{relpath} does not reference the worker RESULT it audited.",
+                    [relpath],
+                    "Add SOURCE_RESULT_REF, AUDITED_RESULT_REF, RESULT_REF, or ACCEPTED_RESULT_REF.",
+                )
+            )
+            continue
+
+        missing_refs = [
+            ref
+            for ref in result_refs
+            if ref not in known_result_refs and Path(ref).name not in known_result_refs and Path(ref).stem not in known_result_refs
+        ]
+        if missing_refs:
+            findings.append(
+                Finding(
+                    "LINT_NAMING_009",
+                    "warning",
+                    "AUDIT_RESULT references unknown worker RESULT",
+                    f"{relpath} references missing RESULT record(s): {', '.join(missing_refs)}.",
+                    [relpath, *missing_refs],
+                    "Point the audit record at an existing worker RESULT path or registry reference.",
+                )
+            )
     return findings
 
 
@@ -851,6 +1034,7 @@ def _all_lint_findings(root: Path, files: dict[str, RuntimeFile]) -> list[Findin
     findings.extend(_check_task_statuses(files))
     findings.extend(_check_accepted_artifacts(root, files))
     findings.extend(_check_basename_collisions(root))
+    findings.extend(_check_result_and_audit_references(root, files))
     findings.extend(_check_agent_lifecycle(root))
     findings.extend(_check_reasoning_and_designer(root, files))
     findings.extend(_check_skeleton_product_pass(root, files))

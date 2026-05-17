@@ -104,6 +104,50 @@ AGENT_TERMINATION_REQUIRED: true
 """
 
 
+AUDIT_RESULT = """# AUDIT_RESULT
+
+STATUS: pass
+TASK_ID: TASK_DEMO_001
+AGENT_INSTANCE_ID: audit_TASK_DEMO_001_attempt_001
+ROLE: auditor
+TASK: TASK_DEMO_001
+SUMMARY:
+Audit passed.
+READ_DOCS:
+- NONE
+READ_INPUTS:
+- NONE
+CHANGED_FILES:
+- NONE
+CREATED_FILES:
+- NONE
+DELETED_FILES:
+- NONE
+COMMANDS_RUN:
+- NONE
+TESTS_RUN:
+- NONE
+EVIDENCE:
+- SOURCE_RESULT_REF: project-runtime/results/RESULT_TASK_DEMO_001_ATTEMPT_001.md
+SCOPE_VERIFICATION:
+- NONE
+FORBIDDEN_CHANGES_CHECK:
+- NONE
+RISKS:
+- NONE
+LIMITATIONS:
+- NONE
+BLOCKERS:
+- NONE
+GAPS:
+- NONE
+NEXT_RECOMMENDED_ACTION:
+- NONE
+REUSE_ALLOWED: false
+AGENT_TERMINATION_REQUIRED: true
+"""
+
+
 def write_runtime(root: Path, overrides: dict[str, str] | None = None) -> list[Path]:
     runtime = root / "project-runtime"
     runtime.mkdir()
@@ -145,6 +189,13 @@ def write_runtime(root: Path, overrides: dict[str, str] | None = None) -> list[P
     )
     paths.append(instances_path)
     return paths
+
+
+def append_agent_events(root: Path, events: list[str]) -> None:
+    instances_path = root / "project-runtime" / "agents" / "instances.jsonl"
+    with instances_path.open("a", encoding="utf-8") as handle:
+        for event in events:
+            handle.write(event + "\n")
 
 
 def run_lint(root: Path, *extra: str) -> subprocess.CompletedProcess[str]:
@@ -329,6 +380,63 @@ AGENT_TERMINATION_REQUIRED: false
             self.assertEqual(result.returncode, 1, result.stdout + result.stderr)
             self.assertIn("LINT_AGENT_004", result.stdout)
             self.assertIn("LINT_AGENT_006", result.stdout)
+
+    def test_lint_warns_when_result_references_unknown_task(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            write_runtime(root)
+            result_path = root / "project-runtime" / "results" / "RESULT_TASK_DEMO_001_ATTEMPT_001.md"
+            result_path.write_text(RESULT.replace("TASK_ID: TASK_DEMO_001", "TASK_ID: TASK_UNKNOWN_999"), encoding="utf-8")
+
+            result = run_lint(root)
+
+            self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+            self.assertIn("LINT_NAMING_005", result.stdout)
+
+    def test_lint_validates_audit_result_task_and_result_references(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            write_runtime(root)
+            audit_dir = root / "project-runtime" / "results" / "audit"
+            audit_dir.mkdir()
+            (audit_dir / "AUDIT_RESULT_TASK_DEMO_001_ATTEMPT_001.md").write_text(AUDIT_RESULT, encoding="utf-8")
+            append_agent_events(
+                root,
+                [
+                    '{"event":"agent_result_received","agent_instance_id":"audit_TASK_DEMO_001_attempt_001","task_id":"TASK_DEMO_001","result_ref":"project-runtime/results/audit/AUDIT_RESULT_TASK_DEMO_001_ATTEMPT_001.md","reuse_allowed":false}',
+                    '{"event":"agent_instance_terminated","agent_instance_id":"audit_TASK_DEMO_001_attempt_001","task_id":"TASK_DEMO_001","reuse_allowed":false}',
+                ],
+            )
+
+            result = run_lint(root)
+
+            self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+            self.assertNotIn("LINT_NAMING_008", result.stdout)
+            self.assertNotIn("LINT_NAMING_009", result.stdout)
+
+    def test_lint_warns_when_audit_result_lacks_worker_result_reference(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            write_runtime(root)
+            audit_dir = root / "project-runtime" / "results" / "audit"
+            audit_dir.mkdir()
+            audit_text = AUDIT_RESULT.replace(
+                "- SOURCE_RESULT_REF: project-runtime/results/RESULT_TASK_DEMO_001_ATTEMPT_001.md",
+                "- NONE",
+            )
+            (audit_dir / "AUDIT_RESULT_TASK_DEMO_001_ATTEMPT_001.md").write_text(audit_text, encoding="utf-8")
+            append_agent_events(
+                root,
+                [
+                    '{"event":"agent_result_received","agent_instance_id":"audit_TASK_DEMO_001_attempt_001","task_id":"TASK_DEMO_001","result_ref":"project-runtime/results/audit/AUDIT_RESULT_TASK_DEMO_001_ATTEMPT_001.md","reuse_allowed":false}',
+                    '{"event":"agent_instance_terminated","agent_instance_id":"audit_TASK_DEMO_001_attempt_001","task_id":"TASK_DEMO_001","reuse_allowed":false}',
+                ],
+            )
+
+            result = run_lint(root)
+
+            self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+            self.assertIn("LINT_NAMING_008", result.stdout)
 
 
 if __name__ == "__main__":
