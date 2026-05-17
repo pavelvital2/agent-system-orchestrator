@@ -218,6 +218,8 @@ Rules:
 
 - `role_default` is valid only as source/policy metadata, not as
   `REASONING_LEVEL.VALUE`;
+- allowed source metadata values are `explicit`, `role_default`, `gate_floor`,
+  `escalated`, and `fallback`;
 - a task packet may raise reasoning level freely;
 - a task packet may lower below role default only for mechanical bounded tasks
   and must include `OVERRIDE_REASON`;

@@ -15,7 +15,7 @@ TARGET_ROLE: <same as ROLE>
 DISPATCH_TASK_ID: <TASK_ID>
 TASK_PACKET: <path | NONE>
 REASONING_LEVEL_REQUIRED: low | medium | high | xhigh
-REASONING_LEVEL_SOURCE: role_default | task_packet | gate_required_floor | highest_applicable
+REASONING_LEVEL_SOURCE: explicit | role_default | gate_floor | escalated | fallback
 REASONING_LEVEL_RESOLVED: low | medium | high | xhigh
 RUNNER_CONFIG_EVIDENCE: <spawn log, runner config ref, orchestrator transcript ref, or NONE>
 REASONING_LEVEL_COMPLIANCE: compliant | non_compliant | unknown

@@ -57,6 +57,15 @@ FAILURE_TYPE_VALUES = {
 }
 
 REASONING_LEVEL_VALUES = {"low", "medium", "high", "xhigh"}
+DEPRECATED_REASONING_LEVEL_VALUES = {
+    "default",
+    "maximum",
+    "role_default",
+    "standard",
+    "analytical",
+    "critical",
+    "mechanical",
+}
 DEPENDENCY_STATUS_VALUES = {"ready", "blocked", "pending", "none"}
 REQUIREMENT_VALUES = {"mandatory", "optional", "none"}
 YES_NO_VALUES = {"yes", "no"}
@@ -257,7 +266,9 @@ def require_task_packet_schema(sections: Dict[str, str], errors: List[str]) -> N
         add_error(errors, "ATTEMPT_NO must be a number or NONE")
 
     level = reasoning_value(sections)
-    if level not in REASONING_LEVEL_VALUES:
+    if level in DEPRECATED_REASONING_LEVEL_VALUES:
+        add_error(errors, f"REASONING_LEVEL VALUE uses deprecated level {level}")
+    elif level not in REASONING_LEVEL_VALUES:
         add_error(errors, "REASONING_LEVEL VALUE has invalid or missing value")
 
     task_type = lower_scalar(sections, "TASK_TYPE")

@@ -141,6 +141,9 @@ xhigh
 `default`, `maximum`, and `role_default` are deprecated as level values;
 `role_default` may be used only as source/policy metadata.
 
+Allowed `REASONING_LEVEL_SOURCE` values are `explicit`, `role_default`,
+`gate_floor`, `escalated`, and `fallback`.
+
 Task packets may raise reasoning level freely. They may lower below role
 default only for mechanical bounded tasks and only with `OVERRIDE_REASON`.
 They must not lower below the gate-required floor. `low` is forbidden for

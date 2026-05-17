@@ -35,6 +35,12 @@ SINGLETON_RUNTIME_FILES = {
 
 FIELD_RE = re.compile(r"^([A-Z][A-Z0-9_]*):(?:[ \t]*(.*))?$")
 ALLOWED_REASONING_LEVELS = {"low", "medium", "high", "xhigh"}
+REASONING_LEVEL_ORDER = {
+    "low": 0,
+    "medium": 1,
+    "high": 2,
+    "xhigh": 3,
+}
 DEPRECATED_REASONING_LEVELS = {
     "default",
     "maximum",
@@ -43,6 +49,23 @@ DEPRECATED_REASONING_LEVELS = {
     "analytical",
     "critical",
     "mechanical",
+}
+GATE_REASONING_FLOORS = {
+    "initial_tz_analysis": "xhigh",
+    "architecture_design": "xhigh",
+    "task_decomposition": "high",
+    "implementation": "high",
+    "audit": "xhigh",
+    "checkpoint": "high",
+    "runtime_lint": "medium",
+    "docs_update": "medium",
+    "simple_file_move": "low",
+}
+FLOOR_FIELD_NAMES = {
+    "REASONING_LEVEL_REQUIRED_FLOOR",
+    "REASONING_LEVEL_FLOOR",
+    "GATE_REASONING_FLOOR",
+    "GATE_REQUIRED_FLOOR",
 }
 TERMINAL_TASK_STATUSES = {"checkpoint_done", "completed", "superseded"}
 NONE_VALUES = {"", "NONE", "none", "null", "UNKNOWN"}
@@ -176,6 +199,63 @@ def _entries(occurrences: Iterable[FieldOccurrence], start_key: str) -> list[dic
 
 def _is_none(value: str | None) -> bool:
     return value is None or value.strip() in NONE_VALUES
+
+
+def _extract_reasoning_level(text: str, fields: dict[str, str]) -> str:
+    for key in ("REASONING_LEVEL", "REASONING_LEVEL_VALUE"):
+        value = fields.get(key, "").strip()
+        if value:
+            return value.lower()
+
+    section_match = re.search(
+        r"^##\s+REASONING_LEVEL\s*$\n(?P<body>.*?)(?=^##\s+|\Z)",
+        text,
+        re.MULTILINE | re.DOTALL,
+    )
+    if not section_match:
+        return ""
+    value_match = re.search(
+        r"^VALUE:\s*([A-Za-z_]+)\s*$",
+        section_match.group("body"),
+        re.MULTILINE,
+    )
+    return value_match.group(1).lower() if value_match else ""
+
+
+def _extract_reasoning_floor(fields: dict[str, str]) -> tuple[str, str]:
+    for key in FLOOR_FIELD_NAMES:
+        value = fields.get(key, "").strip().lower()
+        if value:
+            return key, value
+
+    gate = fields.get(
+        "GATE_REASONING_FLOOR_NAME",
+        fields.get("GATE_REASONING_FLOOR_KEY", ""),
+    ).strip().lower()
+    if gate in GATE_REASONING_FLOORS:
+        return "GATE_REASONING_FLOOR_NAME", GATE_REASONING_FLOORS[gate]
+
+    task_kind = fields.get("TASK_KIND", "").strip().lower()
+    if task_kind == "audit":
+        return "TASK_KIND", GATE_REASONING_FLOORS["audit"]
+    if task_kind in {"setup", "launch"}:
+        return "TASK_KIND", GATE_REASONING_FLOORS["implementation"]
+
+    target_role = fields.get("TARGET_ROLE", "").strip().lower()
+    if target_role == "auditor":
+        return "TARGET_ROLE", GATE_REASONING_FLOORS["audit"]
+    if target_role in {"designer", "solution_architect"}:
+        return "TARGET_ROLE", GATE_REASONING_FLOORS["architecture_design"]
+
+    return "", ""
+
+
+def _is_below_reasoning_floor(level: str, floor: str) -> bool:
+    return (
+        level in REASONING_LEVEL_ORDER
+        and floor in REASONING_LEVEL_ORDER
+        and REASONING_LEVEL_ORDER[level] < REASONING_LEVEL_ORDER[floor]
+    )
 
 
 def _norm(value: str) -> str:
@@ -921,7 +1001,7 @@ def _check_reasoning_and_designer(root: Path, files: dict[str, RuntimeFile]) -> 
         occurrences = _parse_occurrences(text)
         fields = {occurrence.key: occurrence.value for occurrence in occurrences}
         relpath = _rel(root, path)
-        level = fields.get("REASONING_LEVEL", "")
+        level = _extract_reasoning_level(text, fields)
         if _is_none(level):
             findings.append(
                 Finding(
@@ -955,6 +1035,30 @@ def _check_reasoning_and_designer(root: Path, files: dict[str, RuntimeFile]) -> 
                     "Use one of low, medium, high, or xhigh.",
                 )
             )
+        else:
+            floor_source, floor = _extract_reasoning_floor(fields)
+            if floor and floor not in ALLOWED_REASONING_LEVELS:
+                findings.append(
+                    Finding(
+                        "LINT_REASONING_004",
+                        "error",
+                        "Task packet uses invalid reasoning floor",
+                        f"{relpath} has {floor_source}={floor}.",
+                        [relpath],
+                        "Use a gate floor of low, medium, high, or xhigh.",
+                    )
+                )
+            elif _is_below_reasoning_floor(level, floor):
+                findings.append(
+                    Finding(
+                        "LINT_REASONING_005",
+                        "error",
+                        "Task packet is below reasoning gate floor",
+                        f"{relpath} uses REASONING_LEVEL={level} below {floor_source}={floor}.",
+                        [relpath],
+                        "Raise REASONING_LEVEL to satisfy the gate-required floor.",
+                    )
+                )
 
         for role_key in ("TARGET_ROLE", "OWNER_ROLE", "ROLE", "CURRENT_AGENT_ROLE"):
             if fields.get(role_key) == "designer":

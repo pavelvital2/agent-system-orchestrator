@@ -219,24 +219,31 @@ REQUESTER_RETURN_PROTOCOL_ALIGNMENT:
   infer return targets from informal context.
 
 REASONING_LEVEL_ALIGNMENT:
-  Allowed levels are low, medium, high, and xhigh. Role
-  defaults include tester: high. Task packets may raise reasoning level freely,
-  may lower it only for mechanical bounded tasks with OVERRIDE_REASON, and may
-  never lower below gate-required floor. Low is forbidden for design,
-  requirements, audit, correction after failed audit, lifecycle/state/transition
-  changes, security/secrets policy, launch/release readiness, final acceptance,
-  and cross-link validation. Before profile-agent dispatch, the orchestrator
-  resolves role_default_reasoning_level, task_packet_reasoning_level,
-  gate_required_floor, final_required_dispatch_level, and
-  requested_or_configured_reasoning_level. Dispatch records must include
-  REASONING_LEVEL_REQUIRED, REASONING_LEVEL_SOURCE, REASONING_LEVEL_RESOLVED,
-  RUNNER_CONFIG_EVIDENCE, REASONING_LEVEL_COMPLIANCE, and SPAWN_LOG_REF or
-  HANDOFF_LOG_REF. Requested/configured runner reasoning below resolved
-  required is invalid dispatch: worker RESULT is invalid, auditor pass is
-  forbidden, checkpoint is forbidden after reasoning-level mismatch, and
-  commit/push are forbidden after reasoning-level mismatch. The orchestrator
-  must not claim internal actual reasoning unless the runner provides
-  verifiable evidence.
+  Allowed levels are low, medium, high, and xhigh. Role defaults follow
+  ROLE_REASONING_DEFAULTS: orchestrator high, solution_architect xhigh,
+  designer xhigh as a deprecated alias, researcher high, developer high,
+  auditor xhigh, qa high, documenter medium, summarizer medium, and
+  simple_file_operator low. Current profile-role compatibility mappings include
+  requirements_analyst high, tester high, technical_writer medium,
+  devops_setup_engineer high, and release_manager high. Gate floors follow
+  GATE_REASONING_FLOORS: initial_tz_analysis xhigh, architecture_design xhigh,
+  task_decomposition high, implementation high, audit xhigh, checkpoint high,
+  runtime_lint medium, docs_update medium, and simple_file_move low. Task
+  packets may raise reasoning level freely, may lower it only for mechanical
+  bounded tasks with OVERRIDE_REASON, and may never lower below gate-required
+  floor. Allowed REASONING_LEVEL_SOURCE values are explicit, role_default,
+  gate_floor, escalated, and fallback. Before profile-agent dispatch, the
+  orchestrator resolves role_default_reasoning_level,
+  task_packet_reasoning_level, gate_required_floor,
+  final_required_dispatch_level, and requested_or_configured_reasoning_level.
+  Dispatch records must include REASONING_LEVEL_REQUIRED,
+  REASONING_LEVEL_SOURCE, REASONING_LEVEL_RESOLVED, RUNNER_CONFIG_EVIDENCE,
+  REASONING_LEVEL_COMPLIANCE, and SPAWN_LOG_REF or HANDOFF_LOG_REF.
+  Requested/configured runner reasoning below resolved required is invalid
+  dispatch: worker RESULT is invalid, auditor pass is forbidden, checkpoint is
+  forbidden after reasoning-level mismatch, and commit/push are forbidden after
+  reasoning-level mismatch. The orchestrator must not claim internal actual
+  reasoning unless the runner provides verifiable evidence.
 
 RUNTIME_FILE_SET_ALIGNMENT:
   Mandatory runtime file lists in start, runtime loop, runtime state schema,

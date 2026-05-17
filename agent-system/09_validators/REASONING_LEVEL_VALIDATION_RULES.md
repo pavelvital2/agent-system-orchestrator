@@ -19,35 +19,54 @@ only as source/policy metadata, not as a level value.
 
 ## Role defaults
 
+```yaml
+ROLE_REASONING_DEFAULTS:
+  orchestrator: high
+  solution_architect: xhigh
+  designer: xhigh          # deprecated alias, mapped to solution_architect
+  researcher: high
+  developer: high
+  auditor: xhigh
+  qa: high
+  documenter: medium
+  summarizer: medium
+  simple_file_operator: low
+```
+
+Current profile-role compatibility mappings:
+
 ```text
-orchestrator: high
 requirements_analyst: high
-designer: xhigh
-developer: high
-auditor: xhigh
 tester: high
 technical_writer: medium
 devops_setup_engineer: high
 release_manager: high
 ```
 
+Compatibility mappings are role-default policy metadata. They do not add
+allowed `REASONING_LEVEL.VALUE` strings.
+
 ## Gate-required floors
 
-```text
-requirements gate: xhigh
-design gate: xhigh
-audit gate: xhigh
-final audit: xhigh
-testing gate: high
-setup gate: high
-launch gate: high
-final acceptance: xhigh
-correction after audit fail: high
-governance correction: xhigh
-lifecycle/state/transition changes: xhigh
-security/secrets policy: high
-cross-link validation: high
+```yaml
+GATE_REASONING_FLOORS:
+  initial_tz_analysis: xhigh
+  architecture_design: xhigh
+  task_decomposition: high
+  implementation: high
+  audit: xhigh
+  checkpoint: high
+  runtime_lint: medium
+  docs_update: medium
+  simple_file_move: low
 ```
+
+Current gate names must map to the canonical floor that preserves or raises
+their minimum: requirements gates map to `initial_tz_analysis`; design gates map
+to `architecture_design`; final audit and audit gates map to `audit`; setup,
+testing, launch, correction implementation, security policy, and cross-link
+validation map to at least `implementation`; lifecycle/state/transition and
+final acceptance gates require `xhigh`.
 
 ## Validation rules
 
@@ -103,6 +122,16 @@ REASONING_LEVEL_RESOLVED
 RUNNER_CONFIG_EVIDENCE
 REASONING_LEVEL_COMPLIANCE
 SPAWN_LOG_REF or HANDOFF_LOG_REF
+```
+
+Allowed `REASONING_LEVEL_SOURCE` values are:
+
+```text
+explicit
+role_default
+gate_floor
+escalated
+fallback
 ```
 
 If the requested or configured runner reasoning level is below required, this

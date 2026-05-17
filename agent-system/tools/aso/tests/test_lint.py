@@ -327,6 +327,40 @@ STATUS: accepted
             self.assertEqual(strict.returncode, 1, strict.stdout + strict.stderr)
             self.assertIn("ASO lint: FAILED", strict.stdout)
 
+    def test_deprecated_reasoning_warns_and_strict_fails(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            write_runtime(root)
+            task_path = root / "project-runtime" / "tasks" / "TASK_DEMO_001.md"
+            task_path.write_text(
+                TASK_PACKET.replace("REASONING_LEVEL: high", "REASONING_LEVEL: role_default"),
+                encoding="utf-8",
+            )
+
+            non_strict = run_lint(root)
+            strict = run_lint(root, "--strict")
+
+            self.assertEqual(non_strict.returncode, 0, non_strict.stdout + non_strict.stderr)
+            self.assertIn("LINT_REASONING_002", non_strict.stdout)
+            self.assertEqual(strict.returncode, 1, strict.stdout + strict.stderr)
+            self.assertIn("ASO lint: FAILED", strict.stdout)
+
+    def test_lint_rejects_reasoning_below_explicit_floor(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            write_runtime(root)
+            task_path = root / "project-runtime" / "tasks" / "TASK_DEMO_001.md"
+            task_path.write_text(
+                TASK_PACKET.replace("REASONING_LEVEL: high", "REASONING_LEVEL: medium")
+                + "REASONING_LEVEL_REQUIRED_FLOOR: high\n",
+                encoding="utf-8",
+            )
+
+            result = run_lint(root)
+
+            self.assertEqual(result.returncode, 1, result.stdout + result.stderr)
+            self.assertIn("LINT_REASONING_005", result.stdout)
+
     def test_lint_detects_reasoning_lifecycle_naming_and_skeleton_rules(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)

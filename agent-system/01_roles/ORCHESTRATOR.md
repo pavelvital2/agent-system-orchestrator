@@ -118,20 +118,23 @@ xhigh
 
 Role defaults:
 
-```text
-orchestrator: high
-solution_architect: xhigh
-designer: xhigh
-researcher: high
-developer: high
-auditor: xhigh
-qa: high
-documenter: medium
-summarizer: medium
-simple_file_operator: low
-devops_setup_engineer: high
-release_manager: high
+```yaml
+ROLE_REASONING_DEFAULTS:
+  orchestrator: high
+  solution_architect: xhigh
+  designer: xhigh          # deprecated alias, mapped to solution_architect
+  researcher: high
+  developer: high
+  auditor: xhigh
+  qa: high
+  documenter: medium
+  summarizer: medium
+  simple_file_operator: low
 ```
+
+Current profile-role compatibility mappings are `requirements_analyst: high`,
+`tester: high`, `technical_writer: medium`, `devops_setup_engineer: high`, and
+`release_manager: high`.
 
 Role defaults are source/policy metadata only. A task packet must not set
 `REASONING_LEVEL.VALUE` to `role_default`; when role-default policy is used,
