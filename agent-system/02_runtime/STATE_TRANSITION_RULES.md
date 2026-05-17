@@ -30,18 +30,38 @@ PROJECT_STATE.ACTIVE_DOC_ROOT
 PROJECT_STATE.PACKAGE_VERSION
 PROJECT_STATE.GOVERNANCE_RULESET_VERSION
 PROJECT_STATE.RUNTIME_SCHEMA_VERSION
+PROJECT_STATE.PROJECT_SLUG
+PROJECT_STATE.WORKSPACE_TYPE
+PROJECT_STATE.WORKSPACE_IDENTITY_REF
+PROJECT_STATE.REPOSITORY_LOCK_REF
+PROJECT_STATE.EXPECTED_GIT_REMOTE
+PROJECT_STATE.ACTUAL_GIT_REMOTE
+PROJECT_STATE.EXPECTED_BRANCH
+PROJECT_STATE.ACTUAL_BRANCH
+PROJECT_STATE.PUSH_ALLOWED
+PROJECT_STATE.IDENTITY_VALIDATION_STATUS
+PROJECT_STATE.IDENTITY_VALIDATION_ERROR
+PROJECT_STATE.REPOSITORY_LOCK_STATUS
+PROJECT_STATE.CHECKPOINT_ELIGIBILITY
+PROJECT_STATE.CHECKPOINT_BLOCKED_BY
 CURRENT_GATE.GATE_TYPE
 CURRENT_GATE.STATUS
 CURRENT_GATE.OWNER_ROLE
 CURRENT_GATE.TASK_ID
 CURRENT_GATE.TASK_PACKET
 CURRENT_GATE.ACTION_SEMANTIC
+CURRENT_GATE.WORKSPACE_IDENTITY_STATUS
+CURRENT_GATE.REPOSITORY_LOCK_STATUS
+CURRENT_GATE.CHECKPOINT_ELIGIBILITY
 NEXT_ACTION.ACTION_TYPE
 NEXT_ACTION.TARGET_ROLE
 NEXT_ACTION.TASK_ID
 NEXT_ACTION.TASK_PACKET
 NEXT_ACTION.DEPENDENCY_STATUS
 NEXT_ACTION.ACTION_SEMANTIC
+NEXT_ACTION.WORKSPACE_IDENTITY_REQUIRED
+NEXT_ACTION.REPOSITORY_LOCK_REQUIRED
+NEXT_ACTION.CHECKPOINT_POLICY
 NEXT_ACTION.REQUESTER_RETURN_CONTEXT
 GAP_REGISTER.active_gaps
 TASK_REGISTRY.requester_return_metadata
@@ -64,6 +84,7 @@ requirements_analyst(auditor pass) -> post-audit checkpoint gate, then designer 
 auditor(pass, design)   -> post-audit checkpoint gate, then next audited implementation/correction task
 auditor(pass, research_dependency) -> post-audit checkpoint gate if required, then explicit requester continuation according to RETURN_TO_ROLE_AFTER_AUDIT_PASS and RETURN_TASK_AFTER_AUDIT_PASS
 auditor(pass, impl)     -> tester if testing required, else next governed task/finalization
+auditor(pass, checkpoint preflight detects audit miss) -> correction with FAILURE_TYPE audit_miss; no commit, no push, no normal next task
 devops_setup_engineer(auditor pass) -> post-audit checkpoint gate, then run, launch, documentation, or correction according to gate
 release_manager(auditor pass) -> post-audit checkpoint gate, then final_acceptance, handover, completed, or correction according to gate
 auditor(fail)           -> correction for checked profile role; no commit, no push, no next phase
@@ -127,8 +148,26 @@ the auditor returns `STATUS: pass`.
 - post-audit Git checkpoint before required auditor pass;
 - post-audit Git checkpoint that stages files outside the audited task allowed scope;
 - post-audit Git checkpoint that stages suspected secret or credential material;
+- post-audit Git checkpoint after `AUDIT_FALSE_PASS_DETECTED` or unresolved
+  `FAILURE_TYPE: audit_miss`;
+- normal dispatch, finalize, checkpoint, commit, or push while
+  `INCIDENT_RECOVERY` is active for `wrong_remote_push`,
+  `wrong_branch_push`, `invalid_task_packet_commit`, `forbidden_files`,
+  `secret_exposure`, `runtime_corruption`, or `audit_false_pass`;
+- `TASK_PACKET: NONE` for any file-changing correction
+  (`TASK_PACKET_NONE_FILE_CHANGES_FORBIDDEN`);
 - post-audit Git checkpoint after reasoning-level mismatch or invalid dispatch
   where actual spawned reasoning is below required;
+- profile-agent dispatch before workspace identity validation passes;
+- runtime initialization that infers identity from folder name, inherited `.git`
+  metadata, or raw remote strings without a workspace identity record;
+- post-audit Git checkpoint before workspace identity validation and repository
+  lock validation pass;
+- checkpoint, commit, or push when `repository_identity_mismatch`,
+  `repository_branch_mismatch`, `workspace_identity_leakage`, or
+  `unapproved_ssh_host_alias` is active;
+- push when `PUSH_ALLOWED` is not true under an accepted repository lock;
+- push from `WORKSPACE_TYPE: test_fixture`;
 - push after commit failure or checkpoint validation failure;
 - commit or push after reasoning-level mismatch or invalid dispatch where
   actual spawned reasoning is below required;
@@ -189,6 +228,10 @@ When an auditor returns `STATUS: pass` for required audited work:
 
 - `POST_AUDIT_GIT_CHECKPOINT.md` must run before normal dependent work is
   marked `ready`;
+- workspace identity validation must pass before checkpoint eligibility is
+  evaluated;
+- repository lock validation must pass before any push is attempted;
+- wrong remote or wrong branch is a hard blocker for push;
 - Git checkpoint validation must pass before staging, committing, or pushing;
 - only accepted files from the audited task allowed scope may be staged;
 - successful checkpoint must record branch, commit hash, push status, accepted
@@ -252,6 +295,72 @@ When secret or credential risk is detected:
 - logs and RESULT summaries must not include secret values;
 - routing must use governed correction or owner handling.
 
+When checkpoint preflight detects a blocker after auditor `STATUS: pass` for a
+check the auditor was required to perform:
+
+- record `AUDIT_FALSE_PASS_DETECTED`;
+- classify the correction input as `FAILURE_TYPE: audit_miss`;
+- staging, commit, and push are forbidden;
+- normal dependent dispatch and requester continuation are forbidden;
+- route only to governed correction, blocked/GAP handling, or genuine owner
+  handling as permitted by the full runtime tuple;
+- file-changing correction requires a full correction task packet and a later
+  independent audit pass before checkpoint can be attempted again.
+
+## Workspace identity and repository lock routing
+
+Workspace identity validation is required before any dispatch, checkpoint,
+commit, or push. The orchestrator must compare canonical repository identity:
+
+```text
+EXPECTED_GIT_REMOTE
+ACTUAL_GIT_REMOTE
+```
+
+Raw remote strings may differ only when both normalize to the same canonical
+GitHub repository identity under
+`agent-system/09_validators/WORKSPACE_IDENTITY_VALIDATION_RULES.md`.
+
+If an SSH host alias appears in `ACTUAL_REMOTE`, it is valid only when accepted
+in the repository lock or when bounded evidence proves that the alias resolves
+to `github.com`.
+
+If the identity gate fails:
+
+```text
+PROJECT_STATUS: blocked
+CURRENT_PHASE: correction | blocked
+CURRENT_GATE.STATUS: blocked
+NEXT_ACTION.ACTION_TYPE: correction | wait_for_owner | update_state | stop
+```
+
+The following blockers must stop dependent dispatch and checkpoint:
+
+```text
+repository_identity_mismatch
+repository_branch_mismatch
+workspace_identity_leakage
+unapproved_ssh_host_alias
+repository_lock_missing
+push_without_repository_lock
+```
+
+Push is allowed only when:
+
+```text
+IDENTITY_VALIDATION_STATUS: passed
+REPOSITORY_LOCK_STATUS: accepted
+PUSH_ALLOWED: true
+CHECKPOINT_ELIGIBILITY: push_allowed
+WORKSPACE_TYPE: package_repo | project_workspace | implementation_repo
+```
+
+`WORKSPACE_TYPE: test_fixture` must always keep `PUSH_ALLOWED: false`.
+
+Commit is forbidden after wrong remote or wrong branch unless the active
+repository lock and active task packet explicitly allow a governed local-only
+checkpoint. That local-only exception must not push.
+
 ## Phase/action compatibility
 
 ```text
@@ -292,6 +401,70 @@ Follow-up: must be followed by tuple validation
 - finalize when no task packet is required;
 - stop;
 - correction when routing does not dispatch a profile/package-correction agent.
+
+`TASK_PACKET_NONE_FILE_CHANGES_FORBIDDEN`: `TASK_PACKET: NONE` is forbidden for
+file-changing corrections. It is valid only for pure coordination or
+orchestrator-owned runtime operations that do not change project, package,
+implementation, task-packet, profile-result, committed, or other non-runtime
+artifacts. Any correction that changes non-runtime files requires a full
+correction task packet.
+
+## Incident recovery routing
+
+Incident recovery is entered when any incident class from
+`INCIDENT_RECOVERY.md` is active:
+
+```text
+wrong_remote_push
+wrong_branch_push
+invalid_task_packet_commit
+forbidden_files
+secret_exposure
+runtime_corruption
+audit_false_pass
+```
+
+Required incident freeze tuple:
+
+```text
+PROJECT_STATUS: blocked
+CURRENT_PHASE: correction
+CURRENT_GATE.STATUS: blocked
+NEXT_ACTION.ACTION_TYPE: correction | wait_for_owner | update_state | stop | create_agent
+```
+
+Allowed incident recovery actions:
+
+- governed `update_state` for runtime/routing metadata;
+- `wait_for_owner` for owner decisions about wrong remote, wrong branch,
+  exposed secrets, remote history, or unrecoverable state;
+- `stop` only when stop invariants permit a governed halt;
+- `create_agent` only for a full bounded correction task packet when file
+  changes are required and governance freeze permits a correction dispatch.
+
+Forbidden incident recovery actions:
+
+- normal project dispatch;
+- finalization or completed-state routing;
+- checkpoint, commit, or push before incident resume criteria pass;
+- direct orchestrator repair of project docs, task packets, package docs,
+  implementation files, profile RESULTs, committed content, or secret-bearing
+  files.
+
+Resume after incident recovery requires:
+
+- redacted incident evidence and affected references;
+- repository identity, expected branch, repository lock, and push policy
+  validation when Git target was involved;
+- task packet validation when an invalid task packet was involved;
+- changed-file scope validation when forbidden files were involved;
+- secret scan pass and owner security action when secret exposure was involved;
+- runtime schema and transition validation when runtime corruption was
+  involved;
+- `AUDIT_FALSE_PASS_DETECTED` / `FAILURE_TYPE: audit_miss` correction and
+  independent audit when audit false pass was involved;
+- full correction task packet, independent audit, and checkpoint preflight for
+  every file-changing correction.
 
 ## Terminal completion
 
@@ -370,8 +543,27 @@ Enter correction if any of the following are detected:
 - checkpoint after auditor fail, blocked, gap, invalid RESULT, or pending correction;
 - checkpoint, commit, or push after reasoning-level mismatch where actual
   spawned reasoning is below required;
+- profile-agent dispatch, checkpoint, commit, or push before workspace identity
+  validation passes;
+- missing workspace identity or repository lock fields in v2.0.0 runtime state;
+- `repository_identity_mismatch`;
+- `repository_branch_mismatch`;
+- `workspace_identity_leakage`;
+- `unapproved_ssh_host_alias`;
+- `PUSH_ALLOWED: true` without accepted repository lock;
+- `WORKSPACE_TYPE: test_fixture` with `PUSH_ALLOWED: true`;
 - checkpoint push attempted after commit failure;
 - checkpoint record or event containing unredacted secret values.
+- `AUDIT_FALSE_PASS_DETECTED` without blocked dependent work and a governed
+  `FAILURE_TYPE: audit_miss` correction route;
+- active `INCIDENT_RECOVERY` without `PROJECT_STATUS: blocked`,
+  `CURRENT_PHASE: correction`, blocked dependent work, and a governed
+  recovery route;
+- `wrong_remote_push`, `wrong_branch_push`, `invalid_task_packet_commit`,
+  `forbidden_files`, `secret_exposure`, or `runtime_corruption` followed by
+  normal dispatch, finalize, checkpoint, commit, or push before incident
+  resume criteria pass;
+- `TASK_PACKET: NONE` paired with a correction that changes non-runtime files;
 
 The validator layer must also catch the concrete invalid states listed in:
 

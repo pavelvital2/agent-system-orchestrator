@@ -1,0 +1,1 @@
+secret_scan_check: potential_secret_exposure:.env.local:sensitive_path

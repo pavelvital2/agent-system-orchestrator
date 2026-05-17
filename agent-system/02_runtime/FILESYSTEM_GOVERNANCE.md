@@ -103,6 +103,12 @@ project-runtime/ORCHESTRATOR_EVENTS_LOG.md
 project-runtime/STATUS_SUMMARY.md
 ```
 
+Checkpoint eligibility receipts are orchestrator-owned runtime evidence under:
+
+```text
+project-runtime/checkpoints/CHECKPOINT_ELIGIBILITY_<TASK_ID>_<ATTEMPT_NO>.md
+```
+
 Кто может менять:
 - оркестратор;
 - владелец проекта вручную при emergency correction.
@@ -185,6 +191,129 @@ profile route.
 profile-agent и только если файл является полным bootstrap task packet по
 `agent-system/03_templates/BOOTSTRAP_TASK_PACKET_TEMPLATE.md`. Обычные task
 packets вне `ACTIVE_DOC_ROOT` остаются invalid.
+
+---
+
+## Workspace identity governance
+
+Every active workspace must have an explicit workspace identity record based on:
+
+```text
+agent-system/03_templates/WORKSPACE_IDENTITY_TEMPLATE.md
+```
+
+The orchestrator must validate workspace identity before runtime
+initialization, profile-agent dispatch, checkpoint, commit, or push. It must
+not trust folder name, inherited `.git` metadata, README wording, runtime state
+alone, or raw Git remote strings as sufficient identity proof.
+
+The workspace identity model must include:
+
+```text
+PROJECT_NAME
+PROJECT_SLUG
+WORKSPACE_TYPE
+PROJECT_ROOT_EXPECTED
+GIT_TOPLEVEL_ACTUAL
+EXPECTED_REMOTE
+ACTUAL_REMOTE
+EXPECTED_GIT_REMOTE
+ACTUAL_GIT_REMOTE
+EXPECTED_BRANCH
+ACTUAL_BRANCH
+PUSH_ALLOWED
+```
+
+Canonical repository identity comparison is required. `EXPECTED_GIT_REMOTE` and
+`ACTUAL_GIT_REMOTE` must match after normalization under
+`agent-system/09_validators/WORKSPACE_IDENTITY_VALIDATION_RULES.md`.
+
+Equivalent GitHub remote forms are limited to:
+
+```text
+https://github.com/OWNER/REPO
+https://github.com/OWNER/REPO.git
+git@github.com:OWNER/REPO.git
+git@<approved_ssh_host_alias>:OWNER/REPO.git
+```
+
+The SSH host alias form is valid only when the alias is explicitly accepted in
+the repository lock or bounded evidence proves the alias resolves to
+`github.com`.
+
+## Safe project workspace initialization
+
+New project workspaces must be initialized from the universal package through:
+
+```text
+agent-system/scripts/init_project_workspace.sh
+```
+
+or an equivalent governed procedure that satisfies the same invariants.
+
+The initialization procedure must:
+
+- copy only universal package content needed by the workspace, normally
+  `agent-system/`;
+- create project-owned bootstrap directories such as `project-input/`,
+  `project-runtime/`, and `project-archive/` locally in the target workspace;
+- never copy, rename, inherit, or reuse the package repository `.git`
+  directory;
+- reject a target directory inside the package repository worktree;
+- reject a target directory that inherits an ancestor Git worktree instead of
+  owning its own `.git`;
+- require explicit expected remote and expected branch inputs before repository
+  lock acceptance;
+- compare any existing target `.git` origin and branch against those expected
+  inputs before copying package files;
+- classify an existing target `.git` origin mismatch as
+  `repository_identity_mismatch`;
+- classify an existing target branch mismatch as
+  `repository_branch_mismatch`;
+- create or require creation of `WORKSPACE_IDENTITY` and `REPOSITORY_LOCK`
+  records before normal runtime initialization.
+
+Clone-renaming the package repository into a project workspace is forbidden.
+That pattern carries package repository identity into project runtime state and
+must be treated as `workspace_identity_leakage` until corrected.
+
+Repository lock acceptance is forbidden unless all of these are true:
+
+```text
+EXPECTED_GIT_REMOTE equals ACTUAL_GIT_REMOTE after canonical normalization
+EXPECTED_BRANCH equals ACTUAL_BRANCH
+WORKSPACE_TYPE is valid for the target workspace
+PUSH_ALLOWED remains false unless the accepted lock explicitly authorizes push
+```
+
+## Workspace types
+
+```text
+package_repo:
+  Universal agent-system package repository. Only owner-authorized
+  package-governance tasks may change agent-system files. Push requires an
+  accepted repository lock.
+
+project_workspace:
+  Project orchestration workspace containing project-input, project-runtime,
+  project docs, and package instructions. It must not inherit identity from a
+  copied package checkout. Push requires an accepted repository lock.
+
+implementation_repo:
+  Product/source repository for implementation work. Code checkpoint requires
+  matching canonical repository identity and branch. Push requires an accepted
+  repository lock.
+
+test_fixture:
+  Disposable validation fixture. PUSH_ALLOWED must remain false, and fixture
+  identity cannot authorize package, project workspace, or implementation repo
+  checkpoint.
+```
+
+If workspace type conflicts with README, runtime state, manifest, Git remote,
+Git branch, or repository lock, classify the condition as
+`workspace_identity_leakage`. Dispatch, checkpoint, commit, and push are
+forbidden until governed correction resolves the conflict.
 
 ---
 
@@ -440,6 +569,34 @@ project-runtime/bootstrap/TASK_BOOTSTRAP_<TARGET_ROLE>_001.md
 
 Любой ordinary task packet вне ACTIVE_DOC_ROOT invalid.
 
+Dispatchable task packets must declare:
+
+```text
+# TASK PACKET
+```
+
+and must pass:
+
+```text
+agent-system/09_validators/TASK_PACKET_SCHEMA_VALIDATION_RULES.md
+agent-system/scripts/validate_task_packet.py
+```
+
+Files that declare:
+
+```text
+# TASK PROPOSAL
+TASK_PROPOSAL
+```
+
+are non-dispatchable proposals. They may not be selected by
+`NEXT_ACTION.TASK_PACKET`, may not create a profile agent, and must be converted
+into a full task packet before dispatch.
+
+Selecting a proposal, malformed task file, superseded task packet, deprecated
+task packet, or ordinary task packet outside `ACTIVE_DOC_ROOT` for dispatch is
+an `invalid_task_packet_schema` blocker.
+
 Рекомендуемая папка:
 
 ```text
@@ -549,6 +706,44 @@ authority to profile agents.
 The post-audit Git checkpoint is orchestrator-owned only and may run only after
 the required auditor returns `STATUS: pass`.
 
+Auditor `STATUS: pass` is not sufficient for commit or push. Before any
+orchestrator-owned checkpoint, commit, or push, the orchestrator must validate:
+
+```text
+- workspace identity gate passed;
+- canonical EXPECTED_GIT_REMOTE equals ACTUAL_GIT_REMOTE;
+- EXPECTED_BRANCH equals ACTUAL_BRANCH;
+- WORKSPACE_TYPE permits the requested checkpoint behavior;
+- REPOSITORY_LOCK_STATUS is accepted when push is requested;
+- PUSH_ALLOWED is true only under the accepted repository lock.
+- CHECKPOINT_ELIGIBILITY_STATUS is eligible in a bounded receipt;
+- changed files pass CHANGED_FILES_SCOPE_MATRIX;
+- secret scan passes SECRET_SCAN_RULES without potential_secret_exposure.
+```
+
+Wrong remote, wrong branch, identity leakage, missing repository lock, or
+`PUSH_ALLOWED: false` is a hard blocker for push. Commit is also forbidden
+unless a governed local-only checkpoint is explicitly allowed by the repository
+lock and active task packet.
+
+Changed-file scope validation is governed by:
+
+```text
+agent-system/09_validators/CHANGED_FILES_SCOPE_MATRIX.md
+```
+
+Secret and sensitive artifact validation is governed by:
+
+```text
+agent-system/09_validators/SECRET_SCAN_RULES.md
+```
+
+Checkpoint eligibility receipts must use:
+
+```text
+agent-system/03_templates/CHECKPOINT_ELIGIBILITY_TEMPLATE.md
+```
+
 ## Secret handling
 
 No role may read, print, edit, stage, commit, or push secrets. A safe
@@ -568,8 +763,10 @@ Secrets include:
 - credentials;
 - tokens;
 - cookies;
+- HAR/devtools dumps;
 - private keys;
 - passwords;
+- session material;
 - local secret stores;
 - `.env` files with real values.
 

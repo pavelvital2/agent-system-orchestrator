@@ -807,4 +807,126 @@ TRACEABILITY_NOTE: UPG_ASU_130_001 remains historically proposed as the initial 
 AUTHORIZED_BY: project_owner
 AUDIT_REQUIRED: yes
 STATUS: accepted
+
+CHANGE_ID: GOV-2026-05-17-001
+CHANGE_TITLE: ASO_25_GOVERNANCE_HARDENING_V2_0_0_WORKSPACE_IDENTITY_GATE
+DATE: 2026-05-17
+PACKAGE_VERSION_BEFORE: 1.3.0
+PACKAGE_VERSION_AFTER: 2.0.0
+GOVERNANCE_RULESET_BEFORE: 1.3.0
+GOVERNANCE_RULESET_AFTER: 2.0.0
+RUNTIME_SCHEMA_BEFORE: 1.2.0
+RUNTIME_SCHEMA_AFTER: 2.0.0
+CHANGE_TYPE: major
+AFFECTED_FILES:
+- agent-system/PACKAGE_VERSIONING.md
+- agent-system/GOVERNANCE_CHANGELOG.md
+- agent-system/02_runtime/ORCHESTRATOR_RUNTIME_LOOP.md
+- agent-system/02_runtime/FILESYSTEM_GOVERNANCE.md
+- agent-system/02_runtime/GOVERNANCE_AUTHORITY.md
+- agent-system/02_runtime/STATE_TRANSITION_RULES.md
+- agent-system/04_state/RUNTIME_STATE_SCHEMA.md
+- agent-system/04_state/PROJECT_STATE_TEMPLATE.md
+- agent-system/04_state/CURRENT_GATE_TEMPLATE.md
+- agent-system/04_state/NEXT_ACTION_TEMPLATE.md
+- agent-system/03_templates/WORKSPACE_IDENTITY_TEMPLATE.md
+- agent-system/03_templates/REPOSITORY_LOCK_TEMPLATE.md
+- agent-system/09_validators/WORKSPACE_IDENTITY_VALIDATION_RULES.md
+AFFECTED_INVARIANTS:
+- Fix 1: workspace identity gate is mandatory before dispatch, runtime initialization, checkpoint, commit, or push.
+- Fix 2: workspace identity manifest/template declares identity, workspace type, expected remote, branch, push policy, allowed identity fields, and version tuple compatibility.
+- Fix 3: repository lock defaults PUSH_ALLOWED to false until explicitly accepted and validated.
+- Fix 4: package_repo, project_workspace, implementation_repo, and test_fixture behavior are defined.
+- Fix 5: wrong remote or wrong branch is a hard blocker for push, and commit requires an explicit governed local-only exception.
+- Fix 7: identity leakage across README, runtime, manifest, Git remote, branch, and workspace type is a blocker.
+- canonical repository identity comparison is required; raw remote string comparison alone is insufficient.
+- SSH host aliases are accepted only when explicitly locked or proven to resolve to github.com.
+AFFECTED_TRANSITIONS:
+- runtime validation -> workspace identity gate before any dispatchable action.
+- profile-agent dispatch -> blocked when repository_identity_mismatch, repository_branch_mismatch, workspace_identity_leakage, or unapproved_ssh_host_alias is active.
+- auditor pass -> post-audit checkpoint eligibility still requires workspace identity and repository lock validation.
+- checkpoint/commit/push -> blocked unless repository identity, branch, workspace type, and PUSH_ALLOWED policy validate.
+SCHEMA_TEMPLATE_IMPACT: both
+MIGRATION_REQUIRED: yes
+MIGRATION_NOTE: Existing runtime states must add workspace identity, repository lock, and checkpoint eligibility fields before normal dispatch. Missing or contradictory identity fields must route to correction or owner wait; the orchestrator must not infer identity from folder name, copied .git metadata, or raw remote strings.
+AUTHORIZED_BY: project_owner
+AUDIT_REQUIRED: yes
+STATUS: accepted
+
+CHANGE_ID: GOV-2026-05-17-008
+CHANGE_TITLE: ASO_25_GOVERNANCE_HARDENING_V2_0_0_GOVERNANCE_SMOKE_TESTS
+DATE: 2026-05-17
+PACKAGE_VERSION_BEFORE: 2.0.0
+PACKAGE_VERSION_AFTER: 2.0.0
+GOVERNANCE_RULESET_BEFORE: 2.0.0
+GOVERNANCE_RULESET_AFTER: 2.0.0
+RUNTIME_SCHEMA_BEFORE: 2.0.0
+RUNTIME_SCHEMA_AFTER: 2.0.0
+CHANGE_TYPE: patch
+AFFECTED_FILES:
+- agent-system/scripts/run_governance_smoke_tests.sh
+- agent-system/scripts/checkpoint_preflight.sh
+- agent-system/README.md
+- agent-system/PACKAGE_VERSIONING.md
+- agent-system/GOVERNANCE_CHANGELOG.md
+- tests/fixtures/wrong_remote/*
+- tests/fixtures/wrong_branch/*
+- tests/fixtures/package_repo_with_project_docs/*
+- tests/fixtures/invalid_task_packet/*
+- tests/fixtures/push_not_allowed/*
+- tests/fixtures/secret_file_present/*
+AFFECTED_INVARIANTS:
+- TASK_ASO_PATCH_008_GOVERNANCE_SMOKE_TESTS covers Fix 25 with deterministic local smoke fixtures.
+- Wrong remote, wrong branch, package/project path pollution, invalid task packet, push without accepted lock, and secret-file exposure are expected blockers.
+- Smoke execution uses dry-run preflight checks and temporary local Git repositories; no real network push or real secret material is required.
+- Final smoke assertion verifies TOTAL_FIXES: 25 and REQUIRED_COVERAGE: 25/25 from the v2.0.0 coverage matrix.
+- Active version tuple remains 2.0.0 / 2.0.0 / 2.0.0.
+AFFECTED_TRANSITIONS:
+- auditor pass -> checkpoint preflight remains blocked when repository identity, branch, repository lock, file scope, or secret-scan blockers are present.
+- invalid task packet -> profile-agent dispatch and checkpoint validation remain blocked.
+- package_repo changed files -> project documentation path pollution remains blocked even when a malformed task packet attempts to allow project-docs paths.
+SCHEMA_TEMPLATE_IMPACT: none
+MIGRATION_REQUIRED: no
+MIGRATION_NOTE: Existing runtime states are unaffected by the smoke fixtures. The v2.0.0 workspace identity, repository lock, checkpoint eligibility, task packet validation, and secret-scan migration requirements remain governed by the major package update.
+AUTHORIZED_BY: project_owner
+AUDIT_REQUIRED: yes
+STATUS: accepted
+
+CHANGE_ID: GOV-2026-05-17-009
+CHANGE_TITLE: ASO_CORR_200_001_REPRODUCIBLE_SMOKE_PREFLIGHT_VALIDATION
+DATE: 2026-05-17
+PACKAGE_VERSION_BEFORE: 2.0.0
+PACKAGE_VERSION_AFTER: 2.0.0
+GOVERNANCE_RULESET_BEFORE: 2.0.0
+GOVERNANCE_RULESET_AFTER: 2.0.0
+RUNTIME_SCHEMA_BEFORE: 2.0.0
+RUNTIME_SCHEMA_AFTER: 2.0.0
+CHANGE_TYPE: patch
+AFFECTED_FILES:
+- agent-system/scripts/checkpoint_preflight.sh
+- agent-system/scripts/run_governance_smoke_tests.sh
+- agent-system/10_examples/ASO_25_GOVERNANCE_HARDENING_COVERAGE_MATRIX.md
+- agent-system/GOVERNANCE_CHANGELOG.md
+- agent-system/00_start/ORCHESTRATOR_START.md
+- agent-system/01_roles/AUDITOR.md
+- agent-system/09_validators/GIT_CHECKPOINT_VALIDATION_RULES.md
+- agent-system/02_runtime/POST_AUDIT_GIT_CHECKPOINT.md
+- tests/fixtures/approved_ssh_alias/*
+AFFECTED_INVARIANTS:
+- Smoke is reproducible from tracked repository files and no longer reads project-input/.
+- Checkpoint preflight delegates task packet validation to validate_task_packet.py.
+- Minimal malformed task packets block checkpoint with invalid_task_packet_schema.
+- Owner-approved SSH alias canonicalization is accepted for the package repository.
+- Smoke verifies accepted v2.0.0 changelog status.
+- Executable shell/Python changes require syntax evidence before auditor pass and checkpoint.
+AFFECTED_TRANSITIONS:
+- auditor pass -> checkpoint preflight -> full task packet schema validation before git add.
+- executable script change -> syntax evidence required before auditor pass and checkpoint eligibility.
+SCHEMA_TEMPLATE_IMPACT: none
+MIGRATION_REQUIRED: no
+MIGRATION_NOTE: This correction changes reproducible package smoke coverage and checkpoint preflight enforcement only. The active version tuple remains 2.0.0 / 2.0.0 / 2.0.0.
+TRACEABILITY_NOTE: Corrects AUDIT_ASO_PATCH_V2_0_0_FAIL_NON_REPRODUCIBLE_SMOKE_AND_PREFLIGHT_VALIDATION_GAP through TASK_ASO_CORR_200_001_REPRODUCIBLE_SMOKE_AND_PREFLIGHT_VALIDATION after mandatory auditor pass and orchestrator-owned checkpoint.
+AUTHORIZED_BY: project_owner
+AUDIT_REQUIRED: yes
+STATUS: accepted
 ```

@@ -128,3 +128,15 @@ or if evidence for the actual spawned reasoning level is missing, unknown, or
 not traceable to `SPAWN_LOG_REF`, `HANDOFF_LOG_REF`, or an orchestrator
 transcript, auditor `STATUS: pass` is invalid. The auditor must return
 `STATUS: fail` or `STATUS: blocked`.
+
+Auditor evidence must record:
+
+```text
+REASONING_LEVEL_COMPLIANCE: passed | failed | blocked
+```
+
+If checkpoint preflight or later deterministic routing detects a
+reasoning-level blocker after auditor `STATUS: pass`, and the auditor had the
+required spawn/handoff evidence available, the orchestrator must record
+`AUDIT_FALSE_PASS_DETECTED` with `FAILURE_TYPE: audit_miss` and route correction
+without staging, commit, or push.

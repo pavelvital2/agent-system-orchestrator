@@ -95,8 +95,9 @@ DEPENDENCY_STATUS: blocked
 BLOCKED_BY: invalid_or_missing_package_file
 ```
 
-4. В `NEXT_ACTION.md` выставить полный v1.3.0 `NEXT_ACTION` record with
-   exactly one selected classification branch.
+4. В `NEXT_ACTION.md` выставить полный `NEXT_ACTION` record compatible with
+   `CURRENT_RUNTIME_SCHEMA_VERSION` and exactly one selected classification
+   branch.
 
 5. В handoff-файле явно указать, какие файлы отсутствуют.
 

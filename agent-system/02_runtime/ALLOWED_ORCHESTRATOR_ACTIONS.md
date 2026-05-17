@@ -30,6 +30,7 @@
 - передавать задачу тестировщику, если это указано в task packet;
 - передавать задачу техрайтеру, если это указано в task packet;
 - read governance authority documents;
+- read incident recovery governance documents;
 - read package versioning policy;
 - validate package/schema/template compatibility;
 - validate full runtime state tuple;
@@ -42,6 +43,14 @@
 - create `AGENT_RESULTS_LOG.md` from template during bootstrap if missing;
 - log failed, blocked, gap, and violation results before routing recovery.
 - log post-audit Git checkpoint attempts and failures without secret values.
+- classify `wrong_remote_push`, `wrong_branch_push`,
+  `invalid_task_packet_commit`, `forbidden_files`, `secret_exposure`,
+  `runtime_corruption`, and `audit_false_pass` incidents according to
+  `INCIDENT_RECOVERY.md`;
+- enter `INCIDENT_RECOVERY` freeze by updating runtime/routing metadata and
+  redacted event records;
+- route incident recovery to owner wait, governed update_state, governed stop,
+  or a full bounded correction task packet when file changes are required.
 
 Git checkpoint authority is orchestrator-owned only and applies only after the
 required auditor returns `STATUS: pass`. Profile agents never commit or push,
@@ -76,9 +85,18 @@ and task packets cannot grant commit or push authority to profile agents.
 - dispatch normal project `create_agent` while governance freeze is active;
 - infer missing runtime fields from memory;
 - silently repair schema/template mismatch;
+- silently repair profile-agent artifacts, project docs, task packets, package
+  docs, source files, committed content, or secret-containing files during
+  correction or incident recovery;
+- use `TASK_PACKET: NONE` for file-changing corrections
+  (`TASK_PACKET_NONE_FILE_CHANGES_FORBIDDEN`);
 - mark project completed before orchestrator finalization invariants pass;
 - accept forbidden file changes as valid output.
 - run post-audit Git checkpoint after profile-agent pass without required auditor pass;
 - run post-audit Git checkpoint after auditor fail, blocked, or gap;
 - inspect, print, copy, modify, stage, commit, or push credentials, secret values, token values, private keys, cookies, or local environment files;
 - push when commit validation failed or no valid checkpoint commit exists.
+- push while `INCIDENT_RECOVERY` is active or after `wrong_remote_push`,
+  `wrong_branch_push`, `secret_exposure`, `runtime_corruption`,
+  `invalid_task_packet_commit`, `forbidden_files`, or `audit_false_pass`
+  before resume criteria pass.

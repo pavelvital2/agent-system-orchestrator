@@ -22,23 +22,34 @@
    - `agent-system/02_runtime/STATE_TRANSITION_RULES.md`
    - `agent-system/02_runtime/POST_AUDIT_GIT_CHECKPOINT.md`
    - `agent-system/02_runtime/VIOLATION_RECOVERY.md`
+   - `agent-system/02_runtime/INCIDENT_RECOVERY.md`
    - `agent-system/02_runtime/ACCEPTED_STATE_LOCKING.md`
    - `agent-system/02_runtime/AGENT_LIFECYCLE.md`
    - `agent-system/03_templates/TASK_PACKET_TEMPLATE.md`
+   - `agent-system/03_templates/TASK_PROPOSAL_TEMPLATE.md`
    - `agent-system/03_templates/BOOTSTRAP_TASK_PACKET_TEMPLATE.md`
    - `agent-system/03_templates/RESEARCH_REQUEST_TEMPLATE.md`
    - `agent-system/03_templates/RESEARCH_RESULT_TEMPLATE.md`
    - `agent-system/03_templates/DESIGN_CONTINUATION_TASK_TEMPLATE.md`
    - `agent-system/03_templates/ORCHESTRATOR_TASK_HANDOFF_TEMPLATE.md`
+   - `agent-system/03_templates/WORKSPACE_IDENTITY_TEMPLATE.md`
+   - `agent-system/03_templates/REPOSITORY_LOCK_TEMPLATE.md`
+   - `agent-system/03_templates/CHECKPOINT_ELIGIBILITY_TEMPLATE.md`
    - `agent-system/03_templates/AGENT_RESULT_TEMPLATE.md`
    - `agent-system/04_state/RUNTIME_STATE_SCHEMA.md`
    - `agent-system/05_gap_flow/GAP_FLOW.md`
    - `agent-system/05_gap_flow/GAP_REGISTER_TEMPLATE.md`
    - `agent-system/06_logs/AGENT_RESULTS_LOG_TEMPLATE.md`
    - `agent-system/06_logs/ORCHESTRATOR_EVENTS_LOG_TEMPLATE.md`
+   - `agent-system/09_validators/WORKSPACE_IDENTITY_VALIDATION_RULES.md`
+   - `agent-system/09_validators/TASK_PACKET_SCHEMA_VALIDATION_RULES.md`
    - `agent-system/09_validators/GIT_CHECKPOINT_VALIDATION_RULES.md`
+   - `agent-system/09_validators/CHANGED_FILES_SCOPE_MATRIX.md`
+   - `agent-system/09_validators/SECRET_SCAN_RULES.md`
    - `agent-system/09_validators/RESEARCH_RETURN_VALIDATION_RULES.md`
    - `agent-system/09_validators/REASONING_LEVEL_VALIDATION_RULES.md`
+   - `agent-system/scripts/checkpoint_preflight.sh`
+   - `agent-system/scripts/validate_task_packet.py`
    - `project-runtime/PROJECT_STATE.md`
    - `project-runtime/CURRENT_GATE.md`
    - `project-runtime/NEXT_ACTION.md`
@@ -48,6 +59,52 @@
    - `project-runtime/ACCEPTED_ARTIFACTS.md`
    - `project-runtime/ORCHESTRATOR_EVENTS_LOG.md`
    - `project-runtime/STATUS_SUMMARY.md`
+
+Before trusting `NEXT_ACTION.md` for dispatch or checkpoint routing, the
+orchestrator must run the workspace identity gate from:
+
+```text
+agent-system/09_validators/WORKSPACE_IDENTITY_VALIDATION_RULES.md
+```
+
+The gate must validate `PROJECT_NAME`, `PROJECT_SLUG`, `WORKSPACE_TYPE`,
+`PROJECT_ROOT_EXPECTED`, `GIT_TOPLEVEL_ACTUAL`, `EXPECTED_REMOTE`,
+`ACTUAL_REMOTE`, `EXPECTED_GIT_REMOTE`, `ACTUAL_GIT_REMOTE`,
+`EXPECTED_BRANCH`, `ACTUAL_BRANCH`, and `PUSH_ALLOWED`.
+
+The gate compares canonical repository identity, not raw remote strings.
+Accepted equivalent raw remote forms are:
+
+```text
+https://github.com/OWNER/REPO
+https://github.com/OWNER/REPO.git
+git@github.com:OWNER/REPO.git
+git@<approved_ssh_host_alias>:OWNER/REPO.git
+```
+
+The SSH host alias form is valid only when the alias is explicitly accepted in
+the repository lock or bounded evidence proves it resolves to `github.com`.
+
+If the gate returns `repository_identity_mismatch`,
+`repository_branch_mismatch`, `workspace_identity_leakage`,
+`unapproved_ssh_host_alias`, `repository_lock_missing`, or
+`push_without_repository_lock`, then profile-agent dispatch, checkpoint, commit,
+and push are forbidden. Commit may proceed only as a governed local-only
+checkpoint when the repository lock and active task packet explicitly permit
+that exception.
+
+For a new project workspace, runtime initialization must start from a safe
+package-to-project workspace procedure:
+
+```text
+agent-system/scripts/init_project_workspace.sh
+```
+
+or an equivalent governed procedure that explicitly excludes `.git`, rejects
+clone-renamed package checkouts, requires expected remote and branch inputs
+before repository lock acceptance, blocks mismatched existing target `.git`
+remote or branch, and creates or requires `WORKSPACE_IDENTITY` and
+`REPOSITORY_LOCK` records.
 
 
 2. Определить следующий шаг только из `NEXT_ACTION.md`.
@@ -67,11 +124,36 @@ Task-packet validation применяется только если:
 Если task-packet validation требуется, оркестратор обязан проверить, что task packet:
 
 - соответствует `TASK_PACKET_TEMPLATE.md`;
+- проходит `TASK_PACKET_SCHEMA_VALIDATION_RULES.md` или
+  `agent-system/scripts/validate_task_packet.py`;
 - содержит обязательные секции;
 - не нарушает mandatory workflow;
 - не нарушает filesystem governance.
 
+`TASK_PROPOSAL` files are not dispatchable task packets. A proposal may be used
+only as non-dispatchable planning input and must conform to:
+
+```text
+agent-system/03_templates/TASK_PROPOSAL_TEMPLATE.md
+```
+
+If `NEXT_ACTION.ACTION_TYPE: create_agent` references a `TASK_PROPOSAL`, a file
+without `# TASK PACKET`, or a malformed task packet, dispatch is forbidden and
+the route must enter governed correction with:
+
+```text
+invalid_task_packet_schema
+```
+
 Для `wait_for_owner`, `update_state`, `finalize`, `stop` и `correction` без task packet значение `TASK_PACKET: NONE` допустимо, если full runtime state tuple разрешён `STATE_TRANSITION_RULES.md`.
+
+`TASK_PACKET_NONE_FILE_CHANGES_FORBIDDEN`: `TASK_PACKET: NONE` is forbidden for
+file-changing corrections. It is allowed only for pure coordination or
+orchestrator-owned runtime operations that do not change project, package,
+implementation, task-packet, profile-result, or other non-runtime artifacts.
+Any correction that creates, edits, deletes, restores, reverts, redacts, or
+replaces files outside orchestrator-owned runtime state requires a full
+correction task packet.
 
 Оркестратор не должен считать `TASK_PACKET: NONE` отсутствующим task packet для таких non-dispatch actions.
 
@@ -197,12 +279,59 @@ allowed only after auditor `STATUS: pass`.
 Если auditor RESULT имеет `STATUS: pass`, оркестратор обязан:
 
 - route first to `POST_AUDIT_GIT_CHECKPOINT.md`;
-- validate `GIT_CHECKPOINT_VALIDATION_RULES.md` before staging;
+- treat auditor pass as necessary but not sufficient for commit or push;
+- verify the auditor RESULT includes explicit passing evidence statuses for
+  changed files scope, task packet schema, repository identity, forbidden
+  paths, runtime mutation, required evidence, secret exposure, and
+  reasoning-level compliance;
+- require these audit evidence labels before accepting auditor pass:
+
+```text
+CHANGED_FILES_SCOPE_STATUS
+TASK_PACKET_SCHEMA_STATUS
+REPOSITORY_IDENTITY_STATUS
+FORBIDDEN_PATH_STATUS
+RUNTIME_MUTATION_STATUS
+EVIDENCE_STATUS
+SECRET_EXPOSURE_STATUS
+REASONING_LEVEL_COMPLIANCE
+```
+
+- when changed task-like files include `TASK_*.md`, `TASK_PROPOSAL*.md`, or
+  `*_TASK_PACKET*.md`, require `VALIDATED_TASK_PACKETS` evidence listing each
+  validated file, classification, and `TASK_PACKET_SCHEMA_STATUS`;
+- treat a missing, failed, blocked, unknown, contradicted, or
+  `potential_secret_exposure` audit status as invalid audit acceptance;
+- before accepting design output that created or changed downstream task-like
+  artifacts, verify the audit includes downstream task validation evidence for
+  changed `TASK_*.md`, `TASK_PROPOSAL*.md`, and `*_TASK_PACKET*.md` files;
+- treat invalid, ambiguous, or unvalidated downstream dispatchable task packets
+  as blockers for audit acceptance, checkpoint, staging, commit, and push;
+- run deterministic checkpoint preflight before staging;
+- validate `GIT_CHECKPOINT_VALIDATION_RULES.md`,
+  `CHANGED_FILES_SCOPE_MATRIX.md`, and `SECRET_SCAN_RULES.md`;
+- record `CHECKPOINT_ELIGIBILITY_STATUS` in a checkpoint eligibility receipt;
 - stage only accepted files allowed by the audited task packet;
 - commit only after checkpoint validation passes;
 - push only after a valid local commit exists;
-- record branch, commit hash, push status, and accepted files;
+- record branch, commit hash, commit status, push status, push remote/branch,
+  `LAST_PUSH_TARGET_STATUS`, `PROJECT_CHECKPOINT_STATUS`, and accepted files;
 - route to the next governed task only after successful checkpoint completion.
+
+If checkpoint preflight finds a blocker after auditor `STATUS: pass` and the
+blocker belongs to a check the auditor was required to perform, the
+orchestrator must record:
+
+```text
+AUDIT_FALSE_PASS_DETECTED
+FAILURE_TYPE: audit_miss
+```
+
+In that case staging, commit, push, and normal next-task dispatch are
+forbidden. The orchestrator must route only to governed correction, blocked
+handling, GAP handling, or genuine owner handling as permitted by the runtime
+tuple. File-changing correction for `audit_miss` requires a full correction task
+packet and its own independent audit before checkpoint can be attempted again.
 
 If the audited task has `TASK_KIND: research_dependency` and
 `RETURN_TO_REQUESTER_AFTER_AUDIT_PASS: yes`, the next governed task after audit
@@ -349,7 +478,7 @@ NEXT_RECOMMENDED_ACTION: correction
 12. Действовать по STATUS:
    - profile-agent `pass` with mandatory audit → перейти к обязательному audit gate;
    - profile-agent `pass` without mandatory audit → route only by validated task packet, task registry, and transition rules;
-   - auditor `pass` → выполнить post-audit Git checkpoint, then перейти к следующему governed gate;
+   - auditor `pass` → выполнить post-audit checkpoint eligibility preflight and, only if eligible, Git checkpoint, then перейти к следующему governed gate;
    - `fail` → вернуть задачу на исправление профильному агенту;
    - `blocked` → зафиксировать блокер;
    - `gap` → зафиксировать GAP и остановить зависимую ветку.
@@ -369,34 +498,88 @@ NEXT_RECOMMENDED_ACTION: correction
 
 ## Mandatory validation order
 
-Before any `create_agent`, `route_result`, `update_state`, `correction`, `finalize`, or `stop` action, the orchestrator must validate in this order:
+Before any `create_agent`, `route_result`, `update_state`, `correction`,
+`finalize`, or `stop` action, and before any post-audit checkpoint, commit, or
+push, the orchestrator must validate in this order:
 
 1. universal package files exist;
 2. package version / governance ruleset / runtime schema are compatible;
 3. mandatory runtime files exist;
-4. runtime state matches `RUNTIME_STATE_SCHEMA.md`;
-5. full runtime state tuple is valid under `STATE_TRANSITION_RULES.md`;
-6. action/state semantics are valid under `ACTION_STATE_SEMANTICS.md`;
-7. `NEXT_ACTION.md` contains exactly one action;
-8. `NEXT_ACTION.md` does not conflict with `GOVERNANCE_AUTHORITY.md`;
-9. if `NEXT_ACTION.ACTION_TYPE` is `create_agent` or `NEXT_ACTION.TASK_PACKET` is not `NONE`, target task packet is active, not superseded, not deprecated;
-10. if task-packet validation is required, target task packet is inside `ACTIVE_DOC_ROOT` unless it is the governed first bootstrap task packet at `project-runtime/bootstrap/TASK_BOOTSTRAP_<TARGET_ROLE>_001.md` or explicitly governed as system/package correction material;
-11. if task-packet validation is required, REQUIRED_DOCS do not include deprecated/archive documents;
-12. if task-packet validation is not required, `TASK_PACKET: NONE` is valid only for `wait_for_owner`, `update_state`, `finalize`, `stop`, or `correction` when allowed by `STATE_TRANSITION_RULES.md`;
-13. role/file permissions match `FILESYSTEM_GOVERNANCE.md`;
-14. task packet `REASONING_LEVEL` is valid for allowed values, role default,
+4. workspace identity and repository lock fields exist in runtime state or
+   initialization material;
+5. workspace identity gate passes under
+   `WORKSPACE_IDENTITY_VALIDATION_RULES.md`;
+6. canonical `EXPECTED_GIT_REMOTE` and `ACTUAL_GIT_REMOTE` match, using
+   approved SSH alias evidence when an alias is present;
+7. `EXPECTED_BRANCH` and `ACTUAL_BRANCH` match;
+8. `PUSH_ALLOWED` is false unless an accepted repository lock authorizes the
+   current workspace type, canonical repository identity, branch, and
+   checkpoint policy;
+9. runtime state matches `RUNTIME_STATE_SCHEMA.md`;
+10. full runtime state tuple is valid under `STATE_TRANSITION_RULES.md`;
+11. action/state semantics are valid under `ACTION_STATE_SEMANTICS.md`;
+12. `NEXT_ACTION.md` contains exactly one action;
+13. `NEXT_ACTION.md` does not conflict with `GOVERNANCE_AUTHORITY.md`;
+14. if `NEXT_ACTION.ACTION_TYPE` is `create_agent` or `NEXT_ACTION.TASK_PACKET` is not `NONE`, target task artifact declares `# TASK PACKET`, not `# TASK PROPOSAL`, and passes `TASK_PACKET_SCHEMA_VALIDATION_RULES.md`;
+15. if `NEXT_ACTION.ACTION_TYPE` is `create_agent` or `NEXT_ACTION.TASK_PACKET` is not `NONE`, target task packet is active, not superseded, not deprecated;
+16. if task-packet validation is required, target task packet is inside `ACTIVE_DOC_ROOT` unless it is the governed first bootstrap task packet at `project-runtime/bootstrap/TASK_BOOTSTRAP_<TARGET_ROLE>_001.md` or explicitly governed as system/package correction material;
+17. if task-packet validation is required, REQUIRED_DOCS do not include deprecated/archive documents;
+18. if task-packet validation is not required, `TASK_PACKET: NONE` is valid only for `wait_for_owner`, `update_state`, `finalize`, `stop`, or `correction` when allowed by `STATE_TRANSITION_RULES.md`;
+18a. if `TASK_PACKET: NONE` is present, enforce
+    `TASK_PACKET_NONE_FILE_CHANGES_FORBIDDEN` from
+    `INCIDENT_RECOVERY.md`: no file-changing correction may proceed without a
+    full correction task packet;
+19. role/file permissions match `FILESYSTEM_GOVERNANCE.md`;
+20. task packet `REASONING_LEVEL` is valid for allowed values, role default,
     and gate-required floor;
-15. profile-agent dispatch reasoning is resolved and prepared for recording:
+21. profile-agent dispatch reasoning is resolved and prepared for recording:
     `role_default_reasoning_level`, `task_packet_reasoning_level`,
     `gate_required_floor`, `final_required_dispatch_level`, and
     `actual_spawned_reasoning_level`; `final_required_dispatch_level` must be
     the highest applicable level among role default, task packet
     `REASONING_LEVEL`, and gate-required floor;
-16. `TASK_KIND: research_dependency` and requester continuation routing are
+22. `TASK_KIND: research_dependency` and requester continuation routing are
     valid under `REQUESTER_RETURN_PROTOCOL.md`;
-17. requested action is valid under governance-freeze rules.
+23. for design audit acceptance, changed downstream task-like artifacts are
+    explicitly classified as dispatchable `TASK_PACKET` or non-dispatchable
+    `TASK_PROPOSAL`; every changed dispatchable downstream `TASK_*.md` file
+    passes task packet schema validation before auditor pass is accepted; and
+    non-dispatchable proposals are not selected by `NEXT_ACTION.TASK_PACKET`;
+24. before accepting auditor pass, the auditor RESULT includes explicit
+    evidence statuses for changed file scope, task packet schema, repository
+    identity, forbidden paths, runtime mutation, required evidence, secret
+    exposure, and reasoning-level compliance;
+25. when changed task-like files include `TASK_*.md`,
+    `TASK_PROPOSAL*.md`, or `*_TASK_PACKET*.md`, the auditor RESULT lists
+    `VALIDATED_TASK_PACKETS` with each path, classification, dispatchability,
+    and `TASK_PACKET_SCHEMA_STATUS`;
+26. before checkpoint, commit, or push, deterministic checkpoint preflight has
+    run and produced `CHECKPOINT_ELIGIBILITY_STATUS: eligible` in a receipt
+    based on `CHECKPOINT_ELIGIBILITY_TEMPLATE.md`;
+27. checkpoint preflight covers workspace identity, Git target, changed file
+    scope, task packet schema, runtime schema, and secret/sensitive artifact
+    scan;
+28. checkpoint preflight validates changed dispatchable task packets and
+    non-dispatchable `TASK_PROPOSAL` files before `git add`; any
+    `invalid_task_packet_schema` result blocks staging, commit, and push;
+29. if checkpoint preflight detects a blocker after auditor pass for a check
+    the auditor was required to perform, the route records
+    `AUDIT_FALSE_PASS_DETECTED` with `FAILURE_TYPE: audit_miss` and forbids
+    staging, commit, push, and normal next-task dispatch;
+30. requested action is valid under governance-freeze rules.
+31. if `wrong_remote_push`, `wrong_branch_push`,
+    `invalid_task_packet_commit`, `forbidden_files`, `secret_exposure`,
+    `runtime_corruption`, or `AUDIT_FALSE_PASS_DETECTED` is active, requested
+    action is valid under `INCIDENT_RECOVERY.md`.
 
-If any validation fails, dispatch is forbidden.
+If any validation fails, dispatch is forbidden. If the failure is found during
+checkpoint preflight, staging, commit, and push are forbidden.
+
+For a governed `correction`, `update_state`, `wait_for_owner`, or `stop` action
+whose explicit purpose is to create or repair missing workspace identity or
+repository lock records, a failed identity gate still blocks normal dispatch,
+checkpoint, commit, and push, but it does not block the governed recovery
+action itself when transition rules permit that recovery route.
 
 Freeze absence is not a required validation condition for recovery actions.
 
@@ -432,6 +615,29 @@ The orchestrator may only:
 - dispatch an explicitly bounded package-governance correction task through `create_agent` when transition rules permit it;
 - stop through governed `stop` when stop invariants allow it;
 - reread and revalidate runtime files.
+
+## Incident recovery freeze behavior
+
+If incident recovery is active, the orchestrator must apply
+`INCIDENT_RECOVERY.md` in addition to ordinary governance freeze rules.
+
+Incident classes include:
+
+```text
+wrong_remote_push
+wrong_branch_push
+invalid_task_packet_commit
+forbidden_files
+secret_exposure
+runtime_corruption
+audit_false_pass
+```
+
+During incident recovery freeze, normal dispatch, checkpoint, commit, and push
+are forbidden. The orchestrator may coordinate recovery only through
+runtime/routing metadata, redacted event logging, owner wait, governed
+update_state, governed stop, or a full bounded correction task packet when file
+changes are required.
 
 ## Post-update validation
 

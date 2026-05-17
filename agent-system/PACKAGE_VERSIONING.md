@@ -19,9 +19,9 @@ RUNTIME_SCHEMA_VERSION:
 ## Active version constants
 
 ```text
-CURRENT_PACKAGE_VERSION: 1.3.0
-CURRENT_GOVERNANCE_RULESET_VERSION: 1.3.0
-CURRENT_RUNTIME_SCHEMA_VERSION: 1.2.0
+CURRENT_PACKAGE_VERSION: 2.0.0
+CURRENT_GOVERNANCE_RULESET_VERSION: 2.0.0
+CURRENT_RUNTIME_SCHEMA_VERSION: 2.0.0
 ```
 
 These constants define the active package/governance/schema tuple for runtime validation. They are policy constants, not a release manifest.
@@ -62,6 +62,27 @@ This upgrade adds Research Dependency Loop, Design Research Loop, Requester
 Return Protocol, explicit reasoning-level governance, requester return metadata
 fields, and runtime tuple cleanup for `CURRENT_GATE.ACTION_SEMANTIC` and
 `NEXT_ACTION.ACTION_SEMANTIC`. It must not use `1.2.1` as the active tuple.
+
+The v2.0.0 governance hardening package installs:
+
+```text
+CURRENT_PACKAGE_VERSION: 2.0.0
+CURRENT_GOVERNANCE_RULESET_VERSION: 2.0.0
+CURRENT_RUNTIME_SCHEMA_VERSION: 2.0.0
+```
+
+This major update makes workspace identity validation and repository lock
+validation mandatory before profile-agent dispatch, runtime initialization,
+checkpoint, commit, or push. Existing runtime states that lack the mandatory
+workspace identity, repository lock, or checkpoint eligibility fields enter
+correction or owner wait flow; the orchestrator must not silently infer those
+fields from folder name, inherited `.git` metadata, or raw remote strings.
+
+The governance smoke-test addition for
+`TASK_ASO_PATCH_008_GOVERNANCE_SMOKE_TESTS` keeps the active tuple unchanged at
+`2.0.0 / 2.0.0 / 2.0.0`. It adds deterministic local fixtures and a dry-run
+runner for the v2.0.0 blocker surface; it is recorded in
+`GOVERNANCE_CHANGELOG.md` and does not install a new package version.
 
 ## Version semantics
 

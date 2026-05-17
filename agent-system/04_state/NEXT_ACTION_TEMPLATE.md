@@ -13,6 +13,12 @@ TASK_PACKET:
 DEPENDENCY_STATUS:
 BLOCKED_BY:
 ACTION_SEMANTIC:
+WORKSPACE_IDENTITY_REQUIRED:
+REPOSITORY_LOCK_REQUIRED:
+CHECKPOINT_POLICY:
+CHECKPOINT_PREFLIGHT_REQUIRED:
+CHECKPOINT_RECEIPT_REQUIRED:
+CHECKPOINT_RECEIPT_REF:
 REQUESTER_RETURN_CONTEXT:
 BLOCKING_OR_RESUME_CONTEXT:
 REQUIRED_UNIVERSAL_DOCS:
@@ -30,7 +36,25 @@ TASK_PACKET:
 DEPENDENCY_STATUS: ready | blocked | completed | not_applicable
 BLOCKED_BY:
 ACTION_SEMANTIC: normal | wait_for_owner | pause | stop_terminal | completed_state_transition
+WORKSPACE_IDENTITY_REQUIRED: yes | no
+REPOSITORY_LOCK_REQUIRED: yes | no
+CHECKPOINT_POLICY: forbidden | local_only | commit_and_push | no_checkpoint
+CHECKPOINT_PREFLIGHT_REQUIRED: yes | no
+CHECKPOINT_RECEIPT_REQUIRED: yes | no
+CHECKPOINT_RECEIPT_REF:
 ```
+
+`WORKSPACE_IDENTITY_REQUIRED` must be `yes` for runtime initialization,
+profile-agent dispatch, checkpoint, commit, or push. It may be `no` only for a
+governed correction or owner-wait action whose purpose is to create or repair
+missing identity records.
+
+`REPOSITORY_LOCK_REQUIRED` must be `yes` before commit or push. Push remains
+forbidden unless the accepted repository lock sets `PUSH_ALLOWED: true`.
+`CHECKPOINT_PREFLIGHT_REQUIRED: yes` is mandatory before any checkpoint, commit,
+or push. `CHECKPOINT_RECEIPT_REQUIRED: yes` is mandatory when
+`CHECKPOINT_POLICY` is `local_only` or `commit_and_push`; the receipt must use
+`agent-system/03_templates/CHECKPOINT_ELIGIBILITY_TEMPLATE.md`.
 
 ## Requester return context
 
@@ -99,4 +123,11 @@ One instruction only.
 - Audit fail must not set `DEPENDENCY_STATUS: ready` for dependent work.
 - Research dependency return must not set requester continuation ready before independent audit pass.
 - Requester return routing must use explicit return metadata and must not be inferred from context.
+- Workspace identity validation must pass before dispatch, checkpoint, commit,
+  or push unless the action is a governed correction or owner wait for missing
+  identity records.
+- `CHECKPOINT_POLICY: commit_and_push` requires `REPOSITORY_LOCK_REQUIRED: yes`
+  and an accepted repository lock with `PUSH_ALLOWED: true`.
+- `CHECKPOINT_PREFLIGHT_REQUIRED: yes` and `CHECKPOINT_RECEIPT_REQUIRED: yes`
+  are required before any local-only or commit-and-push checkpoint.
 - If multiple actions are needed, each action must become a separate `NEXT_ACTION.md` update after the previous one completes.
