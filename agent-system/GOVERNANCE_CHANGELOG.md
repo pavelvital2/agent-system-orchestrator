@@ -981,4 +981,19 @@ TRACEABILITY_NOTE: Corrects AUDIT_MARKETS_V2_TEST_RUN_FAIL_BOOTSTRAP_DEAD_END_AN
 AUTHORIZED_BY: project_owner
 AUDIT_REQUIRED: yes
 STATUS: accepted
+
+CHANGE_ID: GOV-2026-05-17-011
+CHANGE_TITLE: ASO_CORR_200_003_REMOVE_LEGACY_TOP_LEVEL_FIXTURES
+DATE: 2026-05-17
+PACKAGE_VERSION_BEFORE: 2.0.0
+PACKAGE_VERSION_AFTER: 2.0.0
+GOVERNANCE_RULESET_BEFORE: 2.0.0
+GOVERNANCE_RULESET_AFTER: 2.0.0
+RUNTIME_SCHEMA_BEFORE: 2.0.0
+RUNTIME_SCHEMA_AFTER: 2.0.0
+CHANGE_TYPE: correction
+SUMMARY:
+- Removed legacy top-level tests/fixtures after smoke fixtures were moved under agent-system/tests/fixtures.
+- Confirmed governance smoke remains self-contained inside the copied agent-system package.
+STATUS: accepted
 ```

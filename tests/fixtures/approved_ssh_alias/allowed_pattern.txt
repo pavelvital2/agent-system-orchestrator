@@ -1,1 +1,0 @@
-smoke/approved-ssh-alias.txt
