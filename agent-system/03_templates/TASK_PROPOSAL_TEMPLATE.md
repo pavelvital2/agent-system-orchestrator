@@ -14,6 +14,11 @@ that conforms to:
 agent-system/03_templates/TASK_PACKET_TEMPLATE.md
 ```
 
+When emitted as downstream work by a designer or other planning task, this file
+is the explicit non-dispatchable classification for the proposed work. It must
+remain planning input until a separate governed task creates a valid
+`# TASK PACKET`.
+
 ---
 
 # TASK PROPOSAL
@@ -120,6 +125,8 @@ Rules:
   task packets;
 - selecting a proposal for `create_agent` is an
   `invalid_task_packet_schema` blocker.
+- requester-return or design-continuation routing described in a proposal is
+  advisory only and does not authorize dispatch.
 
 ---
 

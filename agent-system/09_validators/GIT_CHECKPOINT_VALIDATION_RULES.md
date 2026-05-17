@@ -47,6 +47,8 @@ A Git checkpoint is valid only when all conditions are true:
   before staging;
 - changed `TASK_PROPOSAL` files pass proposal validation and remain
   non-dispatchable before staging;
+- design audit acceptance for changed downstream task-like artifacts includes
+  validation evidence before checkpoint eligibility is granted;
 - `CHECKPOINT_ELIGIBILITY_STATUS: eligible` is recorded separately from
   `AUDIT_STATUS`;
 - `CHECKPOINT_PREFLIGHT_STATUS: passed` is recorded with a bounded preflight
@@ -63,6 +65,8 @@ Checkpoint is forbidden after:
 - invalid RESULT shape;
 - invalid task packet;
 - invalid downstream dispatchable task packet;
+- ambiguous or unvalidated downstream task artifact created by accepted design
+  output;
 - `TASK_PROPOSAL` selected as a dispatchable task packet;
 - invalid runtime tuple;
 - direct progress after audit fail;
@@ -122,6 +126,8 @@ Checkpoint preflight passes only when all of the following are true:
 - task packet has required schema sections and is active;
 - every changed downstream `# TASK PACKET` artifact has required schema
   sections before staging;
+- every changed downstream `TASK_*.md` artifact is explicitly classified as a
+  dispatchable `TASK_PACKET` or non-dispatchable `TASK_PROPOSAL`;
 - every changed `TASK_PROPOSAL` artifact conforms to
   `TASK_PROPOSAL_TEMPLATE.md` and remains non-dispatchable;
 - any task schema failure is reported as `invalid_task_packet_schema`;

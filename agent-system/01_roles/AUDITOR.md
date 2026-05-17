@@ -38,6 +38,8 @@
 - проверить, что агент не выполнил работу вне своей роли;
 - проверить, что заявленные changed files соответствуют задаче;
 - проверить, что next action логически следует из результата;
+- проверить, что changed downstream task-like artifacts are explicitly
+  classified and schema-valid before audit pass;
 - проверить reasoning-level execution compliance: task packet
   `REASONING_LEVEL`, role default, gate-required floor, actual spawned
   reasoning level, and evidence from spawn log, handoff, or orchestrator
@@ -86,6 +88,24 @@ Git checkpoint is orchestrator-owned only and runs only after auditor STATUS: pa
 - нет ли oversized-задач;
 - нет ли giant-doc подхода, если task требует bounded-docs;
 - достаточно ли документации для следующего bounded шага.
+- every changed downstream `TASK_*.md`, `TASK_PROPOSAL*.md`, and
+  `*_TASK_PACKET*.md` file is classified as either dispatchable `TASK_PACKET`
+  or non-dispatchable `TASK_PROPOSAL`;
+- every changed dispatchable downstream `# TASK PACKET` passes
+  `TASK_PACKET_SCHEMA_VALIDATION_RULES.md` or
+  `agent-system/scripts/validate_task_packet.py` before design audit pass;
+- every changed `TASK_PROPOSAL` passes proposal validation, contains
+  `DISPATCH_STATUS: non_dispatchable`, and is not selected by
+  `NEXT_ACTION.TASK_PACKET`;
+- design-continuation and requester-return metadata is explicit,
+  deterministic, and compatible with `REQUESTER_RETURN_PROTOCOL.md`;
+- invalid, ambiguous, or unvalidated dispatchable downstream tasks block
+  design audit pass.
+
+If the validator cannot be run in the current environment, the auditor may use
+the documentation rules as an equivalent manual check. If neither executable
+nor manual schema validation is possible, auditor `STATUS: pass` is forbidden
+and the auditor must return `STATUS: blocked`.
 
 ### Implementation audit
 
@@ -136,6 +156,8 @@ STATUS: fail
 - обязательный workflow;
 - запрет на додумывание требований.
 - actual spawned reasoning level below the resolved required level.
+- downstream dispatchable task packets are invalid, ambiguous, unclassified, or
+  selected from a non-dispatchable `TASK_PROPOSAL`.
 
 В `NEXT_RECOMMENDED_ACTION` аудитор должен рекомендовать, какому агенту нужно вернуть задачу на исправление через оркестратора.
 
@@ -154,7 +176,9 @@ STATUS: pass
 ```
 
 только если проверяемый результат соответствует задаче, scope и обязательным
-правилам, including reasoning-level execution compliance.
+правилам, including reasoning-level execution compliance and downstream task
+artifact validation when the checked result creates or changes future task
+artifacts.
 
 ---
 

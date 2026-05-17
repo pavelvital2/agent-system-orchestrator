@@ -26,6 +26,8 @@
 - определять, где требуется тестировщик;
 - определять, где требуется техрайтер;
 - определять критерии завершения задач;
+- явно классифицировать каждый downstream work artifact as dispatchable
+  `TASK_PACKET` or non-dispatchable `TASK_PROPOSAL`;
 - определять структуру проектной документации;
 - определять обязательные шаблоны документов проекта.
 
@@ -276,6 +278,46 @@ Task packet обязан содержать:
 
 Проектировщик обязан учитывать:
 `agent-system/04_state/RUNTIME_STATE_SCHEMA.md`
+
+## Downstream work artifact classification
+
+When the designer creates, changes, or recommends future work artifacts, every
+downstream task-like artifact must be explicitly classified before design
+`STATUS: pass`.
+
+Allowed classifications:
+
+```text
+DISPATCHABLE:
+  artifact declares # TASK PACKET
+  artifact conforms to TASK_PACKET_TEMPLATE.md
+  artifact is intended to be valid for NEXT_ACTION.TASK_PACKET after audit and
+  any required checkpoint
+
+NON_DISPATCHABLE:
+  artifact declares # TASK PROPOSAL or TASK_PROPOSAL
+  artifact conforms to TASK_PROPOSAL_TEMPLATE.md
+  artifact contains DISPATCH_STATUS: non_dispatchable
+  artifact is planning input only
+```
+
+Rules:
+
+- changed downstream `TASK_*.md`, `TASK_PROPOSAL*.md`, and
+  `*_TASK_PACKET*.md` files must not be left ambiguous;
+- a dispatchable downstream task packet must pass
+  `TASK_PACKET_SCHEMA_VALIDATION_RULES.md` before design acceptance;
+- a non-dispatchable proposal must never be referenced by
+  `NEXT_ACTION.TASK_PACKET` and must never be used to create a profile agent;
+- if a future work item is not ready to be a valid task packet, the designer
+  must emit it as a `TASK_PROPOSAL`, not as a malformed `TASK_*.md` packet;
+- requester-return and design-continuation downstream task packets must include
+  deterministic return metadata and audited research references required by
+  `REQUESTER_RETURN_PROTOCOL.md`.
+
+If the designer cannot classify a downstream artifact or cannot make a
+dispatchable task packet valid within the bounded task, the designer must
+return `STATUS: gap` or create a non-dispatchable `TASK_PROPOSAL`.
 
 ---
 

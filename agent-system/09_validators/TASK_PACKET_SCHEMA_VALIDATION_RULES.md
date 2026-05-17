@@ -85,6 +85,42 @@ If a `TASK_PROPOSAL` is selected for `create_agent`, validation must fail with:
 invalid_task_packet_schema
 ```
 
+## Downstream artifact classification
+
+Design output and other planning output may create future work artifacts only
+when each changed task-like artifact is explicitly classified:
+
+```text
+TASK_PACKET:
+  dispatchable only if the file declares # TASK PACKET and passes task packet
+  schema validation
+
+TASK_PROPOSAL:
+  non-dispatchable only if the file declares # TASK PROPOSAL or TASK_PROPOSAL
+  and contains DISPATCH_STATUS: non_dispatchable
+```
+
+Changed downstream files matching these patterns must be inspected before
+design audit pass and again before checkpoint staging:
+
+```text
+TASK_*.md
+TASK_PROPOSAL*.md
+*_TASK_PACKET*.md
+```
+
+Rules:
+
+- a changed downstream `TASK_*.md` file that is intended for dispatch must be a
+  valid dispatchable `# TASK PACKET`;
+- a changed downstream `TASK_*.md` file that is not ready for dispatch must be
+  classified as a `TASK_PROPOSAL` and must remain non-dispatchable;
+- a task-like artifact that lacks both task packet and task proposal markers is
+  invalid;
+- a `TASK_PROPOSAL` selected by `NEXT_ACTION.TASK_PACKET` is invalid;
+- invalid or ambiguous downstream task artifacts must be reported as
+  `invalid_task_packet_schema`.
+
 ## Mandatory task packet sections
 
 Every dispatchable task packet must include these `##` sections exactly once in
@@ -242,6 +278,8 @@ Rules:
 
 - every changed file declaring `# TASK PACKET` must pass task packet schema
   validation;
+- every changed downstream `TASK_*.md` dispatchable artifact must pass schema
+  validation before audit pass and before checkpoint;
 - every changed active dispatchable task packet must also pass dispatch path
   validation;
 - every changed `TASK_PROPOSAL` must pass proposal validation and remain
@@ -287,3 +325,8 @@ Checkpoint validation:
 ```text
 python agent-system/scripts/validate_task_packet.py --mode checkpoint --active-doc-root project-docs <changed_task_artifact.md>
 ```
+
+Design-audit downstream artifact validation may use the same checkpoint mode
+against each changed task-like artifact before auditor pass. The audit evidence
+must record which changed artifacts were validated and whether each was a
+dispatchable `TASK_PACKET` or non-dispatchable `TASK_PROPOSAL`.

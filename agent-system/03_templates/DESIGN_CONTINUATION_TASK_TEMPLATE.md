@@ -112,3 +112,11 @@ NONE
 - Continuation scope must remain bounded to the original design task and the
   accepted research implications.
 - The continuation task still routes to mandatory design audit on pass.
+- A dispatchable design continuation artifact must be embedded in a full
+  `# TASK PACKET` and pass task packet schema validation before dispatch.
+- A candidate continuation that is not yet dispatchable must be emitted as a
+  `TASK_PROPOSAL` with `DISPATCH_STATUS: non_dispatchable`.
+- `RETURN_TO_REQUESTER_AFTER_AUDIT_PASS`,
+  `RETURN_TO_ROLE_AFTER_AUDIT_PASS`, and `RETURN_TASK_AFTER_AUDIT_PASS` must
+  remain deterministic and must not be inferred from research notes or
+  conversation history.

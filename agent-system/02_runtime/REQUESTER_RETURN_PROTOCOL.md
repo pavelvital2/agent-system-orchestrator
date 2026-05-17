@@ -37,6 +37,23 @@ The same return metadata must be recorded in `TASK_REGISTRY.md` for the
 dependency task. `NEXT_ACTION.md` must preserve the return context whenever it
 routes an audited dependency toward requester continuation.
 
+When a designer creates downstream artifacts for requester return,
+research-dependency follow-up, or design continuation, each artifact must be
+classified before design acceptance:
+
+```text
+TASK_PACKET:
+  dispatchable only after schema validation, audit pass, and any required
+  checkpoint
+
+TASK_PROPOSAL:
+  non-dispatchable planning input only
+```
+
+Return metadata is operational only in a dispatchable task packet. A
+`TASK_PROPOSAL` may describe a possible continuation, but it must not be used
+as `NEXT_ACTION.TASK_PACKET` and must not authorize requester return.
+
 ## Research dependency route
 
 Research dependencies use:
@@ -128,3 +145,6 @@ audit result references in `DEPENDENCIES`, `INPUTS`, or `READ_INPUTS`.
 
 Continuation is invalid if it reads or relies on a research result that has not
 passed independent audit.
+
+If a design continuation artifact is not yet a valid dispatchable task packet,
+it must remain a `TASK_PROPOSAL` with `DISPATCH_STATUS: non_dispatchable`.

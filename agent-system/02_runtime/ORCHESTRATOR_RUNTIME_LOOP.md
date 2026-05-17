@@ -271,6 +271,11 @@ allowed only after auditor `STATUS: pass`.
 
 - route first to `POST_AUDIT_GIT_CHECKPOINT.md`;
 - treat auditor pass as necessary but not sufficient for commit or push;
+- before accepting design output that created or changed downstream task-like
+  artifacts, verify the audit includes downstream task validation evidence for
+  changed `TASK_*.md`, `TASK_PROPOSAL*.md`, and `*_TASK_PACKET*.md` files;
+- treat invalid, ambiguous, or unvalidated downstream dispatchable task packets
+  as blockers for audit acceptance, checkpoint, staging, commit, and push;
 - run deterministic checkpoint preflight before staging;
 - validate `GIT_CHECKPOINT_VALIDATION_RULES.md`,
   `CHANGED_FILES_SCOPE_MATRIX.md`, and `SECRET_SCAN_RULES.md`;
@@ -485,16 +490,21 @@ push, the orchestrator must validate in this order:
     `REASONING_LEVEL`, and gate-required floor;
 22. `TASK_KIND: research_dependency` and requester continuation routing are
     valid under `REQUESTER_RETURN_PROTOCOL.md`;
-23. before checkpoint, commit, or push, deterministic checkpoint preflight has
+23. for design audit acceptance, changed downstream task-like artifacts are
+    explicitly classified as dispatchable `TASK_PACKET` or non-dispatchable
+    `TASK_PROPOSAL`; every changed dispatchable downstream `TASK_*.md` file
+    passes task packet schema validation before auditor pass is accepted; and
+    non-dispatchable proposals are not selected by `NEXT_ACTION.TASK_PACKET`;
+24. before checkpoint, commit, or push, deterministic checkpoint preflight has
     run and produced `CHECKPOINT_ELIGIBILITY_STATUS: eligible` in a receipt
     based on `CHECKPOINT_ELIGIBILITY_TEMPLATE.md`;
-24. checkpoint preflight covers workspace identity, Git target, changed file
+25. checkpoint preflight covers workspace identity, Git target, changed file
     scope, task packet schema, runtime schema, and secret/sensitive artifact
     scan;
-25. checkpoint preflight validates changed dispatchable task packets and
+26. checkpoint preflight validates changed dispatchable task packets and
     non-dispatchable `TASK_PROPOSAL` files before `git add`; any
     `invalid_task_packet_schema` result blocks staging, commit, and push;
-26. requested action is valid under governance-freeze rules.
+27. requested action is valid under governance-freeze rules.
 
 If any validation fails, dispatch is forbidden. If the failure is found during
 checkpoint preflight, staging, commit, and push are forbidden.

@@ -45,6 +45,9 @@ A post-audit Git checkpoint may start only when all conditions are true:
   `TASK_PACKET_SCHEMA_VALIDATION_RULES.md`;
 - changed `TASK_PROPOSAL` files pass proposal validation and remain
   non-dispatchable;
+- design-audit acceptance evidence exists when the accepted result created or
+  changed downstream `TASK_*.md`, `TASK_PROPOSAL*.md`, or
+  `*_TASK_PACKET*.md` files;
 - runtime state has no active blocker or GAP that blocks the accepted work;
 - `AUDIT_STATUS` for the accepted work is `passed`;
 - `CHECKPOINT_ELIGIBILITY_STATUS` is `eligible` in a bounded checkpoint
@@ -66,6 +69,9 @@ The orchestrator must not stage, commit, or push after:
 - formally invalid profile-agent RESULT;
 - formally invalid auditor RESULT;
 - invalid downstream dispatchable task packet;
+- missing design-audit validation evidence for changed downstream task-like
+  artifacts;
+- ambiguous downstream task artifact classification;
 - `TASK_PROPOSAL` selected as a dispatchable task packet;
 - reasoning-level dispatch mismatch where actual spawned reasoning is below
   required;
@@ -129,6 +135,12 @@ Task packet schema failures must use:
 ```text
 invalid_task_packet_schema
 ```
+
+For design outputs, the preflight must not compensate for a missing downstream
+validation check in the audit. If changed downstream task artifacts were
+created or modified, both the auditor acceptance and the checkpoint preflight
+must agree that dispatchable packets are valid and proposals are
+non-dispatchable.
 
 When the accepted task creates new files, those untracked paths must be included
 in file-scope and secret checks before staging.
