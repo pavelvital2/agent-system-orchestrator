@@ -158,6 +158,18 @@ Git checkpoint is orchestrator-owned only and runs only after auditor STATUS: pa
 
 Используется после проектировщика.
 
+For `solution_architect` output and deprecated `designer` alias output, the
+auditor must apply:
+
+```text
+agent-system/03_templates/DESIGN_OUTPUT_CONTRACT.md
+agent-system/09_validators/DESIGN_TRACEABILITY_RULES.md
+agent-system/09_validators/DESIGN_REVIEW_RUBRIC.md
+```
+
+The audit evidence must include the deterministic design rubric statuses and
+score required by `DESIGN_REVIEW_RUBRIC.md`.
+
 Аудитор проверяет:
 
 - соответствует ли проектная документация ТЗ;
@@ -184,6 +196,11 @@ Git checkpoint is orchestrator-owned only and runs only after auditor STATUS: pa
   deterministic, and compatible with `REQUESTER_RETURN_PROTOCOL.md`;
 - invalid, ambiguous, or unvalidated dispatchable downstream tasks block
   design audit pass.
+- any design review rubric fail condition blocks design audit pass, including
+  decision without source, assumption as fact, task without acceptance
+  criteria, oversized task scope, missing test strategy, unresolved
+  dependencies, missing owner decision marker, unclear product capability
+  level, and implementation task before required design gate.
 
 If the validator cannot be run in the current environment, the auditor may use
 the documentation rules as an equivalent manual check. If neither executable

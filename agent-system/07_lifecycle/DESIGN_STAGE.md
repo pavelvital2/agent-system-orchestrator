@@ -33,6 +33,13 @@ Design output must follow:
 agent-system/03_templates/DESIGN_OUTPUT_CONTRACT.md
 ```
 
+Design traceability and audit scoring must follow:
+
+```text
+agent-system/09_validators/DESIGN_TRACEABILITY_RULES.md
+agent-system/09_validators/DESIGN_REVIEW_RUBRIC.md
+```
+
 ## Outputs
 
 - bounded design docs;
@@ -48,7 +55,8 @@ Design exits with `STATUS: pass` only when the required design output contract
 sections are present, architecture decisions have source references,
 assumptions/GAPs/research dependencies are separated, and the next bounded task
 can be dispatched without relying on stale context or hidden assumptions.
-Design pass must be followed by audit.
+Design pass must be followed by audit. Design audit pass is forbidden when the
+deterministic review rubric or traceability rules report a fail condition.
 
 If accepted research is required, design continuation must follow
 `agent-system/07_lifecycle/DESIGN_RESEARCH_LOOP.md` and must not use research

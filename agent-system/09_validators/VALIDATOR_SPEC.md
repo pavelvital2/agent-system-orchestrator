@@ -22,6 +22,8 @@ Validators help the orchestrator detect:
 - invalid reasoning level assignments;
 - invalid profile-agent lifecycle termination or reuse evidence;
 - secret-handling violations.
+- invalid solution architect design traceability, scoring, or design audit
+  readiness.
 
 ## Source of authority
 
@@ -54,6 +56,8 @@ agent-system/09_validators/CROSS_LINK_VALIDATION_RULES.md
 agent-system/09_validators/RESEARCH_RETURN_VALIDATION_RULES.md
 agent-system/09_validators/REASONING_LEVEL_VALIDATION_RULES.md
 agent-system/09_validators/AGENT_LIFECYCLE_VALIDATION_RULES.md
+agent-system/09_validators/DESIGN_TRACEABILITY_RULES.md
+agent-system/09_validators/DESIGN_REVIEW_RUBRIC.md
 ```
 
 ## Machine-readable schema sidecars

@@ -16,6 +16,8 @@ agent-system/02_runtime/FILESYSTEM_GOVERNANCE.md
 agent-system/02_runtime/REQUESTER_RETURN_PROTOCOL.md
 agent-system/02_runtime/ACCEPTED_STATE_LOCKING.md
 agent-system/03_templates/DESIGN_OUTPUT_CONTRACT.md
+agent-system/09_validators/DESIGN_TRACEABILITY_RULES.md
+agent-system/09_validators/DESIGN_REVIEW_RUBRIC.md
 ```
 
 ## Required structure
@@ -108,6 +110,8 @@ For `ROLE: solution_architect`, validators must verify design output against:
 
 ```text
 agent-system/03_templates/DESIGN_OUTPUT_CONTRACT.md
+agent-system/09_validators/DESIGN_TRACEABILITY_RULES.md
+agent-system/09_validators/DESIGN_REVIEW_RUBRIC.md
 ```
 
 At minimum, design output is invalid when:
@@ -120,6 +124,8 @@ At minimum, design output is invalid when:
   packets or non-dispatchable proposals;
 - a downstream dispatchable task packet is claimed as `NEXT_ACTION`-eligible
   without task packet schema validation evidence.
+- the design review rubric records any hard fail condition;
+- deterministic design traceability status is `failed` or `blocked`.
 
 ## Evidence validation
 

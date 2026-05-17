@@ -103,6 +103,9 @@ Reasoning-level validation is documented in
 [REASONING_LEVEL_VALIDATION_RULES.md](09_validators/REASONING_LEVEL_VALIDATION_RULES.md).
 Profile-agent lifecycle validation is documented in
 [AGENT_LIFECYCLE_VALIDATION_RULES.md](09_validators/AGENT_LIFECYCLE_VALIDATION_RULES.md).
+Solution architect design traceability and audit scoring are documented in
+[DESIGN_TRACEABILITY_RULES.md](09_validators/DESIGN_TRACEABILITY_RULES.md)
+and [DESIGN_REVIEW_RUBRIC.md](09_validators/DESIGN_REVIEW_RUBRIC.md).
 
 ## Safe workspace initialization
 

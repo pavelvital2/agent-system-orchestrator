@@ -116,6 +116,13 @@ Every solution architect design output must follow:
 agent-system/03_templates/DESIGN_OUTPUT_CONTRACT.md
 ```
 
+Design traceability and independent audit scoring are governed by:
+
+```text
+agent-system/09_validators/DESIGN_TRACEABILITY_RULES.md
+agent-system/09_validators/DESIGN_REVIEW_RUBRIC.md
+```
+
 At minimum, every solution architect result must include:
 
 ```text
@@ -158,6 +165,9 @@ A solution architect result fails audit when:
 - owner decision required but not declared;
 - product capability level is unclear;
 - implementation work appears before the required design gate.
+
+Auditors must apply `DESIGN_REVIEW_RUBRIC.md` and
+`DESIGN_TRACEABILITY_RULES.md` before accepting solution architect output.
 
 ## Bounded Documentation Rules
 
