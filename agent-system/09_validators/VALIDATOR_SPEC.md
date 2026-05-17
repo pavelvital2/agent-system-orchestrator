@@ -24,6 +24,7 @@ Validators help the orchestrator detect:
 - secret-handling violations.
 - invalid solution architect design traceability, scoring, or design audit
   readiness.
+- invalid product capability, MVP readiness, or final acceptance claims.
 
 ## Source of authority
 
@@ -40,6 +41,7 @@ agent-system/02_runtime/CANONICAL_JSON_STATE_PREPARATION.md
 agent-system/03_templates/AGENT_RESULT_TEMPLATE.md
 agent-system/03_templates/TASK_PACKET_TEMPLATE.md
 agent-system/04_state/RUNTIME_STATE_SCHEMA.md
+agent-system/09_validators/PRODUCT_CAPABILITY_GATE_POLICY.md
 ```
 
 If this validator specification conflicts with runtime governance, runtime
@@ -59,6 +61,7 @@ agent-system/09_validators/REASONING_LEVEL_VALIDATION_RULES.md
 agent-system/09_validators/AGENT_LIFECYCLE_VALIDATION_RULES.md
 agent-system/09_validators/DESIGN_TRACEABILITY_RULES.md
 agent-system/09_validators/DESIGN_REVIEW_RUBRIC.md
+agent-system/09_validators/PRODUCT_CAPABILITY_GATE_POLICY.md
 ```
 
 ## Machine-readable schema sidecars
@@ -142,11 +145,13 @@ before_dispatch:
   task packet validity
   transition validity
   reasoning level floor validity
+  product capability gate validity when product readiness is claimed
   research/requester return validity when applicable
 
 after_agent_result:
   result validity
   profile-agent lifecycle field and termination validity
+  product capability gate validity when product readiness is claimed
   research result schema validity when TASK_KIND is research_dependency
   file-scope validity
   transition validity
@@ -159,6 +164,7 @@ before_audit_dispatch:
 after_audit_result:
   result validity
   research result schema validity when auditing TASK_KIND research_dependency
+  product capability gate validity before product, MVP, or final acceptance routing
   transition validity
   accepted-state rules
   research/requester return validity when applicable

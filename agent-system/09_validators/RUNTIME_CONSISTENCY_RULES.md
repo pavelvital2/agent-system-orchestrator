@@ -17,6 +17,7 @@ agent-system/02_runtime/STATE_TRANSITION_RULES.md
 agent-system/02_runtime/ACTION_STATE_SEMANTICS.md
 agent-system/02_runtime/REQUESTER_RETURN_PROTOCOL.md
 agent-system/02_runtime/VIOLATION_RECOVERY.md
+agent-system/09_validators/PRODUCT_CAPABILITY_GATE_POLICY.md
 ```
 
 ## Required runtime files
@@ -156,6 +157,31 @@ STATUS: fail
 Failed results are logged and routed to correction, but they are not accepted
 state. The orchestrator must not use a failed result as accepted source-of-truth
 for downstream work.
+
+### Product readiness requires product capability gates
+
+Runtime state is invalid when it routes to `final_acceptance` or records
+`mvp_ready`, `product_pass`, or `capability_pass` without the evidence required
+by `PRODUCT_CAPABILITY_GATE_POLICY.md`.
+
+The runtime tuple must preserve these distinctions:
+
+```text
+governance_pass
+task_pass
+capability_pass
+product_pass
+mvp_ready
+final_acceptance
+```
+
+Invalid runtime states include:
+
+- `SKELETON_STATUS: passed` treated as `MVP_READY: true`;
+- task or audit pass treated as product pass without a capability matrix row;
+- `final_acceptance` selected before MVP-required product gates are checked;
+- blocked, failed, deferred, or unaudited MVP-required capability rows hidden
+  by a generic project status such as `ready` or `passed`.
 
 ### Blocked project requires blocker or GAP
 

@@ -15,6 +15,7 @@ agent-system/02_runtime/ACCEPTED_STATE_LOCKING.md
 agent-system/02_runtime/REQUESTER_RETURN_PROTOCOL.md
 agent-system/04_state/RUNTIME_STATE_SCHEMA.md
 agent-system/09_validators/REASONING_LEVEL_VALIDATION_RULES.md
+agent-system/09_validators/PRODUCT_CAPABILITY_GATE_POLICY.md
 ```
 
 ## Required structure
@@ -45,6 +46,9 @@ A task packet is invalid when:
   lowered below role default without a valid mechanical-task `OVERRIDE_REASON`;
 - `TASK_KIND: research_dependency` lacks requester return metadata or expected
   research evidence.
+- a task packet claims `capability_pass`, `product_pass`, `mvp_ready`, or
+  `final_acceptance` without mapping the claim to capability IDs and accepted
+  gate evidence.
 
 ## ACTIVE_DOC_ROOT checks
 
@@ -126,6 +130,28 @@ A task packet is invalid when it allows or requires:
 - requester continuation before research audit pass;
 - audit fail, blocked, or gap routing to requester continuation;
 - research dependency used as a substitute for GAP or BLOCKER handling.
+
+## Product capability mapping checks
+
+Task packets may map bounded work to product capability IDs using existing
+sections such as `SCOPE_IN`, `ACCEPTANCE_CRITERIA`, `EVIDENCE_REQUIREMENTS`,
+and `NOTES`.
+
+Validators must preserve the distinction between:
+
+```text
+governance_pass
+task_pass
+capability_pass
+product_pass
+mvp_ready
+final_acceptance
+```
+
+A task packet is invalid when it treats a skeleton/scaffold pass, profile-agent
+pass, or auditor pass as MVP readiness or final acceptance. Product gates must
+be checked according to `PRODUCT_CAPABILITY_GATE_POLICY.md` before final
+acceptance routing.
 
 ## Reasoning level checks
 

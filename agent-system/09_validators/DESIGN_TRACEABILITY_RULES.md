@@ -287,6 +287,10 @@ Validation fails with `unclear product capability level` when:
 - a skeleton or task-level result is described as product, MVP, launch, or
   final acceptance ready without a supporting accepted gate.
 
+When a design output claims or prepares `capability_pass`, `product_pass`,
+`mvp_ready`, or `final_acceptance`, it must also follow the capability matrix
+and gate vocabulary in `PRODUCT_CAPABILITY_GATE_POLICY.md`.
+
 ## Pass criteria
 
 `DESIGN_TRACEABILITY_STATUS: passed` is allowed only when:

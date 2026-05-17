@@ -107,6 +107,9 @@ Profile-agent lifecycle validation is documented in
 Solution architect design traceability and audit scoring are documented in
 [DESIGN_TRACEABILITY_RULES.md](09_validators/DESIGN_TRACEABILITY_RULES.md)
 and [DESIGN_REVIEW_RUBRIC.md](09_validators/DESIGN_REVIEW_RUBRIC.md).
+Product capability gates, MVP readiness, and final acceptance distinctions are
+documented in
+[PRODUCT_CAPABILITY_GATE_POLICY.md](09_validators/PRODUCT_CAPABILITY_GATE_POLICY.md).
 
 Future migration from Markdown runtime state to canonical JSON state is
 specified in
