@@ -25,6 +25,7 @@
    - `agent-system/02_runtime/ACCEPTED_STATE_LOCKING.md`
    - `agent-system/02_runtime/AGENT_LIFECYCLE.md`
    - `agent-system/03_templates/TASK_PACKET_TEMPLATE.md`
+   - `agent-system/03_templates/TASK_PROPOSAL_TEMPLATE.md`
    - `agent-system/03_templates/BOOTSTRAP_TASK_PACKET_TEMPLATE.md`
    - `agent-system/03_templates/RESEARCH_REQUEST_TEMPLATE.md`
    - `agent-system/03_templates/RESEARCH_RESULT_TEMPLATE.md`
@@ -40,12 +41,14 @@
    - `agent-system/06_logs/AGENT_RESULTS_LOG_TEMPLATE.md`
    - `agent-system/06_logs/ORCHESTRATOR_EVENTS_LOG_TEMPLATE.md`
    - `agent-system/09_validators/WORKSPACE_IDENTITY_VALIDATION_RULES.md`
+   - `agent-system/09_validators/TASK_PACKET_SCHEMA_VALIDATION_RULES.md`
    - `agent-system/09_validators/GIT_CHECKPOINT_VALIDATION_RULES.md`
    - `agent-system/09_validators/CHANGED_FILES_SCOPE_MATRIX.md`
    - `agent-system/09_validators/SECRET_SCAN_RULES.md`
    - `agent-system/09_validators/RESEARCH_RETURN_VALIDATION_RULES.md`
    - `agent-system/09_validators/REASONING_LEVEL_VALIDATION_RULES.md`
    - `agent-system/scripts/checkpoint_preflight.sh`
+   - `agent-system/scripts/validate_task_packet.py`
    - `project-runtime/PROJECT_STATE.md`
    - `project-runtime/CURRENT_GATE.md`
    - `project-runtime/NEXT_ACTION.md`
@@ -120,9 +123,26 @@ Task-packet validation применяется только если:
 Если task-packet validation требуется, оркестратор обязан проверить, что task packet:
 
 - соответствует `TASK_PACKET_TEMPLATE.md`;
+- проходит `TASK_PACKET_SCHEMA_VALIDATION_RULES.md` или
+  `agent-system/scripts/validate_task_packet.py`;
 - содержит обязательные секции;
 - не нарушает mandatory workflow;
 - не нарушает filesystem governance.
+
+`TASK_PROPOSAL` files are not dispatchable task packets. A proposal may be used
+only as non-dispatchable planning input and must conform to:
+
+```text
+agent-system/03_templates/TASK_PROPOSAL_TEMPLATE.md
+```
+
+If `NEXT_ACTION.ACTION_TYPE: create_agent` references a `TASK_PROPOSAL`, a file
+without `# TASK PACKET`, or a malformed task packet, dispatch is forbidden and
+the route must enter governed correction with:
+
+```text
+invalid_task_packet_schema
+```
 
 Для `wait_for_owner`, `update_state`, `finalize`, `stop` и `correction` без task packet значение `TASK_PACKET: NONE` допустимо, если full runtime state tuple разрешён `STATE_TRANSITION_RULES.md`.
 
@@ -449,30 +469,35 @@ push, the orchestrator must validate in this order:
 11. action/state semantics are valid under `ACTION_STATE_SEMANTICS.md`;
 12. `NEXT_ACTION.md` contains exactly one action;
 13. `NEXT_ACTION.md` does not conflict with `GOVERNANCE_AUTHORITY.md`;
-14. if `NEXT_ACTION.ACTION_TYPE` is `create_agent` or `NEXT_ACTION.TASK_PACKET` is not `NONE`, target task packet is active, not superseded, not deprecated;
-15. if task-packet validation is required, target task packet is inside `ACTIVE_DOC_ROOT` unless it is the governed first bootstrap task packet at `project-runtime/bootstrap/TASK_BOOTSTRAP_<TARGET_ROLE>_001.md` or explicitly governed as system/package correction material;
-16. if task-packet validation is required, REQUIRED_DOCS do not include deprecated/archive documents;
-17. if task-packet validation is not required, `TASK_PACKET: NONE` is valid only for `wait_for_owner`, `update_state`, `finalize`, `stop`, or `correction` when allowed by `STATE_TRANSITION_RULES.md`;
-18. role/file permissions match `FILESYSTEM_GOVERNANCE.md`;
-19. task packet `REASONING_LEVEL` is valid for allowed values, role default,
+14. if `NEXT_ACTION.ACTION_TYPE` is `create_agent` or `NEXT_ACTION.TASK_PACKET` is not `NONE`, target task artifact declares `# TASK PACKET`, not `# TASK PROPOSAL`, and passes `TASK_PACKET_SCHEMA_VALIDATION_RULES.md`;
+15. if `NEXT_ACTION.ACTION_TYPE` is `create_agent` or `NEXT_ACTION.TASK_PACKET` is not `NONE`, target task packet is active, not superseded, not deprecated;
+16. if task-packet validation is required, target task packet is inside `ACTIVE_DOC_ROOT` unless it is the governed first bootstrap task packet at `project-runtime/bootstrap/TASK_BOOTSTRAP_<TARGET_ROLE>_001.md` or explicitly governed as system/package correction material;
+17. if task-packet validation is required, REQUIRED_DOCS do not include deprecated/archive documents;
+18. if task-packet validation is not required, `TASK_PACKET: NONE` is valid only for `wait_for_owner`, `update_state`, `finalize`, `stop`, or `correction` when allowed by `STATE_TRANSITION_RULES.md`;
+19. role/file permissions match `FILESYSTEM_GOVERNANCE.md`;
+20. task packet `REASONING_LEVEL` is valid for allowed values, role default,
     and gate-required floor;
-20. profile-agent dispatch reasoning is resolved and prepared for recording:
+21. profile-agent dispatch reasoning is resolved and prepared for recording:
     `role_default_reasoning_level`, `task_packet_reasoning_level`,
     `gate_required_floor`, `final_required_dispatch_level`, and
     `actual_spawned_reasoning_level`; `final_required_dispatch_level` must be
     the highest applicable level among role default, task packet
     `REASONING_LEVEL`, and gate-required floor;
-21. `TASK_KIND: research_dependency` and requester continuation routing are
+22. `TASK_KIND: research_dependency` and requester continuation routing are
     valid under `REQUESTER_RETURN_PROTOCOL.md`;
-22. before checkpoint, commit, or push, deterministic checkpoint preflight has
+23. before checkpoint, commit, or push, deterministic checkpoint preflight has
     run and produced `CHECKPOINT_ELIGIBILITY_STATUS: eligible` in a receipt
     based on `CHECKPOINT_ELIGIBILITY_TEMPLATE.md`;
-23. checkpoint preflight covers workspace identity, Git target, changed file
+24. checkpoint preflight covers workspace identity, Git target, changed file
     scope, task packet schema, runtime schema, and secret/sensitive artifact
     scan;
-24. requested action is valid under governance-freeze rules.
+25. checkpoint preflight validates changed dispatchable task packets and
+    non-dispatchable `TASK_PROPOSAL` files before `git add`; any
+    `invalid_task_packet_schema` result blocks staging, commit, and push;
+26. requested action is valid under governance-freeze rules.
 
-If any validation fails, dispatch is forbidden.
+If any validation fails, dispatch is forbidden. If the failure is found during
+checkpoint preflight, staging, commit, and push are forbidden.
 
 For a governed `correction`, `update_state`, `wait_for_owner`, or `stop` action
 whose explicit purpose is to create or repair missing workspace identity or

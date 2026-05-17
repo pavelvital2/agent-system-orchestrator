@@ -569,6 +569,34 @@ project-runtime/bootstrap/TASK_BOOTSTRAP_<TARGET_ROLE>_001.md
 
 Любой ordinary task packet вне ACTIVE_DOC_ROOT invalid.
 
+Dispatchable task packets must declare:
+
+```text
+# TASK PACKET
+```
+
+and must pass:
+
+```text
+agent-system/09_validators/TASK_PACKET_SCHEMA_VALIDATION_RULES.md
+agent-system/scripts/validate_task_packet.py
+```
+
+Files that declare:
+
+```text
+# TASK PROPOSAL
+TASK_PROPOSAL
+```
+
+are non-dispatchable proposals. They may not be selected by
+`NEXT_ACTION.TASK_PACKET`, may not create a profile agent, and must be converted
+into a full task packet before dispatch.
+
+Selecting a proposal, malformed task file, superseded task packet, deprecated
+task packet, or ordinary task packet outside `ACTIVE_DOC_ROOT` for dispatch is
+an `invalid_task_packet_schema` blocker.
+
 Рекомендуемая папка:
 
 ```text

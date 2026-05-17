@@ -41,6 +41,10 @@ A post-audit Git checkpoint may start only when all conditions are true:
   work without a later governed correction and audit pass;
 - changed files match the task packet `ALLOWED_FILE_CHANGES`;
 - changed files do not match the task packet `FORBIDDEN_FILE_CHANGES`;
+- changed dispatchable task packet files pass
+  `TASK_PACKET_SCHEMA_VALIDATION_RULES.md`;
+- changed `TASK_PROPOSAL` files pass proposal validation and remain
+  non-dispatchable;
 - runtime state has no active blocker or GAP that blocks the accepted work;
 - `AUDIT_STATUS` for the accepted work is `passed`;
 - `CHECKPOINT_ELIGIBILITY_STATUS` is `eligible` in a bounded checkpoint
@@ -61,6 +65,8 @@ The orchestrator must not stage, commit, or push after:
 - auditor `STATUS: gap`;
 - formally invalid profile-agent RESULT;
 - formally invalid auditor RESULT;
+- invalid downstream dispatchable task packet;
+- `TASK_PROPOSAL` selected as a dispatchable task packet;
 - reasoning-level dispatch mismatch where actual spawned reasoning is below
   required;
 - pending correction for the same work;
@@ -85,8 +91,10 @@ checkpoint preflight defined by:
 ```text
 agent-system/09_validators/GIT_CHECKPOINT_VALIDATION_RULES.md
 agent-system/09_validators/CHANGED_FILES_SCOPE_MATRIX.md
+agent-system/09_validators/TASK_PACKET_SCHEMA_VALIDATION_RULES.md
 agent-system/09_validators/SECRET_SCAN_RULES.md
 agent-system/scripts/checkpoint_preflight.sh
+agent-system/scripts/validate_task_packet.py
 ```
 
 The preflight must produce a deterministic eligibility receipt based on:
@@ -115,6 +123,12 @@ schema, or secret scan check must set `CHECKPOINT_ELIGIBILITY_STATUS:
 ineligible` or `blocked`, keep `PROJECT_CHECKPOINT_STATUS: blocked | failed`,
 and forbid staging, commit, and push. Secret-related failures must use the
 redacted class `potential_secret_exposure` and must not print secret values.
+
+Task packet schema failures must use:
+
+```text
+invalid_task_packet_schema
+```
 
 When the accepted task creates new files, those untracked paths must be included
 in file-scope and secret checks before staging.

@@ -22,8 +22,10 @@ agent-system/04_state/TASK_REGISTRY_TEMPLATE.md
 agent-system/04_state/ACCEPTED_ARTIFACTS_TEMPLATE.md
 agent-system/06_logs/ORCHESTRATOR_EVENTS_LOG_TEMPLATE.md
 agent-system/09_validators/CHANGED_FILES_SCOPE_MATRIX.md
+agent-system/09_validators/TASK_PACKET_SCHEMA_VALIDATION_RULES.md
 agent-system/09_validators/SECRET_SCAN_RULES.md
 agent-system/scripts/checkpoint_preflight.sh
+agent-system/scripts/validate_task_packet.py
 ```
 
 ## Checkpoint preconditions
@@ -41,6 +43,10 @@ A Git checkpoint is valid only when all conditions are true:
   checkpointed work.
 - accepted files can be listed without reading or printing secret values;
 - working-tree validation for accepted task-specific invariants has passed.
+- changed dispatchable task packet files pass task packet schema validation
+  before staging;
+- changed `TASK_PROPOSAL` files pass proposal validation and remain
+  non-dispatchable before staging;
 - `CHECKPOINT_ELIGIBILITY_STATUS: eligible` is recorded separately from
   `AUDIT_STATUS`;
 - `CHECKPOINT_PREFLIGHT_STATUS: passed` is recorded with a bounded preflight
@@ -56,6 +62,8 @@ Checkpoint is forbidden after:
 - audit gap;
 - invalid RESULT shape;
 - invalid task packet;
+- invalid downstream dispatchable task packet;
+- `TASK_PROPOSAL` selected as a dispatchable task packet;
 - invalid runtime tuple;
 - direct progress after audit fail;
 - unverified correction result;
@@ -112,6 +120,11 @@ Checkpoint preflight passes only when all of the following are true:
 - newly created files intended for checkpoint are included in file-scope and
   secret checks before they are staged;
 - task packet has required schema sections and is active;
+- every changed downstream `# TASK PACKET` artifact has required schema
+  sections before staging;
+- every changed `TASK_PROPOSAL` artifact conforms to
+  `TASK_PROPOSAL_TEMPLATE.md` and remains non-dispatchable;
+- any task schema failure is reported as `invalid_task_packet_schema`;
 - runtime schema contains mandatory checkpoint distinction fields;
 - secret scan returns no `potential_secret_exposure`.
 

@@ -13,10 +13,44 @@
 - ограничить scope агента;
 - обеспечить стабильный audit flow;
 - обеспечить минимальный REQUIRED_DOCS package.
+- отделить dispatchable task packets от non-dispatchable `TASK_PROPOSAL`
+  drafts.
+
+Dispatchable task packets must validate against:
+
+```text
+agent-system/09_validators/TASK_PACKET_SCHEMA_VALIDATION_RULES.md
+agent-system/scripts/validate_task_packet.py
+```
+
+`TASK_PROPOSAL` files are governed by:
+
+```text
+agent-system/03_templates/TASK_PROPOSAL_TEMPLATE.md
+```
+
+They are non-dispatchable and must not be used as `NEXT_ACTION.TASK_PACKET`.
 
 ---
 
 # TASK PACKET
+
+Dispatchable marker:
+
+```text
+# TASK PACKET
+```
+
+Rules:
+
+- a file that does not declare `# TASK PACKET` is not a dispatchable task
+  packet;
+- a file that declares `# TASK PROPOSAL` or `TASK_PROPOSAL` is a
+  non-dispatchable proposal unless it is converted into this full template;
+- selecting a proposal or malformed task file for `create_agent` is an
+  `invalid_task_packet_schema` blocker;
+- invalid dispatchable task packets also block post-audit checkpoint before
+  `git add`.
 
 ## TASK_ID
 
@@ -757,6 +791,7 @@ Task packet не должен:
 - нарушать ACTIVE_DOC_ROOT;
 - смешивать runtime/docs/source zones.
 - grant commit or push authority to a profile agent.
+- bypass `TASK_PACKET_SCHEMA_VALIDATION_RULES.md`.
 
 Git authority rule:
 
@@ -765,6 +800,22 @@ Profile agents never commit or push.
 Task packets cannot grant commit/push authority to profile agents.
 Git checkpoint is orchestrator-owned only and runs only after auditor STATUS: pass.
 ```
+
+Location rule:
+
+```text
+Ordinary dispatchable task packets must be inside ACTIVE_DOC_ROOT.
+```
+
+The only first-bootstrap exception outside `ACTIVE_DOC_ROOT` is:
+
+```text
+project-runtime/bootstrap/TASK_BOOTSTRAP_<TARGET_ROLE>_001.md
+```
+
+This exception is valid only for the first profile-agent dispatch, only when
+`<TARGET_ROLE>` is populated by the selected first profile route, and only when
+the file is a full schema-valid bootstrap task packet.
 
 ---
 
@@ -781,6 +832,7 @@ Task packet не должен:
 - bypass audit;
 - bypass correction flow;
 - bypass runtime routing rules.
+- bypass dispatch-time or checkpoint-time task packet schema validation.
 
 Task packet обязан быть совместим с:
 `agent-system/04_state/RUNTIME_STATE_SCHEMA.md`
