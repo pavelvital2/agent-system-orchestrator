@@ -110,6 +110,50 @@ alias evidence.
     remote, Git branch, and workspace type.
 12. Validate repository lock and `PUSH_ALLOWED` before any push.
 
+## Safe initialization validation
+
+New project workspace initialization must use:
+
+```text
+agent-system/scripts/init_project_workspace.sh
+```
+
+or an equivalent governed procedure.
+
+Validators must treat these initialization conditions as mandatory:
+
+```text
+- package repository .git is not copied into the target workspace
+- target workspace is not inside the package repository worktree
+- target workspace does not inherit an ancestor Git worktree
+- expected remote input is present before repository lock acceptance
+- expected branch input is present before repository lock acceptance
+- any existing target .git origin normalizes to EXPECTED_GIT_REMOTE
+- any existing target Git branch equals EXPECTED_BRANCH
+- WORKSPACE_IDENTITY and REPOSITORY_LOCK records exist before normal runtime initialization
+```
+
+If an existing target `.git` origin does not normalize to
+`EXPECTED_GIT_REMOTE`, validation must fail with:
+
+```text
+repository_identity_mismatch
+```
+
+If an existing target branch does not equal `EXPECTED_BRANCH`, validation must
+fail with:
+
+```text
+repository_branch_mismatch
+```
+
+If a project workspace was created by cloning or renaming the package
+repository, validation must fail with:
+
+```text
+workspace_identity_leakage
+```
+
 ## Hard blockers
 
 ```text

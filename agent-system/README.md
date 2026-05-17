@@ -84,10 +84,36 @@ directory and define checks for task packets, results, transitions, runtime
 consistency, Git checkpoint readiness, cross-link coverage, and validator
 specification. Cross-link validation is documented in
 [CROSS_LINK_VALIDATION_RULES.md](09_validators/CROSS_LINK_VALIDATION_RULES.md).
+Workspace identity validation is documented in
+[WORKSPACE_IDENTITY_VALIDATION_RULES.md](09_validators/WORKSPACE_IDENTITY_VALIDATION_RULES.md).
 Research return validation is documented in
 [RESEARCH_RETURN_VALIDATION_RULES.md](09_validators/RESEARCH_RETURN_VALIDATION_RULES.md).
 Reasoning-level validation is documented in
 [REASONING_LEVEL_VALIDATION_RULES.md](09_validators/REASONING_LEVEL_VALIDATION_RULES.md).
+
+## Safe workspace initialization
+
+Use the governed initializer when copying the package into a new project
+workspace:
+
+```text
+agent-system/scripts/init_project_workspace.sh \
+  --target /path/to/project-workspace \
+  --project-name "Example Project" \
+  --project-slug example-project \
+  --expected-remote https://github.com/OWNER/REPO.git \
+  --expected-branch main
+```
+
+The initializer copies `agent-system/`, creates local bootstrap directories,
+and writes `project-runtime/WORKSPACE_IDENTITY.md` plus
+`project-runtime/REPOSITORY_LOCK.md`. It does not copy or reuse `.git`.
+
+Do not clone or rename this package repository as a project workspace. If the
+target already has `.git`, its origin and branch must match the expected remote
+and branch before package files are copied. Repository lock acceptance requires
+explicit expected remote and branch inputs; push remains disabled unless an
+accepted repository lock explicitly allows it.
 
 ## Templates, state, and logs
 
@@ -161,12 +187,12 @@ Governance and package changes are recorded in:
 agent-system/GOVERNANCE_CHANGELOG.md
 ```
 
-Current v1.3.0 tuple:
+Current v2.0.0 tuple:
 
 ```text
-CURRENT_PACKAGE_VERSION: 1.3.0
-CURRENT_GOVERNANCE_RULESET_VERSION: 1.3.0
-CURRENT_RUNTIME_SCHEMA_VERSION: 1.2.0
+CURRENT_PACKAGE_VERSION: 2.0.0
+CURRENT_GOVERNANCE_RULESET_VERSION: 2.0.0
+CURRENT_RUNTIME_SCHEMA_VERSION: 2.0.0
 ```
 
 ## Examples

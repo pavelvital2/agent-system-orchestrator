@@ -85,6 +85,19 @@ and push are forbidden. Commit may proceed only as a governed local-only
 checkpoint when the repository lock and active task packet explicitly permit
 that exception.
 
+For a new project workspace, runtime initialization must start from a safe
+package-to-project workspace procedure:
+
+```text
+agent-system/scripts/init_project_workspace.sh
+```
+
+or an equivalent governed procedure that explicitly excludes `.git`, rejects
+clone-renamed package checkouts, requires expected remote and branch inputs
+before repository lock acceptance, blocks mismatched existing target `.git`
+remote or branch, and creates or requires `WORKSPACE_IDENTITY` and
+`REPOSITORY_LOCK` records.
+
 
 2. Определить следующий шаг только из `NEXT_ACTION.md`.
 

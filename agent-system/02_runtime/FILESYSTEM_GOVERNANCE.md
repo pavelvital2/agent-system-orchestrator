@@ -235,6 +235,51 @@ The SSH host alias form is valid only when the alias is explicitly accepted in
 the repository lock or bounded evidence proves the alias resolves to
 `github.com`.
 
+## Safe project workspace initialization
+
+New project workspaces must be initialized from the universal package through:
+
+```text
+agent-system/scripts/init_project_workspace.sh
+```
+
+or an equivalent governed procedure that satisfies the same invariants.
+
+The initialization procedure must:
+
+- copy only universal package content needed by the workspace, normally
+  `agent-system/`;
+- create project-owned bootstrap directories such as `project-input/`,
+  `project-runtime/`, and `project-archive/` locally in the target workspace;
+- never copy, rename, inherit, or reuse the package repository `.git`
+  directory;
+- reject a target directory inside the package repository worktree;
+- reject a target directory that inherits an ancestor Git worktree instead of
+  owning its own `.git`;
+- require explicit expected remote and expected branch inputs before repository
+  lock acceptance;
+- compare any existing target `.git` origin and branch against those expected
+  inputs before copying package files;
+- classify an existing target `.git` origin mismatch as
+  `repository_identity_mismatch`;
+- classify an existing target branch mismatch as
+  `repository_branch_mismatch`;
+- create or require creation of `WORKSPACE_IDENTITY` and `REPOSITORY_LOCK`
+  records before normal runtime initialization.
+
+Clone-renaming the package repository into a project workspace is forbidden.
+That pattern carries package repository identity into project runtime state and
+must be treated as `workspace_identity_leakage` until corrected.
+
+Repository lock acceptance is forbidden unless all of these are true:
+
+```text
+EXPECTED_GIT_REMOTE equals ACTUAL_GIT_REMOTE after canonical normalization
+EXPECTED_BRANCH equals ACTUAL_BRANCH
+WORKSPACE_TYPE is valid for the target workspace
+PUSH_ALLOWED remains false unless the accepted lock explicitly authorizes push
+```
+
 ## Workspace types
 
 ```text
