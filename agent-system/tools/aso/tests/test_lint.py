@@ -1,0 +1,264 @@
+from __future__ import annotations
+
+import json
+import subprocess
+import sys
+import tempfile
+import unittest
+from pathlib import Path
+
+
+CLI = Path(__file__).resolve().parents[1] / "aso.py"
+
+
+RUNTIME_CONTENT = {
+    "PROJECT_STATE.md": """# PROJECT_STATE
+
+PROJECT_SLUG: demo-project
+PROJECT_STATUS: active
+PROJECT_CHECKPOINT_STATUS: pending
+PUSH_ALLOWED: false
+""",
+    "CURRENT_GATE.md": """# CURRENT_GATE
+
+STATUS: open
+TASK_ID: TASK_DEMO_001
+""",
+    "NEXT_ACTION.md": """# NEXT_ACTION
+
+ACTION_TYPE: create_agent
+TARGET_ROLE: developer
+TASK_ID: TASK_DEMO_001
+TASK_PACKET: project-runtime/tasks/TASK_DEMO_001.md
+CHECKPOINT_POLICY: forbidden
+CHECKPOINT_RECEIPT_REQUIRED: no
+CHECKPOINT_RECEIPT_REF: NONE
+""",
+    "TASK_REGISTRY.md": """# TASK_REGISTRY
+
+TASK_ID: TASK_DEMO_001
+STATUS: ready
+RESULT_REFS: NONE
+AUDIT_REFS: NONE
+COMMIT_HASH: NONE
+BRANCH: NONE
+ACCEPTED_FILES: NONE
+CHECKPOINT_REF: NONE
+""",
+    "ACCEPTED_ARTIFACTS.md": "# ACCEPTED_ARTIFACTS\n\nNONE\n",
+    "REPOSITORY_LOCK.md": "# REPOSITORY_LOCK\n\nPUSH_ALLOWED: false\n",
+    "WORKSPACE_IDENTITY.md": "# WORKSPACE_IDENTITY\n\nPUSH_ALLOWED: false\n",
+}
+
+
+TASK_PACKET = """# TASK_DEMO_001
+
+TASK_ID: TASK_DEMO_001
+TARGET_ROLE: developer
+REASONING_LEVEL: high
+STATUS: pending
+"""
+
+
+RESULT = """# RESULT
+
+TASK_ID: TASK_DEMO_001
+AGENT_INSTANCE_ID: agent_TASK_DEMO_001_attempt_001
+SUMMARY:
+Done.
+REUSE_ALLOWED: false
+AGENT_TERMINATION_REQUIRED: true
+AGENT_TERMINATION_EVIDENCE:
+Closed by orchestrator.
+"""
+
+
+def write_runtime(root: Path, overrides: dict[str, str] | None = None) -> list[Path]:
+    runtime = root / "project-runtime"
+    runtime.mkdir()
+    paths = []
+    content = dict(RUNTIME_CONTENT)
+    if overrides:
+        content.update(overrides)
+    for name, text in content.items():
+        path = runtime / name
+        path.write_text(text, encoding="utf-8")
+        paths.append(path)
+
+    tasks = runtime / "tasks"
+    tasks.mkdir()
+    task_path = tasks / "TASK_DEMO_001.md"
+    task_path.write_text(TASK_PACKET, encoding="utf-8")
+    paths.append(task_path)
+
+    results = runtime / "results"
+    results.mkdir()
+    result_path = results / "RESULT_TASK_DEMO_001_ATTEMPT_001.md"
+    result_path.write_text(RESULT, encoding="utf-8")
+    paths.append(result_path)
+    return paths
+
+
+def run_lint(root: Path, *extra: str) -> subprocess.CompletedProcess[str]:
+    return subprocess.run(
+        [sys.executable, str(CLI), "lint", "--root", str(root), *extra],
+        check=False,
+        text=True,
+        capture_output=True,
+    )
+
+
+class LintCommandTests(unittest.TestCase):
+    def test_lint_passes_clean_runtime_and_does_not_mutate_files(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            paths = write_runtime(root)
+            mtimes_before = {path: path.stat().st_mtime_ns for path in paths}
+
+            result = run_lint(root)
+
+            self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+            self.assertIn("ASO lint: PASSED", result.stdout)
+            self.assertIn("Errors: 0", result.stdout)
+            self.assertIn("Warnings: 0", result.stdout)
+            self.assertIn("Findings: 0", result.stdout)
+            self.assertEqual(mtimes_before, {path: path.stat().st_mtime_ns for path in paths})
+
+    def test_lint_writes_json_out_only_to_explicit_path(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            write_runtime(root)
+            json_out = root / "lint.json"
+
+            result = run_lint(root, "--json-out", str(json_out))
+
+            self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+            report = json.loads(json_out.read_text(encoding="utf-8"))
+            self.assertEqual(report["tool"], "aso")
+            self.assertEqual(report["command"], "lint")
+            self.assertEqual(report["status"], "passed")
+            self.assertEqual(report["summary"], {"errors": 0, "warnings": 0, "info": 0})
+            self.assertEqual(report["findings"], [])
+
+    def test_lint_returns_io_error_for_missing_required_runtime_files(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            (root / "project-runtime").mkdir()
+
+            result = run_lint(root)
+
+            self.assertEqual(result.returncode, 3, result.stdout + result.stderr)
+            self.assertIn("ASO lint: IO_ERROR", result.stdout)
+            self.assertIn("LINT_IO_004", result.stdout)
+
+    def test_lint_detects_state_errors(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            write_runtime(
+                root,
+                {
+                    "PROJECT_STATE.md": """# PROJECT_STATE
+
+PROJECT_STATUS: active
+PROJECT_CHECKPOINT_STATUS: passed
+PUSH_ALLOWED: false
+PUSH_ALLOWED: true
+""",
+                    "NEXT_ACTION.md": """# NEXT_ACTION
+
+ACTION_TYPE: create_agent
+TARGET_ROLE: developer
+TASK_ID: TASK_DONE_001
+TASK_PACKET: project-runtime/tasks/TASK_DONE_001.md
+CHECKPOINT_POLICY: local_only
+CHECKPOINT_RECEIPT_REQUIRED: yes
+CHECKPOINT_RECEIPT_REF: NONE
+""",
+                    "TASK_REGISTRY.md": """# TASK_REGISTRY
+
+TASK_ID: TASK_DONE_001
+STATUS: checkpoint_done
+RESULT_REFS: NONE
+AUDIT_REFS: NONE
+COMMIT_HASH: NONE
+BRANCH: NONE
+ACCEPTED_FILES: NONE
+CHECKPOINT_REF: NONE
+""",
+                    "ACCEPTED_ARTIFACTS.md": """# ACCEPTED_ARTIFACTS
+
+ARTIFACT_ID: ART_001
+ARTIFACT_REF: missing/product.md
+STATUS: accepted
+""",
+                    "REPOSITORY_LOCK.md": "# REPOSITORY_LOCK\n\nPUSH_ALLOWED: false\n",
+                    "WORKSPACE_IDENTITY.md": "# WORKSPACE_IDENTITY\n\nPUSH_ALLOWED: true\n",
+                },
+            )
+
+            result = run_lint(root)
+
+            self.assertEqual(result.returncode, 1, result.stdout + result.stderr)
+            self.assertIn("LINT_STATE_001", result.stdout)
+            self.assertIn("LINT_STATE_002", result.stdout)
+            self.assertIn("LINT_STATE_007", result.stdout)
+            self.assertIn("LINT_STATE_008", result.stdout)
+            self.assertIn("LINT_TASK_001", result.stdout)
+            self.assertIn("LINT_TASK_002", result.stdout)
+            self.assertIn("LINT_TASK_003", result.stdout)
+            self.assertIn("LINT_ARTIFACT_002", result.stdout)
+
+    def test_strict_fails_on_warning_only_designer_alias(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            write_runtime(
+                root,
+                {
+                    "NEXT_ACTION.md": RUNTIME_CONTENT["NEXT_ACTION.md"].replace(
+                        "TARGET_ROLE: developer", "TARGET_ROLE: designer"
+                    )
+                },
+            )
+
+            non_strict = run_lint(root)
+            strict = run_lint(root, "--strict")
+
+            self.assertEqual(non_strict.returncode, 0, non_strict.stdout + non_strict.stderr)
+            self.assertIn("LINT_ROLE_002", non_strict.stdout)
+            self.assertEqual(strict.returncode, 1, strict.stdout + strict.stderr)
+            self.assertIn("ASO lint: FAILED", strict.stdout)
+
+    def test_lint_detects_reasoning_lifecycle_naming_and_skeleton_rules(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            write_runtime(root)
+            task_path = root / "project-runtime" / "tasks" / "TASK_DEMO_001.md"
+            task_path.write_text(TASK_PACKET.replace("REASONING_LEVEL: high", "REASONING_LEVEL: role_default"), encoding="utf-8")
+            result_path = root / "project-runtime" / "results" / "TASK_DEMO_001.md"
+            result_path.write_text(
+                """# RESULT
+
+TASK_ID: TASK_DEMO_001
+AGENT_INSTANCE_ID: agent_missing_termination
+SKELETON_STATUS: passed
+MVP_READY: true
+REUSE_ALLOWED: true
+AGENT_TERMINATION_REQUIRED: false
+""",
+                encoding="utf-8",
+            )
+
+            result = run_lint(root)
+
+            self.assertEqual(result.returncode, 1, result.stdout + result.stderr)
+            self.assertIn("LINT_REASONING_002", result.stdout)
+            self.assertIn("LINT_NAMING_001", result.stdout)
+            self.assertIn("LINT_NAMING_002", result.stdout)
+            self.assertIn("LINT_AGENT_001", result.stdout)
+            self.assertIn("LINT_AGENT_002", result.stdout)
+            self.assertIn("LINT_AGENT_003", result.stdout)
+            self.assertIn("LINT_PRODUCT_001", result.stdout)
+
+
+if __name__ == "__main__":
+    unittest.main()

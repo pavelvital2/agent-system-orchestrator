@@ -1,20 +1,879 @@
-"""Read-only lint command scaffold."""
+"""Read-only runtime consistency lint command."""
 
 from __future__ import annotations
 
 import argparse
+import json
+import re
+import sys
+from dataclasses import dataclass
+from pathlib import Path
+from typing import Iterable
 
 
 EXIT_OK = 0
+EXIT_FINDINGS = 1
+EXIT_IO_ERROR = 3
+
+REQUIRED_RUNTIME_FILES = (
+    "PROJECT_STATE.md",
+    "CURRENT_GATE.md",
+    "NEXT_ACTION.md",
+    "TASK_REGISTRY.md",
+    "ACCEPTED_ARTIFACTS.md",
+    "REPOSITORY_LOCK.md",
+    "WORKSPACE_IDENTITY.md",
+)
+
+SINGLETON_RUNTIME_FILES = {
+    "PROJECT_STATE.md",
+    "CURRENT_GATE.md",
+    "NEXT_ACTION.md",
+    "REPOSITORY_LOCK.md",
+    "WORKSPACE_IDENTITY.md",
+}
+
+FIELD_RE = re.compile(r"^([A-Z][A-Z0-9_]*):(?:[ \t]*(.*))?$")
+ALLOWED_REASONING_LEVELS = {"low", "medium", "high", "xhigh"}
+DEPRECATED_REASONING_LEVELS = {
+    "default",
+    "maximum",
+    "role_default",
+    "standard",
+    "analytical",
+    "critical",
+    "mechanical",
+}
+TERMINAL_TASK_STATUSES = {"checkpoint_done", "completed", "superseded"}
+NONE_VALUES = {"", "NONE", "none", "null", "UNKNOWN"}
+
+
+@dataclass(frozen=True)
+class FieldOccurrence:
+    key: str
+    value: str
+    line: int
+
+
+@dataclass(frozen=True)
+class RuntimeFile:
+    name: str
+    relpath: str
+    path: Path
+    exists: bool
+    text: str
+    fields: dict[str, str]
+    occurrences: list[FieldOccurrence]
+    error: str | None = None
+
+
+@dataclass(frozen=True)
+class Finding:
+    rule_id: str
+    severity: str
+    title: str
+    details: str
+    files: list[str]
+    recommendation: str
+
+    def to_json(self) -> dict[str, object]:
+        return {
+            "rule_id": self.rule_id,
+            "severity": self.severity,
+            "title": self.title,
+            "details": self.details,
+            "files": self.files,
+            "recommendation": self.recommendation,
+        }
+
+
+def _runtime_path(root: Path, name: str) -> Path:
+    return root / "project-runtime" / name
+
+
+def _read_text(path: Path) -> tuple[str, str | None]:
+    try:
+        return path.read_text(encoding="utf-8"), None
+    except OSError as exc:
+        return "", str(exc)
+
+
+def _read_runtime_file(root: Path, name: str) -> RuntimeFile:
+    relpath = f"project-runtime/{name}"
+    path = _runtime_path(root, name)
+    if not path.exists():
+        return RuntimeFile(name, relpath, path, False, "", {}, [])
+    if not path.is_file():
+        return RuntimeFile(name, relpath, path, False, "", {}, [], "path exists but is not a regular file")
+
+    text, error = _read_text(path)
+    if error:
+        return RuntimeFile(name, relpath, path, True, "", {}, [], error)
+
+    occurrences = _parse_occurrences(text)
+    fields: dict[str, str] = {}
+    for occurrence in occurrences:
+        if occurrence.value:
+            fields.setdefault(occurrence.key, occurrence.value)
+    return RuntimeFile(name, relpath, path, True, text, fields, occurrences)
+
+
+def _parse_occurrences(text: str) -> list[FieldOccurrence]:
+    occurrences: list[FieldOccurrence] = []
+    pending_key: str | None = None
+    pending_line = 0
+
+    for line_no, raw_line in enumerate(text.splitlines(), start=1):
+        line = raw_line.strip()
+        match = FIELD_RE.match(line)
+        if match:
+            if pending_key is not None:
+                occurrences.append(FieldOccurrence(pending_key, "", pending_line))
+            pending_key = match.group(1)
+            pending_line = line_no
+            value = (match.group(2) or "").strip()
+            if value:
+                occurrences.append(FieldOccurrence(pending_key, value, pending_line))
+                pending_key = None
+            continue
+
+        if pending_key is None:
+            continue
+        if not line or line.startswith("#") or line.startswith("```"):
+            continue
+        occurrences.append(FieldOccurrence(pending_key, line, pending_line))
+        pending_key = None
+
+    if pending_key is not None:
+        occurrences.append(FieldOccurrence(pending_key, "", pending_line))
+
+    return occurrences
+
+
+def _entries(occurrences: Iterable[FieldOccurrence], start_key: str) -> list[dict[str, str]]:
+    entries: list[dict[str, str]] = []
+    current: dict[str, str] | None = None
+
+    for occurrence in occurrences:
+        if occurrence.key == start_key:
+            if current:
+                entries.append(current)
+            current = {occurrence.key: occurrence.value}
+            continue
+        if current is not None:
+            current.setdefault(occurrence.key, occurrence.value)
+
+    if current:
+        entries.append(current)
+    return entries
+
+
+def _is_none(value: str | None) -> bool:
+    return value is None or value.strip() in NONE_VALUES
+
+
+def _norm(value: str) -> str:
+    return value.strip()
+
+
+def _rel(root: Path, path: Path) -> str:
+    try:
+        return path.relative_to(root).as_posix()
+    except ValueError:
+        return path.as_posix()
+
+
+def _field(file: RuntimeFile, key: str) -> str:
+    return file.fields.get(key, "")
+
+
+def _validate_root_and_required_files(root: Path) -> tuple[dict[str, RuntimeFile], list[Finding], bool]:
+    findings: list[Finding] = []
+    files: dict[str, RuntimeFile] = {}
+
+    if not root.exists() or not root.is_dir():
+        findings.append(
+            Finding(
+                "LINT_IO_001",
+                "error",
+                "Project root is unreadable",
+                f"{root} is not an existing readable directory.",
+                [str(root)],
+                "Pass --root pointing at an initialized project workspace.",
+            )
+        )
+        return files, findings, False
+
+    runtime_dir = root / "project-runtime"
+    if not runtime_dir.exists() or not runtime_dir.is_dir():
+        findings.append(
+            Finding(
+                "LINT_IO_002",
+                "error",
+                "project-runtime directory is missing",
+                "Required runtime directory project-runtime is not present.",
+                ["project-runtime"],
+                "Initialize or restore project-runtime before running aso lint.",
+            )
+        )
+        return files, findings, False
+
+    for name in REQUIRED_RUNTIME_FILES:
+        runtime_file = _read_runtime_file(root, name)
+        files[name] = runtime_file
+        if runtime_file.error:
+            findings.append(
+                Finding(
+                    "LINT_IO_003",
+                    "error",
+                    "Required runtime file is unreadable",
+                    f"{runtime_file.relpath}: {runtime_file.error}",
+                    [runtime_file.relpath],
+                    "Repair the runtime path or permissions and rerun aso lint.",
+                )
+            )
+        elif not runtime_file.exists:
+            findings.append(
+                Finding(
+                    "LINT_IO_004",
+                    "error",
+                    "Required runtime file is missing",
+                    f"{runtime_file.relpath} is not present.",
+                    [runtime_file.relpath],
+                    "Restore the required runtime file from the matching template.",
+                )
+            )
+
+    return files, findings, not findings
+
+
+def _check_duplicate_field_mismatch(files: dict[str, RuntimeFile]) -> list[Finding]:
+    findings: list[Finding] = []
+    for name in SINGLETON_RUNTIME_FILES:
+        runtime_file = files[name]
+        values_by_key: dict[str, set[str]] = {}
+        for occurrence in runtime_file.occurrences:
+            value = _norm(occurrence.value)
+            if _is_none(value):
+                continue
+            values_by_key.setdefault(occurrence.key, set()).add(value)
+
+        for key, values in sorted(values_by_key.items()):
+            if len(values) <= 1:
+                continue
+            findings.append(
+                Finding(
+                    "LINT_STATE_001",
+                    "error",
+                    "Duplicate field has conflicting values",
+                    f"{runtime_file.relpath} repeats {key} with values: {', '.join(sorted(values))}.",
+                    [runtime_file.relpath],
+                    "Keep exactly one current value for singleton runtime fields.",
+                )
+            )
+    return findings
+
+
+def _check_checkpoint_gate(files: dict[str, RuntimeFile]) -> list[Finding]:
+    checkpoint_status = _field(files["PROJECT_STATE.md"], "PROJECT_CHECKPOINT_STATUS")
+    gate_status = _field(files["CURRENT_GATE.md"], "STATUS")
+    if checkpoint_status == "passed" and gate_status not in {"passed", "skipped", "closed", "completed", "inactive"}:
+        return [
+            Finding(
+                "LINT_STATE_002",
+                "error",
+                "Checkpoint passed but gate is active",
+                f"PROJECT_CHECKPOINT_STATUS={checkpoint_status}; CURRENT_GATE.STATUS={gate_status or 'MISSING'}.",
+                ["project-runtime/PROJECT_STATE.md", "project-runtime/CURRENT_GATE.md"],
+                "Close the active gate or repair stale checkpoint state.",
+            )
+        ]
+    return []
+
+
+def _check_stale_next_action(files: dict[str, RuntimeFile]) -> list[Finding]:
+    findings: list[Finding] = []
+    next_action = files["NEXT_ACTION.md"]
+    current_gate = files["CURRENT_GATE.md"]
+    registry = files["TASK_REGISTRY.md"]
+    action_type = _field(next_action, "ACTION_TYPE")
+    task_id = _field(next_action, "TASK_ID")
+    gate_task_id = _field(current_gate, "TASK_ID")
+    project_status = _field(files["PROJECT_STATE.md"], "PROJECT_STATUS")
+    task_entries = {entry.get("TASK_ID", ""): entry for entry in _entries(registry.occurrences, "TASK_ID")}
+
+    if not _is_none(task_id) and not _is_none(gate_task_id) and task_id != gate_task_id:
+        findings.append(
+            Finding(
+                "LINT_STATE_003",
+                "error",
+                "NEXT_ACTION task differs from current gate task",
+                f"NEXT_ACTION.TASK_ID={task_id}; CURRENT_GATE.TASK_ID={gate_task_id}.",
+                ["project-runtime/NEXT_ACTION.md", "project-runtime/CURRENT_GATE.md"],
+                "Update NEXT_ACTION and CURRENT_GATE to point at the same active task or record a governed handoff.",
+            )
+        )
+
+    if action_type == "create_agent" and not _is_none(task_id):
+        task_entry = task_entries.get(task_id)
+        if task_entry is None:
+            findings.append(
+                Finding(
+                    "LINT_STATE_004",
+                    "error",
+                    "NEXT_ACTION points to an unregistered task",
+                    f"NEXT_ACTION.TASK_ID={task_id} is not present in TASK_REGISTRY.",
+                    ["project-runtime/NEXT_ACTION.md", "project-runtime/TASK_REGISTRY.md"],
+                    "Register the task before dispatch or repair the stale NEXT_ACTION.",
+                )
+            )
+        elif task_entry.get("STATUS") in TERMINAL_TASK_STATUSES:
+            findings.append(
+                Finding(
+                    "LINT_STATE_005",
+                    "error",
+                    "NEXT_ACTION dispatches a terminal task",
+                    f"TASK_REGISTRY marks {task_id} as {task_entry.get('STATUS')}.",
+                    ["project-runtime/NEXT_ACTION.md", "project-runtime/TASK_REGISTRY.md"],
+                    "Replace NEXT_ACTION with the next governed task or terminal stop action.",
+                )
+            )
+
+    if project_status == "completed" and action_type not in {"stop", "finalize"}:
+        findings.append(
+            Finding(
+                "LINT_STATE_006",
+                "error",
+                "NEXT_ACTION is stale for completed project",
+                f"PROJECT_STATUS=completed but NEXT_ACTION.ACTION_TYPE={action_type or 'MISSING'}.",
+                ["project-runtime/PROJECT_STATE.md", "project-runtime/NEXT_ACTION.md"],
+                "Use a terminal stop/finalization action after completed project state.",
+            )
+        )
+
+    return findings
+
+
+def _check_checkpoint_receipt(files: dict[str, RuntimeFile]) -> list[Finding]:
+    next_action = files["NEXT_ACTION.md"]
+    project_state = files["PROJECT_STATE.md"]
+    required = _field(next_action, "CHECKPOINT_RECEIPT_REQUIRED")
+    policy = _field(next_action, "CHECKPOINT_POLICY")
+    checkpoint_status = _field(project_state, "PROJECT_CHECKPOINT_STATUS")
+    receipt_ref = _field(next_action, "CHECKPOINT_RECEIPT_REF") or _field(project_state, "CHECKPOINT_RECEIPT_REF")
+
+    receipt_needed = (
+        required == "yes"
+        or policy in {"local_only", "commit_and_push"}
+        or checkpoint_status == "passed"
+    )
+    if receipt_needed and _is_none(receipt_ref):
+        return [
+            Finding(
+                "LINT_STATE_007",
+                "error",
+                "Checkpoint receipt is missing",
+                (
+                    f"CHECKPOINT_RECEIPT_REQUIRED={required or 'MISSING'}; "
+                    f"CHECKPOINT_POLICY={policy or 'MISSING'}; "
+                    f"PROJECT_CHECKPOINT_STATUS={checkpoint_status or 'MISSING'}."
+                ),
+                ["project-runtime/PROJECT_STATE.md", "project-runtime/NEXT_ACTION.md"],
+                "Record CHECKPOINT_RECEIPT_REF before marking checkpoint receipt requirements satisfied.",
+            )
+        ]
+    return []
+
+
+def _check_push_allowed(files: dict[str, RuntimeFile]) -> list[Finding]:
+    values = {
+        "PROJECT_STATE": _field(files["PROJECT_STATE.md"], "PUSH_ALLOWED"),
+        "REPOSITORY_LOCK": _field(files["REPOSITORY_LOCK.md"], "PUSH_ALLOWED"),
+        "WORKSPACE_IDENTITY": _field(files["WORKSPACE_IDENTITY.md"], "PUSH_ALLOWED"),
+    }
+    known = {source: value for source, value in values.items() if not _is_none(value)}
+    if len(set(known.values())) <= 1:
+        return []
+    return [
+        Finding(
+            "LINT_STATE_008",
+            "error",
+            "Conflicting PUSH_ALLOWED values",
+            ", ".join(f"{source}={value or 'MISSING'}" for source, value in values.items()),
+            [
+                "project-runtime/PROJECT_STATE.md",
+                "project-runtime/REPOSITORY_LOCK.md",
+                "project-runtime/WORKSPACE_IDENTITY.md",
+            ],
+            "Reconcile PUSH_ALLOWED across project state, repository lock, and workspace identity.",
+        )
+    ]
+
+
+def _check_task_statuses(files: dict[str, RuntimeFile]) -> list[Finding]:
+    findings: list[Finding] = []
+    for entry in _entries(files["TASK_REGISTRY.md"].occurrences, "TASK_ID"):
+        task_id = entry.get("TASK_ID", "UNKNOWN")
+        status = entry.get("STATUS", "")
+        result_refs = entry.get("RESULT_REFS", "")
+        audit_refs = entry.get("AUDIT_REFS", "")
+        checkpoint_ref = entry.get("CHECKPOINT_REF", "")
+        commit_hash = entry.get("COMMIT_HASH", "")
+        branch = entry.get("BRANCH", "")
+        accepted_files = entry.get("ACCEPTED_FILES", "")
+
+        if status in {"completed", "audit_passed", "checkpoint_done"} and _is_none(result_refs):
+            findings.append(
+                Finding(
+                    "LINT_TASK_001",
+                    "error",
+                    "Task status lacks result traceability",
+                    f"{task_id} has STATUS={status} but RESULT_REFS is empty.",
+                    ["project-runtime/TASK_REGISTRY.md"],
+                    "Record the accepted RESULT reference or move the task back to a non-terminal status.",
+                )
+            )
+        if status in {"audit_passed", "checkpoint_done"} and _is_none(audit_refs):
+            findings.append(
+                Finding(
+                    "LINT_TASK_002",
+                    "error",
+                    "Task status lacks audit traceability",
+                    f"{task_id} has STATUS={status} but AUDIT_REFS is empty.",
+                    ["project-runtime/TASK_REGISTRY.md"],
+                    "Record the audit RESULT reference before using an audit-passed status.",
+                )
+            )
+        if status == "checkpoint_done" and (
+            _is_none(checkpoint_ref)
+            or _is_none(commit_hash)
+            or _is_none(branch)
+            or _is_none(accepted_files)
+        ):
+            findings.append(
+                Finding(
+                    "LINT_TASK_003",
+                    "error",
+                    "Checkpoint-done task is missing checkpoint fields",
+                    f"{task_id} has STATUS=checkpoint_done without complete commit, branch, accepted files, and checkpoint refs.",
+                    ["project-runtime/TASK_REGISTRY.md"],
+                    "Fill checkpoint traceability fields or repair the stale task status.",
+                )
+            )
+    return findings
+
+
+def _check_accepted_artifacts(root: Path, files: dict[str, RuntimeFile]) -> list[Finding]:
+    findings: list[Finding] = []
+    for entry in _entries(files["ACCEPTED_ARTIFACTS.md"].occurrences, "ARTIFACT_ID"):
+        if entry.get("STATUS") != "accepted":
+            continue
+        artifact_ref = entry.get("ARTIFACT_REF", "")
+        if _is_none(artifact_ref):
+            findings.append(
+                Finding(
+                    "LINT_ARTIFACT_001",
+                    "error",
+                    "Accepted artifact has no ARTIFACT_REF",
+                    f"{entry.get('ARTIFACT_ID', 'UNKNOWN')} is accepted but ARTIFACT_REF is empty.",
+                    ["project-runtime/ACCEPTED_ARTIFACTS.md"],
+                    "Record the accepted artifact path or supersede the artifact entry.",
+                )
+            )
+            continue
+        artifact_path = Path(artifact_ref)
+        if not artifact_path.is_absolute():
+            artifact_path = root / artifact_path
+        if not artifact_path.exists():
+            findings.append(
+                Finding(
+                    "LINT_ARTIFACT_002",
+                    "error",
+                    "Accepted artifact is missing from workspace",
+                    f"{entry.get('ARTIFACT_ID', 'UNKNOWN')} points to missing path {artifact_ref}.",
+                    ["project-runtime/ACCEPTED_ARTIFACTS.md", artifact_ref],
+                    "Restore the accepted artifact or mark the artifact superseded/failed through governed state update.",
+                )
+            )
+    return findings
+
+
+def _classified_markdown_files(root: Path) -> list[tuple[str, Path]]:
+    candidates: list[tuple[str, Path]] = []
+    search_roots = [
+        root / "project-input",
+        root / "project-runtime" / "tasks",
+        root / "project-runtime" / "results",
+        root / "project-runtime" / "agent-results",
+        root / "project-runtime" / "audits",
+    ]
+    for search_root in search_roots:
+        if not search_root.exists():
+            continue
+        for path in search_root.rglob("*.md"):
+            rel = _rel(root, path)
+            name = path.name
+            role = ""
+            if name.startswith("AUDIT_RESULT_") or "/audits/" in f"/{rel}":
+                role = "audit"
+            elif name.startswith("RESULT_") or "/results/" in f"/{rel}" or "/agent-results/" in f"/{rel}":
+                role = "result"
+            elif name.startswith("TASK_") or "/tasks/" in f"/{rel}":
+                role = "task"
+            if role:
+                candidates.append((role, path))
+    return candidates
+
+
+def _check_basename_collisions(root: Path) -> list[Finding]:
+    findings: list[Finding] = []
+    by_stem: dict[str, dict[str, list[str]]] = {}
+    for role, path in _classified_markdown_files(root):
+        by_stem.setdefault(path.stem, {}).setdefault(role, []).append(_rel(root, path))
+
+        if role == "result" and not path.name.startswith("RESULT_"):
+            findings.append(
+                Finding(
+                    "LINT_NAMING_002",
+                    "warning",
+                    "Result file lacks RESULT_ prefix",
+                    f"{_rel(root, path)} does not follow RESULT_<TASK_ID>_ATTEMPT_<NNN>.md.",
+                    [_rel(root, path)],
+                    "Use RESULT_<TASK_ID>_ATTEMPT_<NNN>.md for new result files.",
+                )
+            )
+        if role == "audit" and not path.name.startswith("AUDIT_RESULT_"):
+            findings.append(
+                Finding(
+                    "LINT_NAMING_003",
+                    "warning",
+                    "Audit file lacks AUDIT_RESULT_ prefix",
+                    f"{_rel(root, path)} does not follow AUDIT_RESULT_<TASK_ID>_ATTEMPT_<NNN>.md.",
+                    [_rel(root, path)],
+                    "Use AUDIT_RESULT_<TASK_ID>_ATTEMPT_<NNN>.md for new audit result files.",
+                )
+            )
+
+    for stem, roles in sorted(by_stem.items()):
+        if len(roles) <= 1:
+            continue
+        paths = [path for role_paths in roles.values() for path in role_paths]
+        findings.append(
+            Finding(
+                "LINT_NAMING_001",
+                "warning",
+                "Task/result/audit basename collision",
+                f"{stem}.md is used for multiple record types: {', '.join(sorted(roles))}.",
+                sorted(paths),
+                "Use distinct TASK_, RESULT_, and AUDIT_RESULT_ prefixes with attempt suffixes for result records.",
+            )
+        )
+    return findings
+
+
+def _result_files(root: Path) -> list[Path]:
+    result_roots = [root / "project-runtime" / "results", root / "project-runtime" / "agent-results"]
+    paths: list[Path] = []
+    for result_root in result_roots:
+        if result_root.exists():
+            paths.extend(sorted(result_root.rglob("*.md")))
+    return paths
+
+
+def _agent_events(root: Path) -> dict[str, set[str]]:
+    events_path = root / "project-runtime" / "agents" / "instances.jsonl"
+    events: dict[str, set[str]] = {}
+    if not events_path.exists():
+        return events
+
+    text, error = _read_text(events_path)
+    if error:
+        return events
+    for raw_line in text.splitlines():
+        if not raw_line.strip():
+            continue
+        try:
+            payload = json.loads(raw_line)
+        except json.JSONDecodeError:
+            continue
+        agent_id = str(payload.get("agent_instance_id", "")).strip()
+        event = str(payload.get("event", "")).strip()
+        if agent_id and event:
+            events.setdefault(agent_id, set()).add(event)
+            if event == "agent_result_received" and str(payload.get("reuse_allowed", "")).lower() not in {"false", ""}:
+                events.setdefault(f"{agent_id}:reuse_violation", set()).add(event)
+    return events
+
+
+def _check_agent_lifecycle(root: Path) -> list[Finding]:
+    findings: list[Finding] = []
+    events = _agent_events(root)
+    for path in _result_files(root):
+        text, error = _read_text(path)
+        if error:
+            continue
+        fields = {occurrence.key: occurrence.value for occurrence in _parse_occurrences(text)}
+        relpath = _rel(root, path)
+        agent_id = fields.get("AGENT_INSTANCE_ID", "")
+        reuse_allowed = fields.get("REUSE_ALLOWED", "")
+        termination_required = fields.get("AGENT_TERMINATION_REQUIRED", "")
+        termination_evidence = fields.get("AGENT_TERMINATION_EVIDENCE", "")
+
+        if reuse_allowed != "false":
+            findings.append(
+                Finding(
+                    "LINT_AGENT_001",
+                    "error",
+                    "RESULT does not forbid agent reuse",
+                    f"{relpath} has REUSE_ALLOWED={reuse_allowed or 'MISSING'}.",
+                    [relpath],
+                    "Set REUSE_ALLOWED: false in every profile-agent RESULT.",
+                )
+            )
+        if termination_required != "true":
+            findings.append(
+                Finding(
+                    "LINT_AGENT_002",
+                    "error",
+                    "RESULT does not require agent termination",
+                    f"{relpath} has AGENT_TERMINATION_REQUIRED={termination_required or 'MISSING'}.",
+                    [relpath],
+                    "Set AGENT_TERMINATION_REQUIRED: true in every profile-agent RESULT.",
+                )
+            )
+        if not _is_none(agent_id):
+            terminated = "agent_instance_terminated" in events.get(agent_id, set())
+            has_inline_evidence = not _is_none(termination_evidence)
+            if not terminated and not has_inline_evidence:
+                findings.append(
+                    Finding(
+                        "LINT_AGENT_003",
+                        "error",
+                        "Agent termination evidence is missing after RESULT",
+                        f"{relpath} records AGENT_INSTANCE_ID={agent_id} but no termination event/evidence exists.",
+                        [relpath, "project-runtime/agents/instances.jsonl"],
+                        "Terminate the profile agent and record agent_instance_terminated or inline termination evidence.",
+                    )
+                )
+            if f"{agent_id}:reuse_violation" in events:
+                findings.append(
+                    Finding(
+                        "LINT_AGENT_004",
+                        "error",
+                        "Agent result event allows reuse",
+                        f"agent_result_received for {agent_id} does not record reuse_allowed=false.",
+                        ["project-runtime/agents/instances.jsonl"],
+                        "Record result receipt with reuse_allowed=false and terminate the agent instance.",
+                    )
+                )
+    return findings
+
+
+def _task_packet_files(root: Path) -> list[Path]:
+    paths: list[Path] = []
+    for search_root in [root / "project-input", root / "project-runtime" / "tasks"]:
+        if search_root.exists():
+            paths.extend(sorted(path for path in search_root.rglob("TASK_*.md") if path.is_file()))
+    return paths
+
+
+def _check_reasoning_and_designer(root: Path, files: dict[str, RuntimeFile]) -> list[Finding]:
+    findings: list[Finding] = []
+    for path in _task_packet_files(root):
+        text, error = _read_text(path)
+        if error:
+            continue
+        occurrences = _parse_occurrences(text)
+        fields = {occurrence.key: occurrence.value for occurrence in occurrences}
+        relpath = _rel(root, path)
+        level = fields.get("REASONING_LEVEL", "")
+        if _is_none(level):
+            findings.append(
+                Finding(
+                    "LINT_REASONING_001",
+                    "error",
+                    "Task packet is missing REASONING_LEVEL",
+                    f"{relpath} has no REASONING_LEVEL field.",
+                    [relpath],
+                    "Add REASONING_LEVEL: low|medium|high|xhigh.",
+                )
+            )
+        elif level in DEPRECATED_REASONING_LEVELS:
+            findings.append(
+                Finding(
+                    "LINT_REASONING_002",
+                    "warning",
+                    "Task packet uses deprecated REASONING_LEVEL",
+                    f"{relpath} uses REASONING_LEVEL={level}.",
+                    [relpath],
+                    "Migrate new task packets to low, medium, high, or xhigh.",
+                )
+            )
+        elif level not in ALLOWED_REASONING_LEVELS:
+            findings.append(
+                Finding(
+                    "LINT_REASONING_003",
+                    "error",
+                    "Task packet uses invalid REASONING_LEVEL",
+                    f"{relpath} uses REASONING_LEVEL={level}.",
+                    [relpath],
+                    "Use one of low, medium, high, or xhigh.",
+                )
+            )
+
+        for role_key in ("TARGET_ROLE", "OWNER_ROLE", "ROLE", "CURRENT_AGENT_ROLE"):
+            if fields.get(role_key) == "designer":
+                findings.append(
+                    Finding(
+                        "LINT_ROLE_001",
+                        "warning",
+                        "Deprecated designer role alias is used",
+                        f"{relpath} has {role_key}: designer.",
+                        [relpath],
+                        "Use solution_architect for new design work; keep designer only for legacy compatibility.",
+                    )
+                )
+
+    for runtime_file in files.values():
+        for occurrence in runtime_file.occurrences:
+            if occurrence.key in {"TARGET_ROLE", "OWNER_ROLE", "ROLE", "CURRENT_AGENT_ROLE"} and occurrence.value == "designer":
+                findings.append(
+                    Finding(
+                        "LINT_ROLE_002",
+                        "warning",
+                        "Deprecated designer role alias is used in runtime state",
+                        f"{runtime_file.relpath} line {occurrence.line} has {occurrence.key}: designer.",
+                        [runtime_file.relpath],
+                        "Use solution_architect for new design work; preserve designer only for legacy records.",
+                    )
+                )
+    return findings
+
+
+def _check_skeleton_product_pass(root: Path, files: dict[str, RuntimeFile]) -> list[Finding]:
+    findings: list[Finding] = []
+    paths = _task_packet_files(root) + _result_files(root)
+    runtime_extra = [runtime_file.path for runtime_file in files.values()]
+    for path in paths + runtime_extra:
+        if not path.exists() or not path.is_file():
+            continue
+        text, error = _read_text(path)
+        if error:
+            continue
+        lowered = text.lower()
+        if "skeleton" not in lowered:
+            continue
+        occurrences = _parse_occurrences(text)
+        fields = {occurrence.key: occurrence.value.lower() for occurrence in occurrences}
+        product_markers = {
+            "PRODUCT_PASS",
+            "PRODUCT_STATUS",
+            "MVP_READY",
+            "MVP_STATUS",
+            "FINAL_ACCEPTANCE",
+            "CAPABILITY_PASS",
+        }
+        skeleton_pass = fields.get("SKELETON_STATUS") == "passed" or fields.get("SKELETON_PASS") in {"true", "yes", "passed"}
+        product_pass = any(fields.get(marker) in {"passed", "pass", "true", "yes", "ready", "mvp_ready"} for marker in product_markers)
+        if skeleton_pass and product_pass:
+            findings.append(
+                Finding(
+                    "LINT_PRODUCT_001",
+                    "error",
+                    "Skeleton pass is marked as product/MVP pass",
+                    f"{_rel(root, path)} records skeleton pass together with product/MVP readiness.",
+                    [_rel(root, path)],
+                    "Separate skeleton/task pass from capability, product, MVP, and final acceptance gates.",
+                )
+            )
+    return findings
+
+
+def _all_lint_findings(root: Path, files: dict[str, RuntimeFile]) -> list[Finding]:
+    findings: list[Finding] = []
+    findings.extend(_check_duplicate_field_mismatch(files))
+    findings.extend(_check_checkpoint_gate(files))
+    findings.extend(_check_stale_next_action(files))
+    findings.extend(_check_checkpoint_receipt(files))
+    findings.extend(_check_push_allowed(files))
+    findings.extend(_check_task_statuses(files))
+    findings.extend(_check_accepted_artifacts(root, files))
+    findings.extend(_check_basename_collisions(root))
+    findings.extend(_check_agent_lifecycle(root))
+    findings.extend(_check_reasoning_and_designer(root, files))
+    findings.extend(_check_skeleton_product_pass(root, files))
+    return findings
+
+
+def _summary(findings: list[Finding]) -> dict[str, int]:
+    return {
+        "errors": sum(1 for finding in findings if finding.severity == "error"),
+        "warnings": sum(1 for finding in findings if finding.severity == "warning"),
+        "info": sum(1 for finding in findings if finding.severity == "info"),
+    }
+
+
+def _report(root: Path, strict: bool) -> tuple[dict[str, object], int]:
+    files, io_findings, can_lint = _validate_root_and_required_files(root)
+    findings = list(io_findings)
+    exit_code = EXIT_OK
+
+    if not can_lint:
+        exit_code = EXIT_IO_ERROR
+        status = "io_error"
+    else:
+        findings.extend(_all_lint_findings(root, files))
+        summary = _summary(findings)
+        failed = summary["errors"] > 0 or (strict and bool(findings))
+        exit_code = EXIT_FINDINGS if failed else EXIT_OK
+        status = "failed" if failed else ("warning" if findings else "passed")
+
+    return {
+        "tool": "aso",
+        "command": "lint",
+        "status": status,
+        "root": str(root),
+        "strict": strict,
+        "findings": [finding.to_json() for finding in findings],
+        "summary": _summary(findings),
+    }, exit_code
+
+
+def _print_text(report: dict[str, object]) -> None:
+    summary = report["summary"]
+    if not isinstance(summary, dict):
+        raise TypeError("internal lint report summary must be a dictionary")
+
+    print(f"ASO lint: {str(report['status']).upper()}")
+    print(f"Root: {report['root']}")
+    print(f"Strict: {report['strict']}")
+    print(f"Errors: {summary['errors']}")
+    print(f"Warnings: {summary['warnings']}")
+    print(f"Info: {summary['info']}")
+    print(f"Findings: {len(report['findings'])}")
+    for finding in report["findings"]:
+        if not isinstance(finding, dict):
+            continue
+        print(f"- {finding['severity']} {finding['rule_id']}: {finding['title']}")
+
+
+def _write_json(path_text: str, report: dict[str, object]) -> bool:
+    path = Path(path_text).expanduser()
+    if not path.parent.exists():
+        print(f"aso lint: json-out parent does not exist: {path.parent}", file=sys.stderr)
+        return False
+    try:
+        path.write_text(json.dumps(report, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+    except OSError as exc:
+        print(f"aso lint: failed to write json-out: {exc}", file=sys.stderr)
+        return False
+    return True
 
 
 def run(args: argparse.Namespace) -> int:
-    """Run the lint command.
-
-    Full lint rule evaluation is intentionally left to TASK_004.
-    """
-    print("ASO lint command scaffold")
-    print(f"Root: {args.root}")
-    print(f"Strict: {args.strict}")
-    print("Findings: NOT_IMPLEMENTED")
-    return EXIT_OK
+    """Run the lint command."""
+    report, exit_code = _report(args.root, args.strict)
+    _print_text(report)
+    if args.json_out and not _write_json(args.json_out, report):
+        return EXIT_IO_ERROR
+    return exit_code

@@ -13,18 +13,22 @@ from commands import archive_verify, lint, status
 EXIT_USAGE = 2
 
 
+def _root_path(value: str) -> Path:
+    return Path(value).expanduser()
+
+
 def _existing_root(value: str) -> Path:
-    root = Path(value).expanduser()
+    root = _root_path(value)
     if not root.exists() or not root.is_dir():
         raise argparse.ArgumentTypeError(f"project root is not a readable directory: {value}")
     return root
 
 
-def _add_root_argument(parser: argparse.ArgumentParser) -> None:
+def _add_root_argument(parser: argparse.ArgumentParser, *, validate: bool = True) -> None:
     parser.add_argument(
         "--root",
         default=Path("."),
-        type=_existing_root,
+        type=_existing_root if validate else _root_path,
         help="Project root to inspect (default: current directory).",
     )
 
@@ -56,11 +60,16 @@ def build_parser() -> argparse.ArgumentParser:
         help="Check runtime consistency rules.",
         description="Inspect runtime files for ASO consistency findings.",
     )
-    _add_root_argument(lint_parser)
+    _add_root_argument(lint_parser, validate=False)
     lint_parser.add_argument(
         "--strict",
         action="store_true",
-        help="Treat findings as a failing result when lint implementation is added.",
+        help="Treat warnings as a failing lint result.",
+    )
+    lint_parser.add_argument(
+        "--json-out",
+        metavar="PATH",
+        help="Write the lint report JSON to this explicit path.",
     )
     lint_parser.set_defaults(handler=lint.run)
 
