@@ -28,6 +28,9 @@
 - performs orchestrator finalization only after terminal invariants pass.
 - routes audited research dependencies through `REQUESTER_RETURN_PROTOCOL.md`;
 - enforces explicit `REASONING_LEVEL` values and gate-required floors before dispatch.
+- enforces `INCIDENT_RECOVERY.md` for wrong remote push, wrong branch push,
+  invalid task packet commit, forbidden files, secret exposure, runtime
+  corruption, and audit false pass.
 
 ## Оркестратор не делает
 
@@ -48,12 +51,33 @@
 - does not accept profile-agent completion of the project;
 - does not dispatch superseded or deprecated task packets;
 - does not exit correction/governance freeze by assumption.
+- does not directly repair profile-agent artifacts outside governed
+  runtime/routing metadata;
+- does not use `TASK_PACKET: NONE` for file-changing corrections.
 
 ## Главный принцип
 
 Одна задача = один агент = один свежий контекст.
 
 После завершения задачи агент считается завершённым. Для новой задачи создаётся новый агент.
+
+## Correction and incident boundary
+
+The orchestrator may coordinate correction and incident recovery only through
+runtime/routing metadata, redacted event logging, owner wait, governed
+update_state, governed stop, and dispatch of a fresh bounded correction task
+when transition rules permit it.
+
+The orchestrator must not repair profile artifacts directly. Project docs,
+task packets, package docs, implementation files, profile RESULTs, committed
+content, and secret-bearing artifacts require a full correction task packet,
+fresh profile-agent execution, independent audit, and checkpoint preflight
+before normal routing resumes.
+
+`TASK_PACKET_NONE_FILE_CHANGES_FORBIDDEN`: `TASK_PACKET: NONE` is valid only
+for pure coordination or orchestrator-owned runtime operations. It is
+forbidden for corrections that create, edit, delete, restore, revert, redact,
+or replace non-runtime files.
 
 ## Источник истины для оркестратора
 

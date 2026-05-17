@@ -150,6 +150,12 @@ the auditor returns `STATUS: pass`.
 - post-audit Git checkpoint that stages suspected secret or credential material;
 - post-audit Git checkpoint after `AUDIT_FALSE_PASS_DETECTED` or unresolved
   `FAILURE_TYPE: audit_miss`;
+- normal dispatch, finalize, checkpoint, commit, or push while
+  `INCIDENT_RECOVERY` is active for `wrong_remote_push`,
+  `wrong_branch_push`, `invalid_task_packet_commit`, `forbidden_files`,
+  `secret_exposure`, `runtime_corruption`, or `audit_false_pass`;
+- `TASK_PACKET: NONE` for any file-changing correction
+  (`TASK_PACKET_NONE_FILE_CHANGES_FORBIDDEN`);
 - post-audit Git checkpoint after reasoning-level mismatch or invalid dispatch
   where actual spawned reasoning is below required;
 - profile-agent dispatch before workspace identity validation passes;
@@ -396,6 +402,70 @@ Follow-up: must be followed by tuple validation
 - stop;
 - correction when routing does not dispatch a profile/package-correction agent.
 
+`TASK_PACKET_NONE_FILE_CHANGES_FORBIDDEN`: `TASK_PACKET: NONE` is forbidden for
+file-changing corrections. It is valid only for pure coordination or
+orchestrator-owned runtime operations that do not change project, package,
+implementation, task-packet, profile-result, committed, or other non-runtime
+artifacts. Any correction that changes non-runtime files requires a full
+correction task packet.
+
+## Incident recovery routing
+
+Incident recovery is entered when any incident class from
+`INCIDENT_RECOVERY.md` is active:
+
+```text
+wrong_remote_push
+wrong_branch_push
+invalid_task_packet_commit
+forbidden_files
+secret_exposure
+runtime_corruption
+audit_false_pass
+```
+
+Required incident freeze tuple:
+
+```text
+PROJECT_STATUS: blocked
+CURRENT_PHASE: correction
+CURRENT_GATE.STATUS: blocked
+NEXT_ACTION.ACTION_TYPE: correction | wait_for_owner | update_state | stop | create_agent
+```
+
+Allowed incident recovery actions:
+
+- governed `update_state` for runtime/routing metadata;
+- `wait_for_owner` for owner decisions about wrong remote, wrong branch,
+  exposed secrets, remote history, or unrecoverable state;
+- `stop` only when stop invariants permit a governed halt;
+- `create_agent` only for a full bounded correction task packet when file
+  changes are required and governance freeze permits a correction dispatch.
+
+Forbidden incident recovery actions:
+
+- normal project dispatch;
+- finalization or completed-state routing;
+- checkpoint, commit, or push before incident resume criteria pass;
+- direct orchestrator repair of project docs, task packets, package docs,
+  implementation files, profile RESULTs, committed content, or secret-bearing
+  files.
+
+Resume after incident recovery requires:
+
+- redacted incident evidence and affected references;
+- repository identity, expected branch, repository lock, and push policy
+  validation when Git target was involved;
+- task packet validation when an invalid task packet was involved;
+- changed-file scope validation when forbidden files were involved;
+- secret scan pass and owner security action when secret exposure was involved;
+- runtime schema and transition validation when runtime corruption was
+  involved;
+- `AUDIT_FALSE_PASS_DETECTED` / `FAILURE_TYPE: audit_miss` correction and
+  independent audit when audit false pass was involved;
+- full correction task packet, independent audit, and checkpoint preflight for
+  every file-changing correction.
+
 ## Terminal completion
 
 Completion is valid only when:
@@ -486,6 +556,14 @@ Enter correction if any of the following are detected:
 - checkpoint record or event containing unredacted secret values.
 - `AUDIT_FALSE_PASS_DETECTED` without blocked dependent work and a governed
   `FAILURE_TYPE: audit_miss` correction route;
+- active `INCIDENT_RECOVERY` without `PROJECT_STATUS: blocked`,
+  `CURRENT_PHASE: correction`, blocked dependent work, and a governed
+  recovery route;
+- `wrong_remote_push`, `wrong_branch_push`, `invalid_task_packet_commit`,
+  `forbidden_files`, `secret_exposure`, or `runtime_corruption` followed by
+  normal dispatch, finalize, checkpoint, commit, or push before incident
+  resume criteria pass;
+- `TASK_PACKET: NONE` paired with a correction that changes non-runtime files;
 
 The validator layer must also catch the concrete invalid states listed in:
 

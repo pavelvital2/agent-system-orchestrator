@@ -22,6 +22,7 @@
    - `agent-system/02_runtime/STATE_TRANSITION_RULES.md`
    - `agent-system/02_runtime/POST_AUDIT_GIT_CHECKPOINT.md`
    - `agent-system/02_runtime/VIOLATION_RECOVERY.md`
+   - `agent-system/02_runtime/INCIDENT_RECOVERY.md`
    - `agent-system/02_runtime/ACCEPTED_STATE_LOCKING.md`
    - `agent-system/02_runtime/AGENT_LIFECYCLE.md`
    - `agent-system/03_templates/TASK_PACKET_TEMPLATE.md`
@@ -145,6 +146,14 @@ invalid_task_packet_schema
 ```
 
 Для `wait_for_owner`, `update_state`, `finalize`, `stop` и `correction` без task packet значение `TASK_PACKET: NONE` допустимо, если full runtime state tuple разрешён `STATE_TRANSITION_RULES.md`.
+
+`TASK_PACKET_NONE_FILE_CHANGES_FORBIDDEN`: `TASK_PACKET: NONE` is forbidden for
+file-changing corrections. It is allowed only for pure coordination or
+orchestrator-owned runtime operations that do not change project, package,
+implementation, task-packet, profile-result, or other non-runtime artifacts.
+Any correction that creates, edits, deletes, restores, reverts, redacts, or
+replaces files outside orchestrator-owned runtime state requires a full
+correction task packet.
 
 Оркестратор не должен считать `TASK_PACKET: NONE` отсутствующим task packet для таких non-dispatch actions.
 
@@ -516,6 +525,10 @@ push, the orchestrator must validate in this order:
 16. if task-packet validation is required, target task packet is inside `ACTIVE_DOC_ROOT` unless it is the governed first bootstrap task packet at `project-runtime/bootstrap/TASK_BOOTSTRAP_<TARGET_ROLE>_001.md` or explicitly governed as system/package correction material;
 17. if task-packet validation is required, REQUIRED_DOCS do not include deprecated/archive documents;
 18. if task-packet validation is not required, `TASK_PACKET: NONE` is valid only for `wait_for_owner`, `update_state`, `finalize`, `stop`, or `correction` when allowed by `STATE_TRANSITION_RULES.md`;
+18a. if `TASK_PACKET: NONE` is present, enforce
+    `TASK_PACKET_NONE_FILE_CHANGES_FORBIDDEN` from
+    `INCIDENT_RECOVERY.md`: no file-changing correction may proceed without a
+    full correction task packet;
 19. role/file permissions match `FILESYSTEM_GOVERNANCE.md`;
 20. task packet `REASONING_LEVEL` is valid for allowed values, role default,
     and gate-required floor;
@@ -554,6 +567,10 @@ push, the orchestrator must validate in this order:
     `AUDIT_FALSE_PASS_DETECTED` with `FAILURE_TYPE: audit_miss` and forbids
     staging, commit, push, and normal next-task dispatch;
 30. requested action is valid under governance-freeze rules.
+31. if `wrong_remote_push`, `wrong_branch_push`,
+    `invalid_task_packet_commit`, `forbidden_files`, `secret_exposure`,
+    `runtime_corruption`, or `AUDIT_FALSE_PASS_DETECTED` is active, requested
+    action is valid under `INCIDENT_RECOVERY.md`.
 
 If any validation fails, dispatch is forbidden. If the failure is found during
 checkpoint preflight, staging, commit, and push are forbidden.
@@ -598,6 +615,29 @@ The orchestrator may only:
 - dispatch an explicitly bounded package-governance correction task through `create_agent` when transition rules permit it;
 - stop through governed `stop` when stop invariants allow it;
 - reread and revalidate runtime files.
+
+## Incident recovery freeze behavior
+
+If incident recovery is active, the orchestrator must apply
+`INCIDENT_RECOVERY.md` in addition to ordinary governance freeze rules.
+
+Incident classes include:
+
+```text
+wrong_remote_push
+wrong_branch_push
+invalid_task_packet_commit
+forbidden_files
+secret_exposure
+runtime_corruption
+audit_false_pass
+```
+
+During incident recovery freeze, normal dispatch, checkpoint, commit, and push
+are forbidden. The orchestrator may coordinate recovery only through
+runtime/routing metadata, redacted event logging, owner wait, governed
+update_state, governed stop, or a full bounded correction task packet when file
+changes are required.
 
 ## Post-update validation
 
