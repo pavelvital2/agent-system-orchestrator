@@ -50,6 +50,9 @@ DEPRECATED_REASONING_LEVELS = {
     "critical",
     "mechanical",
 }
+ROLE_ALIASES = {
+    "designer": "solution_architect",
+}
 GATE_REASONING_FLOORS = {
     "initial_tz_analysis": "xhigh",
     "architecture_design": "xhigh",
@@ -1061,13 +1064,14 @@ def _check_reasoning_and_designer(root: Path, files: dict[str, RuntimeFile]) -> 
                 )
 
         for role_key in ("TARGET_ROLE", "OWNER_ROLE", "ROLE", "CURRENT_AGENT_ROLE"):
-            if fields.get(role_key) == "designer":
+            role_value = fields.get(role_key, "")
+            if role_value in ROLE_ALIASES:
                 findings.append(
                     Finding(
                         "LINT_ROLE_001",
                         "warning",
                         "Deprecated designer role alias is used",
-                        f"{relpath} has {role_key}: designer.",
+                        f"{relpath} has {role_key}: {role_value}; canonical role is {ROLE_ALIASES[role_value]}.",
                         [relpath],
                         "Use solution_architect for new design work; keep designer only for legacy compatibility.",
                     )
@@ -1075,13 +1079,13 @@ def _check_reasoning_and_designer(root: Path, files: dict[str, RuntimeFile]) -> 
 
     for runtime_file in files.values():
         for occurrence in runtime_file.occurrences:
-            if occurrence.key in {"TARGET_ROLE", "OWNER_ROLE", "ROLE", "CURRENT_AGENT_ROLE"} and occurrence.value == "designer":
+            if occurrence.key in {"TARGET_ROLE", "OWNER_ROLE", "ROLE", "CURRENT_AGENT_ROLE"} and occurrence.value in ROLE_ALIASES:
                 findings.append(
                     Finding(
                         "LINT_ROLE_002",
                         "warning",
                         "Deprecated designer role alias is used in runtime state",
-                        f"{runtime_file.relpath} line {occurrence.line} has {occurrence.key}: designer.",
+                        f"{runtime_file.relpath} line {occurrence.line} has {occurrence.key}: {occurrence.value}; canonical role is {ROLE_ALIASES[occurrence.value]}.",
                         [runtime_file.relpath],
                         "Use solution_architect for new design work; preserve designer only for legacy records.",
                     )

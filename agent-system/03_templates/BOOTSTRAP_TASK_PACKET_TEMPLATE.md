@@ -22,7 +22,7 @@ Examples:
 
 ```text
 project-runtime/bootstrap/TASK_BOOTSTRAP_REQUIREMENTS_ANALYST_001.md
-project-runtime/bootstrap/TASK_BOOTSTRAP_DESIGNER_001.md
+project-runtime/bootstrap/TASK_BOOTSTRAP_SOLUTION_ARCHITECT_001.md
 ```
 
 `TASK_PACKET: NONE` is never valid for the first profile-agent dispatch.
@@ -95,13 +95,13 @@ Bootstrap intake for <requirements analysis | design>
 ## TASK_TYPE
 
 ```text
-requirements_analyst | designer
+requirements_analyst | solution_architect
 ```
 
 ## TARGET_ROLE
 
 ```text
-requirements_analyst | designer
+requirements_analyst | solution_architect
 ```
 
 Rules:
@@ -109,8 +109,9 @@ Rules:
 - `TARGET_ROLE` must match `TASK_TYPE`.
 - Use `requirements_analyst` when source input is incomplete, ambiguous, or not
   clearly design-ready.
-- Use `designer` only when source input is sufficiently structured for design
-  routing under `agent-system/07_lifecycle/BOOTSTRAP_STAGE.md`.
+- Use `solution_architect` only when source input is sufficiently structured
+  for design routing under `agent-system/07_lifecycle/BOOTSTRAP_STAGE.md`.
+- `designer` is a deprecated compatibility alias for old bootstrap packets.
 
 ## REASONING_LEVEL
 
@@ -222,7 +223,8 @@ source input and universal package governance.
 ```text
 - project-input/TZ.md
 - agent-system/01_roles/REQUIREMENTS_ANALYST.md when TARGET_ROLE is requirements_analyst
-- agent-system/01_roles/DESIGNER.md when TARGET_ROLE is designer
+- agent-system/01_roles/SOLUTION_ARCHITECT.md when TARGET_ROLE is solution_architect
+- agent-system/01_roles/DESIGNER.md only for deprecated TARGET_ROLE designer compatibility packets
 - agent-system/03_templates/AGENT_RESULT_TEMPLATE.md
 - agent-system/07_lifecycle/BOOTSTRAP_STAGE.md
 ```
@@ -233,8 +235,11 @@ Role document mapping:
 TARGET_ROLE: requirements_analyst
 Role doc: agent-system/01_roles/REQUIREMENTS_ANALYST.md
 
+TARGET_ROLE: solution_architect
+Role doc: agent-system/01_roles/SOLUTION_ARCHITECT.md
+
 TARGET_ROLE: designer
-Role doc: agent-system/01_roles/DESIGNER.md
+Role doc: agent-system/01_roles/DESIGNER.md (deprecated alias wrapper)
 ```
 
 Do not derive role document paths by lower-case `TARGET_ROLE` interpolation.
@@ -289,7 +294,7 @@ For `requirements_analyst`:
 - project-docs/00_requirements/*
 ```
 
-For `designer`:
+For `solution_architect`:
 
 ```text
 - project-docs/01_architecture/*
@@ -318,9 +323,9 @@ For `designer`:
 - bootstrap output cannot be accepted unless it contains a valid downstream
   dispatchable TASK_PACKET, explicit GAP, explicit BLOCKED route, or explicit
   wait_for_owner route;
-- when research or design continuation is needed, the designer must create a
-  full schema-valid downstream research/design continuation task packet or
-  return GAP/BLOCKED/wait_for_owner;
+- when research or design continuation is needed, the solution architect must
+  create a full schema-valid downstream research/design continuation task
+  packet or return GAP/BLOCKED/wait_for_owner;
 - no forbidden file changes are made;
 - no profile agent commits or pushes.
 ```
@@ -363,7 +368,7 @@ project-runtime/results/worker/RESULT_TASK_BOOTSTRAP_<TARGET_ROLE>_001_ATTEMPT_0
 
 ```text
 requirements_analyst(pass) -> auditor
-designer(pass) -> auditor
+solution_architect(pass) -> auditor
 blocked -> orchestrator
 gap -> orchestrator
 ```

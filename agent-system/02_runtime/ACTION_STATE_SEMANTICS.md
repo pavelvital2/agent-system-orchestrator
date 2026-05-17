@@ -22,7 +22,7 @@ The terms below are universal operational semantics. They do not replace `RUNTIM
 - `stop_terminal` is not a temporary hold. It may not be used to wait, throttle, defer, or park work that is expected to resume.
 - `completed` is not an action. It is a project state reached only after terminal finalization invariants pass.
 - Profile-agent `STATUS: pass` does not imply `completed`.
-- Profile-agent `STATUS: blocked` does not imply `wait_for_owner`; blocker routing determines whether owner input, designer correction, implementation correction, runtime correction, or another governed path is required.
+- Profile-agent `STATUS: blocked` does not imply `wait_for_owner`; blocker routing determines whether owner input, solution_architect correction, implementation correction, runtime correction, or another governed path is required.
 
 ## Audit fail semantics
 
@@ -32,7 +32,7 @@ Required semantics:
 
 - no normal next task may be dispatched from the failed result;
 - no post-audit Git checkpoint may run;
-- the affected branch must route to correction for the checked role, designer, or another governed correction target;
+- the affected branch must route to correction for the checked role, solution_architect, or another governed correction target;
 - the failed gate remains failed or blocked until corrected and re-audited;
 - `NEXT_ACTION.DEPENDENCY_STATUS` for dependent work must be `blocked` until the correction path passes required gates.
 

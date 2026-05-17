@@ -4,7 +4,7 @@
 
 ```text
 ROLE:
-<requirements_analyst | designer | developer | auditor | tester | technical_writer | devops_setup_engineer | release_manager>
+<requirements_analyst | solution_architect | designer | developer | auditor | tester | technical_writer | devops_setup_engineer | release_manager>
 
 REASONING_LEVEL:
 VALUE: low | medium | high | xhigh
@@ -75,6 +75,8 @@ Use:
 agent-system/03_templates/AGENT_RESULT_TEMPLATE.md
 ```
 
-`ROLE` must be a canonical profile execution role. Control/routing pseudo-roles
-`orchestrator`, `project_owner`, and `none` are not valid task handoff execution
-roles in this template.
+`ROLE` must be a canonical profile execution role. `solution_architect` is the
+canonical design role; `designer` is accepted only as a deprecated compatibility
+alias for old task packets. Control/routing pseudo-roles `orchestrator`,
+`project_owner`, and `none` are not valid task handoff execution roles in this
+template.

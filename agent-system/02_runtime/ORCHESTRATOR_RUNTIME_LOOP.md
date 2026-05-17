@@ -231,7 +231,7 @@ Ordinary task packets outside `ACTIVE_DOC_ROOT` remain invalid.
 
 profile_agent(pass) → auditor when `AUDIT_REQUIREMENTS` makes audit mandatory
 requirements_analyst(pass) → auditor when audit mandatory
-designer(pass) → auditor when audit mandatory
+solution_architect(pass) → auditor when audit mandatory
 developer(pass) → auditor when audit mandatory
 tester(pass) → auditor when audit mandatory
 technical_writer(pass) → auditor when audit mandatory

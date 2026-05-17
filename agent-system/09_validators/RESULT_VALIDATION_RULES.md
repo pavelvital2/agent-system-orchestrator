@@ -199,7 +199,7 @@ reading older records, but current RESULT validation must require
 
 Invalid RESULT recommendations include:
 
-- designer pass directly to developer;
+- solution_architect pass directly to developer;
 - developer pass directly to tester or technical writer;
 - audit fail routed to normal next task;
 - audit fail routed to Git checkpoint;

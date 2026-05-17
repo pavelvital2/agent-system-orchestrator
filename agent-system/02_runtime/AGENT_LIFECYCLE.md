@@ -63,7 +63,7 @@ For correction:
 - create a fresh agent;
 - pass only REQUIRED_DOCS;
 - preserve normal audit/testing/documentation requirements;
-- do not expand correction scope unless designer creates a new bounded task.
+- do not expand correction scope unless the solution architect creates a new bounded task.
 
 Agent `NEXT_RECOMMENDED_ACTION` is advisory. The orchestrator must validate it against governance, runtime schema, transition rules, handoff protocol, and filesystem governance before updating runtime state or next action.
 

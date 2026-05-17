@@ -88,7 +88,7 @@ The orchestrator may coordinate incident recovery only by:
 - setting `NEXT_ACTION` to a governed correction, owner wait, update_state, or
   stop route permitted by transition rules;
 - selecting or routing an already-governed full bounded correction task packet,
-  or requesting owner/designer creation when a required correction packet is
+  or requesting owner/solution_architect creation when a required correction packet is
   missing;
 - dispatching a fresh profile agent only when the correction task packet,
   filesystem governance, transition rules, and freeze rules permit it.

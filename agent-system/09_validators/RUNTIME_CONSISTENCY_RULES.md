@@ -111,6 +111,7 @@ Profile execution roles for this check are:
 
 ```text
 requirements_analyst
+solution_architect
 designer
 developer
 tester
@@ -118,6 +119,8 @@ technical_writer
 devops_setup_engineer
 release_manager
 ```
+
+`designer` is a deprecated alias for `solution_architect`.
 
 Invalid direct routes after a mandatory-audit profile pass include:
 

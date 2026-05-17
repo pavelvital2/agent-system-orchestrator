@@ -34,7 +34,7 @@
     "STATUS": { "type": "string", "enum": ["pass", "fail", "blocked", "gap"] },
     "TASK_ID": { "type": "string" },
     "AGENT_INSTANCE_ID": { "type": "string" },
-    "ROLE": { "type": "string", "enum": ["requirements_analyst", "designer", "developer", "auditor", "tester", "technical_writer", "devops_setup_engineer", "release_manager"] },
+    "ROLE": { "type": "string", "enum": ["requirements_analyst", "solution_architect", "designer", "developer", "auditor", "tester", "technical_writer", "devops_setup_engineer", "release_manager"] },
     "TASK": { "type": "string" },
     "SUMMARY": { "$ref": "#/$defs/nonEmptyList" },
     "READ_DOCS": { "$ref": "#/$defs/listOrNone" },

@@ -37,7 +37,7 @@ The same return metadata must be recorded in `TASK_REGISTRY.md` for the
 dependency task. `NEXT_ACTION.md` must preserve the return context whenever it
 routes an audited dependency toward requester continuation.
 
-When a designer creates downstream artifacts for requester return,
+When a solution architect creates downstream artifacts for requester return,
 research-dependency follow-up, or design continuation, each artifact must be
 classified before design acceptance:
 

@@ -14,10 +14,10 @@ that conforms to:
 agent-system/03_templates/TASK_PACKET_TEMPLATE.md
 ```
 
-When emitted as downstream work by a designer or other planning task, this file
-is the explicit non-dispatchable classification for the proposed work. It must
-remain planning input until a separate governed task creates a valid
-`# TASK PACKET`.
+When emitted as downstream work by a solution architect or other planning task,
+this file is the explicit non-dispatchable classification for the proposed
+work. It must remain planning input until a separate governed task creates a
+valid `# TASK PACKET`.
 
 ---
 
@@ -61,7 +61,7 @@ Rules:
 ## REQUESTED_BY_ROLE
 
 ```text
-<requirements_analyst | designer | developer | auditor | tester | technical_writer | devops_setup_engineer | release_manager | orchestrator | project_owner | none>
+<requirements_analyst | solution_architect | designer | developer | auditor | tester | technical_writer | devops_setup_engineer | release_manager | orchestrator | project_owner | none>
 ```
 
 ---
@@ -85,7 +85,7 @@ normal | research_dependency | design_continuation | task_continuation | correct
 ## PROPOSED_TARGET_ROLE
 
 ```text
-<requirements_analyst | designer | developer | auditor | tester | technical_writer | devops_setup_engineer | release_manager | UNKNOWN>
+<requirements_analyst | solution_architect | designer | developer | auditor | tester | technical_writer | devops_setup_engineer | release_manager | UNKNOWN>
 ```
 
 ---

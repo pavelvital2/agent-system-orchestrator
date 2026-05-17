@@ -13,7 +13,7 @@ AGENT_INSTANCE_ID:
 <agent instance id assigned by orchestrator>
 
 ROLE:
-<requirements_analyst | designer | developer | auditor | tester | technical_writer | devops_setup_engineer | release_manager>
+<requirements_analyst | solution_architect | designer | developer | auditor | tester | technical_writer | devops_setup_engineer | release_manager>
 
 TASK:
 <TASK_ID or task title>
@@ -119,6 +119,7 @@ gap
 
 ```text
 requirements_analyst
+solution_architect
 designer
 developer
 auditor
@@ -127,6 +128,10 @@ technical_writer
 devops_setup_engineer
 release_manager
 ```
+
+`designer` is a deprecated compatibility alias for `solution_architect`.
+New RESULT records must use `solution_architect`; legacy `designer` records
+remain accepted with validator warnings.
 
 Control/routing pseudo-roles `orchestrator`, `project_owner`, and `none` are not valid profile-agent RESULT roles.
 

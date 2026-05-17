@@ -82,11 +82,11 @@
     "TASK_TITLE": { "type": "string" },
     "TASK_TYPE": {
       "type": "string",
-      "enum": ["requirements_analyst", "designer", "developer", "auditor", "tester", "technical_writer", "devops_setup_engineer", "release_manager"]
+      "enum": ["requirements_analyst", "solution_architect", "designer", "developer", "auditor", "tester", "technical_writer", "devops_setup_engineer", "release_manager"]
     },
     "TARGET_ROLE": {
       "type": "string",
-      "enum": ["requirements_analyst", "designer", "developer", "auditor", "tester", "technical_writer", "devops_setup_engineer", "release_manager"]
+      "enum": ["requirements_analyst", "solution_architect", "designer", "developer", "auditor", "tester", "technical_writer", "devops_setup_engineer", "release_manager"]
     },
     "REASONING_LEVEL": {
       "type": "object",
@@ -170,15 +170,15 @@
     },
     "nextRole": {
       "type": "string",
-      "enum": ["orchestrator", "requirements_analyst", "designer", "developer", "auditor", "tester", "technical_writer", "devops_setup_engineer", "release_manager", "project_owner", "none"]
+      "enum": ["orchestrator", "requirements_analyst", "solution_architect", "designer", "developer", "auditor", "tester", "technical_writer", "devops_setup_engineer", "release_manager", "project_owner", "none"]
     },
     "requesterRoleOrNone": {
       "type": "string",
-      "enum": ["requirements_analyst", "designer", "developer", "auditor", "tester", "technical_writer", "devops_setup_engineer", "release_manager", "NONE"]
+      "enum": ["requirements_analyst", "solution_architect", "designer", "developer", "auditor", "tester", "technical_writer", "devops_setup_engineer", "release_manager", "NONE"]
     },
     "requesterReturnRole": {
       "type": "string",
-      "enum": ["requirements_analyst", "designer", "developer", "auditor", "tester", "technical_writer", "devops_setup_engineer", "release_manager", "none"]
+      "enum": ["requirements_analyst", "solution_architect", "designer", "developer", "auditor", "tester", "technical_writer", "devops_setup_engineer", "release_manager", "none"]
     }
   }
 }

@@ -59,7 +59,7 @@ A lower authority cannot relax or bypass a higher authority.
 | Task packet conflicts with mandatory workflow | Treat as workflow violation; do not dispatch. |
 | NEXT_ACTION conflicts with transition table | Treat as invalid runtime state; enter correction. |
 | Role instruction conflicts with task packet | Role/governance wins unless explicitly governed and audited. |
-| Owner answer changes requirements/architecture | Route through designer/audit or bounded correction task. |
+| Owner answer changes requirements/architecture | Route through solution_architect/audit or bounded correction task. |
 | Archive/deprecated doc appears in REQUIRED_DOCS | Treat task packet as invalid. |
 | Raw Git remote strings differ but canonical repository identity matches | Treat as valid only if the raw forms are allowed by workspace identity rules and any SSH alias is accepted or proven to resolve to GitHub. |
 | Canonical expected and actual repository identity differ | Treat as `repository_identity_mismatch`; dispatch, checkpoint, commit, and push are forbidden. |

@@ -129,7 +129,7 @@
         "CURRENT_TASK": { "type": "string" },
         "CURRENT_AGENT_ROLE": {
           "type": "string",
-          "enum": ["requirements_analyst", "designer", "developer", "auditor", "tester", "technical_writer", "devops_setup_engineer", "release_manager"]
+          "enum": ["requirements_analyst", "solution_architect", "designer", "developer", "auditor", "tester", "technical_writer", "devops_setup_engineer", "release_manager"]
         },
         "DEPENDENCIES": { "oneOf": [{ "const": "NONE" }, { "type": "array", "items": { "type": "string" } }] },
         "BLOCKED_BY": { "type": "string" }
@@ -165,7 +165,7 @@
       "properties": {
         "ROLE": {
           "type": "string",
-          "enum": ["requirements_analyst", "designer", "developer", "auditor", "tester", "technical_writer", "devops_setup_engineer", "release_manager"]
+          "enum": ["requirements_analyst", "solution_architect", "designer", "developer", "auditor", "tester", "technical_writer", "devops_setup_engineer", "release_manager"]
         },
         "TASK": { "type": "string" },
         "DATE": { "type": "string" },

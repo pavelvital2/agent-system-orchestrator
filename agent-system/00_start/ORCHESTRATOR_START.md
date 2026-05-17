@@ -36,7 +36,7 @@
    - `agent-system/01_roles/REQUIREMENTS_ANALYST.md`
 
 3. Инструкции роли проектировщика:
-   - `agent-system/01_roles/DESIGNER.md`
+   - `agent-system/01_roles/SOLUTION_ARCHITECT.md`
 
 4. Шаблона task packet:
    - `agent-system/03_templates/TASK_PACKET_TEMPLATE.md`
@@ -83,7 +83,7 @@ BLOCKED_BY: missing_bootstrap_input
 
 Если отсутствует или недоступен обязательный файл пакета `agent-system/`,
 включая `agent-system/01_roles/REQUIREMENTS_ANALYST.md`,
-`agent-system/01_roles/DESIGNER.md`,
+`agent-system/01_roles/SOLUTION_ARCHITECT.md`,
 `agent-system/03_templates/TASK_PACKET_TEMPLATE.md` или
 `agent-system/03_templates/BOOTSTRAP_TASK_PACKET_TEMPLATE.md` или
 `agent-system/03_templates/AGENT_RESULT_TEMPLATE.md`:
@@ -188,32 +188,32 @@ project-runtime/bootstrap/TASK_BOOTSTRAP_REQUIREMENTS_ANALYST_001.md
 If input is sufficiently structured for direct design, create:
 
 ```text
-project-runtime/bootstrap/TASK_BOOTSTRAP_DESIGNER_001.md
+project-runtime/bootstrap/TASK_BOOTSTRAP_SOLUTION_ARCHITECT_001.md
 ```
 
 После этого оркестратор выбирает первый profile-агент по deterministic routing:
 
 ```text
 if project input is sufficiently structured for design:
-  ACTION_ID: NEXT_BOOTSTRAP_DESIGNER_001
+  ACTION_ID: NEXT_BOOTSTRAP_SOLUTION_ARCHITECT_001
   ACTION_TYPE: create_agent
-  TARGET_ROLE: designer
-  TASK_ID: TASK_BOOTSTRAP_DESIGNER_001
-  TASK_PACKET: project-runtime/bootstrap/TASK_BOOTSTRAP_DESIGNER_001.md
+  TARGET_ROLE: solution_architect
+  TASK_ID: TASK_BOOTSTRAP_SOLUTION_ARCHITECT_001
+  TASK_PACKET: project-runtime/bootstrap/TASK_BOOTSTRAP_SOLUTION_ARCHITECT_001.md
   DEPENDENCY_STATUS: ready
   BLOCKED_BY: NONE
   ACTION_SEMANTIC: normal
   REQUESTER_RETURN_CONTEXT: NONE
   BLOCKING_OR_RESUME_CONTEXT: NONE
   REQUIRED_UNIVERSAL_DOCS:
-  - agent-system/01_roles/DESIGNER.md
+  - agent-system/01_roles/SOLUTION_ARCHITECT.md
   - agent-system/03_templates/AGENT_RESULT_TEMPLATE.md
   - agent-system/07_lifecycle/BOOTSTRAP_STAGE.md
   REQUIRED_PROJECT_DOCS:
   - project-input/TZ.md
   EXPECTED_RESULT:
   - agent-system/03_templates/AGENT_RESULT_TEMPLATE.md
-  INSTRUCTION_FOR_ORCHESTRATOR: Dispatch exactly one designer bootstrap task.
+  INSTRUCTION_FOR_ORCHESTRATOR: Dispatch exactly one solution_architect bootstrap task.
 else:
   ACTION_ID: NEXT_BOOTSTRAP_REQUIREMENTS_ANALYST_001
   ACTION_TYPE: create_agent
@@ -327,7 +327,7 @@ The first profile-agent dispatch remains forbidden until bootstrap validation pa
 - проверки корректности пути;
 - проверки доступности файла для передачи агенту;
 - проверки наличия явных разделов, достаточных только для выбора маршрута
-  `requirements_analyst` или `designer`.
+  `requirements_analyst` или `solution_architect`.
 
 Оркестратору запрещено:
 - анализировать бизнес-логику ТЗ;

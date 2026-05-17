@@ -29,7 +29,7 @@
     },
     "TARGET_ROLE": {
       "type": "string",
-      "enum": ["orchestrator", "requirements_analyst", "designer", "developer", "auditor", "tester", "technical_writer", "devops_setup_engineer", "release_manager", "project_owner", "none"]
+      "enum": ["orchestrator", "requirements_analyst", "solution_architect", "designer", "developer", "auditor", "tester", "technical_writer", "devops_setup_engineer", "release_manager", "project_owner", "none"]
     },
     "TASK_ID": { "type": "string" },
     "TASK_PACKET": { "type": "string" },
@@ -120,13 +120,13 @@
       "properties": {
         "REQUESTED_BY_ROLE": {
           "type": "string",
-          "enum": ["requirements_analyst", "designer", "developer", "auditor", "tester", "technical_writer", "devops_setup_engineer", "release_manager", "NONE"]
+          "enum": ["requirements_analyst", "solution_architect", "designer", "developer", "auditor", "tester", "technical_writer", "devops_setup_engineer", "release_manager", "NONE"]
         },
         "REQUESTED_BY_TASK": { "type": "string" },
         "RETURN_TO_REQUESTER_AFTER_AUDIT_PASS": { "type": "string", "enum": ["yes", "no"] },
         "RETURN_TO_ROLE_AFTER_AUDIT_PASS": {
           "type": "string",
-          "enum": ["requirements_analyst", "designer", "developer", "auditor", "tester", "technical_writer", "devops_setup_engineer", "release_manager", "none"]
+          "enum": ["requirements_analyst", "solution_architect", "designer", "developer", "auditor", "tester", "technical_writer", "devops_setup_engineer", "release_manager", "none"]
         },
         "RETURN_TASK_AFTER_AUDIT_PASS": { "type": "string" },
         "RESEARCH_QUESTION_ID": { "type": "string" },

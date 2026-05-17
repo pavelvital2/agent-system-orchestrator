@@ -60,7 +60,7 @@ Rules:
 - failed result is not accepted;
 - correction uses fresh agent context;
 - correction follows mandatory audit path;
-- repeated same failure escalates to designer/owner routing.
+- repeated same failure escalates to solution_architect/owner routing.
 
 ## Accepted artifact violation
 

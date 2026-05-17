@@ -29,7 +29,7 @@ Bootstrap must choose exactly one first profile-agent route:
 
 ```text
 if source input is sufficiently structured for design:
-  route to designer
+  route to solution_architect
 else:
   route to requirements_analyst
 ```
@@ -64,8 +64,12 @@ Concrete first-route paths:
 
 ```text
 project-runtime/bootstrap/TASK_BOOTSTRAP_REQUIREMENTS_ANALYST_001.md
-project-runtime/bootstrap/TASK_BOOTSTRAP_DESIGNER_001.md
+project-runtime/bootstrap/TASK_BOOTSTRAP_SOLUTION_ARCHITECT_001.md
 ```
+
+Legacy `TASK_BOOTSTRAP_DESIGNER_001.md` packets remain accepted through the
+deprecated `designer -> solution_architect` alias and should emit validator
+warnings rather than hard failures.
 
 The bootstrap task packet is an orchestrator-created runtime input. Profile
 agents may read it but must not edit it. The first profile-agent `NEXT_ACTION`
@@ -85,7 +89,7 @@ design architecture, or decompose implementation work.
 - initial GAP if source inputs are insufficient;
 - one valid `NEXT_ACTION` using the current `NEXT_ACTION_TEMPLATE.md` and
   active runtime schema for either `TARGET_ROLE: requirements_analyst` or
-  `TARGET_ROLE: designer`.
+  `TARGET_ROLE: solution_architect`.
 
 Bootstrap `NEXT_ACTION` output must include:
 

@@ -119,6 +119,7 @@ The control/target role enum for runtime routing is:
 ```text
 orchestrator
 requirements_analyst
+solution_architect
 designer
 developer
 auditor
@@ -134,6 +135,7 @@ Profile execution roles are:
 
 ```text
 requirements_analyst
+solution_architect
 designer
 developer
 auditor
@@ -143,12 +145,14 @@ devops_setup_engineer
 release_manager
 ```
 
+`designer` is a deprecated alias for `solution_architect`.
+
 `orchestrator`, `project_owner`, and `none` are control/routing pseudo-roles
 and must not be treated as dispatchable profile execution task types.
 
 Validators must catch these forbidden transitions:
 
-- designer pass directly to developer;
+- solution_architect pass directly to developer;
 - developer pass directly to tester;
 - developer pass directly to technical writer;
 - tester fail to technical writer;

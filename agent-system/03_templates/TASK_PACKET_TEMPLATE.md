@@ -152,7 +152,7 @@ Rules:
 
 - correction must be a bounded task;
 - correction must use a fresh agent context;
-- correction must not silently expand scope unless designer creates a new bounded task;
+- correction must not silently expand scope unless the solution architect creates a new bounded task;
 - correction must follow mandatory audit/testing/documentation path;
 - SOURCE_RESULT_REF must reference the result or violation that triggered correction when applicable;
 - SOURCE_RESULT_REF must be `NONE` only when no triggering result or violation applies;
@@ -177,6 +177,7 @@ Implement local task service
 
 ```text
 requirements_analyst
+solution_architect
 designer
 developer
 auditor
@@ -196,12 +197,15 @@ TASK_TYPE values unless a governance-only exception is explicitly documented.
 ## TARGET_ROLE
 
 ```text
-<requirements_analyst | designer | developer | auditor | tester | technical_writer | devops_setup_engineer | release_manager>
+<requirements_analyst | solution_architect | designer | developer | auditor | tester | technical_writer | devops_setup_engineer | release_manager>
 ```
 
 Rules:
 - TARGET_ROLE is the role that must execute this task;
 - TARGET_ROLE must match TASK_TYPE for profile execution tasks unless the packet explicitly documents a governed exception;
+- `solution_architect` is the canonical design role; `designer` is a deprecated
+  compatibility alias that validators resolve to `solution_architect` with a
+  warning;
 - control pseudo-roles `orchestrator`, `project_owner`, and `none` are valid only in control/routing fields such as NEXT_ROLE_ON_* where the template permits them;
 - a task packet must not assign work to multiple profile roles.
 
@@ -267,7 +271,7 @@ Rules:
 ## REQUESTED_BY_ROLE
 
 ```text
-<requirements_analyst | designer | developer | auditor | tester | technical_writer | devops_setup_engineer | release_manager | NONE>
+<requirements_analyst | solution_architect | designer | developer | auditor | tester | technical_writer | devops_setup_engineer | release_manager | NONE>
 ```
 
 ## REQUESTED_BY_TASK
@@ -327,7 +331,7 @@ yes | no
 ## RETURN_TO_ROLE_AFTER_AUDIT_PASS
 
 ```text
-<requirements_analyst | designer | developer | auditor | tester | technical_writer | devops_setup_engineer | release_manager | none>
+<requirements_analyst | solution_architect | designer | developer | auditor | tester | technical_writer | devops_setup_engineer | release_manager | none>
 ```
 
 ## RETURN_TASK_AFTER_AUDIT_PASS
@@ -727,6 +731,7 @@ Allowed NEXT_ROLE_ON_* values use the control/target role enum:
 ```text
 orchestrator
 requirements_analyst
+solution_architect
 designer
 developer
 auditor
@@ -749,7 +754,7 @@ none
 ```
 
 Правила:
-- после designer — mandatory;
+- после solution_architect — mandatory;
 - после developer — mandatory;
 - optional допустим только если это явно разрешено governance.
 

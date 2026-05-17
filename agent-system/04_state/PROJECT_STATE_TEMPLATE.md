@@ -99,8 +99,10 @@ BLOCKED_BY: <BLOCKER_ID | GAP_ID | NONE>
 ```
 
 `CURRENT_AGENT_ROLE` must be one of the profile execution roles:
-`requirements_analyst`, `designer`, `developer`, `auditor`, `tester`,
-`technical_writer`, `devops_setup_engineer`, or `release_manager`.
+`requirements_analyst`, `solution_architect`, `developer`, `auditor`,
+`tester`, `technical_writer`, `devops_setup_engineer`, or
+`release_manager`. `designer` is a deprecated alias for
+`solution_architect`.
 
 If no active branches exist:
 

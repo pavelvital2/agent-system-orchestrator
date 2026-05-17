@@ -18,6 +18,7 @@ from typing import Dict, Iterable, List, Sequence
 
 PROFILE_ROLES = {
     "requirements_analyst",
+    "solution_architect",
     "designer",
     "developer",
     "auditor",
@@ -25,6 +26,10 @@ PROFILE_ROLES = {
     "technical_writer",
     "devops_setup_engineer",
     "release_manager",
+}
+
+ROLE_ALIASES = {
+    "designer": "solution_architect",
 }
 
 CONTROL_ROLES = PROFILE_ROLES | {"orchestrator", "project_owner", "none"}
@@ -156,6 +161,7 @@ class ValidationResult:
     path: Path
     classification: str
     errors: List[str]
+    warnings: List[str]
 
     @property
     def ok(self) -> bool:
@@ -224,6 +230,28 @@ def add_error(errors: List[str], message: str) -> None:
     errors.append(f"invalid_task_packet_schema: {message}")
 
 
+def add_warning(warnings: List[str], message: str) -> None:
+    warnings.append(f"deprecated_role_alias: {message}")
+
+
+def canonical_role(role: str) -> str:
+    return ROLE_ALIASES.get(role, role)
+
+
+def warn_deprecated_role_aliases(
+    sections: Dict[str, str],
+    section_names: Iterable[str],
+    warnings: List[str],
+) -> None:
+    for section in section_names:
+        value = lower_scalar(sections, section)
+        if value in ROLE_ALIASES:
+            add_warning(
+                warnings,
+                f"{section} uses {value}; canonical role is {ROLE_ALIASES[value]}",
+            )
+
+
 def require_enum(
     sections: Dict[str, str],
     section: str,
@@ -235,7 +263,11 @@ def require_enum(
         add_error(errors, f"{section} has invalid value {value or '<empty>'}")
 
 
-def require_task_packet_schema(sections: Dict[str, str], errors: List[str]) -> None:
+def require_task_packet_schema(
+    sections: Dict[str, str],
+    errors: List[str],
+    warnings: List[str],
+) -> None:
     for section in MANDATORY_TASK_PACKET_SECTIONS:
         if section not in sections:
             add_error(errors, f"missing mandatory section {section}")
@@ -271,8 +303,23 @@ def require_task_packet_schema(sections: Dict[str, str], errors: List[str]) -> N
     elif level not in REASONING_LEVEL_VALUES:
         add_error(errors, "REASONING_LEVEL VALUE has invalid or missing value")
 
-    task_type = lower_scalar(sections, "TASK_TYPE")
-    target_role = lower_scalar(sections, "TARGET_ROLE")
+    warn_deprecated_role_aliases(
+        sections,
+        (
+            "TASK_TYPE",
+            "TARGET_ROLE",
+            "REQUESTED_BY_ROLE",
+            "RETURN_TO_ROLE_AFTER_AUDIT_PASS",
+            "NEXT_ROLE_ON_PASS",
+            "NEXT_ROLE_ON_FAIL",
+            "NEXT_ROLE_ON_BLOCKED",
+            "NEXT_ROLE_ON_GAP",
+        ),
+        warnings,
+    )
+
+    task_type = canonical_role(lower_scalar(sections, "TASK_TYPE"))
+    target_role = canonical_role(lower_scalar(sections, "TARGET_ROLE"))
     if task_type != target_role:
         add_error(errors, "TASK_TYPE must match TARGET_ROLE for dispatchable profile tasks")
 
@@ -311,8 +358,12 @@ def is_under(rel_path: str, root: str) -> bool:
 def bootstrap_path_allowed(rel_path: str, target_role: str) -> bool:
     if target_role not in PROFILE_ROLES:
         return False
-    expected = f"project-runtime/bootstrap/TASK_BOOTSTRAP_{target_role.upper()}_001.md"
-    return rel_path == expected
+    allowed_roles = {target_role, canonical_role(target_role)}
+    expected_paths = {
+        f"project-runtime/bootstrap/TASK_BOOTSTRAP_{role.upper()}_001.md"
+        for role in allowed_roles
+    }
+    return rel_path in expected_paths
 
 
 def system_package_correction_allowed(rel_path: str, sections: Dict[str, str]) -> bool:
@@ -352,8 +403,9 @@ def require_dispatchable_path(
 
 def validate_task_packet(path: Path, text: str, args: argparse.Namespace) -> ValidationResult:
     errors: List[str] = []
+    warnings: List[str] = []
     sections = parse_sections(text)
-    require_task_packet_schema(sections, errors)
+    require_task_packet_schema(sections, errors, warnings)
 
     if not errors and args.mode == "dispatch":
         if lower_scalar(sections, "TASK_STATUS") != "active":
@@ -364,7 +416,12 @@ def validate_task_packet(path: Path, text: str, args: argparse.Namespace) -> Val
         if lower_scalar(sections, "TASK_STATUS") == "active":
             require_dispatchable_path(path, sections, args, errors)
 
-    return ValidationResult(path=path, classification="TASK_PACKET", errors=errors)
+    return ValidationResult(
+        path=path,
+        classification="TASK_PACKET",
+        errors=errors,
+        warnings=warnings,
+    )
 
 
 def validate_task_proposal(path: Path, text: str, args: argparse.Namespace) -> ValidationResult:
@@ -375,14 +432,24 @@ def validate_task_proposal(path: Path, text: str, args: argparse.Namespace) -> V
     if args.mode == "dispatch":
         add_error(errors, "TASK_PROPOSAL is non-dispatchable and cannot create_agent")
 
-    return ValidationResult(path=path, classification="TASK_PROPOSAL", errors=errors)
+    return ValidationResult(
+        path=path,
+        classification="TASK_PROPOSAL",
+        errors=errors,
+        warnings=[],
+    )
 
 
 def validate_path(path: Path, args: argparse.Namespace) -> ValidationResult:
     try:
         text = path.read_text(encoding="utf-8")
     except OSError as exc:
-        return ValidationResult(path=path, classification="unreadable", errors=[str(exc)])
+        return ValidationResult(
+            path=path,
+            classification="unreadable",
+            errors=[str(exc)],
+            warnings=[],
+        )
 
     marker_text = strip_fenced_blocks(text)
     has_task_packet = bool(H1_TASK_PACKET_RE.search(marker_text))
@@ -393,6 +460,7 @@ def validate_path(path: Path, args: argparse.Namespace) -> ValidationResult:
             path=path,
             classification="ambiguous",
             errors=["invalid_task_packet_schema: file declares both TASK_PACKET and TASK_PROPOSAL"],
+            warnings=[],
         )
 
     if has_task_packet:
@@ -405,6 +473,7 @@ def validate_path(path: Path, args: argparse.Namespace) -> ValidationResult:
         path=path,
         classification="unknown",
         errors=["invalid_task_packet_schema: missing # TASK PACKET or # TASK PROPOSAL marker"],
+        warnings=[],
     )
 
 
@@ -414,9 +483,13 @@ def print_result(result: ValidationResult) -> None:
             print(f"VALID: {result.path}: TASK_PROPOSAL non_dispatchable")
         else:
             print(f"VALID: {result.path}: {result.classification}")
+        for warning in result.warnings:
+            print(f"WARNING: {warning}")
         return
 
     print(f"INVALID: {result.path}: {result.classification}")
+    for warning in result.warnings:
+        print(f"WARNING: {warning}")
     for error in result.errors:
         print(f"ERROR: {error}")
 

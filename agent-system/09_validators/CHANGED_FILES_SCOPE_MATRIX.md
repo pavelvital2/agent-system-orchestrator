@@ -64,7 +64,8 @@ forbids auditor pass, staging, commit, and push.
 | TARGET_ROLE | Normally allowed changed files | Normally forbidden changed files |
 |---|---|---|
 | `requirements_analyst` | Bounded requirements artifacts under `ACTIVE_DOC_ROOT` listed by task packet. | `agent-system/`, `project-runtime/`, `project-input/`, implementation code, archive docs. |
-| `designer` | Architecture, stage, task packet, and project design docs under `ACTIVE_DOC_ROOT` listed by task packet. | `agent-system/`, `project-runtime/`, implementation code, source input rewrites. |
+| `solution_architect` | Architecture, stage, task packet, and project design docs under `ACTIVE_DOC_ROOT` listed by task packet. | `agent-system/`, `project-runtime/`, implementation code, source input rewrites. |
+| `designer` | Deprecated alias for `solution_architect`; accepted for legacy packets with a warning. | Same as `solution_architect`. |
 | `developer` | Implementation files explicitly listed by task packet. For owner-authorized package governance correction/update tasks, explicitly listed `agent-system/` files may be changed. | `project-runtime/`, `project-input/`, `project-archive/`, unrelated project docs, unlisted package files. |
 | `auditor` | No file changes by default. | All changes unless a separate correction task explicitly grants bounded write authority. |
 | `tester` | Temporary test artifacts only when the task packet explicitly allows them. | Source code, project docs, task packets, runtime state, package instructions. |

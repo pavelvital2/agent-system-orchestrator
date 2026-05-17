@@ -33,4 +33,4 @@ Requirements turns the TZ and approved owner decisions into a traceable requirem
 
 ## Exit criteria
 
-Requirements exits with `STATUS: pass` only when enough requirements exist for the designer to create bounded design docs and task packets without inventing scope.
+Requirements exits with `STATUS: pass` only when enough requirements exist for the solution architect to create bounded design docs and task packets without inventing scope.

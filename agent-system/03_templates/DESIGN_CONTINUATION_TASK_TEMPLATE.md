@@ -2,7 +2,8 @@
 
 ## Purpose
 
-Use this template for a designer continuation task after accepted research.
+Use this template for a solution architect continuation task after accepted
+research.
 
 The continuation task resumes the original bounded design work using only
 research that passed independent audit.
@@ -36,13 +37,13 @@ design_continuation
 ## TASK_TYPE
 
 ```text
-designer
+solution_architect
 ```
 
 ## TARGET_ROLE
 
 ```text
-designer
+solution_architect
 ```
 
 ## REASONING_LEVEL
@@ -55,7 +56,7 @@ OVERRIDE_REASON: NONE
 ## REQUESTED_BY_ROLE
 
 ```text
-designer
+solution_architect
 ```
 
 ## REQUESTED_BY_TASK
@@ -106,7 +107,7 @@ NONE
 
 ## Rules
 
-- The designer must use only audited research as continuation input.
+- The solution architect must use only audited research as continuation input.
 - Unaudited research, failed audit findings, or informal research notes are not
   valid continuation source-of-truth.
 - Continuation scope must remain bounded to the original design task and the

@@ -283,6 +283,7 @@ BLOCKED_BY:
 
 ```text
 requirements_analyst
+solution_architect
 designer
 developer
 auditor
@@ -556,13 +557,14 @@ blocked
 ## Required next role
 
 ```text
-requirements_analyst | designer | developer | auditor | tester | technical_writer | devops_setup_engineer | release_manager | orchestrator | project_owner | none
+requirements_analyst | solution_architect | designer | developer | auditor | tester | technical_writer | devops_setup_engineer | release_manager | orchestrator | project_owner | none
 ```
 
-Profile execution roles are `requirements_analyst`, `designer`, `developer`,
-`auditor`, `tester`, `technical_writer`, `devops_setup_engineer`, and
-`release_manager`. `orchestrator`, `project_owner`, and `none` are
-control/routing pseudo-roles, not profile task types.
+Profile execution roles are `requirements_analyst`, `solution_architect`,
+`developer`, `auditor`, `tester`, `technical_writer`,
+`devops_setup_engineer`, and `release_manager`. `designer` is a deprecated
+alias for `solution_architect`. `orchestrator`, `project_owner`, and `none`
+are control/routing pseudo-roles, not profile task types.
 
 ## Gate evidence
 
@@ -678,6 +680,7 @@ stop
 
 ```text
 requirements_analyst
+solution_architect
 designer
 developer
 auditor
@@ -936,11 +939,11 @@ NONE
 ## GAP routing rules
 
 - business GAP → project_owner;
-- functional GAP → project_owner или designer, если вопрос технически проектный;
-- technical GAP → designer;
-- documentation GAP → designer или technical_writer;
-- acceptance GAP → designer;
-- runtime GAP → designer, если не требуется business decision.
+- functional GAP → project_owner или solution_architect, если вопрос технически проектный;
+- technical GAP → solution_architect;
+- documentation GAP → solution_architect или technical_writer;
+- acceptance GAP → solution_architect;
+- runtime GAP → solution_architect, если не требуется business decision.
 
 Оркестратор не решает GAP по существу.
 
@@ -950,7 +953,7 @@ NONE
 - `STATUS: closed` requires an accepted source-of-truth update.
 - `ACCEPTED_SOURCE_OF_TRUTH_UPDATE` must reference the accepted document, task packet, runtime-state update, or owner decision record that became source-of-truth.
 - `CLOSURE_EVIDENCE` must reference the RESULT, audit, accepted artifact, or runtime-state record that proves the update was accepted.
-- If the resolution changes requirements, design, task scope, acceptance criteria, runtime behavior, or launch readiness, closure must go through governed designer/audit or correction/audit flow before dependent dispatch continues.
+- If the resolution changes requirements, design, task scope, acceptance criteria, runtime behavior, or launch readiness, closure must go through governed solution_architect/audit or correction/audit flow before dependent dispatch continues.
 
 ---
 
@@ -1006,6 +1009,7 @@ NEXT_RECOMMENDED_ACTION:
 
 ```text
 requirements_analyst
+solution_architect
 designer
 developer
 auditor
@@ -1069,6 +1073,7 @@ UPDATED_AT:
 
 ```text
 requirements_analyst
+solution_architect
 designer
 developer
 auditor
@@ -1098,6 +1103,7 @@ handover
 ```text
 orchestrator
 requirements_analyst
+solution_architect
 designer
 developer
 auditor

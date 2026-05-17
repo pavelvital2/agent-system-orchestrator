@@ -14,7 +14,7 @@ CREATED_AT:
 <ISO-8601 timestamp>
 
 CREATED_BY:
-<orchestrator | requirements_analyst | designer | developer | auditor | tester | technical_writer | devops_setup_engineer | release_manager | project_owner>
+<orchestrator | requirements_analyst | solution_architect | designer | developer | auditor | tester | technical_writer | devops_setup_engineer | release_manager | project_owner>
 
 SOURCE_TASK:
 <TASK_ID | NONE>
@@ -23,7 +23,7 @@ SOURCE_RESULT:
 <RESULT_REF | NONE>
 
 TARGET_ROLE:
-<requirements_analyst | designer | developer | auditor | tester | technical_writer | devops_setup_engineer | release_manager | orchestrator | project_owner | none>
+<requirements_analyst | solution_architect | designer | developer | auditor | tester | technical_writer | devops_setup_engineer | release_manager | orchestrator | project_owner | none>
 
 PURPOSE:
 <bounded handoff purpose>
@@ -67,7 +67,7 @@ SUPERSEDED_BY:
 ## Rules
 
 - Only one active handoff may represent the same bounded next action.
-- Profile execution role values are `requirements_analyst`, `designer`, `developer`, `auditor`, `tester`, `technical_writer`, `devops_setup_engineer`, and `release_manager`.
+- Profile execution role values are `requirements_analyst`, `solution_architect`, `developer`, `auditor`, `tester`, `technical_writer`, `devops_setup_engineer`, and `release_manager`; `designer` is a deprecated alias for `solution_architect`.
 - `TARGET_ROLE` may also use control/routing pseudo-roles `orchestrator`, `project_owner`, and `none`.
 - `CREATED_BY` may identify a profile execution role, `orchestrator`, or `project_owner`; it must not use `none`.
 - `CREATED_AT` is required for every handoff.

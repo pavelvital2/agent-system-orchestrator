@@ -4,11 +4,11 @@
 
 This document defines the design-specific research dependency loop.
 
-The designer must not guess when factual evidence is missing.
+The solution architect must not guess when factual evidence is missing.
 
 ## When to use
 
-The designer must create a bounded research dependency when architecture,
+The solution architect must create a bounded research dependency when architecture,
 implementation plan, task decomposition, contracts, setup plan, launch plan, or
 project documentation cannot be completed safely without additional factual
 evidence that can be researched from allowed sources.
@@ -27,20 +27,20 @@ Examples that are not research dependencies:
 - owner business decision or product choice: return GAP;
 - missing credentials, inaccessible file, broken command, unavailable runtime:
   return blocked;
-- design preference that requires architecture judgment: keep within designer
+- design preference that requires architecture judgment: keep within solution_architect
   task and audit it.
 
 ## Required design route
 
 ```text
-designer identifies missing factual evidence
--> designer creates or requests TASK_KIND: research_dependency
+solution_architect identifies missing factual evidence
+-> solution_architect creates or requests TASK_KIND: research_dependency
 -> research executor returns RESULT and research output
 -> independent auditor reviews research
 -> audit pass and checkpoint if configured
 -> orchestrator dispatches TASK_KIND: design_continuation
--> designer continues bounded design task
--> designer pass routes to design audit
+-> solution_architect continues bounded design task
+-> solution_architect pass routes to design audit
 ```
 
 Audit fail, blocked, or gap from the research audit must not route to design
@@ -53,7 +53,7 @@ The research task packet must include:
 
 ```text
 TASK_KIND: research_dependency
-REQUESTED_BY_ROLE: designer
+REQUESTED_BY_ROLE: solution_architect
 REQUESTED_BY_TASK:
 RESEARCH_QUESTION_ID:
 RESEARCH_PURPOSE:
@@ -63,7 +63,7 @@ FORBIDDEN_SOURCES:
 EXPECTED_EVIDENCE:
 EXPECTED_OUTPUT:
 RETURN_TO_REQUESTER_AFTER_AUDIT_PASS: yes
-RETURN_TO_ROLE_AFTER_AUDIT_PASS: designer
+RETURN_TO_ROLE_AFTER_AUDIT_PASS: solution_architect
 RETURN_TASK_AFTER_AUDIT_PASS:
 AUDIT_REQUIREMENTS: mandatory
 ```
@@ -74,7 +74,7 @@ The continuation task must use:
 
 ```text
 TASK_KIND: design_continuation
-TARGET_ROLE: designer
+TARGET_ROLE: solution_architect
 REASONING_LEVEL.VALUE: xhigh
 ```
 

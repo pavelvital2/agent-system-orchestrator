@@ -30,7 +30,7 @@ INSTRUCTION_FOR_ORCHESTRATOR:
 ```text
 ACTION_ID:
 ACTION_TYPE: create_agent | route_result | update_state | wait_for_owner | correction | finalize | stop
-TARGET_ROLE: requirements_analyst | designer | developer | auditor | tester | technical_writer | devops_setup_engineer | release_manager | orchestrator | project_owner | none
+TARGET_ROLE: requirements_analyst | solution_architect | designer | developer | auditor | tester | technical_writer | devops_setup_engineer | release_manager | orchestrator | project_owner | none
 TASK_ID:
 TASK_PACKET:
 DEPENDENCY_STATUS: ready | blocked | completed | not_applicable
@@ -114,7 +114,8 @@ One instruction only.
 - `NEXT_ACTION.md` must contain exactly one next action.
 - It must not contain hidden subtasks.
 - It must not override governance authority, state transition rules, filesystem governance, or role instructions.
-- `requirements_analyst`, `designer`, `developer`, `auditor`, `tester`, `technical_writer`, `devops_setup_engineer`, and `release_manager` are profile execution roles for dispatchable agent work.
+- `requirements_analyst`, `solution_architect`, `developer`, `auditor`, `tester`, `technical_writer`, `devops_setup_engineer`, and `release_manager` are profile execution roles for dispatchable agent work.
+- `designer` is a deprecated alias for `solution_architect` and should appear only in legacy packets or runtime records.
 - `orchestrator`, `project_owner`, and `none` are control/routing pseudo-roles and must not be used as profile execution task types.
 - `ACTION_SEMANTIC: wait_for_owner` requires `ACTION_TYPE: wait_for_owner` and `TARGET_ROLE: project_owner`.
 - `ACTION_SEMANTIC: pause` is temporary and must not use `ACTION_TYPE: stop`.

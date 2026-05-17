@@ -232,7 +232,8 @@ Dispatch mode must verify:
 3. all mandatory task packet sections exist and are non-empty;
 4. enum fields use values allowed by `TASK_PACKET_TEMPLATE.md`;
 5. `TASK_STATUS` is `active`;
-6. `TASK_TYPE` and `TARGET_ROLE` match for profile execution tasks;
+6. `TASK_TYPE` and `TARGET_ROLE` match after role alias normalization for
+   profile execution tasks;
 7. `REQUIRED_DOCS` does not include `project-archive/` or deprecated documents;
 8. the file path is valid under filesystem governance.
 

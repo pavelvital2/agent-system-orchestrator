@@ -6,7 +6,9 @@ Design converts accepted requirements into bounded project documentation and exe
 
 ## Main role
 
-`agent-system/01_roles/DESIGNER.md`
+`agent-system/01_roles/SOLUTION_ARCHITECT.md`
+
+`designer` is a deprecated compatibility alias for `solution_architect`.
 
 ## Inputs
 

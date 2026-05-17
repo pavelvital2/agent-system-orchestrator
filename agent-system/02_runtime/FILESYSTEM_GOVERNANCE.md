@@ -823,7 +823,7 @@ agent-system/02_runtime/ACCEPTED_STATE_LOCKING.md
 
 Rules:
 
-- designer output is accepted only after design audit pass;
+- solution_architect output is accepted only after design audit pass;
 - developer output is accepted only after implementation audit pass;
 - tested behavior is accepted only after tester pass when testing is required;
 - technical writer output cannot redefine unverified implementation behavior;

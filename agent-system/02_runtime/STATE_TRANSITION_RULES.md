@@ -74,13 +74,13 @@ PROJECT_STATE.active_branches
 ```text
 profile_agent(pass, audit mandatory) -> auditor
 requirements_analyst(pass) -> auditor when audit mandatory
-designer(pass)          -> auditor
+solution_architect(pass) -> auditor
 developer(pass)         -> auditor
 tester(pass)            -> auditor when audit mandatory
 technical_writer(pass)  -> auditor when audit mandatory
 devops_setup_engineer(pass) -> auditor when audit mandatory
 release_manager(pass)   -> auditor when audit mandatory
-requirements_analyst(auditor pass) -> post-audit checkpoint gate, then designer or next requirements task according to NEXT_ACTION/TASK_REGISTRY
+requirements_analyst(auditor pass) -> post-audit checkpoint gate, then solution_architect or next requirements task according to NEXT_ACTION/TASK_REGISTRY
 auditor(pass, design)   -> post-audit checkpoint gate, then next audited implementation/correction task
 auditor(pass, research_dependency) -> post-audit checkpoint gate if required, then explicit requester continuation according to RETURN_TO_ROLE_AFTER_AUDIT_PASS and RETURN_TASK_AFTER_AUDIT_PASS
 auditor(pass, impl)     -> tester if testing required, else next governed task/finalization
@@ -101,6 +101,7 @@ For this rule, `profile_agent` covers these profile execution roles:
 
 ```text
 requirements_analyst
+solution_architect
 designer
 developer
 tester
@@ -117,9 +118,9 @@ the auditor returns `STATUS: pass`.
 
 ## Forbidden transitions
 
-- designer pass directly to developer;
+- solution_architect pass directly to developer;
 - developer pass directly to tester or technical writer;
-- requirements_analyst pass directly to designer, next requirements task, or
+- requirements_analyst pass directly to solution_architect, next requirements task, or
   another phase when audit is required;
 - devops_setup_engineer pass directly to run, launch, documentation, or another
   phase when audit is required;

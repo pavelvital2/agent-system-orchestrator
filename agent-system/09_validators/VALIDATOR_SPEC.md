@@ -156,6 +156,7 @@ enum:
 ```text
 orchestrator
 requirements_analyst
+solution_architect
 designer
 developer
 auditor
@@ -171,6 +172,7 @@ Validators that inspect profile execution task types must use:
 
 ```text
 requirements_analyst
+solution_architect
 designer
 developer
 auditor
@@ -179,6 +181,19 @@ technical_writer
 devops_setup_engineer
 release_manager
 ```
+
+Role alias migration:
+
+```yaml
+ROLE_ALIASES:
+  designer: solution_architect
+```
+
+`solution_architect` is the canonical design role. `designer` remains accepted
+only as a deprecated alias so old task packets and runtime records continue to
+validate with warnings. New templates and task packets must use
+`solution_architect`. The rename avoids confusing architecture/task
+decomposition responsibilities with UI/UX or graphic design.
 
 `orchestrator`, `project_owner`, and `none` are control/routing pseudo-roles.
 They are valid for orchestrator control flow and owner/terminal routing, but not

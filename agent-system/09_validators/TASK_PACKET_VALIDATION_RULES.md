@@ -116,9 +116,9 @@ project-archive/
 
 A task packet is invalid when it allows or requires:
 
-- designer pass directly to developer;
+- solution_architect pass directly to developer;
 - developer pass directly to tester or technical writer;
-- audit bypass after designer or developer work;
+- audit bypass after solution_architect or developer work;
 - audit fail to normal next task;
 - audit fail to Git checkpoint;
 - correction without a fresh bounded task where correction is required;
@@ -181,6 +181,7 @@ Profile execution `TASK_TYPE` values are limited to:
 
 ```text
 requirements_analyst
+solution_architect
 designer
 developer
 auditor
@@ -190,8 +191,20 @@ devops_setup_engineer
 release_manager
 ```
 
-For profile execution tasks, `TARGET_ROLE` must match `TASK_TYPE` unless the
-packet explicitly documents a governed exception.
+For profile execution tasks, `TARGET_ROLE` must match `TASK_TYPE` after role
+alias normalization unless the packet explicitly documents a governed
+exception.
+
+Role alias:
+
+```yaml
+ROLE_ALIASES:
+  designer: solution_architect
+```
+
+`designer` is deprecated but remains valid for old task packets. Validators
+must emit a warning and normalize it to `solution_architect`, not hard-fail the
+packet solely because the old role name is present.
 
 Control pseudo-roles are:
 
@@ -219,7 +232,7 @@ FAILURE_TYPE
 Invalid correction packets include:
 
 - missing source result or violation reference when one exists;
-- scope broader than the failed surface without designer approval;
+- scope broader than the failed surface without solution architect approval;
 - missing mandatory audit path;
 - repeated same failure without escalation path.
 

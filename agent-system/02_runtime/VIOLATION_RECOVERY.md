@@ -42,18 +42,18 @@ Before recovery/reformat routing, the orchestrator must log the invalid RESULT a
 
 | Violation | Recovery |
 |---|---|
-| Missing bootstrap input | `wait_for_owner`; no designer dispatch. |
+| Missing bootstrap input | `wait_for_owner`; no solution_architect dispatch. |
 | Missing runtime file | Create from valid template or freeze if template missing/invalid. |
 | Runtime schema violation | Enter correction; regenerate valid runtime state. |
 | Schema/template mismatch | Governance freeze until package docs align. |
 | Invalid transition | Enter correction; do not dispatch. |
 | Forbidden file change | Log RESULT; mark workflow violation; route correction; do not accept. |
-| Deprecated doc in REQUIRED_DOCS | Task packet invalid; route to designer/correction. |
+| Deprecated doc in REQUIRED_DOCS | Task packet invalid; route to solution_architect/correction. |
 | Superseded task selected | Stop dispatch; route to replacing task or correction. |
 | Agent RESULT format invalid | Log deterministic `violation` entry; do not route by status; request governed correction/reformat. |
 | Agent STATUS gap | Register GAP; block dependent branch; route by GAP type. |
 | Agent STATUS blocked | Route by blocker type; do not continue dependent branch. |
-| Auditor fail | Checked result not accepted; correction to checked role/designer. |
+| Auditor fail | Checked result not accepted; correction to checked role/solution_architect. |
 | Audit false pass after checkpoint preflight | Record `AUDIT_FALSE_PASS_DETECTED`; create correction input with `FAILURE_TYPE: audit_miss`; do not commit or push. |
 | wrong_remote_push | Enter `INCIDENT_RECOVERY`; freeze normal dispatch/checkpoint/commit/push; require owner decision for remote-side remediation and full correction task packet for file changes. |
 | wrong_branch_push | Enter `INCIDENT_RECOVERY`; freeze normal dispatch/checkpoint/commit/push; require owner decision for branch-side remediation and full correction task packet for file changes. |
@@ -135,19 +135,19 @@ When an incident is active:
 
 - GAP is identified by profile agent RESULT only.
 - Orchestrator records GAP and blocks dependent branch.
-- Owner/designer answer does not automatically close GAP if source-of-truth must change.
+- Owner/solution_architect answer does not automatically close GAP if source-of-truth must change.
 - GAP closes only when resolution is reflected in accepted docs/tasks/runtime state.
 
 ## Blocker routing
 
 ```text
 business decision missing       -> project_owner
-functional ambiguity            -> project_owner or designer
-technical/runtime design issue  -> designer
+functional ambiguity            -> project_owner or solution_architect
+technical/runtime design issue  -> solution_architect
 implementation defect           -> developer correction task
 missing package instruction     -> project_owner or package-governance correction
-missing project doc/task packet -> designer
-missing verified behavior       -> tester or designer through orchestrator
+missing project doc/task packet -> solution_architect
+missing verified behavior       -> tester or solution_architect through orchestrator
 ```
 
 ## Correction task rules
@@ -155,5 +155,5 @@ missing verified behavior       -> tester or designer through orchestrator
 - Correction is one bounded task.
 - Correction uses a fresh agent.
 - Correction result follows normal audit/testing/doc path.
-- Correction scope must not expand beyond the failure unless designer creates a new task.
-- Repeated same-class failure escalates to designer or owner routing.
+- Correction scope must not expand beyond the failure unless solution_architect creates a new task.
+- Repeated same-class failure escalates to solution_architect or owner routing.

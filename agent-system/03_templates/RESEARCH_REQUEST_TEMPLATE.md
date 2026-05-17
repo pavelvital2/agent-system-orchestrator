@@ -37,7 +37,7 @@ research_dependency
 ## TASK_TYPE
 
 ```text
-requirements_analyst | designer | developer | auditor | tester | technical_writer | devops_setup_engineer | release_manager
+requirements_analyst | solution_architect | designer | developer | auditor | tester | technical_writer | devops_setup_engineer | release_manager
 ```
 
 ## TARGET_ROLE
@@ -58,7 +58,7 @@ Research dependency tasks must not use `low`.
 ## REQUESTED_BY_ROLE
 
 ```text
-<requirements_analyst | designer | developer | auditor | tester | technical_writer | devops_setup_engineer | release_manager>
+<requirements_analyst | solution_architect | designer | developer | auditor | tester | technical_writer | devops_setup_engineer | release_manager>
 ```
 
 ## REQUESTED_BY_TASK

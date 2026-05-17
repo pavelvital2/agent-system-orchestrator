@@ -77,9 +77,10 @@ agent-system/07_lifecycle/DESIGN_STAGE.md
 ```
 
 The bootstrap, lifecycle, requirements, and design documents are inconsistent
-if they make designer the only valid first profile agent, omit the
-requirements_analyst route for incomplete, ambiguous, or uncertain owner input,
-or allow direct designer routing without sufficiently structured owner input.
+if they make solution_architect (or deprecated `designer`) the only valid first
+profile agent, omit the requirements_analyst route for incomplete, ambiguous,
+or uncertain owner input, or allow direct solution_architect routing without
+sufficiently structured owner input.
 
 Bootstrap task packet path validation must cross-check
 `FILESYSTEM_GOVERNANCE.md`, `STATE_TRANSITION_RULES.md`,
@@ -114,6 +115,7 @@ resolve to existing role files and must include:
 
 ```text
 requirements_analyst
+solution_architect
 designer
 developer
 tester
@@ -135,6 +137,7 @@ current profile execution role set is:
 
 ```text
 requirements_analyst
+solution_architect
 designer
 developer
 auditor
@@ -143,6 +146,9 @@ technical_writer
 devops_setup_engineer
 release_manager
 ```
+
+`designer` is a deprecated alias for `solution_architect`; it must resolve to
+`agent-system/01_roles/DESIGNER.md`, which is only a compatibility wrapper.
 
 For mandatory-audit pass routing, all non-auditor profile execution roles in
 that set must route to auditor before accepted state, next phase, terminal
@@ -284,7 +290,7 @@ Git authority validation must cross-check:
 ```text
 agent-system/02_runtime/POST_AUDIT_GIT_CHECKPOINT.md
 agent-system/01_roles/REQUIREMENTS_ANALYST.md
-agent-system/01_roles/DESIGNER.md
+agent-system/01_roles/SOLUTION_ARCHITECT.md
 agent-system/01_roles/DEVELOPER.md
 agent-system/01_roles/AUDITOR.md
 agent-system/01_roles/TESTER.md
@@ -334,7 +340,8 @@ such as `REQUESTER`, must not include standalone RESULT-only fields such as
 `project-runtime/bootstrap/TASK_BOOTSTRAP_<TARGET_ROLE>_001.md`, and must map
 bootstrap role documents explicitly to
 `agent-system/01_roles/REQUIREMENTS_ANALYST.md` and
-`agent-system/01_roles/DESIGNER.md`.
+`agent-system/01_roles/SOLUTION_ARCHITECT.md`; `DESIGNER.md` remains only as a
+deprecated alias wrapper for old task packets.
 
 Runtime schema parity must compare `RUNTIME_STATE_SCHEMA.md`,
 `CURRENT_GATE_TEMPLATE.md`, `NEXT_ACTION_TEMPLATE.md`,
