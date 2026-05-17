@@ -53,6 +53,10 @@ A Git checkpoint is valid only when all conditions are true:
   `AUDIT_STATUS`;
 - `CHECKPOINT_PREFLIGHT_STATUS: passed` is recorded with a bounded preflight
   reference.
+- auditor evidence contains passing `CHANGED_FILES_SCOPE_STATUS`,
+  `TASK_PACKET_SCHEMA_STATUS`, `SECRET_EXPOSURE_STATUS`,
+  `REPOSITORY_IDENTITY_STATUS`, `FORBIDDEN_PATH_STATUS`,
+  `RUNTIME_MUTATION_STATUS`, and `REASONING_LEVEL_COMPLIANCE` where applicable.
 
 ## Forbidden checkpoint attempts
 
@@ -78,6 +82,8 @@ Checkpoint is forbidden after:
 - `SECRET_SCAN_STATUS: potential_secret_exposure`;
 - missing checkpoint eligibility receipt for a local-only or commit-and-push
   checkpoint.
+- unresolved `AUDIT_FALSE_PASS_DETECTED`;
+- pending correction with `FAILURE_TYPE: audit_miss`.
 
 ## Required checkpoint preflight
 
@@ -92,6 +98,17 @@ these checks in order:
 5. runtime_schema_check
 6. secret_scan_check
 ```
+
+Preflight evidence must record these status labels:
+
+```text
+CHANGED_FILES_SCOPE_STATUS: not_checked | passed | failed | blocked
+TASK_PACKET_SCHEMA_STATUS: not_checked | passed | failed | blocked | not_applicable
+SECRET_EXPOSURE_STATUS: not_checked | passed | potential_secret_exposure | blocked
+```
+
+Any `failed`, `blocked`, `not_checked` after a required check, or
+`potential_secret_exposure` status blocks checkpoint before `git add`.
 
 The preflight may be implemented by:
 
@@ -133,6 +150,19 @@ Checkpoint preflight passes only when all of the following are true:
 - any task schema failure is reported as `invalid_task_packet_schema`;
 - runtime schema contains mandatory checkpoint distinction fields;
 - secret scan returns no `potential_secret_exposure`.
+
+If checkpoint preflight detects a blocker after auditor `STATUS: pass` and the
+blocker belongs to changed file scope, task packet schema, repository identity,
+forbidden path, runtime mutation, required evidence, secret exposure, or
+reasoning-level compliance, the orchestrator must record:
+
+```text
+AUDIT_FALSE_PASS_DETECTED
+FAILURE_TYPE: audit_miss
+```
+
+This condition blocks staging, commit, push, and normal next-task dispatch until
+a bounded correction passes its own audit and checkpoint preflight.
 
 ## Allowed and forbidden file checks
 
@@ -235,6 +265,11 @@ If checkpoint validation fails:
 - do not push;
 - log the validation failure without secret values;
 - route to correction or owner handling according to governance.
+
+If checkpoint validation fails because of `AUDIT_FALSE_PASS_DETECTED`, the
+correction input must use `FAILURE_TYPE: audit_miss`, reference the audit and
+preflight evidence, and must not commit or push as part of the failed
+checkpoint attempt.
 
 If commit fails:
 

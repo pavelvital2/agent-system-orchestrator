@@ -25,6 +25,18 @@ this document and report the same blocker class:
 invalid_task_packet_schema
 ```
 
+## Required status values
+
+Task packet schema evidence must use:
+
+```text
+TASK_PACKET_SCHEMA_STATUS: not_checked | passed | failed | blocked | not_applicable
+```
+
+`not_checked` is valid only before a check is required. Once a changed
+task-like artifact is in audit or checkpoint scope, `not_checked`, `failed`,
+or `blocked` forbids auditor pass, staging, commit, and push.
+
 ## Packet classes
 
 ### Dispatchable task packet
@@ -330,3 +342,26 @@ Design-audit downstream artifact validation may use the same checkpoint mode
 against each changed task-like artifact before auditor pass. The audit evidence
 must record which changed artifacts were validated and whether each was a
 dispatchable `TASK_PACKET` or non-dispatchable `TASK_PROPOSAL`.
+
+## Audit evidence for changed task packets
+
+When changed files include `TASK_*.md`, `TASK_PROPOSAL*.md`, or
+`*_TASK_PACKET*.md`, auditor evidence must include:
+
+```text
+VALIDATED_TASK_PACKETS:
+- path: <changed path>
+  classification: TASK_PACKET | TASK_PROPOSAL | invalid
+  TASK_PACKET_SCHEMA_STATUS: passed | failed | blocked
+  validator_or_manual_rule_ref: <command or rule reference>
+  dispatchable: yes | no
+```
+
+Every changed dispatchable `TASK_PACKET` entry must have
+`TASK_PACKET_SCHEMA_STATUS: passed` before audit pass or checkpoint
+eligibility can be accepted. Any invalid, ambiguous, missing, or unlisted
+changed task-like artifact must be reported as:
+
+```text
+invalid_task_packet_schema
+```

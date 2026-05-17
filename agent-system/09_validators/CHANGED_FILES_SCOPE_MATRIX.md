@@ -24,6 +24,18 @@ AUDIT_STATUS
 CHECKPOINT_ELIGIBILITY_STATUS
 ```
 
+## Required status values
+
+Changed-file scope evidence must use:
+
+```text
+CHANGED_FILES_SCOPE_STATUS: not_checked | passed | failed | blocked
+```
+
+`not_checked` is valid only before scope validation is required. Once audit or
+checkpoint validation is required, `not_checked`, `failed`, or `blocked`
+forbids auditor pass, staging, commit, and push.
+
 ## Global rules
 
 - Every changed file must be allowed by the active task packet.
@@ -62,7 +74,7 @@ CHECKPOINT_ELIGIBILITY_STATUS
 
 ## Invalid scope conditions
 
-Any of the following must set `FILE_SCOPE_CHECK_STATUS: failed` and block
+Any of the following must set `CHANGED_FILES_SCOPE_STATUS: failed` and block
 checkpoint:
 
 - changed file absent from `ALLOWED_FILE_CHANGES`;
@@ -74,7 +86,16 @@ checkpoint:
 - changed file is a secret or sensitive artifact under `SECRET_SCAN_RULES.md`;
 - changed task packet is dispatchable but schema-invalid.
 
+Legacy receipts may still display `FILE_SCOPE_CHECK_STATUS`, but current audit
+and checkpoint evidence must use `CHANGED_FILES_SCOPE_STATUS`.
+
 ## Evidence rules
 
 File scope evidence may list paths and rule identifiers. It must not include
 secret values or file contents from sensitive artifacts.
+
+If checkpoint preflight finds a changed-file scope blocker after auditor
+`STATUS: pass`, and the auditor was required to validate changed-file scope,
+the orchestrator must record `AUDIT_FALSE_PASS_DETECTED` with
+`FAILURE_TYPE: audit_miss` and route correction without staging, commit, or
+push.

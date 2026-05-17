@@ -17,6 +17,17 @@ SECRET_SCAN_STATUS: not_checked | passed | potential_secret_exposure | blocked
 
 `potential_secret_exposure` blocks `git add`, `git commit`, and `git push`.
 
+Audit and checkpoint evidence must also expose the checkpoint-facing alias:
+
+```text
+SECRET_EXPOSURE_STATUS: not_checked | passed | potential_secret_exposure | blocked
+```
+
+`SECRET_EXPOSURE_STATUS` has the same blocking semantics as
+`SECRET_SCAN_STATUS`. `not_checked` is valid only before secret scanning is
+required; after audit or checkpoint scope includes changed files, evidence, or
+commit text, `not_checked` blocks auditor pass and checkpoint eligibility.
+
 ## Forbidden artifact classes
 
 The following path or content classes must be treated as
@@ -121,6 +132,9 @@ When secret scan finds `potential_secret_exposure`:
 - write only the affected path, field, and redacted risk class to checkpoint
   evidence;
 - route to governed correction or owner handling.
+- if the finding appears after auditor `STATUS: pass` for work the auditor was
+  required to inspect, record `AUDIT_FALSE_PASS_DETECTED` with
+  `FAILURE_TYPE: audit_miss`.
 
 ## Scope
 

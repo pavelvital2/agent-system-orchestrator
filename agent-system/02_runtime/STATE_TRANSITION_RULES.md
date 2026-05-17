@@ -84,6 +84,7 @@ requirements_analyst(auditor pass) -> post-audit checkpoint gate, then designer 
 auditor(pass, design)   -> post-audit checkpoint gate, then next audited implementation/correction task
 auditor(pass, research_dependency) -> post-audit checkpoint gate if required, then explicit requester continuation according to RETURN_TO_ROLE_AFTER_AUDIT_PASS and RETURN_TASK_AFTER_AUDIT_PASS
 auditor(pass, impl)     -> tester if testing required, else next governed task/finalization
+auditor(pass, checkpoint preflight detects audit miss) -> correction with FAILURE_TYPE audit_miss; no commit, no push, no normal next task
 devops_setup_engineer(auditor pass) -> post-audit checkpoint gate, then run, launch, documentation, or correction according to gate
 release_manager(auditor pass) -> post-audit checkpoint gate, then final_acceptance, handover, completed, or correction according to gate
 auditor(fail)           -> correction for checked profile role; no commit, no push, no next phase
@@ -147,6 +148,8 @@ the auditor returns `STATUS: pass`.
 - post-audit Git checkpoint before required auditor pass;
 - post-audit Git checkpoint that stages files outside the audited task allowed scope;
 - post-audit Git checkpoint that stages suspected secret or credential material;
+- post-audit Git checkpoint after `AUDIT_FALSE_PASS_DETECTED` or unresolved
+  `FAILURE_TYPE: audit_miss`;
 - post-audit Git checkpoint after reasoning-level mismatch or invalid dispatch
   where actual spawned reasoning is below required;
 - profile-agent dispatch before workspace identity validation passes;
@@ -285,6 +288,18 @@ When secret or credential risk is detected:
 - staging, commit, and push are forbidden;
 - logs and RESULT summaries must not include secret values;
 - routing must use governed correction or owner handling.
+
+When checkpoint preflight detects a blocker after auditor `STATUS: pass` for a
+check the auditor was required to perform:
+
+- record `AUDIT_FALSE_PASS_DETECTED`;
+- classify the correction input as `FAILURE_TYPE: audit_miss`;
+- staging, commit, and push are forbidden;
+- normal dependent dispatch and requester continuation are forbidden;
+- route only to governed correction, blocked/GAP handling, or genuine owner
+  handling as permitted by the full runtime tuple;
+- file-changing correction requires a full correction task packet and a later
+  independent audit pass before checkpoint can be attempted again.
 
 ## Workspace identity and repository lock routing
 
@@ -469,6 +484,8 @@ Enter correction if any of the following are detected:
 - `WORKSPACE_TYPE: test_fixture` with `PUSH_ALLOWED: true`;
 - checkpoint push attempted after commit failure;
 - checkpoint record or event containing unredacted secret values.
+- `AUDIT_FALSE_PASS_DETECTED` without blocked dependent work and a governed
+  `FAILURE_TYPE: audit_miss` correction route;
 
 The validator layer must also catch the concrete invalid states listed in:
 

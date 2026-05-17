@@ -46,6 +46,59 @@
   transcript;
 - зафиксировать pass, fail, blocked или gap.
 
+## Mandatory audit evidence checks
+
+Before returning `STATUS: pass`, the auditor must explicitly check and record
+the following statuses in `EVIDENCE` or `SCOPE_VERIFICATION`:
+
+```text
+CHANGED_FILES_SCOPE_STATUS: passed | failed | blocked
+TASK_PACKET_SCHEMA_STATUS: passed | failed | blocked | not_applicable
+REPOSITORY_IDENTITY_STATUS: passed | failed | blocked | not_applicable
+FORBIDDEN_PATH_STATUS: passed | failed | blocked
+RUNTIME_MUTATION_STATUS: passed | failed | blocked
+EVIDENCE_STATUS: passed | failed | blocked
+SECRET_EXPOSURE_STATUS: passed | potential_secret_exposure | blocked
+REASONING_LEVEL_COMPLIANCE: passed | failed | blocked
+```
+
+The audit check must cover:
+
+- changed files scope against the checked task packet `ALLOWED_FILE_CHANGES`,
+  `FORBIDDEN_FILE_CHANGES`, `FILESYSTEM_GOVERNANCE`, and
+  `CHANGED_FILES_SCOPE_MATRIX.md`;
+- task packet schema validation for changed task-like artifacts;
+- repository identity and repository lock evidence when the result is
+  checkpointable or package-governance work;
+- forbidden paths, including unauthorized `project-runtime/`, `project-input/`,
+  `project-archive/`, `project-docs/`, and unlisted `agent-system/` changes;
+- runtime mutation by any non-orchestrator profile agent;
+- required evidence from the checked result, including commands that were run
+  or a bounded reason when a required command could not be run;
+- secret exposure risk in changed files, RESULT summaries, logs, and evidence
+  without printing or copying suspected secret values;
+- reasoning-level execution compliance from task packet, role default,
+  gate-required floor, and spawn/handoff/orchestrator evidence.
+
+If any required status is `failed`, `blocked`,
+`potential_secret_exposure`, missing, unknown, or contradicted by available
+evidence, auditor `STATUS: pass` is forbidden.
+
+When any changed file matches `TASK_*.md`, `TASK_PROPOSAL*.md`, or
+`*_TASK_PACKET*.md`, the auditor must include a bounded
+`VALIDATED_TASK_PACKETS` evidence list. Each entry must identify:
+
+```text
+path
+classification: TASK_PACKET | TASK_PROPOSAL | invalid
+TASK_PACKET_SCHEMA_STATUS
+validator_or_manual_rule_ref
+dispatchable: yes | no
+```
+
+For changed `TASK_*.md` files, the absence of this list makes auditor
+`STATUS: pass` invalid.
+
 ---
 
 ## Аудитор не делает
@@ -114,6 +167,14 @@ and the auditor must return `STATUS: blocked`.
 Аудитор проверяет:
 
 - изменены ли только разрешённые файлы;
+- `CHANGED_FILES_SCOPE_STATUS` is `passed` for the checked changed-file set;
+- no changed file matches forbidden task-packet paths or forbidden governance
+  paths;
+- no non-orchestrator profile agent mutated `project-runtime/`;
+- repository identity and repository lock evidence is present when the result
+  is expected to proceed to post-audit checkpoint;
+- `SECRET_EXPOSURE_STATUS` is not `potential_secret_exposure`;
+- `TASK_PACKET_SCHEMA_STATUS` is `passed` or `not_applicable`;
 - реализована ли только поставленная задача;
 - не нарушена ли существующая логика;
 - приложены ли evidence и verify commands;
@@ -158,6 +219,8 @@ STATUS: fail
 - actual spawned reasoning level below the resolved required level.
 - downstream dispatchable task packets are invalid, ambiguous, unclassified, or
   selected from a non-dispatchable `TASK_PROPOSAL`.
+- required audit evidence status is missing, failed, blocked, contradicted, or
+  reports `SECRET_EXPOSURE_STATUS: potential_secret_exposure`.
 
 В `NEXT_RECOMMENDED_ACTION` аудитор должен рекомендовать, какому агенту нужно вернуть задачу на исправление через оркестратора.
 
@@ -178,7 +241,12 @@ STATUS: pass
 только если проверяемый результат соответствует задаче, scope и обязательным
 правилам, including reasoning-level execution compliance and downstream task
 artifact validation when the checked result creates or changes future task
-artifacts.
+artifacts, and every mandatory audit evidence status is present and passing.
+
+Auditor pass is necessary but not sufficient for commit or push. If a later
+checkpoint preflight finds a blocker that this audit was required to catch, the
+orchestrator must treat the prior pass as `AUDIT_FALSE_PASS_DETECTED` and route
+a correction with `FAILURE_TYPE: audit_miss`.
 
 ---
 

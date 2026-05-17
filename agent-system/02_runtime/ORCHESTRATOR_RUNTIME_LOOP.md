@@ -271,6 +271,28 @@ allowed only after auditor `STATUS: pass`.
 
 - route first to `POST_AUDIT_GIT_CHECKPOINT.md`;
 - treat auditor pass as necessary but not sufficient for commit or push;
+- verify the auditor RESULT includes explicit passing evidence statuses for
+  changed files scope, task packet schema, repository identity, forbidden
+  paths, runtime mutation, required evidence, secret exposure, and
+  reasoning-level compliance;
+- require these audit evidence labels before accepting auditor pass:
+
+```text
+CHANGED_FILES_SCOPE_STATUS
+TASK_PACKET_SCHEMA_STATUS
+REPOSITORY_IDENTITY_STATUS
+FORBIDDEN_PATH_STATUS
+RUNTIME_MUTATION_STATUS
+EVIDENCE_STATUS
+SECRET_EXPOSURE_STATUS
+REASONING_LEVEL_COMPLIANCE
+```
+
+- when changed task-like files include `TASK_*.md`, `TASK_PROPOSAL*.md`, or
+  `*_TASK_PACKET*.md`, require `VALIDATED_TASK_PACKETS` evidence listing each
+  validated file, classification, and `TASK_PACKET_SCHEMA_STATUS`;
+- treat a missing, failed, blocked, unknown, contradicted, or
+  `potential_secret_exposure` audit status as invalid audit acceptance;
 - before accepting design output that created or changed downstream task-like
   artifacts, verify the audit includes downstream task validation evidence for
   changed `TASK_*.md`, `TASK_PROPOSAL*.md`, and `*_TASK_PACKET*.md` files;
@@ -286,6 +308,21 @@ allowed only after auditor `STATUS: pass`.
 - record branch, commit hash, commit status, push status, push remote/branch,
   `LAST_PUSH_TARGET_STATUS`, `PROJECT_CHECKPOINT_STATUS`, and accepted files;
 - route to the next governed task only after successful checkpoint completion.
+
+If checkpoint preflight finds a blocker after auditor `STATUS: pass` and the
+blocker belongs to a check the auditor was required to perform, the
+orchestrator must record:
+
+```text
+AUDIT_FALSE_PASS_DETECTED
+FAILURE_TYPE: audit_miss
+```
+
+In that case staging, commit, push, and normal next-task dispatch are
+forbidden. The orchestrator must route only to governed correction, blocked
+handling, GAP handling, or genuine owner handling as permitted by the runtime
+tuple. File-changing correction for `audit_miss` requires a full correction task
+packet and its own independent audit before checkpoint can be attempted again.
 
 If the audited task has `TASK_KIND: research_dependency` and
 `RETURN_TO_REQUESTER_AFTER_AUDIT_PASS: yes`, the next governed task after audit
@@ -495,16 +532,28 @@ push, the orchestrator must validate in this order:
     `TASK_PROPOSAL`; every changed dispatchable downstream `TASK_*.md` file
     passes task packet schema validation before auditor pass is accepted; and
     non-dispatchable proposals are not selected by `NEXT_ACTION.TASK_PACKET`;
-24. before checkpoint, commit, or push, deterministic checkpoint preflight has
+24. before accepting auditor pass, the auditor RESULT includes explicit
+    evidence statuses for changed file scope, task packet schema, repository
+    identity, forbidden paths, runtime mutation, required evidence, secret
+    exposure, and reasoning-level compliance;
+25. when changed task-like files include `TASK_*.md`,
+    `TASK_PROPOSAL*.md`, or `*_TASK_PACKET*.md`, the auditor RESULT lists
+    `VALIDATED_TASK_PACKETS` with each path, classification, dispatchability,
+    and `TASK_PACKET_SCHEMA_STATUS`;
+26. before checkpoint, commit, or push, deterministic checkpoint preflight has
     run and produced `CHECKPOINT_ELIGIBILITY_STATUS: eligible` in a receipt
     based on `CHECKPOINT_ELIGIBILITY_TEMPLATE.md`;
-25. checkpoint preflight covers workspace identity, Git target, changed file
+27. checkpoint preflight covers workspace identity, Git target, changed file
     scope, task packet schema, runtime schema, and secret/sensitive artifact
     scan;
-26. checkpoint preflight validates changed dispatchable task packets and
+28. checkpoint preflight validates changed dispatchable task packets and
     non-dispatchable `TASK_PROPOSAL` files before `git add`; any
     `invalid_task_packet_schema` result blocks staging, commit, and push;
-27. requested action is valid under governance-freeze rules.
+29. if checkpoint preflight detects a blocker after auditor pass for a check
+    the auditor was required to perform, the route records
+    `AUDIT_FALSE_PASS_DETECTED` with `FAILURE_TYPE: audit_miss` and forbids
+    staging, commit, push, and normal next-task dispatch;
+30. requested action is valid under governance-freeze rules.
 
 If any validation fails, dispatch is forbidden. If the failure is found during
 checkpoint preflight, staging, commit, and push are forbidden.

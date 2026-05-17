@@ -169,3 +169,37 @@ alias for older records, but profile agents must emit
 Research `RECOMMENDED_NEXT_ACTION` is also advisory. It does not replace
 `NEXT_RECOMMENDED_ACTION` and does not authorize requester return before audit
 pass.
+
+## Audit evidence labels
+
+Auditor RESULTs must keep the required top-level fields unchanged. Mandatory
+audit checks are recorded inside `EVIDENCE` or `SCOPE_VERIFICATION` using these
+labels:
+
+```text
+CHANGED_FILES_SCOPE_STATUS
+TASK_PACKET_SCHEMA_STATUS
+REPOSITORY_IDENTITY_STATUS
+FORBIDDEN_PATH_STATUS
+RUNTIME_MUTATION_STATUS
+EVIDENCE_STATUS
+SECRET_EXPOSURE_STATUS
+REASONING_LEVEL_COMPLIANCE
+VALIDATED_TASK_PACKETS
+```
+
+When changed files include `TASK_*.md`, `TASK_PROPOSAL*.md`, or
+`*_TASK_PACKET*.md`, `VALIDATED_TASK_PACKETS` must list each changed
+task-like file with its classification and schema status.
+
+When checkpoint preflight detects a blocker after auditor `STATUS: pass` for a
+check the auditor was required to perform, the orchestrator records:
+
+```text
+AUDIT_FALSE_PASS_DETECTED
+FAILURE_TYPE: audit_miss
+```
+
+The resulting correction uses normal RESULT fields and must not authorize
+commit or push until the correction passes its own audit and checkpoint
+eligibility preflight.

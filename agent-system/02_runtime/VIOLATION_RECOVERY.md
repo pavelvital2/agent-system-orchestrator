@@ -30,7 +30,7 @@ gap
 
 `violation` is not a valid profile-agent RESULT `STATUS`.
 
-`violation` is an orchestrator-derived recovery/logging category for governance, workflow, filesystem, runtime-state, forbidden file change, or formally invalid RESULT handling.
+`violation` is an orchestrator-derived recovery/logging category for governance, workflow, filesystem, runtime-state, forbidden file change, audit false pass, or formally invalid RESULT handling.
 
 When a RESULT is formally invalid, including a missing mandatory field or a `STATUS` outside the profile-agent enum, the orchestrator must not route by RESULT `STATUS`.
 
@@ -52,9 +52,40 @@ Before recovery/reformat routing, the orchestrator must log the invalid RESULT a
 | Agent STATUS gap | Register GAP; block dependent branch; route by GAP type. |
 | Agent STATUS blocked | Route by blocker type; do not continue dependent branch. |
 | Auditor fail | Checked result not accepted; correction to checked role/designer. |
+| Audit false pass after checkpoint preflight | Record `AUDIT_FALSE_PASS_DETECTED`; create correction input with `FAILURE_TYPE: audit_miss`; do not commit or push. |
 | Tester fail | Developer correction task; audit again after developer pass. |
 | Finalization invariant failure | Stay out of completed; route correction. |
 | Manual intervention | Freeze; reread all files; validate state tuple; regenerate NEXT_ACTION. |
+
+## Audit false pass recovery
+
+An audit false pass occurs when an auditor returned `STATUS: pass`, but
+checkpoint preflight or another deterministic governance check finds a blocker
+that the auditor was required to validate.
+
+The orchestrator must record a bounded event:
+
+```text
+AUDIT_FALSE_PASS_DETECTED
+FAILURE_TYPE: audit_miss
+```
+
+The event must reference the checked task, checked RESULT, audit RESULT,
+preflight or validator reference, blocker class, and affected paths without
+printing secret values.
+
+Recovery rules:
+
+- do not stage additional files;
+- do not commit;
+- do not push;
+- do not route normal dependent work as ready;
+- set dependent work to blocked until correction passes;
+- route to a bounded correction task with `FAILURE_TYPE: audit_miss`;
+- if the correction changes files, `TASK_PACKET: NONE` is forbidden and a full
+  correction task packet is required;
+- the correction result must pass an independent audit and checkpoint
+  eligibility preflight before commit or push can be attempted.
 
 ## GAP recovery
 
