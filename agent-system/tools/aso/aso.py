@@ -87,9 +87,14 @@ def build_parser() -> argparse.ArgumentParser:
     _add_root_argument(verify_parser)
     verify_parser.add_argument(
         "--archive",
-        required=False,
+        required=True,
         metavar="PATH",
         help="Archive to inspect (.zip, .tgz, .tar.gz, or .tar).",
+    )
+    verify_parser.add_argument(
+        "--json-out",
+        metavar="PATH",
+        help="Write the archive verification report JSON to this explicit path.",
     )
     verify_parser.set_defaults(handler=archive_verify.run)
 
