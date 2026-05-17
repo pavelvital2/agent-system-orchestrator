@@ -47,7 +47,7 @@ def build_parser() -> argparse.ArgumentParser:
     status_parser.add_argument(
         "--json-out",
         metavar="PATH",
-        help="Future read-only report output path; not implemented in this scaffold.",
+        help="Write the status report JSON to this explicit path.",
     )
     status_parser.set_defaults(handler=status.run)
 
