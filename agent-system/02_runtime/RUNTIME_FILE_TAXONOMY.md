@@ -175,6 +175,21 @@ project-runtime/WORKSPACE_IDENTITY.md
 project-runtime/REPOSITORY_LOCK.md
 ```
 
+`project-runtime/state/` is reserved for the future canonical JSON runtime
+model documented in
+`agent-system/02_runtime/CANONICAL_JSON_STATE_PREPARATION.md`.
+The proposed future files are:
+
+```text
+project-runtime/state/state.json
+project-runtime/state/events.jsonl
+project-runtime/state/schema.json
+```
+
+They are not required by the current Markdown-compatible v0 runtime. A missing
+`project-runtime/state/` directory is not a validation error until a separate
+accepted migration activates canonical JSON state for the workspace.
+
 This taxonomy is a preferred layout for new runtime artifacts, not permission
 to delete, rewrite, or relocate historical execution evidence.
 

@@ -19,6 +19,7 @@ Runtime state validation must also comply with:
 ```text
 agent-system/02_runtime/GOVERNANCE_AUTHORITY.md
 agent-system/02_runtime/STATE_TRANSITION_RULES.md
+agent-system/02_runtime/CANONICAL_JSON_STATE_PREPARATION.md
 agent-system/02_runtime/REQUESTER_RETURN_PROTOCOL.md
 agent-system/02_runtime/VIOLATION_RECOVERY.md
 agent-system/02_runtime/ACCEPTED_STATE_LOCKING.md
@@ -43,6 +44,17 @@ templates. The Markdown files remain human-readable runtime records; validators
 may validate an equivalent YAML or JSON object that preserves the same fields.
 Executable parsing or rendering support is future/optional unless separately
 implemented by an accepted package task.
+
+Future canonical JSON runtime state is specified in:
+
+```text
+agent-system/02_runtime/CANONICAL_JSON_STATE_PREPARATION.md
+```
+
+That document proposes future files under `project-runtime/state/`:
+`state.json`, `events.jsonl`, and `schema.json`. They are not required in v0.
+Until a separate accepted migration activates canonical JSON state, the
+Markdown runtime files remain authoritative and compatible.
 
 For v2.0.0 workspace identity hardening, the Markdown schema and templates are
 the controlling source for mandatory identity and checkpoint fields. A stale

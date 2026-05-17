@@ -36,6 +36,7 @@ agent-system/02_runtime/VIOLATION_RECOVERY.md
 agent-system/02_runtime/ACCEPTED_STATE_LOCKING.md
 agent-system/02_runtime/FILESYSTEM_GOVERNANCE.md
 agent-system/02_runtime/PROFILE_AGENT_LIFECYCLE.md
+agent-system/02_runtime/CANONICAL_JSON_STATE_PREPARATION.md
 agent-system/03_templates/AGENT_RESULT_TEMPLATE.md
 agent-system/03_templates/TASK_PACKET_TEMPLATE.md
 agent-system/04_state/RUNTIME_STATE_SCHEMA.md
@@ -105,6 +106,31 @@ When both forms exist:
 
 The sidecars are therefore validation specifications, not a requirement that
 the current package already contains executable validation tooling.
+
+## Canonical JSON state migration validation
+
+Future canonical JSON runtime state is prepared in:
+
+```text
+agent-system/02_runtime/CANONICAL_JSON_STATE_PREPARATION.md
+```
+
+Current v0 validation remains Markdown-compatible. Missing future files under
+`project-runtime/state/` must not fail validation unless a separate accepted
+migration task activates them for the workspace.
+
+When canonical JSON state is later activated, validators must enforce the
+authority model in this order:
+
+```text
+state.json   = machine source of truth
+events.jsonl = append-only event history
+*.md         = generated/readable views
+```
+
+Before activation, validators may compare generated or experimental JSON
+snapshots against Markdown, but Markdown remains authoritative and drift must be
+reported as a compatibility issue, not silently corrected.
 
 ## Validation points
 

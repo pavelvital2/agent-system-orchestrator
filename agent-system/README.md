@@ -81,6 +81,7 @@ Key rules cover:
 - allowed orchestrator actions;
 - action/state semantics;
 - state transitions;
+- canonical JSON state preparation;
 - runtime loop behavior;
 - profile-agent lifecycle and termination;
 - filesystem governance;
@@ -106,6 +107,11 @@ Profile-agent lifecycle validation is documented in
 Solution architect design traceability and audit scoring are documented in
 [DESIGN_TRACEABILITY_RULES.md](09_validators/DESIGN_TRACEABILITY_RULES.md)
 and [DESIGN_REVIEW_RUBRIC.md](09_validators/DESIGN_REVIEW_RUBRIC.md).
+
+Future migration from Markdown runtime state to canonical JSON state is
+specified in
+[CANONICAL_JSON_STATE_PREPARATION.md](02_runtime/CANONICAL_JSON_STATE_PREPARATION.md).
+In v0, Markdown runtime files remain authoritative and compatible.
 
 ## Safe workspace initialization
 
