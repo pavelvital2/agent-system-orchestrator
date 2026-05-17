@@ -25,6 +25,13 @@ this document and report the same blocker class:
 invalid_task_packet_schema
 ```
 
+Solution architect design output must classify downstream task-like artifacts
+according to:
+
+```text
+agent-system/03_templates/DESIGN_OUTPUT_CONTRACT.md
+```
+
 ## Required status values
 
 Task packet schema evidence must use:
@@ -111,6 +118,10 @@ TASK_PROPOSAL:
   non-dispatchable only if the file declares # TASK PROPOSAL or TASK_PROPOSAL
   and contains DISPATCH_STATUS: non_dispatchable
 ```
+
+The design contract requires these artifacts to be listed in
+`DISPATCHABLE_TASK_PACKETS` with classification, schema status, dependencies,
+and `NEXT_ACTION` eligibility.
 
 Changed downstream files matching these patterns must be inspected before
 design audit pass and again before checkpoint staging:

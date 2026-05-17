@@ -110,7 +110,13 @@ agent-system/02_runtime/REQUESTER_RETURN_PROTOCOL.md
 
 ## Required Output Contract
 
-Every solution architect result must include:
+Every solution architect design output must follow:
+
+```text
+agent-system/03_templates/DESIGN_OUTPUT_CONTRACT.md
+```
+
+At minimum, every solution architect result must include:
 
 ```text
 REQUIREMENTS_TRACEABILITY_MATRIX
@@ -134,6 +140,10 @@ The result must also follow:
 ```text
 agent-system/03_templates/AGENT_RESULT_TEMPLATE.md
 ```
+
+Architecture decisions require explicit source traceability. Assumptions, GAPs,
+and research dependencies must remain separate from accepted decisions, and
+downstream task packet output must be usable by fresh profile-agent contexts.
 
 ## Design Quality Gates
 

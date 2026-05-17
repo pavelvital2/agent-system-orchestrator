@@ -27,6 +27,12 @@ Design converts accepted requirements into bounded project documentation and exe
 - create bounded research dependencies instead of guessing when factual
   evidence is missing.
 
+Design output must follow:
+
+```text
+agent-system/03_templates/DESIGN_OUTPUT_CONTRACT.md
+```
+
 ## Outputs
 
 - bounded design docs;
@@ -38,7 +44,11 @@ Design converts accepted requirements into bounded project documentation and exe
 
 ## Exit criteria
 
-Design exits with `STATUS: pass` only when the next bounded task can be dispatched without relying on stale context or hidden assumptions. Design pass must be followed by audit.
+Design exits with `STATUS: pass` only when the required design output contract
+sections are present, architecture decisions have source references,
+assumptions/GAPs/research dependencies are separated, and the next bounded task
+can be dispatched without relying on stale context or hidden assumptions.
+Design pass must be followed by audit.
 
 If accepted research is required, design continuation must follow
 `agent-system/07_lifecycle/DESIGN_RESEARCH_LOOP.md` and must not use research

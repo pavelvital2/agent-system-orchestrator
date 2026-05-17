@@ -203,6 +203,17 @@ Research `RECOMMENDED_NEXT_ACTION` is also advisory. It does not replace
 `NEXT_RECOMMENDED_ACTION` and does not authorize requester return before audit
 pass.
 
+## Design output extension
+
+For `ROLE: solution_architect`, the RESULT evidence or referenced design
+artifact must also follow:
+
+```text
+agent-system/03_templates/DESIGN_OUTPUT_CONTRACT.md
+```
+
+The design contract sections do not replace the required RESULT fields.
+
 ## Audit evidence labels
 
 Auditor RESULTs must keep the required top-level fields unchanged. Mandatory

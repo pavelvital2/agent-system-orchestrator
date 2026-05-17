@@ -15,6 +15,7 @@ agent-system/02_runtime/STATE_TRANSITION_RULES.md
 agent-system/02_runtime/FILESYSTEM_GOVERNANCE.md
 agent-system/02_runtime/REQUESTER_RETURN_PROTOCOL.md
 agent-system/02_runtime/ACCEPTED_STATE_LOCKING.md
+agent-system/03_templates/DESIGN_OUTPUT_CONTRACT.md
 ```
 
 ## Required structure
@@ -100,6 +101,25 @@ A RESULT is invalid when:
 - RESULT claims work from a different task packet;
 - RESULT claims authority to update runtime state directly;
 - RESULT claims project completion directly.
+
+## Design output validation
+
+For `ROLE: solution_architect`, validators must verify design output against:
+
+```text
+agent-system/03_templates/DESIGN_OUTPUT_CONTRACT.md
+```
+
+At minimum, design output is invalid when:
+
+- a required design contract section is missing;
+- an architecture decision lacks an allowed source reference;
+- an assumption, GAP, or research dependency is presented as an accepted
+  decision;
+- downstream task-like artifacts are not classified as dispatchable task
+  packets or non-dispatchable proposals;
+- a downstream dispatchable task packet is claimed as `NEXT_ACTION`-eligible
+  without task packet schema validation evidence.
 
 ## Evidence validation
 
