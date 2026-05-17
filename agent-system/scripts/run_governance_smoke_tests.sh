@@ -19,6 +19,24 @@ PYTHON_BIN="${PYTHON_BIN:-python3}"
 
 TMP_ROOT=""
 PASS_COUNT=0
+SMOKE_FIXTURES=(
+  wrong_remote
+  wrong_branch
+  package_repo_with_project_docs
+  invalid_task_packet
+  push_not_allowed
+  secret_file_present
+  approved_ssh_alias
+  canonical_remote_expected
+  canonical_remote_mismatch
+  untracked_critical_baseline
+  project_input_tz_policy
+  manual_preflight_ref
+  bootstrap_and_none_route_governance
+  smoke_self_contained
+  coverage_matrix
+  version_changelog_coherence
+)
 
 cleanup() {
   if [[ -n "${TMP_ROOT}" && -d "${TMP_ROOT}" && "${ASO_SMOKE_KEEP_TMP:-0}" != "1" ]]; then
@@ -764,29 +782,117 @@ assert_version_changelog_coherence() {
   PASS_COUNT=$((PASS_COUNT + 1))
 }
 
+print_fixture_names() {
+  printf '%s\n' "${SMOKE_FIXTURES[@]}"
+}
+
+run_named_fixture() {
+  local name="$1"
+
+  printf 'RUN: %s\n' "$name"
+  case "$name" in
+    wrong_remote)
+      run_preflight_fixture "wrong_remote" "yes"
+      ;;
+    wrong_branch)
+      run_preflight_fixture "wrong_branch" "yes"
+      ;;
+    package_repo_with_project_docs)
+      run_preflight_fixture "package_repo_with_project_docs" "no"
+      ;;
+    invalid_task_packet)
+      run_invalid_task_packet_fixture
+      ;;
+    push_not_allowed)
+      run_preflight_fixture "push_not_allowed" "yes"
+      ;;
+    secret_file_present)
+      run_preflight_fixture "secret_file_present" "no"
+      ;;
+    approved_ssh_alias)
+      run_approved_ssh_alias_fixture
+      ;;
+    canonical_remote_expected)
+      run_canonical_remote_fixture "canonical_remote_expected" "" "yes"
+      ;;
+    canonical_remote_mismatch)
+      run_canonical_remote_fixture "canonical_remote_mismatch" "git_target_check: repository_identity_mismatch" "no"
+      ;;
+    untracked_critical_baseline)
+      run_baseline_tracking_fixture
+      ;;
+    project_input_tz_policy)
+      run_project_input_tz_policy_fixture
+      ;;
+    manual_preflight_ref)
+      run_manual_preflight_fixture
+      ;;
+    bootstrap_and_none_route_governance)
+      assert_bootstrap_and_none_route_governance
+      ;;
+    smoke_self_contained)
+      assert_smoke_self_contained
+      ;;
+    coverage_matrix)
+      assert_coverage_matrix
+      ;;
+    version_changelog_coherence)
+      assert_version_changelog_coherence
+      ;;
+    *)
+      die "unknown smoke fixture: ${name}"
+      ;;
+  esac
+}
+
+usage() {
+  cat <<EOF
+Usage: $(basename "$0") [--list-fixtures | --run-fixture NAME]
+
+Runs governance smoke tests. With no arguments, preserves the historical
+all-fixture shell behavior. The per-fixture options are used by the Python
+diagnostic wrapper.
+EOF
+}
+
 main() {
+  local single_fixture=""
+  local fixture
+
+  while [[ "$#" -gt 0 ]]; do
+    case "$1" in
+      --list-fixtures)
+        print_fixture_names
+        return 0
+        ;;
+      --run-fixture)
+        [[ "$#" -ge 2 ]] || die "--run-fixture requires a fixture name"
+        single_fixture="$2"
+        shift 2
+        ;;
+      -h|--help)
+        usage
+        return 0
+        ;;
+      *)
+        die "unknown argument: $1"
+        ;;
+    esac
+  done
+
   [[ -f "$PREFLIGHT" ]] || die "checkpoint_preflight.sh missing"
   [[ -f "$VALIDATOR" ]] || die "validate_task_packet.py missing"
 
   TMP_ROOT="$(mktemp -d)"
 
   printf 'Governance smoke tests: local dry-run fixtures only; no commit, no push, no real secrets.\n'
-  run_preflight_fixture "wrong_remote" "yes"
-  run_preflight_fixture "wrong_branch" "yes"
-  run_preflight_fixture "package_repo_with_project_docs" "no"
-  run_invalid_task_packet_fixture
-  run_preflight_fixture "push_not_allowed" "yes"
-  run_preflight_fixture "secret_file_present" "no"
-  run_approved_ssh_alias_fixture
-  run_canonical_remote_fixture "canonical_remote_expected" "" "yes"
-  run_canonical_remote_fixture "canonical_remote_mismatch" "git_target_check: repository_identity_mismatch" "no"
-  run_baseline_tracking_fixture
-  run_project_input_tz_policy_fixture
-  run_manual_preflight_fixture
-  assert_bootstrap_and_none_route_governance
-  assert_smoke_self_contained
-  assert_coverage_matrix
-  assert_version_changelog_coherence
+  if [[ -n "$single_fixture" ]]; then
+    run_named_fixture "$single_fixture"
+  else
+    for fixture in "${SMOKE_FIXTURES[@]}"; do
+      run_named_fixture "$fixture"
+    done
+  fi
   printf 'SMOKE_RESULT: passed (%s assertions)\n' "$PASS_COUNT"
 }
 
