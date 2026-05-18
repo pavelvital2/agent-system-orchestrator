@@ -287,4 +287,4 @@ sidecar policy, PROJECT_STATE semantic field parity, and runtime tuple
 validation for `CURRENT_GATE.ACTION_SEMANTIC` and
 `NEXT_ACTION.ACTION_SEMANTIC`.
 
-This repository package does not claim a separate CLI wrapper. It is an instruction, governance, template, lifecycle, and validation package for Codex CLI orchestration.
+This repository package is an instruction, governance, template, lifecycle, and validation package for Codex CLI orchestration. It includes an experimental read-only ASO helper CLI under `agent-system/tools/aso`. The helper currently supports status, lint, and archive verify. It is not yet a full mutation, dispatch, or checkpoint engine.
