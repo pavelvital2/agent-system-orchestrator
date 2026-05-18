@@ -34,6 +34,12 @@ AGENT_TERMINATION_REQUIRED: true
   `AGENT_TERMINATION_REQUIRED: true`;
 - `violation` is an orchestrator-derived recovery/logging category, not a valid profile-agent RESULT `STATUS`;
 - `RESULT_REF` must point to the full RESULT location or contain a bounded reference;
+- new worker RESULT references must use
+  `project-runtime/results/worker/RESULT_<TASK_ID>_ATTEMPT_<N>.md`;
+- new audit RESULT references must use
+  `project-runtime/results/audit/AUDIT_RESULT_<TASK_ID>_ATTEMPT_<N>.md`;
+- `project-runtime/agent-results/` may be read as compatibility legacy
+  evidence, but it is read-only for new RESULT references;
 - `NEXT_RECOMMENDED_ACTION` records the advisory next action emitted by the agent RESULT;
 - legacy consumers may display `NEXT_REQUIRED_ACTION`, but new log entries must use `NEXT_RECOMMENDED_ACTION`;
 - the log must not store full large reports;

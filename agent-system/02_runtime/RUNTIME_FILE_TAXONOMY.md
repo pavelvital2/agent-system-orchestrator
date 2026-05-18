@@ -154,13 +154,13 @@ TASK_<ROLE>_<AREA>_<ACTION>_<NNN>.md
 Worker results:
 
 ```text
-RESULT_<TASK_ID>_ATTEMPT_<NNN>.md
+project-runtime/results/worker/RESULT_<TASK_ID>_ATTEMPT_<N>.md
 ```
 
 Audit results:
 
 ```text
-AUDIT_RESULT_<TASK_ID>_ATTEMPT_<NNN>.md
+project-runtime/results/audit/AUDIT_RESULT_<TASK_ID>_ATTEMPT_<N>.md
 ```
 
 Checkpoint receipts:
@@ -184,11 +184,10 @@ audited worker result with a bounded result reference such as
 
 Existing runtime layouts remain compatible.
 
-The following existing paths are still valid unless a future bounded migration
-task supersedes them:
+The following existing paths are still valid for compatibility unless a future
+bounded migration task supersedes them:
 
 ```text
-project-runtime/agent-results/
 project-runtime/audits/
 project-runtime/bootstrap/
 project-runtime/archive/
@@ -205,6 +204,14 @@ project-runtime/STATUS_SUMMARY.md
 project-runtime/WORKSPACE_IDENTITY.md
 project-runtime/REPOSITORY_LOCK.md
 ```
+
+`project-runtime/agent-results/` is retained only as compatibility/read-only
+legacy storage for historical worker RESULT evidence. New worker RESULT files
+must use `project-runtime/results/worker/RESULT_<TASK_ID>_ATTEMPT_<N>.md`.
+
+`project-runtime/audits/` is retained only as compatibility/read-only legacy
+storage for historical audit evidence. New audit RESULT files must use
+`project-runtime/results/audit/AUDIT_RESULT_<TASK_ID>_ATTEMPT_<N>.md`.
 
 `project-runtime/state/` is reserved for the future canonical JSON runtime
 model documented in
@@ -224,10 +231,11 @@ accepted migration activates canonical JSON state for the workspace.
 This taxonomy is a preferred layout for new runtime artifacts, not permission
 to delete, rewrite, or relocate historical execution evidence.
 
-Validators and archive tools may accept both old and recommended locations
-during the migration window. In particular, legacy worker results under
-`project-runtime/agent-results/` remain valid evidence while new worker results
-may use `project-runtime/results/worker/`.
+Validators and archive tools may read both old and canonical locations during
+the migration window. They must not require historical evidence to be moved, but
+they must classify new RESULT artifacts outside the canonical worker or audit
+paths as non-canonical unless a bounded compatibility exception explicitly
+applies.
 
 ## Future migration path
 

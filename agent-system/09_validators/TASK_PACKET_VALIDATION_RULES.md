@@ -262,6 +262,26 @@ Invalid correction packets include:
 - missing mandatory audit path;
 - repeated same failure without escalation path.
 
+## RESULT_PATH checks
+
+For new file-backed RESULT artifacts, `RESULT_PATH` must use the canonical
+target workspace paths:
+
+```text
+project-runtime/results/worker/RESULT_<TASK_ID>_ATTEMPT_<N>.md
+project-runtime/results/audit/AUDIT_RESULT_<TASK_ID>_ATTEMPT_<N>.md
+```
+
+Validators must reject new worker RESULT paths that omit the `RESULT_` prefix
+or visually reuse a task packet basename under an untyped results directory.
+
+Validators must reject new audit RESULT paths that omit the `AUDIT_RESULT_`
+prefix or use a task packet basename under a legacy audit directory.
+
+`project-runtime/agent-results/` is compatibility/read-only legacy storage for
+historical worker RESULT evidence. Validators may read historical references
+there, but new task packets must not set `RESULT_PATH` under that directory.
+
 ## Secret-safety checks
 
 A task packet is invalid when it asks an agent to:

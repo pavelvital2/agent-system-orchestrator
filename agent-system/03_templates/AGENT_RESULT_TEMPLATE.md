@@ -245,8 +245,18 @@ ACCEPTED_RESULT_REF
 New audit result files should use:
 
 ```text
-project-runtime/results/audit/AUDIT_RESULT_<TASK_ID>_ATTEMPT_<NNN>.md
+project-runtime/results/audit/AUDIT_RESULT_<TASK_ID>_ATTEMPT_<N>.md
 ```
+
+New worker result files should use:
+
+```text
+project-runtime/results/worker/RESULT_<TASK_ID>_ATTEMPT_<N>.md
+```
+
+`project-runtime/agent-results/` is compatibility/read-only legacy storage for
+historical worker RESULT evidence and must not be used for new worker RESULT
+files.
 
 When changed files include `TASK_*.md`, `TASK_PROPOSAL*.md`, or
 `*_TASK_PACKET*.md`, `VALIDATED_TASK_PACKETS` must list each changed

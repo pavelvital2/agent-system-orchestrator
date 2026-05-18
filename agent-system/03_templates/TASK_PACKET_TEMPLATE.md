@@ -614,7 +614,8 @@ Where the orchestrator should store or reference the agent RESULT.
 Example:
 
 ```text
-project-runtime/results/worker/RESULT_<TASK_ID>_ATTEMPT_<NNN>.md
+project-runtime/results/worker/RESULT_<TASK_ID>_ATTEMPT_<N>.md
+project-runtime/results/audit/AUDIT_RESULT_<TASK_ID>_ATTEMPT_<N>.md
 ```
 
 If the runtime uses a log reference instead of a file path:
@@ -626,6 +627,13 @@ project-runtime/AGENT_RESULTS_LOG.md#<RESULT_REF>
 Rules:
 - RESULT_PATH must be deterministic;
 - RESULT_PATH must use the `RESULT_` prefix for new worker result files;
+- RESULT_PATH must use the `AUDIT_RESULT_` prefix for new auditor result
+  files;
+- new worker result files must be under `project-runtime/results/worker/`;
+- new auditor result files must be under `project-runtime/results/audit/`;
+- `project-runtime/agent-results/` is compatibility/read-only legacy storage
+  for historical worker RESULT evidence and must not be used for new result
+  files;
 - RESULT_PATH must not contain secrets;
 - RESULT_PATH must be compatible with filesystem governance and runtime state.
 

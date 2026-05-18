@@ -21,9 +21,10 @@ Validators help the orchestrator detect:
 - unsafe research dependency return routing;
 - invalid reasoning level assignments;
 - invalid profile-agent lifecycle termination or reuse evidence;
-- secret-handling violations.
+- non-canonical RESULT or AUDIT_RESULT artifact paths;
+- secret-handling violations;
 - invalid solution architect design traceability, scoring, or design audit
-  readiness.
+  readiness;
 - invalid product capability, MVP readiness, or final acceptance claims.
 
 ## Source of authority

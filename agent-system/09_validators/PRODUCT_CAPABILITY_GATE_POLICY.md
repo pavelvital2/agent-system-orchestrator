@@ -147,9 +147,9 @@ TASK_PACKET_REFS:
 - TASK_TEST_IMPORT_001
 CAPABILITY_STATUS: capability_pass
 EVIDENCE_REFS:
-- project-runtime/results/TASK_DEV_IMPORT_001.md
-- project-runtime/audits/TASK_DEV_IMPORT_001.md
-- project-runtime/results/TASK_TEST_IMPORT_001.md
+- project-runtime/results/worker/RESULT_TASK_DEV_IMPORT_001_ATTEMPT_1.md
+- project-runtime/results/audit/AUDIT_RESULT_TASK_DEV_IMPORT_001_ATTEMPT_1.md
+- project-runtime/results/worker/RESULT_TASK_TEST_IMPORT_001_ATTEMPT_1.md
 ```
 
 Product pass:
@@ -160,7 +160,7 @@ CAPABILITY_IDS:
 - CAP_IMPORT_001
 - CAP_EXPORT_001
 INTEGRATION_EVIDENCE_REFS:
-- project-runtime/results/TASK_TEST_IMPORT_EXPORT_FLOW_001.md
+- project-runtime/results/worker/RESULT_TASK_TEST_IMPORT_EXPORT_FLOW_001_ATTEMPT_1.md
 MVP_READY: false
 ```
 

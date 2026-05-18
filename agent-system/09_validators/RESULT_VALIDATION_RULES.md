@@ -163,6 +163,30 @@ The RESULT is invalid when:
 
 `CHANGED_FILES: NONE` is required when no files changed.
 
+## RESULT artifact path validation
+
+When validators inspect RESULT file locations or bounded RESULT references,
+new worker RESULT artifacts must use:
+
+```text
+project-runtime/results/worker/RESULT_<TASK_ID>_ATTEMPT_<N>.md
+```
+
+New audit RESULT artifacts must use:
+
+```text
+project-runtime/results/audit/AUDIT_RESULT_<TASK_ID>_ATTEMPT_<N>.md
+```
+
+New RESULT artifact basenames must not duplicate task packet basenames. A
+worker RESULT must be prefixed with `RESULT_`; an audit RESULT must be prefixed
+with `AUDIT_RESULT_`.
+
+`project-runtime/agent-results/` is compatibility/read-only legacy storage.
+Validators may read historical worker RESULT evidence from that path, but must
+classify new RESULT files there as non-canonical unless an explicit bounded
+compatibility exception applies.
+
 ## Secret-safety validation
 
 RESULT is invalid if it prints or embeds:
