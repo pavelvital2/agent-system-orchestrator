@@ -7,7 +7,7 @@ import argparse
 import sys
 from pathlib import Path
 
-from commands import archive_verify, doctor, lint, status, validate_design
+from commands import archive_verify, doctor, lint, status, validate_context_pack, validate_design
 
 
 EXIT_USAGE = 2
@@ -143,6 +143,33 @@ def build_parser() -> argparse.ArgumentParser:
         help="Write the design validation report JSON to this explicit path.",
     )
     validate_design_parser.set_defaults(handler=validate_design.run)
+
+    validate_context_pack_parser = subparsers.add_parser(
+        "validate-context-pack",
+        help="Validate a bounded JSON context pack.",
+        description=(
+            "Read-only validation for inter-agent JSON context packs, including "
+            "required shape, context budget, archive/deprecated path rejection, "
+            "forbidden document checks, and required document existence under --root."
+        ),
+    )
+    validate_context_pack_parser.add_argument(
+        "context_pack_path",
+        metavar="CONTEXT_PACK.json",
+        help="JSON context pack artifact to inspect.",
+    )
+    _add_root_argument(validate_context_pack_parser, validate=False)
+    validate_context_pack_parser.add_argument(
+        "--strict",
+        action="store_true",
+        help="Treat warnings as a failing validation result.",
+    )
+    validate_context_pack_parser.add_argument(
+        "--json-out",
+        metavar="PATH",
+        help="Write the context pack validation report JSON to this explicit path.",
+    )
+    validate_context_pack_parser.set_defaults(handler=validate_context_pack.run)
 
     archive_parser = subparsers.add_parser(
         "archive",

@@ -38,6 +38,7 @@ PACKAGE_REQUIRED_PATHS = (
     "agent-system/tools/aso/commands/lint.py",
     "agent-system/tools/aso/commands/archive_verify.py",
     "agent-system/tools/aso/commands/doctor.py",
+    "agent-system/tools/aso/commands/validate_context_pack.py",
     "agent-system/tools/aso/tests",
     "agent_system_orchestrator_aso",
     "agent_system_orchestrator_aso/cli.py",
