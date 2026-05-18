@@ -1132,4 +1132,38 @@ MIGRATION_NOTE: Existing v3.0.0 target workspaces do not require runtime schema 
 AUTHORIZED_BY: project_owner
 AUDIT_REQUIRED: yes
 STATUS: accepted
+
+CHANGE_ID: GOV-2026-05-18-003
+CHANGE_TITLE: ASO_STAGE1_EXECUTABLE_CONTROLS_DOCS_CHANGELOG_CLEANUP
+DATE: 2026-05-18
+PACKAGE_VERSION_BEFORE: 3.0.1
+PACKAGE_VERSION_AFTER: 3.0.1
+GOVERNANCE_RULESET_BEFORE: 3.0.1
+GOVERNANCE_RULESET_AFTER: 3.0.1
+RUNTIME_SCHEMA_BEFORE: 3.0.0
+RUNTIME_SCHEMA_AFTER: 3.0.0
+CHANGE_TYPE: patch
+CHANGE_SUBTYPE: documentation_release_handoff
+AFFECTED_FILES:
+- README.md
+- agent-system/README.md
+- agent-system/PACKAGE_VERSIONING.md
+- agent-system/GOVERNANCE_CHANGELOG.md
+- agent-system/11_release/STAGE1_UPGRADE_VALIDATION_REPORT.md
+AFFECTED_INVARIANTS:
+- Stage 1 command documentation covers local editable install, direct script compatibility, Make targets, package/workspace doctor, design validation, context-pack validation, CI/smoke expectations, and cleanup/publication boundaries.
+- The ASO helper remains read-only and does not add mutation, dispatch, checkpoint, migration, repair, commit, push, or file deletion authority.
+- Working upgrade packages and generated runtime/audit artifacts remain outside accepted package publication paths.
+- The final validation report is created as a pending tester handoff only and must not claim pass/fail evidence until TASK 007/tester completes real validation.
+- Active package/governance/runtime tuple remains 3.0.1 / 3.0.1 / 3.0.0 to stay aligned with pyproject and wrapper metadata within this documentation-only task scope.
+AFFECTED_TRANSITIONS:
+- Stage 1 documentation cleanup -> independent audit -> orchestrator-owned checkpoint if accepted.
+- Stage 1 final validation handoff -> tester completes real command evidence before final acceptance claims.
+- local cleanup -> verify no tracked project-input, project-runtime, or project-archive files before publication.
+SCHEMA_TEMPLATE_IMPACT: none
+MIGRATION_REQUIRED: no
+MIGRATION_NOTE: No runtime schema migration is introduced. The active tuple remains unchanged because this bounded task cannot update pyproject.toml or agent_system_orchestrator_aso.__version__; a future package version bump must update all package metadata in one audited change.
+AUTHORIZED_BY: project_owner
+AUDIT_REQUIRED: yes
+STATUS: accepted
 ```

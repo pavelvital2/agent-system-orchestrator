@@ -141,6 +141,26 @@ governance changelog enum usage, lifecycle wording, smoke checks, and secret
 ignore patterns after the accepted v3.0.0 release. It does not change runtime
 schema sidecars, ASO v0 command scope, or the read-only ASO helper boundary.
 
+The Stage 1 executable-controls documentation and changelog cleanup records the
+current local command surface without changing active version constants:
+
+```text
+CURRENT_PACKAGE_VERSION: 3.0.1
+CURRENT_GOVERNANCE_RULESET_VERSION: 3.0.1
+CURRENT_RUNTIME_SCHEMA_VERSION: 3.0.0
+```
+
+This bounded cleanup documents local installation, root Make targets, package
+and workspace doctor usage, design validation, context-pack validation,
+CI/smoke expectations, publication boundaries, and final validation report
+handoff. It preserves the active tuple because this task is limited to package
+documentation/release paths and cannot update `pyproject.toml` or the wrapper
+package `__version__`. Keeping the tuple unchanged preserves doctor alignment
+with the installed package metadata and does not change runtime schema
+authority. Any future package version bump must update
+`CURRENT_PACKAGE_VERSION`, `pyproject.toml`, and
+`agent_system_orchestrator_aso.__version__` in one audited package update.
+
 ## Version semantics
 
 ```text

@@ -153,11 +153,26 @@ accepted repository lock explicitly allows it.
 The package includes an experimental read-only ASO helper CLI at
 `agent-system/tools/aso/aso.py`.
 
+Install the local console command from the repository root with:
+
+```text
+python3 -m pip install -e .
+aso --help
+```
+
+The installed `aso` command is additive. Direct script execution remains
+supported and should be used by compatibility checks:
+
+```text
+python3 agent-system/tools/aso/aso.py --help
+```
+
 Package repository checks use explicit package mode:
 
 ```text
 python3 agent-system/tools/aso/aso.py status --root . --mode package
 python3 agent-system/tools/aso/aso.py lint --root . --mode package --strict
+python3 agent-system/tools/aso/aso.py doctor --root . --mode package --strict
 ```
 
 Initialized project workspaces use explicit workspace mode:
@@ -165,10 +180,85 @@ Initialized project workspaces use explicit workspace mode:
 ```text
 python3 agent-system/tools/aso/aso.py status --root /path/to/project --mode workspace
 python3 agent-system/tools/aso/aso.py lint --root /path/to/project --mode workspace --strict
+python3 agent-system/tools/aso/aso.py doctor --root /path/to/project --mode workspace --strict
 ```
 
-The helper supports read-only status, lint, and archive verify inspection. It
-does not provide mutation, dispatch, or checkpoint commands.
+`aso doctor` inspects package command readiness in package mode and workspace
+runtime, identity, repository lock, and checkpoint readiness signals in
+workspace mode. It emits text output by default, supports `--json-out`, and
+uses nonzero exit status for hard failures. `--strict` treats warnings as a
+failed result.
+
+The design validator checks solution architect design Markdown:
+
+```text
+python3 agent-system/tools/aso/aso.py validate-design path/to/DESIGN.md --root . --strict
+```
+
+It validates design contract coverage, traceability, assumptions/GAP
+separation, downstream task readiness, acceptance criteria, testing strategy,
+and product capability evidence. The context-pack validator checks bounded JSON
+context packs:
+
+```text
+python3 agent-system/tools/aso/aso.py validate-context-pack path/to/CONTEXT_PACK.json --root . --strict
+```
+
+It validates required shape, context budget, archive/deprecated path rejection,
+forbidden document checks, and required document existence under `--root`.
+
+Repeatable root targets are:
+
+```text
+make install
+make test
+make smoke
+make doctor
+make lint
+```
+
+`make test` runs the ASO command unit tests and package governance tests.
+`make smoke` runs CLI help, package status, strict package lint, strict package
+doctor, valid design/context-pack fixtures, and the local governance smoke
+runner. The smoke and CI surfaces are local and diagnostic: they must not
+require secrets, network credentials, real remotes, publishing permissions, or
+live service access.
+
+The helper supports read-only status, lint, doctor, design validation, context
+pack validation, and archive verify inspection. Its read-only behavior is part
+of the ASO v0 boundary. It does not provide mutation, dispatch, or checkpoint
+commands.
+
+## Publication and cleanup boundary
+
+Stage 1 working upgrade packages and generated execution artifacts are local
+inputs/evidence, not public package documentation. Do not publish or checkpoint
+the working upgrade package, generated runtime task packets, profile results,
+audit results, local scratch notes, command logs, Codex artifacts, or
+`project-runtime`/`project-archive` material as accepted package docs.
+
+Accepted stable summaries may be added under package-controlled paths such as:
+
+```text
+agent-system/11_release/STAGE1_UPGRADE_VALIDATION_REPORT.md
+```
+
+The Stage 1 final validation report in that path is a placeholder until the
+tester-owned final validation task completes it with real command evidence.
+Pending sections must remain marked pending and must not claim pass/fail
+results before TASK 007/tester supplies evidence.
+
+After all accepted Stage 1 tasks are committed and pushed by the orchestrator,
+cleanup is local:
+
+```text
+rm -rf project-input/<stage1-upgrade-package>
+git status --short project-input project-runtime project-archive
+git ls-files project-input project-runtime project-archive
+```
+
+Expected tracked output for those roots is empty. If any file from those roots
+is staged or tracked, stop and treat it as a governance incident.
 
 ## Templates, state, and logs
 
