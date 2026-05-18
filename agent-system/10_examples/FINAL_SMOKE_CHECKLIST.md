@@ -14,7 +14,7 @@ Check that each path exists:
 agent-system/00_start/ORCHESTRATOR_START.md
 agent-system/01_roles/ORCHESTRATOR.md
 agent-system/01_roles/REQUIREMENTS_ANALYST.md
-agent-system/01_roles/DESIGNER.md
+agent-system/01_roles/SOLUTION_ARCHITECT.md
 agent-system/01_roles/DEVELOPER.md
 agent-system/01_roles/AUDITOR.md
 agent-system/01_roles/TESTER.md
@@ -130,9 +130,9 @@ LIFECYCLE_ALIGNMENT:
   runtime transition rules.
 
 BOOTSTRAP_REQUIREMENTS_ROUTING:
-  ORCHESTRATOR_START and BOOTSTRAP_STAGE do not hard-code designer as the only
+  ORCHESTRATOR_START and BOOTSTRAP_STAGE do not hard-code any design role as the only
   first profile agent. They route incomplete, ambiguous, or uncertain input to
-  requirements_analyst and allow direct designer routing only for sufficiently
+  requirements_analyst and allow direct solution_architect routing only for sufficiently
   structured input. Routing examples use current NEXT_ACTION fields:
   ACTION_ID, ACTION_TYPE, TARGET_ROLE, TASK_ID, TASK_PACKET,
   DEPENDENCY_STATUS, BLOCKED_BY, ACTION_SEMANTIC,
@@ -149,12 +149,14 @@ BOOTSTRAP_REQUIREMENTS_ROUTING:
   one active first bootstrap task packet at the same time is invalid.
   Smoke evidence must explicitly verify all of these bootstrap paths:
   requirements_analyst route is valid for incomplete, ambiguous, or uncertain
-  owner input; direct designer route is valid only for sufficiently structured
-  owner input; no bootstrap document presents designer as the universal first
+  owner input; direct solution_architect route is valid only for sufficiently structured
+  owner input; no bootstrap document presents the design role as the universal first
   profile agent; BOOTSTRAP_TASK_PACKET_TEMPLATE includes full task packet
   fields and governance boundaries; bootstrap role docs map explicitly to
   agent-system/01_roles/REQUIREMENTS_ANALYST.md and
-  agent-system/01_roles/DESIGNER.md instead of lower-case role interpolation.
+  agent-system/01_roles/SOLUTION_ARCHITECT.md instead of lower-case role
+  interpolation. agent-system/01_roles/DESIGNER.md is checked only as the
+  deprecated alias wrapper for legacy packets.
   BOOTSTRAP_TASK_PACKET_TEMPLATE must not include standalone REQUESTER or
   standalone RESULT-only NEXT_RECOMMENDED_ACTION task-packet fields.
 
@@ -221,7 +223,7 @@ REQUESTER_RETURN_PROTOCOL_ALIGNMENT:
 REASONING_LEVEL_ALIGNMENT:
   Allowed levels are low, medium, high, and xhigh. Role defaults follow
   ROLE_REASONING_DEFAULTS: orchestrator high, solution_architect xhigh,
-  designer xhigh as a deprecated alias, researcher high, developer high,
+  designer xhigh as a deprecated alias for solution_architect, researcher high, developer high,
   auditor xhigh, qa high, documenter medium, summarizer medium, and
   simple_file_operator low. Current profile-role compatibility mappings include
   requirements_analyst high, tester high, technical_writer medium,
@@ -296,11 +298,13 @@ AUDIT_CHECKPOINT_ALIGNMENT:
   manager pass routing examples are explicitly covered by transition rules.
   Smoke evidence must list each current profile execution role covered by
   mandatory-audit transition rules:
-  requirements_analyst, designer, developer, tester, technical_writer,
-  devops_setup_engineer, and release_manager.
+  requirements_analyst, solution_architect, developer, tester,
+  technical_writer, devops_setup_engineer, and release_manager. Historical
+  designer alias coverage is compatibility-only.
 
 MINIMAL_FIXTURE_SCHEMA_ALIGNMENT:
-  MINIMAL_EXAMPLE_FIXTURE uses the active v1.3.0 runtime tuple, the canonical
+  MINIMAL_EXAMPLE_FIXTURE uses the active v3.0.1 package/governance and
+  v3.0.0 runtime schema tuple, the canonical
   nine runtime file dependencies, current NEXT_ACTION fields, and task packet
   fields compatible with TASK_PACKET_TEMPLATE and task_packet.schema.json.
   Example task packets route outcomes through MANDATORY_WORKFLOW,
@@ -407,30 +411,33 @@ CORR_ASU_120_027_FINAL_PRE_121_CONSISTENCY_CLEANUP:
   AUDIT and FINAL_ACCEPTANCE aliases, CROSS_LINK_VALIDATION_RULES coverage, and
   GOVERNANCE_CHANGELOG traceability for CORR_ASU_120_027.
 
-V1_3_0_VERSION_ALIGNMENT:
-  active package tuple is CURRENT_PACKAGE_VERSION: 1.3.0,
-  CURRENT_GOVERNANCE_RULESET_VERSION: 1.3.0, and
-  CURRENT_RUNTIME_SCHEMA_VERSION: 1.2.0. This feature upgrade must not use
-  1.2.1 as the active tuple.
+HISTORICAL_V1_3_0_VERSION_ALIGNMENT:
+  Historical v1.3.0 smoke evidence records the 1.3.0 / 1.3.0 / 1.2.0 tuple.
+  Current smoke evidence must use the 3.0.1 / 3.0.1 / 3.0.0 tuple and must not
+  reactivate 1.2.1 or historical v1.3.0 constants.
 
 UPG_ASU_130_002_BOOTSTRAP_V13_CONSISTENCY_FIX:
   Smoke evidence must verify that current normative docs contain no stale
   blank-role bootstrap placeholder, use
   project-runtime/bootstrap/TASK_BOOTSTRAP_<TARGET_ROLE>_001.md as the
-  canonical bootstrap task packet path convention, preserve the concrete
+  canonical bootstrap task packet path convention, preserve the current
   project-runtime/bootstrap/TASK_BOOTSTRAP_REQUIREMENTS_ANALYST_001.md and
-  project-runtime/bootstrap/TASK_BOOTSTRAP_DESIGNER_001.md examples, align
+  project-runtime/bootstrap/TASK_BOOTSTRAP_SOLUTION_ARCHITECT_001.md examples,
+  and keep designer examples only as deprecated alias history. It must align
   bootstrap NEXT_ACTION examples with NEXT_ACTION_TEMPLATE.md and
   next_action.schema.json, avoid obsolete runtime-field wording in bootstrap
-  outputs, preserve the 1.3.0 / 1.3.0 / 1.2.0 active tuple, and keep the
+  outputs, preserve the historical 1.3.0 / 1.3.0 / 1.2.0 tuple only as
+  historical evidence, and keep the
   requester-return audit gate mandatory before requester continuation.
 
 UPG_ASU_130_003_DISPATCH_REASONING_AND_BOOTSTRAP_SMOKE_FIX:
   Smoke evidence must verify no current normative blank-role bootstrap
   placeholder references remain; the canonical bootstrap path uses
   project-runtime/bootstrap/TASK_BOOTSTRAP_<TARGET_ROLE>_001.md; concrete
-  TASK_BOOTSTRAP_REQUIREMENTS_ANALYST_001 and TASK_BOOTSTRAP_DESIGNER_001
-  examples remain; bootstrap NEXT_ACTION examples include ACTION_ID,
+  TASK_BOOTSTRAP_REQUIREMENTS_ANALYST_001 and
+  TASK_BOOTSTRAP_SOLUTION_ARCHITECT_001 examples remain; deprecated
+  TASK_BOOTSTRAP_DESIGNER_001 examples may appear only as historical alias
+  evidence. Bootstrap NEXT_ACTION examples include ACTION_ID,
   ACTION_TYPE, TARGET_ROLE, TASK_ID, TASK_PACKET, DEPENDENCY_STATUS,
   BLOCKED_BY, ACTION_SEMANTIC, REQUESTER_RETURN_CONTEXT,
   BLOCKING_OR_RESUME_CONTEXT, REQUIRED_UNIVERSAL_DOCS,
@@ -443,8 +450,8 @@ UPG_ASU_130_003_DISPATCH_REASONING_AND_BOOTSTRAP_SMOKE_FIX:
   checkpoint/commit/push are forbidden after reasoning mismatch,
   requester-return tuple coverage includes
   NEXT_ACTION.REQUESTER_RETURN_CONTEXT and
-  TASK_REGISTRY.requester_return_metadata, and the active version tuple remains
-  1.3.0 / 1.3.0 / 1.2.0.
+  TASK_REGISTRY.requester_return_metadata, and the current active version tuple
+  is 3.0.1 / 3.0.1 / 3.0.0.
 ```
 
 ## Final smoke evidence format

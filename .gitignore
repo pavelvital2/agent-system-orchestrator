@@ -3,6 +3,17 @@
 /project-archive/
 /.tmp/
 /tmp/
+.env
+.env.*
+*.pem
+*.key
+*.crt
+*.p12
+*.pfx
+*.cookie
+cookies.json
+secrets/
+private/
 **/__pycache__/
 *.py[cod]
 .pytest_cache/

@@ -6,7 +6,7 @@ This document defines when outputs become accepted and how accepted artifacts ma
 
 ## Accepted state rules
 
-1. Designer output is accepted only after design audit pass.
+1. solution_architect output is accepted only after design audit pass.
 2. Developer output is accepted only after implementation audit pass.
 3. Tested behavior is accepted only after tester pass when testing is required.
 4. Documentation output is accepted only when it documents verified implementation and passes its governed path.

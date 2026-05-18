@@ -17,7 +17,7 @@ Profiles may:
 - add quality gates and checks for a project type;
 - clarify typical artifacts for bounded tasks;
 - set expectations for setup, smoke, launch, and handover readiness;
-- help designers produce project-appropriate task packets.
+- help `solution_architect` produce project-appropriate task packets.
 
 Profiles must not:
 
@@ -30,7 +30,7 @@ Profiles must not:
 
 ## Profile selection
 
-Profile use is optional. The orchestrator, designer, or requirements analyst may reference a profile when a project type is known and the profile helps define bounded work.
+Profile use is optional. The orchestrator, `solution_architect`, or requirements analyst may reference a profile when a project type is known and the profile helps define bounded work.
 
 When no specialized profile applies, use `generic`.
 

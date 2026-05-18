@@ -74,8 +74,8 @@ MVP_READY: true
 FINAL_ACCEPTANCE: pending
 FINAL_ACCEPTANCE_REQUIRED_REFS:
 - project-docs/.../CAPABILITY_MATRIX.md
-- project-runtime/results/TASK_TEST_MVP_FLOW_001.md
-- project-runtime/audits/TASK_TEST_MVP_FLOW_001.md
+- project-runtime/results/worker/RESULT_TASK_TEST_MVP_FLOW_001_ATTEMPT_001.md
+- project-runtime/results/audit/AUDIT_RESULT_TASK_TEST_MVP_FLOW_001_ATTEMPT_001.md
 - project-docs/.../HANDOVER_CHECKLIST.md
 ```
 

@@ -19,8 +19,8 @@ RUNTIME_SCHEMA_VERSION:
 ## Active version constants
 
 ```text
-CURRENT_PACKAGE_VERSION: 3.0.0
-CURRENT_GOVERNANCE_RULESET_VERSION: 3.0.0
+CURRENT_PACKAGE_VERSION: 3.0.1
+CURRENT_GOVERNANCE_RULESET_VERSION: 3.0.1
 CURRENT_RUNTIME_SCHEMA_VERSION: 3.0.0
 ```
 
@@ -127,6 +127,19 @@ ignored only in the package repository. Target workspaces may continue
 generating `project-runtime/` as runtime state. Existing v2.0.0 workspaces must
 install or update `agent-system/` to v3.0.0 before relying on ASO
 package/workspace mode.
+
+The v3.0.1 package/governance coherence patch installs:
+
+```text
+CURRENT_PACKAGE_VERSION: 3.0.1
+CURRENT_GOVERNANCE_RULESET_VERSION: 3.0.1
+CURRENT_RUNTIME_SCHEMA_VERSION: 3.0.0
+```
+
+This patch updates package documentation, current examples, release evidence,
+governance changelog enum usage, lifecycle wording, smoke checks, and secret
+ignore patterns after the accepted v3.0.0 release. It does not change runtime
+schema sidecars, ASO v0 command scope, or the read-only ASO helper boundary.
 
 ## Version semantics
 

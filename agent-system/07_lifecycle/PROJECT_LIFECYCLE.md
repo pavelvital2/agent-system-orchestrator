@@ -20,7 +20,7 @@ output returns to design continuation only after independent audit pass.
 |---|---|---|
 | Bootstrap | Orchestrator | runtime-ready task context |
 | Requirements | Requirements analyst | requirements baseline or GAP |
-| Design | Designer | bounded project docs and task packets |
+| Design | solution_architect | bounded project docs and task packets |
 | Implementation | Developer | scoped implementation result |
 | Audit | Auditor | independent pass/fail/blocked/gap result |
 | Testing | Tester | acceptance evidence |

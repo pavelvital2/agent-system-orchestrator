@@ -41,11 +41,11 @@ TZ
 
 | Step | Orchestrator action | Primary package references | Accepted output |
 |---:|---|---|---|
-| 1 | Read owner TZ and runtime seed, create a bootstrap task packet, then choose exactly one first profile route. | `00_start/ORCHESTRATOR_START.md`, `03_templates/BOOTSTRAP_TASK_PACKET_TEMPLATE.md`, `07_lifecycle/BOOTSTRAP_STAGE.md` | Valid bounded `NEXT_ACTION` for `requirements_analyst` or `designer` with a bootstrap `TASK_PACKET`. |
+| 1 | Read owner TZ and runtime seed, create a bootstrap task packet, then choose exactly one first profile route. | `00_start/ORCHESTRATOR_START.md`, `03_templates/BOOTSTRAP_TASK_PACKET_TEMPLATE.md`, `07_lifecycle/BOOTSTRAP_STAGE.md` | Valid bounded `NEXT_ACTION` for `requirements_analyst` or `solution_architect` with a bootstrap `TASK_PACKET`. |
 | 2 | Dispatch requirements analyst when input is incomplete, ambiguous, or not clearly design-ready. | `01_roles/REQUIREMENTS_ANALYST.md`, `07_lifecycle/REQUIREMENTS_STAGE.md` | Requirements baseline or GAP. |
 | 3 | Dispatch requirements auditor when a requirements task ran. | `01_roles/AUDITOR.md`, `09_validators/RESULT_VALIDATION_RULES.md` | Audit pass before acceptance. |
 | 4 | Run post-audit checkpoint after requirements audit pass. | `02_runtime/POST_AUDIT_GIT_CHECKPOINT.md`, `09_validators/GIT_CHECKPOINT_VALIDATION_RULES.md` | Commit hash and accepted artifact record. |
-| 5 | Dispatch designer directly from bootstrap only for sufficiently structured input, or after accepted requirements. | `01_roles/DESIGNER.md`, `07_lifecycle/DESIGN_STAGE.md` | Design docs and bounded task packets, or bounded research dependencies when factual evidence is missing. |
+| 5 | Dispatch solution architect directly from bootstrap only for sufficiently structured input, or after accepted requirements. | `01_roles/SOLUTION_ARCHITECT.md`, `07_lifecycle/DESIGN_STAGE.md` | Design docs and bounded task packets, or bounded research dependencies when factual evidence is missing. |
 | 6 | If design needs factual evidence, dispatch a research dependency, audit it, then return only to explicit design continuation after audit pass. | `02_runtime/REQUESTER_RETURN_PROTOCOL.md`, `07_lifecycle/DESIGN_RESEARCH_LOOP.md` | Accepted research evidence and `design_continuation` task. |
 | 7 | Dispatch design auditor, then checkpoint on pass. | `02_runtime/STATE_TRANSITION_RULES.md` | Accepted design state. |
 | 7 | Dispatch one profile agent for one task packet. | `03_templates/TASK_PACKET_TEMPLATE.md`, role file for the target role | Structured `RESULT`. |
@@ -82,25 +82,25 @@ INCOMPLETE_OR_AMBIGUOUS_INPUT:
   INSTRUCTION_FOR_ORCHESTRATOR: Dispatch exactly one requirements analyst bootstrap task.
 
 SUFFICIENTLY_STRUCTURED_INPUT:
-  ACTION_ID: NEXT_BOOTSTRAP_DESIGNER_001
+  ACTION_ID: NEXT_BOOTSTRAP_SOLUTION_ARCHITECT_001
   ACTION_TYPE: create_agent
-  TARGET_ROLE: designer
-  TASK_ID: TASK_BOOTSTRAP_DESIGNER_001
-  TASK_PACKET: project-runtime/bootstrap/TASK_BOOTSTRAP_DESIGNER_001.md
+  TARGET_ROLE: solution_architect
+  TASK_ID: TASK_BOOTSTRAP_SOLUTION_ARCHITECT_001
+  TASK_PACKET: project-runtime/bootstrap/TASK_BOOTSTRAP_SOLUTION_ARCHITECT_001.md
   DEPENDENCY_STATUS: ready
   BLOCKED_BY: NONE
   ACTION_SEMANTIC: normal
   REQUESTER_RETURN_CONTEXT: NONE
   BLOCKING_OR_RESUME_CONTEXT: NONE
   REQUIRED_UNIVERSAL_DOCS:
-  - agent-system/01_roles/DESIGNER.md
+  - agent-system/01_roles/SOLUTION_ARCHITECT.md
   - agent-system/03_templates/AGENT_RESULT_TEMPLATE.md
   - agent-system/07_lifecycle/BOOTSTRAP_STAGE.md
   REQUIRED_PROJECT_DOCS:
   - project-input/TZ.md
   EXPECTED_RESULT:
   - agent-system/03_templates/AGENT_RESULT_TEMPLATE.md
-  INSTRUCTION_FOR_ORCHESTRATOR: Dispatch exactly one designer bootstrap task.
+  INSTRUCTION_FOR_ORCHESTRATOR: Dispatch exactly one solution architect bootstrap task.
 ```
 
 Bootstrap `TASK_PACKET` must never be `NONE` for these first profile-agent
@@ -160,7 +160,7 @@ POST_AUDIT_GIT_CHECKPOINT:
 ## Research dependency return cycle
 
 ```text
-DESIGNER_RESULT:
+SOLUTION_ARCHITECT_RESULT:
   STATUS: pass
   EVIDENCE:
   - missing factual evidence was classified as a bounded research dependency,
@@ -174,7 +174,7 @@ DESIGNER_RESULT:
 
 RESEARCH_TASK_PACKET:
   TASK_KIND: research_dependency
-  REQUESTED_BY_ROLE: designer
+  REQUESTED_BY_ROLE: solution_architect
   REQUESTED_BY_TASK: TASK_DESIGN_EXAMPLE_001
   RESEARCH_QUESTION_ID: RQ_DESIGN_001
   RESEARCH_QUESTIONS:
@@ -184,7 +184,7 @@ RESEARCH_TASK_PACKET:
   FORBIDDEN_SOURCES:
   - secrets and deprecated/archive active use
   RETURN_TO_REQUESTER_AFTER_AUDIT_PASS: yes
-  RETURN_TO_ROLE_AFTER_AUDIT_PASS: designer
+  RETURN_TO_ROLE_AFTER_AUDIT_PASS: solution_architect
   RETURN_TASK_AFTER_AUDIT_PASS: TASK_DESIGN_CONTINUE_001
   AUDIT_REQUIREMENTS: mandatory
 
@@ -201,24 +201,24 @@ AUDITOR_RESULT:
 NEXT_ACTION:
   ACTION_ID: NEXT_DESIGN_RETURN_AFTER_RESEARCH_AUDIT_PASS_001
   ACTION_TYPE: create_agent
-  TARGET_ROLE: designer
+  TARGET_ROLE: solution_architect
   TASK_ID: TASK_DESIGN_CONTINUE_001
   TASK_PACKET: project-docs/example/tasks/TASK_DESIGN_CONTINUE_001.md
   DEPENDENCY_STATUS: ready
   BLOCKED_BY: NONE
   ACTION_SEMANTIC: normal
   REQUESTER_RETURN_CONTEXT:
-    REQUESTED_BY_ROLE: designer
+    REQUESTED_BY_ROLE: solution_architect
     REQUESTED_BY_TASK: TASK_DESIGN_EXAMPLE_001
     RETURN_TO_REQUESTER_AFTER_AUDIT_PASS: yes
-    RETURN_TO_ROLE_AFTER_AUDIT_PASS: designer
+    RETURN_TO_ROLE_AFTER_AUDIT_PASS: solution_architect
     RETURN_TASK_AFTER_AUDIT_PASS: TASK_DESIGN_CONTINUE_001
     RESEARCH_QUESTION_ID: RQ_DESIGN_001
     ACCEPTED_RESEARCH_RESULT_REF: project-runtime/results/worker/RESULT_TASK_RESEARCH_RQ_DESIGN_001_ATTEMPT_001.md
     ACCEPTED_RESEARCH_AUDIT_REF: project-runtime/results/audit/AUDIT_RESULT_TASK_RESEARCH_RQ_DESIGN_001_ATTEMPT_001.md
   BLOCKING_OR_RESUME_CONTEXT: NONE
   REQUIRED_UNIVERSAL_DOCS:
-  - agent-system/01_roles/DESIGNER.md
+  - agent-system/01_roles/SOLUTION_ARCHITECT.md
   - agent-system/02_runtime/REQUESTER_RETURN_PROTOCOL.md
   - agent-system/03_templates/AGENT_RESULT_TEMPLATE.md
   - agent-system/04_state/NEXT_ACTION_TEMPLATE.md

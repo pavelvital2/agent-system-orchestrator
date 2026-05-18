@@ -102,7 +102,6 @@ For this rule, `profile_agent` covers these profile execution roles:
 ```text
 requirements_analyst
 solution_architect
-designer
 developer
 tester
 technical_writer

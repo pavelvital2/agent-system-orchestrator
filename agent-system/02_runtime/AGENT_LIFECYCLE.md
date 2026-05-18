@@ -30,7 +30,9 @@ deletion.
 
 ## Завершение агента
 
-Агент считается завершённым после возврата RESULT.
+Агент считается lifecycle-complete только после того, как оркестратор получил
+RESULT, записал событие `agent_result_received`, а затем записал
+`agent_instance_terminated` для того же `AGENT_INSTANCE_ID`.
 
 После этого:
 
@@ -39,6 +41,8 @@ deletion.
 - для новой задачи создаётся новый агент.
 - RESULT должен быть сохранён или получить deterministic `RESULT_REF`;
 - handoff, если он использовался, должен быть помечен как consumed через `CONSUMED_BY_RESULT`.
+- переход к следующей задаче или lifecycle phase запрещён до
+  orchestrator-recorded termination event.
 
 ## Запреты
 

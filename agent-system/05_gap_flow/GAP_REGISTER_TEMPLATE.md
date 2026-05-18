@@ -56,7 +56,7 @@ NONE
 Only blocking issues belong in this register.
 
 A GAP blocks the listed `BLOCKS` items until closure evidence points to an accepted source-of-truth update.
-`STATUS: answered` means owner or designer input was received but closure is not yet accepted.
+`STATUS: answered` means owner or `solution_architect` input was received but closure is not yet accepted.
 `STATUS: closed` is valid only when `ACCEPTED_SOURCE_OF_TRUTH_UPDATE` and `CLOSURE_EVIDENCE` are populated.
 
 Non-blocking observations must be recorded in a findings register, not as active GAPs.

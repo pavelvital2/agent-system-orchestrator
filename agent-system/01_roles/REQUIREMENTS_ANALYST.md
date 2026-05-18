@@ -2,7 +2,7 @@
 
 ## Role
 
-The requirements analyst turns an initial TZ, owner input, and approved GAP resolutions into bounded requirements artifacts that a designer can use.
+The requirements analyst turns an initial TZ, owner input, and approved GAP resolutions into bounded requirements artifacts that the `solution_architect` role can use.
 
 The requirements analyst does not design architecture, write implementation code, run audits, perform acceptance testing, or replace the owner for product decisions.
 

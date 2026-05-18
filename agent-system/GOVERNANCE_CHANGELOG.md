@@ -14,6 +14,7 @@ DATE:
 PACKAGE_VERSION_BEFORE:
 PACKAGE_VERSION_AFTER:
 CHANGE_TYPE: patch | minor | major
+CHANGE_SUBTYPE:
 AFFECTED_FILES:
 - 
 AFFECTED_INVARIANTS:
@@ -785,7 +786,8 @@ GOVERNANCE_RULESET_BEFORE: 1.2.0
 GOVERNANCE_RULESET_AFTER: 1.3.0
 RUNTIME_SCHEMA_BEFORE: 1.1.0
 RUNTIME_SCHEMA_AFTER: 1.2.0
-CHANGE_TYPE: minor_release_acceptance
+CHANGE_TYPE: minor
+CHANGE_SUBTYPE: release_acceptance
 AFFECTED_FILES:
 - agent-system/GOVERNANCE_CHANGELOG.md
 AFFECTED_INVARIANTS:
@@ -939,7 +941,8 @@ GOVERNANCE_RULESET_BEFORE: 2.0.0
 GOVERNANCE_RULESET_AFTER: 2.0.0
 RUNTIME_SCHEMA_BEFORE: 2.0.0
 RUNTIME_SCHEMA_AFTER: 2.0.0
-CHANGE_TYPE: correction
+CHANGE_TYPE: patch
+CHANGE_SUBTYPE: correction
 AFFECTED_FILES:
 - agent-system/01_roles/AUDITOR.md
 - agent-system/01_roles/DESIGNER.md
@@ -991,7 +994,8 @@ GOVERNANCE_RULESET_BEFORE: 2.0.0
 GOVERNANCE_RULESET_AFTER: 2.0.0
 RUNTIME_SCHEMA_BEFORE: 2.0.0
 RUNTIME_SCHEMA_AFTER: 2.0.0
-CHANGE_TYPE: correction
+CHANGE_TYPE: patch
+CHANGE_SUBTYPE: correction
 SUMMARY:
 - Removed legacy top-level tests/fixtures after smoke fixtures were moved under agent-system/tests/fixtures.
 - Confirmed governance smoke remains self-contained inside the copied agent-system package.
@@ -1070,6 +1074,61 @@ AFFECTED_TRANSITIONS:
 SCHEMA_TEMPLATE_IMPACT: both
 MIGRATION_REQUIRED: yes
 MIGRATION_NOTE: Existing target project workspaces are not automatically cleaned. Root project-runtime/project-input/project-archive are ignored only in the package repository. Target workspaces may continue generating project-runtime as runtime state. Existing v2.0.0 workspaces must install or update agent-system to v3.0.0 before relying on ASO package/workspace mode.
+AUTHORIZED_BY: project_owner
+AUDIT_REQUIRED: yes
+STATUS: accepted
+
+CHANGE_ID: GOV-2026-05-18-002
+CHANGE_TITLE: ASO_V3_0_1_DOCS_EXAMPLES_COHERENCE_PATCH
+DATE: 2026-05-18
+PACKAGE_VERSION_BEFORE: 3.0.0
+PACKAGE_VERSION_AFTER: 3.0.1
+GOVERNANCE_RULESET_BEFORE: 3.0.0
+GOVERNANCE_RULESET_AFTER: 3.0.1
+RUNTIME_SCHEMA_BEFORE: 3.0.0
+RUNTIME_SCHEMA_AFTER: 3.0.0
+CHANGE_TYPE: patch
+CHANGE_SUBTYPE: docs_examples_coherence
+AFFECTED_FILES:
+- .gitignore
+- agent-system/README.md
+- agent-system/PACKAGE_VERSIONING.md
+- agent-system/GOVERNANCE_CHANGELOG.md
+- agent-system/11_release/ASO_CONTROL_PLANE_V0_RELEASE_CANDIDATE.md
+- agent-system/10_examples/EXPECTED_FLOW_EXAMPLE.md
+- agent-system/10_examples/FINAL_SMOKE_CHECKLIST.md
+- agent-system/10_examples/MINIMAL_EXAMPLE_FIXTURE.md
+- agent-system/10_examples/PRODUCT_CAPABILITY_GATE_EXAMPLES.md
+- agent-system/09_validators/CROSS_LINK_VALIDATION_RULES.md
+- agent-system/01_roles/REQUIREMENTS_ANALYST.md
+- agent-system/02_runtime/AGENT_LIFECYCLE.md
+- agent-system/02_runtime/ACCEPTED_STATE_LOCKING.md
+- agent-system/02_runtime/FILESYSTEM_GOVERNANCE.md
+- agent-system/02_runtime/GOVERNANCE_AUTHORITY.md
+- agent-system/02_runtime/PROFILE_AGENT_LIFECYCLE.md
+- agent-system/02_runtime/STATE_TRANSITION_RULES.md
+- agent-system/05_gap_flow/GAP_FLOW.md
+- agent-system/05_gap_flow/GAP_REGISTER_TEMPLATE.md
+- agent-system/07_lifecycle/PROJECT_LIFECYCLE.md
+- agent-system/08_profiles/PROJECT_PROFILE_SPEC.md
+- agent-system/scripts/run_governance_smoke_tests.sh
+- agent-system/tools/aso/tests/test_archive_verify.py
+- agent-system/tools/aso/tests/test_lint.py
+AFFECTED_INVARIANTS:
+- Active package/governance tuple is 3.0.1 / 3.0.1 while runtime schema remains 3.0.0.
+- v3.0.0 release evidence records final released commit, release tag, main release status, and passed whitespace diff check.
+- Current examples use `solution_architect` as the canonical design role; `designer` remains only a deprecated alias or historical reference.
+- Current examples and smoke-generated task packets use canonical worker and audit result paths.
+- Lifecycle completion requires RESULT receipt plus orchestrator-recorded termination event.
+- ASO v0 remains read-only and does not add mutation, dispatch, checkpoint, migration, or repair commands.
+- Runtime schema sidecars are unchanged by this patch.
+AFFECTED_TRANSITIONS:
+- profile-agent RESULT receipt -> orchestrator records `agent_result_received` -> orchestrator records `agent_instance_terminated` -> lifecycle completion.
+- design task routing -> `solution_architect` canonical role, with `designer` accepted only as deprecated compatibility alias.
+- worker/audit RESULT persistence -> canonical `project-runtime/results/worker/` and `project-runtime/results/audit/` paths for new artifacts.
+SCHEMA_TEMPLATE_IMPACT: none
+MIGRATION_REQUIRED: no
+MIGRATION_NOTE: Existing v3.0.0 target workspaces do not require runtime schema migration. They should update package/governance docs and examples to v3.0.1 before using current package coherence checks.
 AUTHORIZED_BY: project_owner
 AUDIT_REQUIRED: yes
 STATUS: accepted

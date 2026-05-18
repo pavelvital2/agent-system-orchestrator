@@ -128,7 +128,7 @@ COMMANDS_RUN:
 TESTS_RUN:
 - NONE
 EVIDENCE:
-- SOURCE_RESULT_REF: project-runtime/results/RESULT_TASK_DEMO_001_ATTEMPT_001.md
+- SOURCE_RESULT_REF: project-runtime/results/worker/RESULT_TASK_DEMO_001_ATTEMPT_001.md
 SCOPE_VERIFICATION:
 - NONE
 FORBIDDEN_CHANGES_CHECK:
@@ -181,8 +181,8 @@ def write_runtime(root: Path, overrides: dict[str, str] | None = None) -> list[P
     task_path.write_text(TASK_PACKET, encoding="utf-8")
     paths.append(task_path)
 
-    results = runtime / "results"
-    results.mkdir()
+    results = runtime / "results" / "worker"
+    results.mkdir(parents=True)
     result_path = results / "RESULT_TASK_DEMO_001_ATTEMPT_001.md"
     result_path.write_text(RESULT, encoding="utf-8")
     paths.append(result_path)
@@ -195,7 +195,7 @@ def write_runtime(root: Path, overrides: dict[str, str] | None = None) -> list[P
             [
                 '{"event":"agent_instance_created","agent_instance_id":"agent_TASK_DEMO_001_attempt_001","task_id":"TASK_DEMO_001","role":"developer","timestamp_utc":"2026-05-17T10:00:00Z"}',
                 '{"event":"agent_task_dispatched","agent_instance_id":"agent_TASK_DEMO_001_attempt_001","task_id":"TASK_DEMO_001","role":"developer","timestamp_utc":"2026-05-17T10:01:00Z"}',
-                '{"event":"agent_result_received","agent_instance_id":"agent_TASK_DEMO_001_attempt_001","task_id":"TASK_DEMO_001","result_ref":"project-runtime/results/RESULT_TASK_DEMO_001_ATTEMPT_001.md","reuse_allowed":false,"timestamp_utc":"2026-05-17T10:30:00Z"}',
+                '{"event":"agent_result_received","agent_instance_id":"agent_TASK_DEMO_001_attempt_001","task_id":"TASK_DEMO_001","result_ref":"project-runtime/results/worker/RESULT_TASK_DEMO_001_ATTEMPT_001.md","reuse_allowed":false,"timestamp_utc":"2026-05-17T10:30:00Z"}',
                 '{"event":"agent_instance_terminated","agent_instance_id":"agent_TASK_DEMO_001_attempt_001","task_id":"TASK_DEMO_001","reuse_allowed":false,"timestamp_utc":"2026-05-17T10:31:00Z"}',
             ]
         )
@@ -352,7 +352,7 @@ class LintCommandTests(unittest.TestCase):
 
 TASK_ID: TASK_DEMO_001
 STATUS: completed
-RESULT_REFS: project-runtime/results/RESULT_TASK_DEMO_001_ATTEMPT_001.md
+RESULT_REFS: project-runtime/results/worker/RESULT_TASK_DEMO_001_ATTEMPT_001.md
 AUDIT_REFS: NONE
 COMMIT_HASH: NONE
 BRANCH: NONE
@@ -623,7 +623,7 @@ AGENT_TERMINATION_REQUIRED: false
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
             write_runtime(root)
-            result_path = root / "project-runtime" / "results" / "RESULT_TASK_DEMO_001_ATTEMPT_001.md"
+            result_path = root / "project-runtime" / "results" / "worker" / "RESULT_TASK_DEMO_001_ATTEMPT_001.md"
             result_path.write_text(RESULT.replace("TASK_ID: TASK_DEMO_001", "TASK_ID: TASK_UNKNOWN_999"), encoding="utf-8")
 
             result = run_lint(root)
@@ -660,7 +660,7 @@ AGENT_TERMINATION_REQUIRED: false
             audit_dir = root / "project-runtime" / "results" / "audit"
             audit_dir.mkdir()
             audit_text = AUDIT_RESULT.replace(
-                "- SOURCE_RESULT_REF: project-runtime/results/RESULT_TASK_DEMO_001_ATTEMPT_001.md",
+                "- SOURCE_RESULT_REF: project-runtime/results/worker/RESULT_TASK_DEMO_001_ATTEMPT_001.md",
                 "- NONE",
             )
             (audit_dir / "AUDIT_RESULT_TASK_DEMO_001_ATTEMPT_001.md").write_text(audit_text, encoding="utf-8")

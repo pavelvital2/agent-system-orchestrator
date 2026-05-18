@@ -2,10 +2,9 @@
 
 ## Purpose
 
-This document records stable release evidence for the ASO control-plane v0
-release candidate after the root `project-runtime/` cleanup path, governance
-changelog traceability correction, and active tuple bump to
-`3.0.0 / 3.0.0 / 3.0.0`.
+This document records stable release evidence for the released ASO
+control-plane v0 package after the root `project-runtime/` cleanup path,
+governance changelog traceability correction, and v3.0.0 release.
 
 The report summarizes accepted package state and durable documentation. It does
 not copy raw runtime dumps and does not require `project-runtime/` to exist
@@ -38,15 +37,16 @@ Pre-cleanup runtime summaries were used only as transient corroboration while
 creating this document. The stable release evidence is the package content
 summarized below.
 
-## Branch and Commit Evidence
+## Branch, Commit, and Release Evidence
 
 - RC correction branch: `correction/aso-v0-version-bump-changelog`.
-- Final commit hash: orchestrator-confirmed after the audited correction commit
-  and branch push.
+- Final released commit: `0a0ca9f97edc7319e425d1d2661d8aff669d4889`.
+- Release tag: `v3.0.0`.
+- Main release status: `released`.
 
-The exact self-referential commit hash is intentionally not embedded before the
-commit that contains this report exists. After the orchestrator performs the
-final audited commit and push, the exact pushed HEAD must be confirmed with
+For future self-referential release reports, do not embed a final commit hash
+before the commit that contains the report exists. After the orchestrator
+performs the final audited commit and push, confirm the exact pushed HEAD with
 `git rev-parse HEAD` or `git rev-parse --short HEAD`.
 
 ## Cleanup Summary
@@ -84,8 +84,7 @@ summaries:
   passed; rechecked during final report preparation with 26 tests in 2.806s.
 - `PYTHONDONTWRITEBYTECODE=1 python3 agent-system/scripts/run_governance_smoke_tests.py --timeout-per-fixture 30 --json-out /tmp/smoke_package_rc.json`:
   `passed`; 16 passed, 0 failed, 0 skipped, 0 timeout; duration 7.114s.
-- `git diff --check`: required as final profile-agent verification after this
-  report edit and before orchestrator audit/commit.
+- `git diff --check`: `passed` for the final v3.0.0 released commit.
 
 The ASO package mode result is accepted for this release candidate: package
 status and strict package lint both passed, generated roots are not tracked, and

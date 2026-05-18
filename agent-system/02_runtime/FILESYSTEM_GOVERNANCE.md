@@ -160,10 +160,15 @@ project-runtime/checkpoints/
 project-runtime/reports/
 ```
 
-Existing paths such as `project-runtime/agent-results/`,
-`project-runtime/audits/`, `project-runtime/bootstrap/`, and root-level
-runtime state files remain compatible. Moving or deleting historical runtime
-artifacts requires a separate archive or supersede workflow.
+Existing paths such as `project-runtime/agent-results/` and
+`project-runtime/audits/` remain as compatibility/read-only legacy paths for
+read-only historical compatibility. New worker result files must use
+`project-runtime/results/worker/RESULT_<TASK_ID>_ATTEMPT_<N>.md`, and new audit
+result files must use
+`project-runtime/results/audit/AUDIT_RESULT_<TASK_ID>_ATTEMPT_<N>.md`.
+`project-runtime/bootstrap/` and root-level runtime state files remain
+compatible. Moving or deleting historical runtime artifacts requires a separate
+archive or supersede workflow.
 
 Кто может менять:
 - оркестратор;
@@ -438,7 +443,7 @@ project-docs/
 
 ---
 
-### Designer
+### solution_architect
 
 Может изменять:
 - проектную документацию внутри ACTIVE_DOC_ROOT;

@@ -275,11 +275,11 @@ Governance and package changes are recorded in:
 agent-system/GOVERNANCE_CHANGELOG.md
 ```
 
-Current v3.0.0 tuple:
+Current v3.0.1 tuple:
 
 ```text
-CURRENT_PACKAGE_VERSION: 3.0.0
-CURRENT_GOVERNANCE_RULESET_VERSION: 3.0.0
+CURRENT_PACKAGE_VERSION: 3.0.1
+CURRENT_GOVERNANCE_RULESET_VERSION: 3.0.1
 CURRENT_RUNTIME_SCHEMA_VERSION: 3.0.0
 ```
 

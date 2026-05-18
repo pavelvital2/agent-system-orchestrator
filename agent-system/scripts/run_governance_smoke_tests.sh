@@ -300,7 +300,7 @@ mandatory
 
 ## RESULT_PATH
 \`\`\`text
-project-runtime/agent-results/${task_id}.md
+project-runtime/results/worker/RESULT_${task_id}_ATTEMPT_001.md
 \`\`\`
 
 ## RISK_REQUIREMENTS
@@ -761,20 +761,20 @@ assert_coverage_matrix() {
 }
 
 assert_version_changelog_coherence() {
-  grep -Fq "CURRENT_PACKAGE_VERSION: 3.0.0" "$PACKAGE_VERSIONING" || die "PACKAGE_VERSIONING missing package 3.0.0"
-  grep -Fq "CURRENT_GOVERNANCE_RULESET_VERSION: 3.0.0" "$PACKAGE_VERSIONING" || die "PACKAGE_VERSIONING missing governance 3.0.0"
+  grep -Fq "CURRENT_PACKAGE_VERSION: 3.0.1" "$PACKAGE_VERSIONING" || die "PACKAGE_VERSIONING missing package 3.0.1"
+  grep -Fq "CURRENT_GOVERNANCE_RULESET_VERSION: 3.0.1" "$PACKAGE_VERSIONING" || die "PACKAGE_VERSIONING missing governance 3.0.1"
   grep -Fq "CURRENT_RUNTIME_SCHEMA_VERSION: 3.0.0" "$PACKAGE_VERSIONING" || die "PACKAGE_VERSIONING missing runtime schema 3.0.0"
-  grep -Fq "CURRENT_PACKAGE_VERSION: 3.0.0" "$PACKAGE_README" || die "README missing package 3.0.0"
-  grep -Fq "GOV-2026-05-18-001" "$CHANGELOG" || die "changelog missing GOV-2026-05-18-001"
-  grep -Fq "ASO_CONTROL_PLANE_V3_0_0_RELEASE_CANDIDATE_PACKAGE_MODE_AND_ROOT_RUNTIME_CLEANUP" "$CHANGELOG" || die "changelog missing v3.0.0 RC title"
-  grep -Fq "PACKAGE_VERSION_AFTER: 3.0.0" "$CHANGELOG" || die "changelog missing PACKAGE_VERSION_AFTER: 3.0.0"
+  grep -Fq "CURRENT_PACKAGE_VERSION: 3.0.1" "$PACKAGE_README" || die "README missing package 3.0.1"
+  grep -Fq "GOV-2026-05-18-002" "$CHANGELOG" || die "changelog missing GOV-2026-05-18-002"
+  grep -Fq "ASO_V3_0_1_DOCS_EXAMPLES_COHERENCE_PATCH" "$CHANGELOG" || die "changelog missing v3.0.1 patch title"
+  grep -Fq "PACKAGE_VERSION_AFTER: 3.0.1" "$CHANGELOG" || die "changelog missing PACKAGE_VERSION_AFTER: 3.0.1"
   awk '
-    /CHANGE_ID: GOV-2026-05-18-001/ { entry="v3" }
-    entry == "v3" && /STATUS: accepted/ { found_v3=1 }
-    END { exit(found_v3 ? 0 : 1) }
-  ' "$CHANGELOG" || die "changelog missing accepted status for v3.0.0 RC entry"
+    /CHANGE_ID: GOV-2026-05-18-002/ { entry="v301" }
+    entry == "v301" && /STATUS: accepted/ { found_v301=1 }
+    END { exit(found_v301 ? 0 : 1) }
+  ' "$CHANGELOG" || die "changelog missing accepted status for v3.0.1 patch entry"
 
-  printf 'PASS: version_changelog coherent for 3.0.0 with accepted status\n'
+  printf 'PASS: version_changelog coherent for 3.0.1 package/governance with runtime schema 3.0.0\n'
   PASS_COUNT=$((PASS_COUNT + 1))
 }
 

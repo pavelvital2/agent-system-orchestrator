@@ -17,7 +17,7 @@ These rules cannot be overridden by task packet, NEXT_ACTION, handoff, or agent 
 7. Ordinary project agents do not modify `agent-system/`.
 8. Task packets must be inside `ACTIVE_DOC_ROOT` unless explicitly governed as system/bootstrap documents.
 9. Deprecated/archive documents are not active source-of-truth.
-10. Designer and developer pass require auditor review.
+10. solution_architect and developer pass require auditor review.
 11. Profile agents cannot declare project completion.
 12. Completion requires orchestrator finalization.
 13. Active GAPs/blockers stop dependent dispatch.

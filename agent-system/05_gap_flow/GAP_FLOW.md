@@ -94,7 +94,7 @@ agent-system/03_templates/FINDINGS_REGISTER_TEMPLATE.md
 
 ## GAP closure rule
 
-A GAP is not closed merely because an owner/designer answer exists.
+A GAP is not closed merely because an owner or `solution_architect` answer exists.
 
 A GAP may be closed only when its resolution is reflected in accepted source-of-truth and the GAP register links to that update:
 
@@ -103,7 +103,7 @@ A GAP may be closed only when its resolution is reflected in accepted source-of-
 - corrected runtime state;
 - or explicit owner decision recorded through governed flow.
 
-If the GAP changes architecture, scope, acceptance criteria, or task packet content, the resolution must go through designer/audit or bounded correction flow before dependent dispatch continues.
+If the GAP changes architecture, scope, acceptance criteria, or task packet content, the resolution must go through `solution_architect`/audit or bounded correction flow before dependent dispatch continues.
 
 Minimum closure evidence:
 
