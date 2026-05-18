@@ -316,6 +316,7 @@ class LintCommandTests(unittest.TestCase):
             root = Path(tmp)
             init_git(root)
             write_package_fixture(root)
+            json_out = root / "package-lint.json"
             (root / "project-runtime").mkdir()
             tracked_runtime_file = root / "project-runtime" / "PROJECT_STATE.md"
             tracked_runtime_file.write_text("# PROJECT_STATE\n", encoding="utf-8")
@@ -327,11 +328,55 @@ class LintCommandTests(unittest.TestCase):
                 capture_output=True,
             )
 
-            result = run_lint(root, "--mode", "package", "--strict")
+            result = run_lint(root, "--mode", "package", "--strict", "--json-out", str(json_out))
 
             self.assertEqual(result.returncode, 1, result.stdout + result.stderr)
             self.assertIn("ASO lint: FAILED", result.stdout)
-            self.assertIn("PACKAGE_TRACKING_001", result.stdout)
+            self.assertIn("LINT_PKG_001", result.stdout)
+
+            report = json.loads(json_out.read_text(encoding="utf-8"))
+            finding = report["findings"][0]
+            self.assertEqual(finding["rule_id"], "LINT_PKG_001")
+            self.assertEqual(finding["severity"], "error")
+            self.assertEqual(finding["mode"], "package")
+            self.assertEqual(finding["path"], "project-runtime/PROJECT_STATE.md")
+            self.assertIn("project-runtime", finding["message"])
+
+    def test_lint_reports_workspace_traceability_stable_ids_and_json_aliases(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            write_runtime(
+                root,
+                {
+                    "TASK_REGISTRY.md": """# TASK_REGISTRY
+
+TASK_ID: TASK_DEMO_001
+STATUS: completed
+RESULT_REFS: project-runtime/results/RESULT_TASK_DEMO_001_ATTEMPT_001.md
+AUDIT_REFS: NONE
+COMMIT_HASH: NONE
+BRANCH: NONE
+ACCEPTED_FILES: NONE
+CHECKPOINT_REF: NONE
+""",
+                },
+            )
+            json_out = root / "workspace-lint.json"
+
+            result = run_lint(root, "--mode", "workspace", "--strict", "--json-out", str(json_out))
+
+            self.assertEqual(result.returncode, 1, result.stdout + result.stderr)
+            self.assertIn("LINT_RT_002", result.stdout)
+            self.assertIn("LINT_RT_003", result.stdout)
+            self.assertIn("LINT_RT_004", result.stdout)
+
+            report = json.loads(json_out.read_text(encoding="utf-8"))
+            by_rule = {finding["rule_id"]: finding for finding in report["findings"]}
+            finding = by_rule["LINT_RT_002"]
+            self.assertEqual(finding["severity"], "error")
+            self.assertEqual(finding["mode"], "workspace")
+            self.assertEqual(finding["path"], "project-runtime/TASK_REGISTRY.md")
+            self.assertIn("AUDIT_REFS", finding["message"])
 
     def test_lint_detects_state_errors(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
@@ -388,7 +433,7 @@ STATUS: accepted
             self.assertIn("LINT_TASK_001", result.stdout)
             self.assertIn("LINT_TASK_002", result.stdout)
             self.assertIn("LINT_TASK_003", result.stdout)
-            self.assertIn("LINT_ARTIFACT_002", result.stdout)
+            self.assertIn("LINT_RT_005", result.stdout)
 
     def test_lint_detects_post_checkpoint_transaction_invariants(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
@@ -574,7 +619,7 @@ AGENT_TERMINATION_REQUIRED: false
             self.assertIn("LINT_AGENT_004", result.stdout)
             self.assertIn("LINT_AGENT_006", result.stdout)
 
-    def test_lint_warns_when_result_references_unknown_task(self) -> None:
+    def test_lint_errors_when_result_references_task_missing_from_registry(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
             write_runtime(root)
@@ -583,8 +628,9 @@ AGENT_TERMINATION_REQUIRED: false
 
             result = run_lint(root)
 
-            self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+            self.assertEqual(result.returncode, 1, result.stdout + result.stderr)
             self.assertIn("LINT_NAMING_005", result.stdout)
+            self.assertIn("LINT_RT_001", result.stdout)
 
     def test_lint_validates_audit_result_task_and_result_references(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:

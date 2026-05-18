@@ -46,15 +46,20 @@ class Finding:
     files: list[str]
     recommendation: str
 
-    def to_json(self) -> dict[str, object]:
-        return {
+    def to_json(self, mode: str | None = None) -> dict[str, object]:
+        payload: dict[str, object] = {
             "rule_id": self.rule_id,
             "severity": self.severity,
+            "message": self.details,
+            "path": self.files[0] if self.files else "",
             "title": self.title,
             "details": self.details,
             "files": self.files,
             "recommendation": self.recommendation,
         }
+        if mode is not None:
+            payload["mode"] = mode
+        return payload
 
 
 def _runtime_path(root: Path, name: str) -> Path:
@@ -304,7 +309,7 @@ def _report(root: Path) -> dict[str, object]:
             }
             for runtime_file in files.values()
         },
-        "findings": [finding.to_json() for finding in findings],
+        "findings": [finding.to_json(mode="workspace") for finding in findings],
     }
 
 
@@ -331,7 +336,7 @@ def _package_report(root: Path) -> dict[str, object]:
             "git_tracked_generated_files": inspection.git_tracked_generated_files,
         },
         "files": inspection.files,
-        "findings": [finding.to_json() for finding in inspection.findings],
+        "findings": [finding.to_json(mode="package") for finding in inspection.findings],
     }
 
 

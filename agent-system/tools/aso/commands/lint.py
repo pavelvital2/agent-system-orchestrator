@@ -81,6 +81,16 @@ AUDIT_RESULT_REF_FIELDS = (
     "RESULT_REF",
     "ACCEPTED_RESULT_REF",
 )
+VERSION_FIELD_NAMES = (
+    "PACKAGE_VERSION",
+    "GOVERNANCE_RULESET_VERSION",
+    "RUNTIME_SCHEMA_VERSION",
+)
+ACTIVE_VERSION_FIELD_NAMES = (
+    "CURRENT_PACKAGE_VERSION",
+    "CURRENT_GOVERNANCE_RULESET_VERSION",
+    "CURRENT_RUNTIME_SCHEMA_VERSION",
+)
 
 
 @dataclass(frozen=True)
@@ -111,15 +121,20 @@ class Finding:
     files: list[str]
     recommendation: str
 
-    def to_json(self) -> dict[str, object]:
-        return {
+    def to_json(self, mode: str | None = None) -> dict[str, object]:
+        payload: dict[str, object] = {
             "rule_id": self.rule_id,
             "severity": self.severity,
+            "message": self.details,
+            "path": self.files[0] if self.files else "",
             "title": self.title,
             "details": self.details,
             "files": self.files,
             "recommendation": self.recommendation,
         }
+        if mode is not None:
+            payload["mode"] = mode
+        return payload
 
 
 def _runtime_path(root: Path, name: str) -> Path:
@@ -205,6 +220,65 @@ def _entries(occurrences: Iterable[FieldOccurrence], start_key: str) -> list[dic
 
 def _is_none(value: str | None) -> bool:
     return value is None or value.strip() in NONE_VALUES
+
+
+def _is_affirmative(value: str | None) -> bool:
+    return (value or "").strip().lower() in {"yes", "true", "waived", "approved", "historical", "covered"}
+
+
+def _has_explicit_reason(entry: dict[str, str], *field_names: str) -> bool:
+    reason_fields = set(field_names) | {
+        "WAIVER_REASON",
+        "TRACEABILITY_WAIVER_REASON",
+        "HISTORICAL_REASON",
+        "COVERAGE_REASON",
+        "ARCHIVE_REASON",
+        "REMOVAL_REASON",
+        "MISSING_REASON",
+        "RETENTION_REASON",
+        "REASON",
+        "NOTES",
+    }
+    return any(not _is_none(entry.get(field_name)) for field_name in reason_fields)
+
+
+def _entry_is_historical(entry: dict[str, str]) -> bool:
+    historical_fields = (
+        "HISTORICAL",
+        "HISTORICAL_RECORD",
+        "IS_HISTORICAL",
+        "TRACEABILITY_HISTORICAL",
+    )
+    return any(_is_affirmative(entry.get(field_name)) for field_name in historical_fields)
+
+
+def _entry_is_waived(entry: dict[str, str]) -> bool:
+    waiver_fields = (
+        "WAIVED",
+        "WAIVER",
+        "LINT_WAIVER",
+        "TRACEABILITY_WAIVER",
+        "TRACEABILITY_WAIVED",
+    )
+    return any(_is_affirmative(entry.get(field_name)) for field_name in waiver_fields) and _has_explicit_reason(entry)
+
+
+def _entry_is_historical_or_waived(entry: dict[str, str]) -> bool:
+    return _entry_is_historical(entry) or _entry_is_waived(entry)
+
+
+def _entry_has_checkpoint_coverage(entry: dict[str, str]) -> bool:
+    coverage_fields = (
+        "AGGREGATE_CHECKPOINT_REF",
+        "COVERED_BY_CHECKPOINT_REF",
+        "CHECKPOINT_COVERAGE_REF",
+        "CHECKPOINT_COVERED_BY",
+        "COVERED_BY_CHECKPOINT",
+    )
+    if any(not _is_none(entry.get(field_name)) for field_name in coverage_fields):
+        return True
+    coverage_value = entry.get("CHECKPOINT_COVERAGE", entry.get("TRACEABILITY_COVERAGE", ""))
+    return _is_affirmative(coverage_value) and _has_explicit_reason(entry)
 
 
 def _extract_reasoning_level(text: str, fields: dict[str, str]) -> str:
@@ -406,12 +480,12 @@ def _check_stale_next_action(files: dict[str, RuntimeFile]) -> list[Finding]:
             )
         )
 
-    if action_type == "create_agent" and not _is_none(task_id):
+    if action_type not in {"stop", "finalize"} and not _is_none(task_id):
         task_entry = task_entries.get(task_id)
         if task_entry is None:
             findings.append(
                 Finding(
-                    "LINT_STATE_004",
+                    "LINT_RT_004",
                     "error",
                     "NEXT_ACTION points to an unregistered task",
                     f"NEXT_ACTION.TASK_ID={task_id} is not present in TASK_REGISTRY.",
@@ -422,7 +496,7 @@ def _check_stale_next_action(files: dict[str, RuntimeFile]) -> list[Finding]:
         elif task_entry.get("STATUS") in TERMINAL_TASK_STATUSES:
             findings.append(
                 Finding(
-                    "LINT_STATE_005",
+                    "LINT_RT_004",
                     "error",
                     "NEXT_ACTION dispatches a terminal task",
                     f"TASK_REGISTRY marks {task_id} as {task_entry.get('STATUS')}.",
@@ -558,6 +632,60 @@ def _check_push_allowed(files: dict[str, RuntimeFile]) -> list[Finding]:
     ]
 
 
+def _package_versioning_path(root: Path) -> Path:
+    workspace_path = root / "agent-system" / "PACKAGE_VERSIONING.md"
+    if workspace_path.is_file():
+        return workspace_path
+    return Path(__file__).resolve().parents[3] / "PACKAGE_VERSIONING.md"
+
+
+def _active_version_tuple(root: Path) -> tuple[dict[str, str], str]:
+    path = _package_versioning_path(root)
+    text, error = _read_text(path)
+    if error:
+        return {}, _rel(root, path)
+    fields = {occurrence.key: occurrence.value for occurrence in _parse_occurrences(text)}
+    return {field_name: fields.get(field_name, "") for field_name in ACTIVE_VERSION_FIELD_NAMES}, _rel(root, path)
+
+
+def _check_package_version_tuple(root: Path, files: dict[str, RuntimeFile]) -> list[Finding]:
+    project_state = files["PROJECT_STATE.md"]
+    if _entry_is_historical_or_waived(project_state.fields):
+        return []
+
+    runtime_tuple = {field_name: _field(project_state, field_name) for field_name in VERSION_FIELD_NAMES}
+    if all(_is_none(value) for value in runtime_tuple.values()):
+        return []
+
+    active_tuple, versioning_relpath = _active_version_tuple(root)
+    if not active_tuple or any(_is_none(value) for value in active_tuple.values()):
+        return []
+
+    expected = {
+        "PACKAGE_VERSION": active_tuple["CURRENT_PACKAGE_VERSION"],
+        "GOVERNANCE_RULESET_VERSION": active_tuple["CURRENT_GOVERNANCE_RULESET_VERSION"],
+        "RUNTIME_SCHEMA_VERSION": active_tuple["CURRENT_RUNTIME_SCHEMA_VERSION"],
+    }
+    mismatches = [
+        f"{field_name}={runtime_tuple[field_name] or 'MISSING'} expected {expected[field_name]}"
+        for field_name in VERSION_FIELD_NAMES
+        if runtime_tuple[field_name] != expected[field_name]
+    ]
+    if not mismatches:
+        return []
+
+    return [
+        Finding(
+            "LINT_RT_006",
+            "error",
+            "Package version tuple mismatch",
+            "; ".join(mismatches),
+            ["project-runtime/PROJECT_STATE.md", versioning_relpath],
+            "Update PROJECT_STATE package/governance/schema versions to the active tuple or mark the runtime explicitly historical.",
+        )
+    ]
+
+
 def _check_task_statuses(files: dict[str, RuntimeFile]) -> list[Finding]:
     findings: list[Finding] = []
     for entry in _entries(files["TASK_REGISTRY.md"].occurrences, "TASK_ID"):
@@ -569,6 +697,7 @@ def _check_task_statuses(files: dict[str, RuntimeFile]) -> list[Finding]:
         commit_hash = entry.get("COMMIT_HASH", "")
         branch = entry.get("BRANCH", "")
         accepted_files = entry.get("ACCEPTED_FILES", "")
+        traceability_exempt = _entry_is_historical_or_waived(entry)
 
         if status in {"completed", "audit_passed", "checkpoint_done"} and _is_none(result_refs):
             findings.append(
@@ -579,6 +708,35 @@ def _check_task_statuses(files: dict[str, RuntimeFile]) -> list[Finding]:
                     f"{task_id} has STATUS={status} but RESULT_REFS is empty.",
                     ["project-runtime/TASK_REGISTRY.md"],
                     "Record the accepted RESULT reference or move the task back to a non-terminal status.",
+                )
+            )
+        traceability_completed = status in {"completed", "checkpoint_done"}
+
+        if traceability_completed and _is_none(audit_refs) and not traceability_exempt:
+            findings.append(
+                Finding(
+                    "LINT_RT_002",
+                    "error",
+                    "Completed task lacks audit traceability",
+                    f"{task_id} has STATUS={status} but AUDIT_REFS is empty.",
+                    ["project-runtime/TASK_REGISTRY.md"],
+                    "Record AUDIT_REFS, mark the entry explicitly historical, or add a governed traceability waiver with reason.",
+                )
+            )
+        if (
+            traceability_completed
+            and _is_none(checkpoint_ref)
+            and not traceability_exempt
+            and not _entry_has_checkpoint_coverage(entry)
+        ):
+            findings.append(
+                Finding(
+                    "LINT_RT_003",
+                    "error",
+                    "Completed task lacks checkpoint traceability",
+                    f"{task_id} has STATUS={status} but CHECKPOINT_REF is empty.",
+                    ["project-runtime/TASK_REGISTRY.md"],
+                    "Record CHECKPOINT_REF, record aggregate checkpoint coverage, or add a governed traceability waiver with reason.",
                 )
             )
         if status in {"audit_passed", "checkpoint_done"} and _is_none(audit_refs):
@@ -633,17 +791,41 @@ def _check_accepted_artifacts(root: Path, files: dict[str, RuntimeFile]) -> list
         if not artifact_path.is_absolute():
             artifact_path = root / artifact_path
         if not artifact_path.exists():
+            if _accepted_artifact_missing_allowed(entry):
+                continue
             findings.append(
                 Finding(
-                    "LINT_ARTIFACT_002",
+                    "LINT_RT_005",
                     "error",
                     "Accepted artifact is missing from workspace",
                     f"{entry.get('ARTIFACT_ID', 'UNKNOWN')} points to missing path {artifact_ref}.",
                     ["project-runtime/ACCEPTED_ARTIFACTS.md", artifact_ref],
-                    "Restore the accepted artifact or mark the artifact superseded/failed through governed state update.",
+                    "Restore the accepted artifact, or record archived/removed state with an explicit reason.",
                 )
             )
     return findings
+
+
+def _accepted_artifact_missing_allowed(entry: dict[str, str]) -> bool:
+    archived_or_removed_values = {"archived", "archive", "removed", "deleted", "relocated"}
+    explicit_archive_or_removal_reason = not _is_none(entry.get("ARCHIVE_REASON")) or not _is_none(
+        entry.get("REMOVAL_REASON")
+    )
+    state_fields = (
+        "PATH_STATUS",
+        "ARTIFACT_PATH_STATUS",
+        "FILESYSTEM_STATUS",
+        "RETENTION_STATUS",
+        "STORAGE_STATUS",
+    )
+    has_archived_or_removed_state = any(
+        entry.get(field_name, "").strip().lower() in archived_or_removed_values
+        for field_name in state_fields
+    )
+    has_archive_ref = not _is_none(entry.get("ARCHIVE_REF")) or not _is_none(entry.get("RELOCATION_REF"))
+    return explicit_archive_or_removal_reason or (
+        (has_archived_or_removed_state or has_archive_ref) and _has_explicit_reason(entry)
+    )
 
 
 def _classified_markdown_files(root: Path) -> list[tuple[str, Path]]:
@@ -752,6 +934,17 @@ def _field_or_label_refs(path: Path, fields: dict[str, str], field_names: Iterab
             if match:
                 refs.extend(_split_refs(match.group(1)))
     return refs
+
+
+def _registry_entries_by_task_id(files: dict[str, RuntimeFile]) -> dict[str, dict[str, str]]:
+    registry = files.get("TASK_REGISTRY.md")
+    if not registry:
+        return {}
+    return {
+        entry.get("TASK_ID", ""): entry
+        for entry in _entries(registry.occurrences, "TASK_ID")
+        if not _is_none(entry.get("TASK_ID"))
+    }
 
 
 def _task_ids(root: Path, files: dict[str, RuntimeFile]) -> set[str]:
@@ -891,6 +1084,42 @@ def _check_result_and_audit_references(root: Path, files: dict[str, RuntimeFile]
                     f"{relpath} references missing RESULT record(s): {', '.join(missing_refs)}.",
                     [relpath, *missing_refs],
                     "Point the audit record at an existing worker RESULT path or registry reference.",
+                )
+            )
+    return findings
+
+
+def _check_result_registry_traceability(root: Path, files: dict[str, RuntimeFile]) -> list[Finding]:
+    findings: list[Finding] = []
+    registry_entries = _registry_entries_by_task_id(files)
+
+    for path in _result_files(root):
+        relpath = _rel(root, path)
+        fields = _read_fields(path)
+        if _entry_is_historical_or_waived(fields):
+            continue
+        task_id = fields.get("TASK_ID", "")
+        if _is_none(task_id):
+            findings.append(
+                Finding(
+                    "LINT_RT_001",
+                    "error",
+                    "RESULT cannot be matched to TASK_REGISTRY",
+                    f"{relpath} has no TASK_ID, so no TASK_REGISTRY entry can be matched.",
+                    [relpath, "project-runtime/TASK_REGISTRY.md"],
+                    "Add TASK_ID and register the task before accepting the RESULT.",
+                )
+            )
+            continue
+        if task_id not in registry_entries:
+            findings.append(
+                Finding(
+                    "LINT_RT_001",
+                    "error",
+                    "RESULT task is missing from TASK_REGISTRY",
+                    f"{relpath} declares TASK_ID={task_id}, but TASK_REGISTRY has no matching entry.",
+                    [relpath, "project-runtime/TASK_REGISTRY.md"],
+                    "Add the task to TASK_REGISTRY or archive/waive the historical RESULT explicitly.",
                 )
             )
     return findings
@@ -1199,10 +1428,12 @@ def _all_lint_findings(root: Path, files: dict[str, RuntimeFile]) -> list[Findin
     findings.extend(_check_checkpoint_receipt(files))
     findings.extend(_check_post_checkpoint_next_action(files))
     findings.extend(_check_push_allowed(files))
+    findings.extend(_check_package_version_tuple(root, files))
     findings.extend(_check_task_statuses(files))
     findings.extend(_check_accepted_artifacts(root, files))
     findings.extend(_check_basename_collisions(root))
     findings.extend(_check_result_and_audit_references(root, files))
+    findings.extend(_check_result_registry_traceability(root, files))
     findings.extend(_check_agent_lifecycle(root))
     findings.extend(_check_reasoning_and_designer(root, files))
     findings.extend(_check_skeleton_product_pass(root, files))
@@ -1248,7 +1479,7 @@ def _package_report(root: Path, strict: bool) -> tuple[dict[str, object], int]:
         "status": status,
         "root": str(root),
         "strict": strict,
-        "findings": [finding.to_json() for finding in findings],
+        "findings": [finding.to_json(mode="package") for finding in findings],
         "summary": summary,
         "package": {
             "package_consistency": package_checks.consistency(inspection.findings),
@@ -1281,7 +1512,7 @@ def _report(root: Path, strict: bool) -> tuple[dict[str, object], int]:
         "status": status,
         "root": str(root),
         "strict": strict,
-        "findings": [finding.to_json() for finding in findings],
+        "findings": [finding.to_json(mode="workspace") for finding in findings],
         "summary": _summary(findings),
     }, exit_code
 

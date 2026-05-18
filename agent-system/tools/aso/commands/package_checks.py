@@ -2,12 +2,32 @@
 
 from __future__ import annotations
 
+import re
 import subprocess
 from dataclasses import dataclass
 from pathlib import Path
 
 
 GENERATED_ROOTS = ("project-runtime", "project-input", "project-archive")
+GENERATED_ROOT_RULE_IDS = {
+    "project-runtime": "LINT_PKG_001",
+    "project-input": "LINT_PKG_002",
+    "project-archive": "LINT_PKG_003",
+}
+GENERATED_CACHE_PATTERNS = (
+    "__pycache__",
+    ".pytest_cache",
+    ".mypy_cache",
+    ".ruff_cache",
+    ".tox",
+    ".nox",
+    ".coverage",
+    "htmlcov",
+    "*.pyc",
+    "*.pyo",
+    "*.log",
+    ".DS_Store",
+)
 REQUIRED_GITIGNORE_PATTERNS = tuple(f"/{name}/" for name in GENERATED_ROOTS)
 README_PATHS = ("README.md", "agent-system/README.md")
 README_REQUIRED_TERMS = (
@@ -30,15 +50,20 @@ class Finding:
     files: list[str]
     recommendation: str
 
-    def to_json(self) -> dict[str, object]:
-        return {
+    def to_json(self, mode: str | None = None) -> dict[str, object]:
+        payload: dict[str, object] = {
             "rule_id": self.rule_id,
             "severity": self.severity,
+            "message": self.details,
+            "path": self.files[0] if self.files else "",
             "title": self.title,
             "details": self.details,
             "files": self.files,
             "recommendation": self.recommendation,
         }
+        if mode is not None:
+            payload["mode"] = mode
+        return payload
 
 
 @dataclass(frozen=True)
@@ -73,6 +98,7 @@ def inspect_package(root: Path) -> PackageInspection:
     _check_required_dirs(root, files, findings)
     tracked_generated_files = _tracked_generated_files(root, findings)
     _check_generated_roots(root, tracked_generated_files, generated_roots, findings)
+    _check_generated_cache_files(root, findings)
     _check_readmes(root, files, readmes, findings)
     _check_gitignore(root, files, findings)
 
@@ -172,9 +198,9 @@ def _check_generated_roots(
             generated_roots[name] = "tracked"
             findings.append(
                 Finding(
-                    "PACKAGE_TRACKING_001",
+                    GENERATED_ROOT_RULE_IDS[name],
                     "error",
-                    "Generated workspace root is tracked",
+                    f"Root {name} is tracked",
                     (
                         f"{name}/ is a generated workspace artifact root, but Git tracks: "
                         f"{', '.join(sorted(tracked_by_root[name])[:5])}"
@@ -189,12 +215,107 @@ def _check_generated_roots(
             generated_roots[name] = "absent"
 
 
+def _tracked_cache_files(root: Path, findings: list[Finding]) -> list[str]:
+    try:
+        result = subprocess.run(
+            ["git", "-C", str(root), "ls-files"],
+            check=False,
+            text=True,
+            capture_output=True,
+        )
+    except FileNotFoundError:
+        findings.append(
+            Finding(
+                "PACKAGE_GIT_001",
+                "error",
+                "Git is unavailable",
+                "git executable was not found, so package mode cannot verify generated cache tracking.",
+                list(GENERATED_CACHE_PATTERNS),
+                "Run package mode in an environment with git available.",
+            )
+        )
+        return []
+
+    if result.returncode != 0:
+        if "not a git repository" in result.stderr.lower():
+            return []
+        findings.append(
+            Finding(
+                "PACKAGE_GIT_002",
+                "error",
+                "Generated cache tracking check failed",
+                (result.stderr or result.stdout or "git ls-files failed").strip(),
+                list(GENERATED_CACHE_PATTERNS),
+                "Repair the Git worktree before running package mode lint.",
+            )
+        )
+        return []
+
+    tracked = [line.strip() for line in result.stdout.splitlines() if line.strip()]
+    return [relpath for relpath in tracked if _is_generated_cache_file(relpath)]
+
+
+def _check_generated_cache_files(root: Path, findings: list[Finding]) -> None:
+    tracked_cache_files = _tracked_cache_files(root, findings)
+    if not tracked_cache_files:
+        return
+
+    findings.append(
+        Finding(
+            "LINT_PKG_006",
+            "error",
+            "Generated cache files are tracked",
+            f"Git tracks generated cache artifact(s): {', '.join(sorted(tracked_cache_files)[:10])}.",
+            sorted(tracked_cache_files),
+            "Remove generated cache files from package tracking and keep them ignored locally.",
+        )
+    )
+
+
+def _is_generated_cache_file(relpath: str) -> bool:
+    name = Path(relpath).name
+    parts = set(Path(relpath).parts)
+    if parts.intersection({"__pycache__", ".pytest_cache", ".mypy_cache", ".ruff_cache", ".tox", ".nox", "htmlcov"}):
+        return True
+    return name in {".coverage", ".DS_Store"} or name.endswith((".pyc", ".pyo", ".log"))
+
+
+def _claims_no_cli_wrapper(text: str) -> bool:
+    patterns = (
+        r"\bno\s+(?:(?:separate|implemented|full|current)\s+){0,4}(?:aso\s+)?(?:cli|command[- ]line)\s+wrapper\b",
+        r"\bwithout\s+(?:an?\s+)?(?:(?:separate|implemented|full|current)\s+){0,4}(?:aso\s+)?(?:cli|command[- ]line)\s+wrapper\b",
+        r"\bdoes\s+not\s+(?:claim|include|ship|provide|have)\s+(?:an?\s+)?(?:(?:separate|implemented|full|current)\s+){0,4}(?:aso\s+)?(?:cli|command[- ]line)(?:\s+wrapper)?\b",
+        r"\bdoesn't\s+(?:claim|include|ship|provide|have)\s+(?:an?\s+)?(?:(?:separate|implemented|full|current)\s+){0,4}(?:aso\s+)?(?:cli|command[- ]line)(?:\s+wrapper)?\b",
+    )
+    for line in text.splitlines():
+        lowered = line.lower()
+        if any(re.search(pattern, lowered) for pattern in patterns) and not _is_qualified_historical_cli_line(lowered):
+            return True
+    return False
+
+
+def _is_qualified_historical_cli_line(lowered_line: str) -> bool:
+    historical_terms = ("earlier", "previous", "historical", "prior", "before", "legacy")
+    current_cli_terms = (
+        "now includes",
+        "currently includes",
+        "now provides",
+        "currently provides",
+        "aso v0 now includes",
+        "aso v0 includes",
+    )
+    return any(term in lowered_line for term in historical_terms) and any(
+        term in lowered_line for term in current_cli_terms
+    )
+
+
 def _check_readmes(
     root: Path,
     files: dict[str, dict[str, object]],
     readmes: dict[str, str],
     findings: list[Finding],
 ) -> None:
+    aso_exists = (root / "agent-system" / "tools" / "aso").exists()
     for relpath in README_PATHS:
         path = root / relpath
         if not path.is_file():
@@ -230,6 +351,20 @@ def _check_readmes(
             continue
 
         files[relpath] = {"exists": True, "type": "file", "bytes": len(text.encode("utf-8"))}
+        if aso_exists and _claims_no_cli_wrapper(text):
+            readmes[relpath] = "contradicts-aso-cli"
+            findings.append(
+                Finding(
+                    "LINT_PKG_004",
+                    "error",
+                    "README claims no CLI wrapper",
+                    f"{relpath} claims the package has no CLI wrapper, but agent-system/tools/aso exists.",
+                    [relpath, "agent-system/tools/aso"],
+                    "Update README wording to describe the read-only ASO helper CLI.",
+                )
+            )
+            continue
+
         missing_terms = [
             label
             for label, term in README_REQUIRED_TERMS
@@ -261,7 +396,7 @@ def _check_gitignore(
         files[".gitignore"] = {"exists": path.exists(), "type": "missing"}
         findings.append(
             Finding(
-                "PACKAGE_IGNORE_001",
+                "LINT_PKG_005",
                 "error",
                 ".gitignore is missing",
                 ".gitignore must ignore generated workspace artifact roots.",
@@ -277,7 +412,7 @@ def _check_gitignore(
         files[".gitignore"] = {"exists": True, "type": "file", "error": str(exc)}
         findings.append(
             Finding(
-                "PACKAGE_IGNORE_002",
+                "LINT_PKG_005",
                 "error",
                 ".gitignore is unreadable",
                 f".gitignore: {exc}",
@@ -299,7 +434,7 @@ def _check_gitignore(
     if missing_patterns:
         findings.append(
             Finding(
-                "PACKAGE_IGNORE_003",
+                "LINT_PKG_005",
                 "error",
                 ".gitignore lacks generated workspace artifact rules",
                 f".gitignore is missing: {', '.join(missing_patterns)}.",
