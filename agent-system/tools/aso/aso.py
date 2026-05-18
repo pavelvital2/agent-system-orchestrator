@@ -7,7 +7,7 @@ import argparse
 import sys
 from pathlib import Path
 
-from commands import archive_verify, doctor, lint, status
+from commands import archive_verify, doctor, lint, status, validate_design
 
 
 EXIT_USAGE = 2
@@ -116,6 +116,33 @@ def build_parser() -> argparse.ArgumentParser:
         help="Write the doctor report JSON to this explicit path.",
     )
     doctor_parser.set_defaults(handler=doctor.run)
+
+    validate_design_parser = subparsers.add_parser(
+        "validate-design",
+        help="Validate a solution architect design Markdown artifact.",
+        description=(
+            "Read-only validation for DESIGN_OUTPUT_CONTRACT, design traceability "
+            "rules, downstream task readiness, testing strategy, and product "
+            "capability evidence."
+        ),
+    )
+    validate_design_parser.add_argument(
+        "design_path",
+        metavar="DESIGN.md",
+        help="Markdown design artifact to inspect.",
+    )
+    _add_root_argument(validate_design_parser, validate=False)
+    validate_design_parser.add_argument(
+        "--strict",
+        action="store_true",
+        help="Treat warnings as a failing validation result.",
+    )
+    validate_design_parser.add_argument(
+        "--json-out",
+        metavar="PATH",
+        help="Write the design validation report JSON to this explicit path.",
+    )
+    validate_design_parser.set_defaults(handler=validate_design.run)
 
     archive_parser = subparsers.add_parser(
         "archive",
