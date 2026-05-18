@@ -23,6 +23,7 @@ class PackagingCommandTests(unittest.TestCase):
         self.assertIn("Read-only Agent System Orchestrator control-plane helper.", result.stdout)
         self.assertIn("status", result.stdout)
         self.assertIn("lint", result.stdout)
+        self.assertIn("doctor", result.stdout)
         self.assertIn("archive", result.stdout)
 
     def test_console_script_entrypoint_is_registered_in_project_metadata(self) -> None:

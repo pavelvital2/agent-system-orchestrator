@@ -7,7 +7,7 @@ import argparse
 import sys
 from pathlib import Path
 
-from commands import archive_verify, lint, status
+from commands import archive_verify, doctor, lint, status
 
 
 EXIT_USAGE = 2
@@ -93,6 +93,29 @@ def build_parser() -> argparse.ArgumentParser:
         help="Write the lint report JSON to this explicit path.",
     )
     lint_parser.set_defaults(handler=lint.run)
+
+    doctor_parser = subparsers.add_parser(
+        "doctor",
+        help="Run read-only package or workspace diagnostics.",
+        description=(
+            "Inspect ASO package command readiness in package mode, or workspace "
+            "runtime, identity, repository lock, and checkpoint readiness signals "
+            "in workspace mode."
+        ),
+    )
+    _add_root_argument(doctor_parser, validate=False)
+    _add_mode_argument(doctor_parser)
+    doctor_parser.add_argument(
+        "--strict",
+        action="store_true",
+        help="Treat warnings as a failing doctor result.",
+    )
+    doctor_parser.add_argument(
+        "--json-out",
+        metavar="PATH",
+        help="Write the doctor report JSON to this explicit path.",
+    )
+    doctor_parser.set_defaults(handler=doctor.run)
 
     archive_parser = subparsers.add_parser(
         "archive",
