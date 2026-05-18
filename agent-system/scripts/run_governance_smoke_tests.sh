@@ -761,24 +761,20 @@ assert_coverage_matrix() {
 }
 
 assert_version_changelog_coherence() {
-  grep -Fq "CURRENT_PACKAGE_VERSION: 2.0.0" "$PACKAGE_VERSIONING" || die "PACKAGE_VERSIONING missing package 2.0.0"
-  grep -Fq "CURRENT_GOVERNANCE_RULESET_VERSION: 2.0.0" "$PACKAGE_VERSIONING" || die "PACKAGE_VERSIONING missing governance 2.0.0"
-  grep -Fq "CURRENT_RUNTIME_SCHEMA_VERSION: 2.0.0" "$PACKAGE_VERSIONING" || die "PACKAGE_VERSIONING missing runtime schema 2.0.0"
-  grep -Fq "CURRENT_PACKAGE_VERSION: 2.0.0" "$PACKAGE_README" || die "README missing package 2.0.0"
-  grep -Fq "TASK_ASO_PATCH_008_GOVERNANCE_SMOKE_TESTS" "$CHANGELOG" || die "changelog missing TASK_ASO_PATCH_008_GOVERNANCE_SMOKE_TESTS"
-  grep -Fq "ASO_CORR_200_002_BOOTSTRAP_CONTINUATION_BASELINE_GATE" "$CHANGELOG" || die "changelog missing ASO_CORR_200_002"
-  grep -Fq "PACKAGE_VERSION_AFTER: 2.0.0" "$CHANGELOG" || die "changelog missing PACKAGE_VERSION_AFTER: 2.0.0"
+  grep -Fq "CURRENT_PACKAGE_VERSION: 3.0.0" "$PACKAGE_VERSIONING" || die "PACKAGE_VERSIONING missing package 3.0.0"
+  grep -Fq "CURRENT_GOVERNANCE_RULESET_VERSION: 3.0.0" "$PACKAGE_VERSIONING" || die "PACKAGE_VERSIONING missing governance 3.0.0"
+  grep -Fq "CURRENT_RUNTIME_SCHEMA_VERSION: 3.0.0" "$PACKAGE_VERSIONING" || die "PACKAGE_VERSIONING missing runtime schema 3.0.0"
+  grep -Fq "CURRENT_PACKAGE_VERSION: 3.0.0" "$PACKAGE_README" || die "README missing package 3.0.0"
+  grep -Fq "GOV-2026-05-18-001" "$CHANGELOG" || die "changelog missing GOV-2026-05-18-001"
+  grep -Fq "ASO_CONTROL_PLANE_V3_0_0_RELEASE_CANDIDATE_PACKAGE_MODE_AND_ROOT_RUNTIME_CLEANUP" "$CHANGELOG" || die "changelog missing v3.0.0 RC title"
+  grep -Fq "PACKAGE_VERSION_AFTER: 3.0.0" "$CHANGELOG" || die "changelog missing PACKAGE_VERSION_AFTER: 3.0.0"
   awk '
-    /CHANGE_ID: GOV-2026-05-17-001/ { entry="001" }
-    /CHANGE_ID: GOV-2026-05-17-008/ { entry="008" }
-    /CHANGE_ID: GOV-2026-05-17-010/ { entry="010" }
-    entry == "001" && /STATUS: accepted/ { found_001=1 }
-    entry == "008" && /STATUS: accepted/ { found_008=1 }
-    entry == "010" && /STATUS: accepted/ { found_010=1 }
-    END { exit(found_001 && found_008 && found_010 ? 0 : 1) }
-  ' "$CHANGELOG" || die "changelog missing accepted status for v2.0.0 patch/correction entries"
+    /CHANGE_ID: GOV-2026-05-18-001/ { entry="v3" }
+    entry == "v3" && /STATUS: accepted/ { found_v3=1 }
+    END { exit(found_v3 ? 0 : 1) }
+  ' "$CHANGELOG" || die "changelog missing accepted status for v3.0.0 RC entry"
 
-  printf 'PASS: version_changelog coherent for 2.0.0 with accepted status\n'
+  printf 'PASS: version_changelog coherent for 3.0.0 with accepted status\n'
   PASS_COUNT=$((PASS_COUNT + 1))
 }
 

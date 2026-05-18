@@ -19,9 +19,9 @@ RUNTIME_SCHEMA_VERSION:
 ## Active version constants
 
 ```text
-CURRENT_PACKAGE_VERSION: 2.0.0
-CURRENT_GOVERNANCE_RULESET_VERSION: 2.0.0
-CURRENT_RUNTIME_SCHEMA_VERSION: 2.0.0
+CURRENT_PACKAGE_VERSION: 3.0.0
+CURRENT_GOVERNANCE_RULESET_VERSION: 3.0.0
+CURRENT_RUNTIME_SCHEMA_VERSION: 3.0.0
 ```
 
 These constants define the active package/governance/schema tuple for runtime validation. They are policy constants, not a release manifest.
@@ -83,6 +83,50 @@ The governance smoke-test addition for
 `2.0.0 / 2.0.0 / 2.0.0`. It adds deterministic local fixtures and a dry-run
 runner for the v2.0.0 blocker surface; it is recorded in
 `GOVERNANCE_CHANGELOG.md` and does not install a new package version.
+
+The v3.0.0 ASO control-plane v0 release candidate installs:
+
+```text
+CURRENT_PACKAGE_VERSION: 3.0.0
+CURRENT_GOVERNANCE_RULESET_VERSION: 3.0.0
+CURRENT_RUNTIME_SCHEMA_VERSION: 3.0.0
+```
+
+This major update introduces the experimental read-only ASO helper CLI and
+requires explicit package/workspace mode selection for package repository and
+target workspace validation. Package repository cleanup policy treats root
+generated workspace artifacts as non-package state: root
+`project-runtime/`, `project-input/`, and `project-archive/` are not shipped as
+tracked package state, while target workspaces may still generate runtime
+state under `project-runtime/`.
+
+The v3.0.0 package records canonical worker result and audit result paths,
+profile-agent lifecycle invariants, reasoning-level authority, and design-role
+authority:
+
+```text
+profile agent lifecycle: one agent = one task = one RESULT = terminate
+REASONING_LEVEL values: low, medium, high, xhigh
+canonical design role: solution_architect
+deprecated compatibility alias: designer
+```
+
+Design output is governed by the solution architect output contract and review
+rubric. Smoke runner hardening, transactional checkpoint specification,
+canonical JSON state migration preparation, and product capability gate
+vocabulary are part of the accepted v3.0.0 package surface.
+
+v3.0.0 is a major version because it changes or introduces mandatory lifecycle
+semantics, role authority and canonical role naming, filesystem and package
+repository authority, runtime artifact taxonomy, and package/workspace
+validation mode.
+
+Migration note: existing target project workspaces are not automatically
+cleaned. Root `project-runtime/`, `project-input/`, and `project-archive/` are
+ignored only in the package repository. Target workspaces may continue
+generating `project-runtime/` as runtime state. Existing v2.0.0 workspaces must
+install or update `agent-system/` to v3.0.0 before relying on ASO
+package/workspace mode.
 
 ## Version semantics
 

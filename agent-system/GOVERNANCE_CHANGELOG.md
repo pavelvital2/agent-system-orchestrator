@@ -996,4 +996,81 @@ SUMMARY:
 - Removed legacy top-level tests/fixtures after smoke fixtures were moved under agent-system/tests/fixtures.
 - Confirmed governance smoke remains self-contained inside the copied agent-system package.
 STATUS: accepted
+
+CHANGE_ID: GOV-2026-05-18-001
+CHANGE_TITLE: ASO_CONTROL_PLANE_V3_0_0_RELEASE_CANDIDATE_PACKAGE_MODE_AND_ROOT_RUNTIME_CLEANUP
+DATE: 2026-05-18
+PACKAGE_VERSION_BEFORE: 2.0.0
+PACKAGE_VERSION_AFTER: 3.0.0
+GOVERNANCE_RULESET_BEFORE: 2.0.0
+GOVERNANCE_RULESET_AFTER: 3.0.0
+RUNTIME_SCHEMA_BEFORE: 2.0.0
+RUNTIME_SCHEMA_AFTER: 3.0.0
+CHANGE_TYPE: major
+AFFECTED_FILES:
+- README.md
+- .gitignore
+- agent-system/README.md
+- agent-system/PACKAGE_VERSIONING.md
+- agent-system/GOVERNANCE_CHANGELOG.md
+- agent-system/01_roles/SOLUTION_ARCHITECT.md
+- agent-system/01_roles/DESIGNER.md
+- agent-system/02_runtime/FILESYSTEM_GOVERNANCE.md
+- agent-system/02_runtime/PROFILE_AGENT_LIFECYCLE.md
+- agent-system/02_runtime/RUNTIME_FILE_TAXONOMY.md
+- agent-system/02_runtime/TRANSACTIONAL_CHECKPOINT_SPEC.md
+- agent-system/02_runtime/CANONICAL_JSON_STATE_PREPARATION.md
+- agent-system/03_templates/AGENT_RESULT_TEMPLATE.md
+- agent-system/03_templates/BOOTSTRAP_TASK_PACKET_TEMPLATE.md
+- agent-system/03_templates/TASK_PACKET_TEMPLATE.md
+- agent-system/06_logs/AGENT_RESULTS_LOG_TEMPLATE.md
+- agent-system/09_validators/REASONING_LEVEL_VALIDATION_RULES.md
+- agent-system/09_validators/PRODUCT_CAPABILITY_GATE_POLICY.md
+- agent-system/09_validators/TASK_PACKET_SCHEMA_VALIDATION_RULES.md
+- agent-system/09_validators/TASK_PACKET_VALIDATION_RULES.md
+- agent-system/09_validators/schemas/task_packet.schema.json
+- agent-system/tools/aso/aso.py
+- agent-system/tools/aso/commands/package_checks.py
+- agent-system/tools/aso/commands/status.py
+- agent-system/tools/aso/commands/lint.py
+- agent-system/tools/aso/commands/archive_verify.py
+- agent-system/tools/aso/tests/test_status.py
+- agent-system/tools/aso/tests/test_lint.py
+- agent-system/tools/aso/tests/test_archive_verify.py
+- agent-system/scripts/run_governance_smoke_tests.sh
+- agent-system/scripts/run_governance_smoke_tests.py
+- agent-system/scripts/validate_task_packet.py
+- agent-system/tests/test_governance_smoke_runner.py
+- agent-system/tests/test_validate_task_packet.py
+- agent-system/11_release/ASO_CONTROL_PLANE_V0_RELEASE_CANDIDATE.md
+AFFECTED_INVARIANTS:
+- Active package, governance ruleset, and runtime schema tuple is 3.0.0 / 3.0.0 / 3.0.0.
+- ASO v0 is an experimental read-only helper CLI for status, lint, and archive verify only.
+- ASO v0 has explicit package/workspace validation mode and no mutation, dispatch, checkpoint, migration, or repair commands.
+- Package repository cleanup policy excludes root generated workspace artifacts from shipped package state.
+- Root generated project-runtime, project-input, and project-archive artifacts are not tracked as package state.
+- Canonical worker result and audit result paths are package-governed runtime artifact taxonomy.
+- Profile-agent lifecycle invariant is one agent = one task = one RESULT = terminate.
+- REASONING_LEVEL policy uses low, medium, high, and xhigh.
+- solution_architect is the canonical project design role and designer is a deprecated compatibility alias.
+- Design output contract and review rubric govern design acceptance.
+- Smoke runner hardening remains self-contained, timeout-bounded, and local.
+- Transactional checkpoint behavior is specification-only in v0 and does not authorize CLI mutation.
+- JSON state migration preparation is documented while Markdown runtime state remains v0-compatible.
+- Product capability gate vocabulary separates process pass, capability pass, product pass, MVP readiness, and final acceptance.
+AFFECTED_TRANSITIONS:
+- package repository validation -> explicit --mode package for ASO status/lint.
+- target workspace validation -> explicit --mode workspace for ASO status/lint.
+- missing or tracked root generated workspace artifacts in package repository -> package-mode finding or governed cleanup.
+- profile-agent dispatch -> one fresh bounded task packet -> one RESULT -> logical termination.
+- worker RESULT -> canonical worker result path -> auditor review -> canonical audit result path.
+- design task routing -> solution_architect canonical role with designer compatibility alias only.
+- checkpoint request in ASO v0 -> rejected as unsupported mutation behavior; checkpoint remains orchestrator-owned specification/policy.
+- capability or product readiness claim -> governed by product capability gate vocabulary before MVP or final acceptance claim.
+SCHEMA_TEMPLATE_IMPACT: both
+MIGRATION_REQUIRED: yes
+MIGRATION_NOTE: Existing target project workspaces are not automatically cleaned. Root project-runtime/project-input/project-archive are ignored only in the package repository. Target workspaces may continue generating project-runtime as runtime state. Existing v2.0.0 workspaces must install or update agent-system to v3.0.0 before relying on ASO package/workspace mode.
+AUTHORIZED_BY: project_owner
+AUDIT_REQUIRED: yes
+STATUS: accepted
 ```

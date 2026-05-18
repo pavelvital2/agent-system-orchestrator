@@ -3,8 +3,9 @@
 ## Purpose
 
 This document records stable release evidence for the ASO control-plane v0
-release candidate after the root `project-runtime/` cleanup path and before the
-orchestrator-owned final commit and push.
+release candidate after the root `project-runtime/` cleanup path, governance
+changelog traceability correction, and active tuple bump to
+`3.0.0 / 3.0.0 / 3.0.0`.
 
 The report summarizes accepted package state and durable documentation. It does
 not copy raw runtime dumps and does not require `project-runtime/` to exist
@@ -37,18 +38,15 @@ Pre-cleanup runtime summaries were used only as transient corroboration while
 creating this document. The stable release evidence is the package content
 summarized below.
 
-## Final Branch and Commit Evidence
+## Branch and Commit Evidence
 
-- Final RC branch: `release-candidate/aso-control-plane-v0-final`.
-- Current pre-final-report HEAD:
-  `f3af0f74d3d518eed28822c7459dc5e3dc255471`.
-- Final commit hash: orchestrator-confirmed after the final report commit and
-  branch push.
+- RC correction branch: `correction/aso-v0-version-bump-changelog`.
+- Final commit hash: orchestrator-confirmed after the audited correction commit
+  and branch push.
 
-The exact self-referential commit hash cannot be embedded before the commit
-that contains this report exists. This report therefore records the current
-pre-final-report HEAD as reproducible evidence. After the orchestrator performs
-the final audited commit and push, the exact pushed HEAD must be confirmed with
+The exact self-referential commit hash is intentionally not embedded before the
+commit that contains this report exists. After the orchestrator performs the
+final audited commit and push, the exact pushed HEAD must be confirmed with
 `git rev-parse HEAD` or `git rev-parse --short HEAD`.
 
 ## Cleanup Summary
@@ -94,6 +92,21 @@ status and strict package lint both passed, generated roots are not tracked, and
 root and package README consistency checks passed.
 
 ## Release Candidate Summary
+
+### RC version tuple and final correction
+
+The ASO control-plane v0 release candidate tuple is now:
+
+```text
+CURRENT_PACKAGE_VERSION: 3.0.0
+CURRENT_GOVERNANCE_RULESET_VERSION: 3.0.0
+CURRENT_RUNTIME_SCHEMA_VERSION: 3.0.0
+```
+
+Correction task `TASK_RC_CORR_001_VERSION_BUMP_AND_GOVERNANCE_CHANGELOG`
+closed the final audit blocker by adding accepted governance changelog
+traceability entry `GOV-2026-05-18-001` and raising the active tuple from
+`2.0.0 / 2.0.0 / 2.0.0` to `3.0.0 / 3.0.0 / 3.0.0`.
 
 ### ASO v0 scope: read-only helper CLI status/lint/archive verify
 
