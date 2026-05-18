@@ -148,6 +148,28 @@ and branch before package files are copied. Repository lock acceptance requires
 explicit expected remote and branch inputs; push remains disabled unless an
 accepted repository lock explicitly allows it.
 
+## ASO helper CLI
+
+The package includes an experimental read-only ASO helper CLI at
+`agent-system/tools/aso/aso.py`.
+
+Package repository checks use explicit package mode:
+
+```text
+python3 agent-system/tools/aso/aso.py status --root . --mode package
+python3 agent-system/tools/aso/aso.py lint --root . --mode package --strict
+```
+
+Initialized project workspaces use explicit workspace mode:
+
+```text
+python3 agent-system/tools/aso/aso.py status --root /path/to/project --mode workspace
+python3 agent-system/tools/aso/aso.py lint --root /path/to/project --mode workspace --strict
+```
+
+The helper supports read-only status, lint, and archive verify inspection. It
+does not provide mutation, dispatch, or checkpoint commands.
+
 ## Templates, state, and logs
 
 Templates in the [03_templates/](03_templates/) package directory define task
@@ -304,4 +326,4 @@ sidecar policy, PROJECT_STATE semantic field parity, and runtime tuple
 validation for `CURRENT_GATE.ACTION_SEMANTIC` and
 `NEXT_ACTION.ACTION_SEMANTIC`.
 
-This repository package is an instruction, governance, template, lifecycle, and validation package for Codex CLI orchestration. It includes an experimental read-only ASO helper CLI under `agent-system/tools/aso`. The helper currently supports status, lint, and archive verify. It is not yet a full mutation, dispatch, or checkpoint engine.
+This repository package is an instruction, governance, template, lifecycle, and validation package for Codex CLI orchestration.

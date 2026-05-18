@@ -51,6 +51,21 @@ PUSH_ALLOWED: false
 }
 
 
+PACKAGE_README = """# Package
+
+Use the read-only ASO helper at `agent-system/tools/aso/aso.py`.
+
+```text
+python3 agent-system/tools/aso/aso.py status --root . --mode package
+python3 agent-system/tools/aso/aso.py lint --root . --mode package --strict
+python3 agent-system/tools/aso/aso.py status --root /path/to/project --mode workspace
+python3 agent-system/tools/aso/aso.py lint --root /path/to/project --mode workspace --strict
+```
+
+It does not provide mutation, dispatch, or checkpoint commands.
+"""
+
+
 def write_runtime(root: Path, overrides: dict[str, str] | None = None) -> list[Path]:
     runtime = root / "project-runtime"
     runtime.mkdir()
@@ -63,6 +78,19 @@ def write_runtime(root: Path, overrides: dict[str, str] | None = None) -> list[P
         path.write_text(text, encoding="utf-8")
         paths.append(path)
     return paths
+
+
+def write_package_fixture(root: Path, *, include_untracked_input: bool = False) -> None:
+    (root / "agent-system" / "tools" / "aso").mkdir(parents=True)
+    (root / "README.md").write_text(PACKAGE_README, encoding="utf-8")
+    (root / "agent-system" / "README.md").write_text(PACKAGE_README, encoding="utf-8")
+    (root / ".gitignore").write_text(
+        "/project-runtime/\n/project-input/\n/project-archive/\n",
+        encoding="utf-8",
+    )
+    if include_untracked_input:
+        (root / "project-input").mkdir()
+        (root / "project-input" / "local-task.md").write_text("local\n", encoding="utf-8")
 
 
 class StatusCommandTests(unittest.TestCase):
@@ -80,6 +108,8 @@ class StatusCommandTests(unittest.TestCase):
                     "status",
                     "--root",
                     str(root),
+                    "--mode",
+                    "workspace",
                     "--json-out",
                     str(json_out),
                 ],
@@ -133,6 +163,41 @@ class StatusCommandTests(unittest.TestCase):
             self.assertEqual(result.returncode, 0, result.stderr)
             self.assertIn("Runtime consistency: FAIL", result.stdout)
             self.assertIn("Findings: 1", result.stdout)
+
+    def test_package_status_passes_without_project_runtime(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            write_package_fixture(root, include_untracked_input=True)
+            json_out = root / "package-status.json"
+
+            result = subprocess.run(
+                [
+                    sys.executable,
+                    str(CLI),
+                    "status",
+                    "--root",
+                    str(root),
+                    "--mode",
+                    "package",
+                    "--json-out",
+                    str(json_out),
+                ],
+                check=False,
+                text=True,
+                capture_output=True,
+            )
+
+            self.assertEqual(result.returncode, 0, result.stderr)
+            self.assertIn("ASO package status: PASSED", result.stdout)
+            self.assertIn("Package consistency: PASS", result.stdout)
+            self.assertIn("project-runtime=absent", result.stdout)
+            self.assertIn("project-input=present-untracked", result.stdout)
+
+            report = json.loads(json_out.read_text(encoding="utf-8"))
+            self.assertEqual(report["mode"], "package")
+            self.assertEqual(report["status"], "passed")
+            self.assertEqual(report["summary"]["generated_roots"]["project-runtime"], "absent")
+            self.assertEqual(report["summary"]["generated_roots"]["project-input"], "present-untracked")
 
 
 if __name__ == "__main__":

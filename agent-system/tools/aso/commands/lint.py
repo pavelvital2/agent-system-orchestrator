@@ -10,6 +10,8 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Iterable
 
+from commands import package_checks
+
 
 EXIT_OK = 0
 EXIT_FINDINGS = 1
@@ -1215,6 +1217,48 @@ def _summary(findings: list[Finding]) -> dict[str, int]:
     }
 
 
+def _package_finding(finding: package_checks.Finding) -> Finding:
+    return Finding(
+        finding.rule_id,
+        finding.severity,
+        finding.title,
+        finding.details,
+        finding.files,
+        finding.recommendation,
+    )
+
+
+def _package_report(root: Path, strict: bool) -> tuple[dict[str, object], int]:
+    inspection = package_checks.inspect_package(root)
+    findings = [_package_finding(finding) for finding in inspection.findings]
+    summary = _summary(findings)
+
+    if any(finding.rule_id == "PACKAGE_IO_001" for finding in findings):
+        exit_code = EXIT_IO_ERROR
+        status = "io_error"
+    else:
+        failed = summary["errors"] > 0 or (strict and bool(findings))
+        exit_code = EXIT_FINDINGS if failed else EXIT_OK
+        status = "failed" if failed else ("warning" if findings else "passed")
+
+    return {
+        "tool": "aso",
+        "command": "lint",
+        "mode": "package",
+        "status": status,
+        "root": str(root),
+        "strict": strict,
+        "findings": [finding.to_json() for finding in findings],
+        "summary": summary,
+        "package": {
+            "package_consistency": package_checks.consistency(inspection.findings),
+            "generated_roots": inspection.generated_roots,
+            "readmes": inspection.readmes,
+            "git_tracked_generated_files": inspection.git_tracked_generated_files,
+        },
+    }, exit_code
+
+
 def _report(root: Path, strict: bool) -> tuple[dict[str, object], int]:
     files, io_findings, can_lint = _validate_root_and_required_files(root)
     findings = list(io_findings)
@@ -1233,6 +1277,7 @@ def _report(root: Path, strict: bool) -> tuple[dict[str, object], int]:
     return {
         "tool": "aso",
         "command": "lint",
+        "mode": "workspace",
         "status": status,
         "root": str(root),
         "strict": strict,
@@ -1248,6 +1293,8 @@ def _print_text(report: dict[str, object]) -> None:
 
     print(f"ASO lint: {str(report['status']).upper()}")
     print(f"Root: {report['root']}")
+    if "mode" in report:
+        print(f"Mode: {report['mode']}")
     print(f"Strict: {report['strict']}")
     print(f"Errors: {summary['errors']}")
     print(f"Warnings: {summary['warnings']}")
@@ -1274,7 +1321,10 @@ def _write_json(path_text: str, report: dict[str, object]) -> bool:
 
 def run(args: argparse.Namespace) -> int:
     """Run the lint command."""
-    report, exit_code = _report(args.root, args.strict)
+    if args.mode == "package":
+        report, exit_code = _package_report(args.root, args.strict)
+    else:
+        report, exit_code = _report(args.root, args.strict)
     _print_text(report)
     if args.json_out and not _write_json(args.json_out, report):
         return EXIT_IO_ERROR

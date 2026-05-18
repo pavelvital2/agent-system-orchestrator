@@ -148,6 +148,21 @@ AGENT_TERMINATION_REQUIRED: true
 """
 
 
+PACKAGE_README = """# Package
+
+Use the read-only ASO helper at `agent-system/tools/aso/aso.py`.
+
+```text
+python3 agent-system/tools/aso/aso.py status --root . --mode package
+python3 agent-system/tools/aso/aso.py lint --root . --mode package --strict
+python3 agent-system/tools/aso/aso.py status --root /path/to/project --mode workspace
+python3 agent-system/tools/aso/aso.py lint --root /path/to/project --mode workspace --strict
+```
+
+It does not provide mutation, dispatch, or checkpoint commands.
+"""
+
+
 def write_runtime(root: Path, overrides: dict[str, str] | None = None) -> list[Path]:
     runtime = root / "project-runtime"
     runtime.mkdir()
@@ -189,6 +204,29 @@ def write_runtime(root: Path, overrides: dict[str, str] | None = None) -> list[P
     )
     paths.append(instances_path)
     return paths
+
+
+def write_package_fixture(root: Path, *, include_untracked_input: bool = False) -> None:
+    (root / "agent-system" / "tools" / "aso").mkdir(parents=True)
+    (root / "README.md").write_text(PACKAGE_README, encoding="utf-8")
+    (root / "agent-system" / "README.md").write_text(PACKAGE_README, encoding="utf-8")
+    (root / ".gitignore").write_text(
+        "/project-runtime/\n/project-input/\n/project-archive/\n",
+        encoding="utf-8",
+    )
+    if include_untracked_input:
+        (root / "project-input").mkdir()
+        (root / "project-input" / "local-task.md").write_text("local\n", encoding="utf-8")
+
+
+def init_git(root: Path) -> None:
+    subprocess.run(
+        ["git", "init"],
+        cwd=root,
+        check=True,
+        text=True,
+        capture_output=True,
+    )
 
 
 def append_agent_events(root: Path, events: list[str]) -> None:
@@ -249,6 +287,51 @@ class LintCommandTests(unittest.TestCase):
             self.assertEqual(result.returncode, 3, result.stdout + result.stderr)
             self.assertIn("ASO lint: IO_ERROR", result.stdout)
             self.assertIn("LINT_IO_004", result.stdout)
+
+    def test_lint_workspace_mode_still_requires_project_runtime(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+
+            result = run_lint(root, "--mode", "workspace", "--strict")
+
+            self.assertEqual(result.returncode, 3, result.stdout + result.stderr)
+            self.assertIn("ASO lint: IO_ERROR", result.stdout)
+            self.assertIn("LINT_IO_002", result.stdout)
+
+    def test_package_lint_strict_passes_without_project_runtime(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            init_git(root)
+            write_package_fixture(root, include_untracked_input=True)
+
+            result = run_lint(root, "--mode", "package", "--strict")
+
+            self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+            self.assertIn("ASO lint: PASSED", result.stdout)
+            self.assertIn("Mode: package", result.stdout)
+            self.assertIn("Findings: 0", result.stdout)
+
+    def test_package_lint_rejects_tracked_generated_root(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            init_git(root)
+            write_package_fixture(root)
+            (root / "project-runtime").mkdir()
+            tracked_runtime_file = root / "project-runtime" / "PROJECT_STATE.md"
+            tracked_runtime_file.write_text("# PROJECT_STATE\n", encoding="utf-8")
+            subprocess.run(
+                ["git", "add", "-f", "project-runtime/PROJECT_STATE.md"],
+                cwd=root,
+                check=True,
+                text=True,
+                capture_output=True,
+            )
+
+            result = run_lint(root, "--mode", "package", "--strict")
+
+            self.assertEqual(result.returncode, 1, result.stdout + result.stderr)
+            self.assertIn("ASO lint: FAILED", result.stdout)
+            self.assertIn("PACKAGE_TRACKING_001", result.stdout)
 
     def test_lint_detects_state_errors(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:

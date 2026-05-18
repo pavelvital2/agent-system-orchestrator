@@ -33,6 +33,19 @@ def _add_root_argument(parser: argparse.ArgumentParser, *, validate: bool = True
     )
 
 
+def _add_mode_argument(parser: argparse.ArgumentParser) -> None:
+    parser.add_argument(
+        "--mode",
+        choices=("workspace", "package"),
+        default="workspace",
+        help=(
+            "Inspection mode. workspace reads generated project-runtime state; "
+            "package validates the packaged agent-system tree without requiring root "
+            "project-runtime (default: workspace)."
+        ),
+    )
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog="aso",
@@ -44,10 +57,14 @@ def build_parser() -> argparse.ArgumentParser:
 
     status_parser = subparsers.add_parser(
         "status",
-        help="Summarize project runtime state.",
-        description="Read project-runtime files and summarize the current ASO state.",
+        help="Summarize workspace runtime state or package repository checks.",
+        description=(
+            "Read project-runtime files in workspace mode, or validate packaged "
+            "agent-system structure in package mode."
+        ),
     )
     _add_root_argument(status_parser)
+    _add_mode_argument(status_parser)
     status_parser.add_argument(
         "--json-out",
         metavar="PATH",
@@ -57,10 +74,14 @@ def build_parser() -> argparse.ArgumentParser:
 
     lint_parser = subparsers.add_parser(
         "lint",
-        help="Check runtime consistency rules.",
-        description="Inspect runtime files for ASO consistency findings.",
+        help="Check workspace runtime consistency or package repository rules.",
+        description=(
+            "Inspect runtime files in workspace mode, or validate package repository "
+            "structure in package mode."
+        ),
     )
     _add_root_argument(lint_parser, validate=False)
+    _add_mode_argument(lint_parser)
     lint_parser.add_argument(
         "--strict",
         action="store_true",

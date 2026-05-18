@@ -9,6 +9,8 @@ import sys
 from dataclasses import dataclass
 from pathlib import Path
 
+from commands import package_checks
+
 
 EXIT_OK = 0
 EXIT_IO_ERROR = 3
@@ -280,6 +282,7 @@ def _report(root: Path) -> dict[str, object]:
     return {
         "tool": "aso",
         "command": "status",
+        "mode": "workspace",
         "status": status_by_consistency[consistency],
         "root": str(root),
         "summary": {
@@ -305,6 +308,33 @@ def _report(root: Path) -> dict[str, object]:
     }
 
 
+def _package_report(root: Path) -> dict[str, object]:
+    inspection = package_checks.inspect_package(root)
+    consistency = package_checks.consistency(inspection.findings)
+    status_by_consistency = {
+        "PASS": "passed",
+        "WARN": "warning",
+        "FAIL": "failed",
+    }
+
+    return {
+        "tool": "aso",
+        "command": "status",
+        "mode": "package",
+        "status": status_by_consistency[consistency],
+        "root": str(root),
+        "summary": {
+            "package_consistency": consistency,
+            "finding_count": len(inspection.findings),
+            "generated_roots": inspection.generated_roots,
+            "readmes": inspection.readmes,
+            "git_tracked_generated_files": inspection.git_tracked_generated_files,
+        },
+        "files": inspection.files,
+        "findings": [finding.to_json() for finding in inspection.findings],
+    }
+
+
 def _print_text(report: dict[str, object]) -> None:
     summary = report["summary"]
     if not isinstance(summary, dict):
@@ -325,6 +355,31 @@ def _print_text(report: dict[str, object]) -> None:
     print(f"Findings: {summary['finding_count']}")
 
 
+def _print_package_text(report: dict[str, object]) -> None:
+    summary = report["summary"]
+    if not isinstance(summary, dict):
+        raise TypeError("internal package status summary must be a dictionary")
+
+    generated_roots = summary["generated_roots"]
+    if not isinstance(generated_roots, dict):
+        raise TypeError("internal generated_roots must be a dictionary")
+
+    root_states = ", ".join(
+        f"{name}={generated_roots.get(name, 'UNKNOWN')}"
+        for name in package_checks.GENERATED_ROOTS
+    )
+
+    print(f"ASO package status: {str(report['status']).upper()}")
+    print(f"Root: {report['root']}")
+    print(f"Package consistency: {summary['package_consistency']}")
+    print(f"Generated roots: {root_states}")
+    print(f"Findings: {summary['finding_count']}")
+    for finding in report["findings"]:
+        if not isinstance(finding, dict):
+            continue
+        print(f"- {finding['severity']} {finding['rule_id']}: {finding['title']}")
+
+
 def _write_json(path_text: str, report: dict[str, object]) -> bool:
     path = Path(path_text).expanduser()
     if not path.parent.exists():
@@ -340,8 +395,12 @@ def _write_json(path_text: str, report: dict[str, object]) -> bool:
 
 def run(args: argparse.Namespace) -> int:
     """Run the status command."""
-    report = _report(args.root)
-    _print_text(report)
+    if args.mode == "package":
+        report = _package_report(args.root)
+        _print_package_text(report)
+    else:
+        report = _report(args.root)
+        _print_text(report)
     if args.json_out and not _write_json(args.json_out, report):
         return EXIT_IO_ERROR
     return EXIT_OK
