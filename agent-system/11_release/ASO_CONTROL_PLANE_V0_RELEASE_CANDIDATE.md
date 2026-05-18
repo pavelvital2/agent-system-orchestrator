@@ -3,7 +3,8 @@
 ## Purpose
 
 This document records stable release evidence for the ASO control-plane v0
-release candidate before cleanup of the root `project-runtime/` directory.
+release candidate after the root `project-runtime/` cleanup path and before the
+orchestrator-owned final commit and push.
 
 The report summarizes accepted package state and durable documentation. It does
 not copy raw runtime dumps and does not require `project-runtime/` to exist
@@ -35,6 +36,62 @@ agent-system/scripts/run_governance_smoke_tests.py
 Pre-cleanup runtime summaries were used only as transient corroboration while
 creating this document. The stable release evidence is the package content
 summarized below.
+
+## Final Branch and Commit Evidence
+
+- Final RC branch: `release-candidate/aso-control-plane-v0-final`.
+- Current pre-final-report HEAD:
+  `f3af0f74d3d518eed28822c7459dc5e3dc255471`.
+- Final commit hash: orchestrator-confirmed after the final report commit and
+  branch push.
+
+The exact self-referential commit hash cannot be embedded before the commit
+that contains this report exists. This report therefore records the current
+pre-final-report HEAD as reproducible evidence. After the orchestrator performs
+the final audited commit and push, the exact pushed HEAD must be confirmed with
+`git rev-parse HEAD` or `git rev-parse --short HEAD`.
+
+## Cleanup Summary
+
+Root generated execution state has been cleaned from the package repository
+working tree:
+
+- `project-runtime/`: absent.
+- `project-archive/`: absent.
+- `project-input/`: present as owner input, untracked, and excluded from the
+  release commit.
+- `git ls-files project-runtime project-input project-archive`: no tracked
+  files.
+
+Durable release evidence remains in tracked package files under
+`agent-system/`, the root `README.md`, `.gitignore`, and this release report.
+
+## Final Validation Evidence
+
+TASK_RC_011 final validation used these package-mode artifacts and command
+summaries:
+
+- `git status --short --branch`: on
+  `release-candidate/aso-control-plane-v0-final`; no tracked runtime or archive
+  cleanup residue was reported before the final report edit.
+- `git ls-files project-runtime project-input project-archive`: no output,
+  confirming no tracked generated root files.
+- `PYTHONDONTWRITEBYTECODE=1 python3 agent-system/tools/aso/aso.py status --root . --mode package --json-out /tmp/aso_status_package_rc.json`:
+  `passed`; package consistency `PASS`; `project-runtime` absent,
+  `project-archive` absent, `project-input` present-untracked; no findings.
+- `PYTHONDONTWRITEBYTECODE=1 python3 agent-system/tools/aso/aso.py lint --root . --mode package --strict --json-out /tmp/aso_lint_package_rc.json`:
+  `passed`; strict mode true; 0 errors, 0 warnings, 0 info findings; package
+  consistency `PASS`.
+- `PYTHONDONTWRITEBYTECODE=1 python3 -m unittest discover -s agent-system/tools/aso/tests`:
+  passed; rechecked during final report preparation with 26 tests in 2.806s.
+- `PYTHONDONTWRITEBYTECODE=1 python3 agent-system/scripts/run_governance_smoke_tests.py --timeout-per-fixture 30 --json-out /tmp/smoke_package_rc.json`:
+  `passed`; 16 passed, 0 failed, 0 skipped, 0 timeout; duration 7.114s.
+- `git diff --check`: required as final profile-agent verification after this
+  report edit and before orchestrator audit/commit.
+
+The ASO package mode result is accepted for this release candidate: package
+status and strict package lint both passed, generated roots are not tracked, and
+root and package README consistency checks passed.
 
 ## Release Candidate Summary
 
@@ -212,7 +269,7 @@ After root runtime cleanup, owner review should rely on durable package docs,
 source files, tests, and this release summary rather than on transient runtime
 result dumps.
 
-## known limitations and future backlog
+## Known Limitations
 
 - ASO v0 is read-only. It does not dispatch agents, mutate runtime state,
   create checkpoints, commit, push, or repair findings.
@@ -228,8 +285,24 @@ result dumps.
 - Root runtime cleanup removes transient execution artifacts from the root
   workspace. Durable package evidence must therefore be kept in `agent-system/`
   and other stable project/package documentation.
-- Future backlog includes canonical JSON runtime implementation,
-  transactional checkpoint implementation, expanded ASO lint strict-mode
-  coverage, capability matrix validation, CI coverage for ASO commands and
-  smoke diagnostics, and legacy runtime naming migration or documented
-  compatibility exceptions.
+- Exact pushed HEAD evidence is orchestrator-owned because this profile agent
+  must not commit or push.
+
+## Future Backlog
+
+- Implement canonical JSON runtime authority and migration tooling.
+- Implement transactional checkpoint mutation commands under orchestrator-owned
+  authority.
+- Expand ASO lint strict-mode coverage.
+- Add capability matrix validation and product-readiness reporting.
+- Add CI coverage for ASO commands and smoke diagnostics.
+- Resolve legacy runtime naming through migration or documented compatibility
+  exceptions.
+
+## Merge Recommendation
+
+Recommend merge after independent audit passes and the orchestrator performs
+the final commit and push for
+`release-candidate/aso-control-plane-v0-final`. Source branch fast-forward
+should be used only if owner policy allows it and `git merge --ff-only` is
+safe. Do not force push.
