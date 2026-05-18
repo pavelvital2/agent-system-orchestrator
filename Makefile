@@ -8,15 +8,19 @@ install:
 
 test:
 	$(PYTHON) -m unittest discover -s agent-system/tools/aso/tests
+	$(PYTHON) -m unittest discover -s agent-system/tests
 
 smoke:
 	$(PYTHON) $(ASO_SCRIPT) --help >/dev/null
 	PYTHONDONTWRITEBYTECODE=1 $(PYTHON) $(ASO_SCRIPT) status --root . --mode package
 	PYTHONDONTWRITEBYTECODE=1 $(PYTHON) $(ASO_SCRIPT) lint --root . --mode package --strict
+	PYTHONDONTWRITEBYTECODE=1 $(PYTHON) $(ASO_SCRIPT) doctor --root . --mode package --strict
+	PYTHONDONTWRITEBYTECODE=1 $(PYTHON) $(ASO_SCRIPT) validate-design agent-system/tests/fixtures/design/valid_design.md --root . --strict
+	PYTHONDONTWRITEBYTECODE=1 $(PYTHON) $(ASO_SCRIPT) validate-context-pack agent-system/tests/fixtures/context_pack/valid_context_pack.json --root . --strict
+	./agent-system/scripts/run_governance_smoke_tests.sh
 
 doctor:
-	@echo "aso doctor is reserved for Stage 1 task 002 and is not implemented by TASK_ASO_STAGE1_DEV_001_PACKAGING."
-	@echo "Run 'make smoke' or 'make lint' for the safe Stage 1 packaging checks available now."
+	PYTHONDONTWRITEBYTECODE=1 $(PYTHON) $(ASO_SCRIPT) doctor --root . --mode package --strict
 
 lint:
 	PYTHONDONTWRITEBYTECODE=1 $(PYTHON) $(ASO_SCRIPT) lint --root . --mode package --strict

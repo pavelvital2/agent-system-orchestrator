@@ -19,6 +19,7 @@ NEGATIVE_FIXTURES = {
     "bad_context_pack_forbidden_doc.json": "CPP-004",
     "bad_context_pack_missing_required_fields.json": "CPS-002",
     "bad_context_pack_budget_overflow.json": "CPB-001",
+    "bad_context_pack_path_escape.json": "CPP-001",
 }
 
 
