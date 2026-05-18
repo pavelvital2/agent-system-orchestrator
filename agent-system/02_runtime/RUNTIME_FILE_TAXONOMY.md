@@ -16,7 +16,28 @@ The project filesystem uses these roots:
 project-docs     = stable documentation
 project-runtime  = execution state/artifacts
 project-input    = owner input/TZ/upgrade packages
+project-archive  = superseded/deprecated workspace artifacts
 ```
+
+These root-level directories are target-workspace roots, not active package
+repository state. Root-level `project-runtime/`, `project-input/`, and
+`project-archive/` are generated workspace artifacts. They are expected in
+target workspaces or local orchestration sessions. They are not shipped as
+active state in the package repository.
+
+Package repository content uses package directories under `agent-system/`.
+In particular:
+
+```text
+agent-system/04_state/       = package state templates
+project-runtime/             = generated runtime state
+agent-system/03_templates/   = package task/result templates
+project-input/               = local owner input
+```
+
+The package templates define reusable shapes. The root-level workspace
+directories contain local, generated, or owner-provided instance data for a
+specific orchestration session.
 
 ### project-docs
 
@@ -73,6 +94,16 @@ Allowed content includes:
 Agents may read `project-input/` only when the task packet or runtime handoff
 explicitly lists the relevant files. Agents must not rewrite owner input unless
 a separate bounded normalization or package-correction task grants that scope.
+
+### project-archive
+
+`project-archive/` contains superseded, deprecated, or historical workspace
+artifacts that are no longer active source-of-truth for dispatch.
+
+It is a generated target-workspace archive root. It is not package repository
+active state, and package repository archival policy must be represented in
+package governance files rather than by shipping active root-level archive
+contents.
 
 ## Recommended project-runtime structure
 

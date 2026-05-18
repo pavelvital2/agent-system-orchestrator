@@ -33,7 +33,13 @@ The filesystem is the source of truth. Runtime state, gates, registries, logs, t
 The top-level taxonomy is documented in
 [RUNTIME_FILE_TAXONOMY.md](02_runtime/RUNTIME_FILE_TAXONOMY.md):
 `project-docs` is stable documentation, `project-runtime` is execution
-state/artifacts, and `project-input` is owner input, TZ, and upgrade packages.
+state/artifacts, `project-input` is owner input, TZ, and upgrade packages, and
+`project-archive` is superseded or deprecated workspace material.
+
+Root-level `project-runtime/`, `project-input/`, and `project-archive/` are
+generated workspace artifacts. They are expected in target workspaces or local
+orchestration sessions. They are not shipped as active state in the package
+repository.
 
 Research dependencies use a controlled extension of the same sequence:
 
@@ -131,8 +137,10 @@ agent-system/scripts/init_project_workspace.sh \
 ```
 
 The initializer copies `agent-system/`, creates local bootstrap directories,
-and writes `project-runtime/WORKSPACE_IDENTITY.md` plus
-`project-runtime/REPOSITORY_LOCK.md`. It does not copy or reuse `.git`.
+creates local generated workspace artifact roots such as `project-input/`,
+`project-runtime/`, and `project-archive/`, and writes
+`project-runtime/WORKSPACE_IDENTITY.md` plus `project-runtime/REPOSITORY_LOCK.md`.
+It does not copy or reuse `.git`.
 
 Do not clone or rename this package repository as a project workspace. If the
 target already has `.git`, its origin and branch must match the expected remote
@@ -151,6 +159,15 @@ Runtime state templates in the [04_state/](04_state/) package directory define
 the project state, current gate, next action, accepted artifacts registry, and
 task registry. Log templates in the [06_logs/](06_logs/) package directory
 define agent results, orchestrator events, and status summaries.
+
+Do not confuse package templates with workspace instance data:
+
+```text
+agent-system/04_state/       = package state templates
+project-runtime/             = generated runtime state
+agent-system/03_templates/   = package task/result templates
+project-input/               = local owner input
+```
 
 ## Profiles
 

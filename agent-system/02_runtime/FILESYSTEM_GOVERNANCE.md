@@ -32,11 +32,26 @@ Top-level runtime taxonomy is governed by
 project-docs     = stable documentation
 project-runtime  = execution state/artifacts
 project-input    = owner input/TZ/upgrade packages
+project-archive  = superseded/deprecated workspace artifacts
 ```
 
 That taxonomy defines the preferred new `project-runtime/` task, result,
 agent, checkpoint, and report layout while preserving compatibility with
 existing runtime paths.
+
+Root-level `project-runtime/`, `project-input/`, and `project-archive/` are
+generated workspace artifacts. They are expected in target workspaces or local
+orchestration sessions. They are not shipped as active state in the package
+repository.
+
+Package templates and workspace instance data must not be confused:
+
+```text
+agent-system/04_state/       = package state templates
+project-runtime/             = generated runtime state
+agent-system/03_templates/   = package task/result templates
+project-input/               = local owner input
+```
 
 ---
 
@@ -52,6 +67,12 @@ project-input/
 project-runtime/
 project-archive/
 ```
+
+This minimum root layout is expected for a target workspace or a local
+orchestration session. In the package repository, root-level
+`project-input/`, `project-runtime/`, and `project-archive/` may exist only as
+local generated artifacts for owner input, runtime evidence, or archival
+material; they are not active package state to ship.
 
 ### agent-system/
 
