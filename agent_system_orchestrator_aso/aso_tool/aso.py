@@ -11,6 +11,7 @@ from commands import (
     archive_verify,
     checkpoint_preflight,
     dashboard,
+    dag,
     doctor,
     lint,
     package_sync,
@@ -272,6 +273,45 @@ def build_parser() -> argparse.ArgumentParser:
         help="Write the dashboard report JSON to /tmp/... or <workspace>/project-runtime/dashboard/...",
     )
     dashboard_parser.set_defaults(handler=dashboard.run)
+
+    dag_parser = subparsers.add_parser(
+        "dag",
+        help="Task dependency graph inspection commands.",
+        description="Read-only task dependency graph verification and rendering commands.",
+    )
+    dag_subparsers = dag_parser.add_subparsers(dest="dag_command", metavar="COMMAND")
+    dag_verify_parser = dag_subparsers.add_parser(
+        "verify",
+        help="Verify TASK_REGISTRY dependency graph consistency.",
+        description=(
+            "Read-only verification for TASK_REGISTRY dependencies, duplicate task ids, "
+            "cycles, status/dependency consistency, and requester-return metadata."
+        ),
+    )
+    _add_root_argument(dag_verify_parser, validate=False)
+    dag_verify_parser.set_defaults(handler=dag.run_verify)
+
+    dag_render_parser = dag_subparsers.add_parser(
+        "render",
+        help="Render TASK_REGISTRY dependency graph.",
+        description=(
+            "Read-only rendering for TASK_REGISTRY dependencies. Prints to stdout by "
+            "default or writes to an explicit --out path outside runtime/input/archive roots."
+        ),
+    )
+    _add_root_argument(dag_render_parser, validate=False)
+    dag_render_parser.add_argument(
+        "--format",
+        choices=("mermaid", "dot"),
+        default="mermaid",
+        help="Graph output format (default: mermaid).",
+    )
+    dag_render_parser.add_argument(
+        "--out",
+        metavar="PATH",
+        help="Write rendered graph to this explicit path.",
+    )
+    dag_render_parser.set_defaults(handler=dag.run_render)
 
     archive_parser = subparsers.add_parser(
         "archive",

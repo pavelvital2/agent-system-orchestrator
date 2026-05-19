@@ -31,6 +31,7 @@ class PackagingCommandTests(unittest.TestCase):
         self.assertIn("plan-next", result.stdout)
         self.assertIn("checkpoint-preflight", result.stdout)
         self.assertIn("dashboard", result.stdout)
+        self.assertIn("dag", result.stdout)
         self.assertIn("state", result.stdout)
         self.assertIn("archive", result.stdout)
         self.assertIn("package-sync", result.stdout)
@@ -46,6 +47,7 @@ class PackagingCommandTests(unittest.TestCase):
 
         self.assertTrue((bundled_tool_dir / "aso.py").is_file())
         self.assertTrue((bundled_tool_dir / "commands" / "status.py").is_file())
+        self.assertTrue((bundled_tool_dir / "commands" / "dag.py").is_file())
         self.assertTrue((bundled_tool_dir / "commands" / "package_checks.py").is_file())
         self.assertTrue((bundled_tool_dir / "commands" / "package_sync.py").is_file())
         self.assertFalse((bundled_tool_dir / "tests").exists())
