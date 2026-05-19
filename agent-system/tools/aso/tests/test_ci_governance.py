@@ -33,6 +33,11 @@ REQUIRED_MAKEFILE_COMMANDS = (
     "doctor --root . --mode package --strict",
     "validate-design agent-system/tests/fixtures/design/valid_design.md --root . --strict",
     "validate-context-pack agent-system/tests/fixtures/context_pack/valid_context_pack.json --root . --strict",
+    "validate-rules --root . --strict",
+    "state verify --root agent-system/tests/fixtures/state/valid_workspace --strict",
+    "plan-next --root agent-system/tests/fixtures/state/valid_workspace --strict",
+    "dashboard --root agent-system/tests/fixtures/state/valid_workspace --out /tmp/aso-stage2-dashboard-smoke.html",
+    "checkpoint-preflight --root . --mode package --strict",
     "./agent-system/scripts/run_governance_smoke_tests.sh",
     "git diff --check",
 )

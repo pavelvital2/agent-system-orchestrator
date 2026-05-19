@@ -17,6 +17,11 @@ smoke:
 	PYTHONDONTWRITEBYTECODE=1 $(PYTHON) $(ASO_SCRIPT) doctor --root . --mode package --strict
 	PYTHONDONTWRITEBYTECODE=1 $(PYTHON) $(ASO_SCRIPT) validate-design agent-system/tests/fixtures/design/valid_design.md --root . --strict
 	PYTHONDONTWRITEBYTECODE=1 $(PYTHON) $(ASO_SCRIPT) validate-context-pack agent-system/tests/fixtures/context_pack/valid_context_pack.json --root . --strict
+	PYTHONDONTWRITEBYTECODE=1 $(PYTHON) $(ASO_SCRIPT) validate-rules --root . --strict
+	PYTHONDONTWRITEBYTECODE=1 $(PYTHON) $(ASO_SCRIPT) state verify --root agent-system/tests/fixtures/state/valid_workspace --strict --json-out /tmp/aso-stage2-state-smoke.json
+	PYTHONDONTWRITEBYTECODE=1 $(PYTHON) $(ASO_SCRIPT) plan-next --root agent-system/tests/fixtures/state/valid_workspace --strict --json-out /tmp/aso-stage2-plan-smoke.json
+	PYTHONDONTWRITEBYTECODE=1 $(PYTHON) $(ASO_SCRIPT) dashboard --root agent-system/tests/fixtures/state/valid_workspace --out /tmp/aso-stage2-dashboard-smoke.html
+	PYTHONDONTWRITEBYTECODE=1 $(PYTHON) $(ASO_SCRIPT) checkpoint-preflight --root . --mode package --strict --json-out /tmp/aso-stage2-checkpoint-preflight-smoke.json
 	./agent-system/scripts/run_governance_smoke_tests.sh
 
 doctor:

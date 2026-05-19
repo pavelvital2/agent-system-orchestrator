@@ -3,6 +3,7 @@ from __future__ import annotations
 import subprocess
 import sys
 import unittest
+import tomllib
 from pathlib import Path
 
 
@@ -24,6 +25,11 @@ class PackagingCommandTests(unittest.TestCase):
         self.assertIn("status", result.stdout)
         self.assertIn("lint", result.stdout)
         self.assertIn("doctor", result.stdout)
+        self.assertIn("validate-rules", result.stdout)
+        self.assertIn("plan-next", result.stdout)
+        self.assertIn("checkpoint-preflight", result.stdout)
+        self.assertIn("dashboard", result.stdout)
+        self.assertIn("state", result.stdout)
         self.assertIn("archive", result.stdout)
 
     def test_console_script_entrypoint_is_registered_in_project_metadata(self) -> None:
@@ -31,6 +37,15 @@ class PackagingCommandTests(unittest.TestCase):
 
         self.assertIn("[project.scripts]", pyproject)
         self.assertIn('aso = "agent_system_orchestrator_aso.cli:main"', pyproject)
+
+    def test_stage2_package_version_is_coherent(self) -> None:
+        pyproject = tomllib.loads((REPO_ROOT / "pyproject.toml").read_text(encoding="utf-8"))
+        init_file = (REPO_ROOT / "agent_system_orchestrator_aso" / "__init__.py").read_text(
+            encoding="utf-8"
+        )
+
+        self.assertEqual(pyproject["project"]["version"], "3.0.1")
+        self.assertIn('__version__ = "3.0.1"', init_file)
 
 
 if __name__ == "__main__":

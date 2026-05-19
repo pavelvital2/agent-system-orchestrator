@@ -153,6 +153,11 @@ accepted repository lock explicitly allows it.
 The package includes an experimental read-only ASO helper CLI at
 `agent-system/tools/aso/aso.py`.
 
+This Stage 2 branch keeps the active package metadata coherent with the
+governed `3.0.1` tuple and adds read-only state sidecar verification,
+governance rule validation, dry-run next-action planning, static dashboard
+rendering, and checkpoint eligibility preflight.
+
 Install the local console command from the repository root with:
 
 ```text
@@ -207,6 +212,23 @@ python3 agent-system/tools/aso/aso.py validate-context-pack path/to/CONTEXT_PACK
 It validates required shape, context budget, archive/deprecated path rejection,
 forbidden document checks, and required document existence under `--root`.
 
+Stage 2 command surfaces are local, read-only, and offline:
+
+```text
+python3 agent-system/tools/aso/aso.py validate-rules --root . --strict
+python3 agent-system/tools/aso/aso.py state verify --root agent-system/tests/fixtures/state/valid_workspace --strict --json-out /tmp/aso-stage2-state.json
+python3 agent-system/tools/aso/aso.py plan-next --root agent-system/tests/fixtures/state/valid_workspace --strict --json-out /tmp/aso-stage2-plan.json
+python3 agent-system/tools/aso/aso.py dashboard --root agent-system/tests/fixtures/state/valid_workspace --out /tmp/aso-stage2-dashboard.html
+python3 agent-system/tools/aso/aso.py checkpoint-preflight --root . --mode package --strict --json-out /tmp/aso-stage2-checkpoint-preflight.json
+```
+
+`aso validate-rules` checks the packaged governance rule registry. `aso state
+verify` compares Markdown runtime files with JSON sidecars and emits optional
+JSON evidence. `aso plan-next` recommends the next orchestrator action as a
+dry-run report only. `aso dashboard` renders escaped static HTML to stdout or
+an allowed `/tmp` output path. `aso checkpoint-preflight` inspects checkpoint
+eligibility without staging, committing, pushing, or changing runtime state.
+
 Repeatable root targets are:
 
 ```text
@@ -215,23 +237,30 @@ make test
 make smoke
 make doctor
 make lint
+make ci
 ```
 
 `make test` runs the ASO command unit tests and package governance tests.
 `make smoke` runs CLI help, package status, strict package lint, strict package
-doctor, valid design/context-pack fixtures, and the local governance smoke
-runner. The smoke and CI surfaces are local and diagnostic: they must not
-require secrets, network credentials, real remotes, publishing permissions, or
-live service access.
+doctor, valid design/context-pack fixtures, rule validation, state sidecar
+verification, dry-run next-action planning, static dashboard rendering to
+`/tmp`, checkpoint preflight, and the local governance smoke runner. `make ci`
+runs `test`, `smoke`, `doctor`, `lint`, and `git diff --check`. The smoke and
+CI surfaces are local and diagnostic: they must not require secrets, network
+credentials, real remotes, publishing permissions, or live service access.
 
 The helper supports read-only status, lint, doctor, design validation, context
-pack validation, and archive verify inspection. Its read-only behavior is part
-of the ASO v0 boundary. It does not provide mutation, dispatch, or checkpoint
+pack validation, rule validation, state verification, dry-run next-action
+planning, static dashboard rendering, checkpoint eligibility preflight, and
+archive verify inspection. Its read-only behavior is part of the ASO boundary.
+It does not dispatch agents, mutate package or workspace state, perform
+checkpoints, commit, or push. For package lint compatibility, this boundary is
+also stated as: ASO does not provide mutation, dispatch, or checkpoint
 commands.
 
 ## Publication and cleanup boundary
 
-Stage 1 working upgrade packages and generated execution artifacts are local
+Stage 1 and Stage 2 working upgrade packages and generated execution artifacts are local
 inputs/evidence, not public package documentation. Do not publish or checkpoint
 the working upgrade package, generated runtime task packets, profile results,
 audit results, local scratch notes, command logs, Codex artifacts, or
@@ -241,18 +270,20 @@ Accepted stable summaries may be added under package-controlled paths such as:
 
 ```text
 agent-system/11_release/STAGE1_UPGRADE_VALIDATION_REPORT.md
+agent-system/11_release/STAGE2_UPGRADE_VALIDATION_REPORT.md
 ```
 
-The Stage 1 final validation report in that path is a placeholder until the
-tester-owned final validation task completes it with real command evidence.
-Pending sections must remain marked pending and must not claim pass/fail
-results before TASK 007/tester supplies evidence.
+The Stage 1 final validation report is accepted evidence and must remain
+intact. The Stage 2 report is a draft until the tester-owned final validation
+task completes it with real command evidence. Pending sections must remain
+marked pending and must not claim pass/fail results before Task 009 supplies
+evidence.
 
-After all accepted Stage 1 tasks are committed and pushed by the orchestrator,
+After all accepted upgrade tasks are committed and pushed by the orchestrator,
 cleanup is local:
 
 ```text
-rm -rf project-input/<stage1-upgrade-package>
+rm -rf project-input/<stage-upgrade-package>
 git status --short project-input project-runtime project-archive
 git ls-files project-input project-runtime project-archive
 ```
@@ -365,12 +396,13 @@ Governance and package changes are recorded in:
 agent-system/GOVERNANCE_CHANGELOG.md
 ```
 
-Current v3.0.1 tuple:
+Current active tuple and Stage 2 marker:
 
 ```text
 CURRENT_PACKAGE_VERSION: 3.0.1
 CURRENT_GOVERNANCE_RULESET_VERSION: 3.0.1
 CURRENT_RUNTIME_SCHEMA_VERSION: 3.0.0
+STAGE2_COMMAND_SURFACE_MARKER: state-dashboard-controls
 ```
 
 ## Examples
