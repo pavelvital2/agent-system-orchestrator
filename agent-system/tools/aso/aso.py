@@ -13,6 +13,7 @@ from commands import (
     dashboard,
     doctor,
     lint,
+    package_sync,
     plan_next,
     state_verify,
     status,
@@ -296,6 +297,40 @@ def build_parser() -> argparse.ArgumentParser:
         help="Write the archive verification report JSON to this explicit path.",
     )
     verify_parser.set_defaults(handler=archive_verify.run)
+
+    package_sync_parser = subparsers.add_parser(
+        "package-sync",
+        help="Package source synchronization inspection commands.",
+        description=(
+            "Read-only package source synchronization inspection commands. "
+            "Verifies the direct ASO source tree against the bundled install copy."
+        ),
+    )
+    package_sync_subparsers = package_sync_parser.add_subparsers(
+        dest="package_sync_command",
+        metavar="COMMAND",
+    )
+    package_sync_verify_parser = package_sync_subparsers.add_parser(
+        "verify",
+        help="Verify direct and bundled ASO source copies are synchronized.",
+        description=(
+            "Read-only verification that agent-system/tools/aso and "
+            "agent_system_orchestrator_aso/aso_tool have matching normalized file "
+            "lists and sha256 content hashes."
+        ),
+    )
+    _add_root_argument(package_sync_verify_parser, validate=False)
+    package_sync_verify_parser.add_argument(
+        "--strict",
+        action="store_true",
+        help="Reserve strict package-sync failure semantics for future warning classes.",
+    )
+    package_sync_verify_parser.add_argument(
+        "--json",
+        action="store_true",
+        help="Print the package-sync verification report as JSON to stdout.",
+    )
+    package_sync_verify_parser.set_defaults(handler=package_sync.run_verify)
 
     state_parser = subparsers.add_parser(
         "state",

@@ -33,6 +33,7 @@ class PackagingCommandTests(unittest.TestCase):
         self.assertIn("dashboard", result.stdout)
         self.assertIn("state", result.stdout)
         self.assertIn("archive", result.stdout)
+        self.assertIn("package-sync", result.stdout)
 
     def test_console_script_entrypoint_is_registered_in_project_metadata(self) -> None:
         pyproject = (REPO_ROOT / "pyproject.toml").read_text(encoding="utf-8")
@@ -46,6 +47,8 @@ class PackagingCommandTests(unittest.TestCase):
         self.assertTrue((bundled_tool_dir / "aso.py").is_file())
         self.assertTrue((bundled_tool_dir / "commands" / "status.py").is_file())
         self.assertTrue((bundled_tool_dir / "commands" / "package_checks.py").is_file())
+        self.assertTrue((bundled_tool_dir / "commands" / "package_sync.py").is_file())
+        self.assertFalse((bundled_tool_dir / "tests").exists())
 
     def test_stage2_package_version_is_coherent(self) -> None:
         pyproject = tomllib.loads((REPO_ROOT / "pyproject.toml").read_text(encoding="utf-8"))
