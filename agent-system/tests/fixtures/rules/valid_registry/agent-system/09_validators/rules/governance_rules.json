@@ -1,0 +1,17 @@
+{
+  "schema_version": "1.0",
+  "registry_id": "valid-fixture",
+  "rules": [
+    {
+      "id": "GOV-FIXTURE-RESULT",
+      "severity": "error",
+      "source_docs": [
+        "agent-system/09_validators/RESULT_VALIDATION_RULES.md"
+      ],
+      "check_target": "profile_agent_result",
+      "trigger": "fixture RESULT is validated",
+      "expected_action": "validate_schema",
+      "rationale": "Fixture rule contains the required fields and references an existing source document."
+    }
+  ]
+}

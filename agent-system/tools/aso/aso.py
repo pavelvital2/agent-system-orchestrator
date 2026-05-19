@@ -7,7 +7,16 @@ import argparse
 import sys
 from pathlib import Path
 
-from commands import archive_verify, doctor, lint, state_verify, status, validate_context_pack, validate_design
+from commands import (
+    archive_verify,
+    doctor,
+    lint,
+    state_verify,
+    status,
+    validate_context_pack,
+    validate_design,
+    validate_rules,
+)
 
 
 EXIT_USAGE = 2
@@ -170,6 +179,27 @@ def build_parser() -> argparse.ArgumentParser:
         help="Write the context pack validation report JSON to this explicit path.",
     )
     validate_context_pack_parser.set_defaults(handler=validate_context_pack.run)
+
+    validate_rules_parser = subparsers.add_parser(
+        "validate-rules",
+        help="Validate the packaged governance rule registry.",
+        description=(
+            "Read-only validation for governance_rules.json structure, source "
+            "links, severities, uniqueness, rationale, and expected action semantics."
+        ),
+    )
+    _add_root_argument(validate_rules_parser, validate=False)
+    validate_rules_parser.add_argument(
+        "--strict",
+        action="store_true",
+        help="Treat warnings as a failing validation result.",
+    )
+    validate_rules_parser.add_argument(
+        "--json-out",
+        metavar="PATH",
+        help="Write the rule registry validation report JSON to this explicit path.",
+    )
+    validate_rules_parser.set_defaults(handler=validate_rules.run)
 
     archive_parser = subparsers.add_parser(
         "archive",

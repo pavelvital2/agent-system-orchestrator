@@ -1,0 +1,19 @@
+{
+  "schema_version": "1.0",
+  "registry_id": "invalid-semantics-fixture",
+  "rules": [
+    {
+      "id": "GOV-FIXTURE-BAD-SEMANTICS",
+      "severity": "fatal",
+      "source_docs": [
+        "agent-system/09_validators/MISSING_RULES.md"
+      ],
+      "check_target": "registry_semantics",
+      "trigger": "invalid fixture registry is validated",
+      "expected_action": [
+        "teleport"
+      ],
+      "rationale": ""
+    }
+  ]
+}
