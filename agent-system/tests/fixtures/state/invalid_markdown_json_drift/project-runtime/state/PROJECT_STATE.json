@@ -1,0 +1,32 @@
+{
+  "schema_version": "2.0.0",
+  "sidecar_type": "PROJECT_STATE",
+  "markdown_source": "project-runtime/PROJECT_STATE.md",
+  "state_revision": 1,
+  "updated_at": "2026-01-01T00:00:00Z",
+  "updated_by": "orchestrator",
+  "content": {
+    "project_slug": "state-sidecar-fixture",
+    "workspace_type": "test_fixture",
+    "current_phase": "implementation",
+    "project_status": "active",
+    "active_doc_root": "project-docs",
+    "package_version": "stage-2",
+    "governance_ruleset_version": "stage-2",
+    "runtime_schema_version": "2.0.0",
+    "workspace_identity_ref": "project-runtime/WORKSPACE_IDENTITY.md",
+    "repository_lock_ref": "project-runtime/REPOSITORY_LOCK.md",
+    "expected_git_remote": "git@example.invalid:fixture/state-sidecar.git",
+    "actual_git_remote": "git@example.invalid:fixture/state-sidecar.git",
+    "expected_branch": "fixture/main",
+    "actual_branch": "fixture/json",
+    "push_allowed": false,
+    "identity_validation_status": "passed",
+    "identity_validation_error": "",
+    "repository_lock_status": "passed",
+    "checkpoint_eligibility": "not_required",
+    "checkpoint_blocked_by": [],
+    "active_blockers": [],
+    "active_branches": []
+  }
+}

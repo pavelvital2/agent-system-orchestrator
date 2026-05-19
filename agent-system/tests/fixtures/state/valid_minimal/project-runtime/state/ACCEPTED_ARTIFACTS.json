@@ -1,0 +1,22 @@
+{
+  "schema_version": "2.0.0",
+  "sidecar_type": "ACCEPTED_ARTIFACTS",
+  "markdown_source": "project-runtime/ACCEPTED_ARTIFACTS.md",
+  "state_revision": 1,
+  "updated_at": "2026-01-01T00:00:00Z",
+  "updated_by": "orchestrator",
+  "content": {
+    "artifacts": [
+      {
+        "artifact_id": "ARTIFACT-FIXTURE-001",
+        "path": "agent-system/02_runtime/CANONICAL_JSON_STATE.md",
+        "task_id": "TASK_FIXTURE_STATE_001",
+        "accepted_result_ref": "project-runtime/results/worker/RESULT_TASK_FIXTURE_STATE_001_ATTEMPT_1.md",
+        "audit_ref": "",
+        "status": "accepted",
+        "commit_hash": "NONE",
+        "notes": "Fixture reference only."
+      }
+    ]
+  }
+}

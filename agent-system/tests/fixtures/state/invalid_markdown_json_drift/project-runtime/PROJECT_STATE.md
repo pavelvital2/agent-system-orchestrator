@@ -1,0 +1,12 @@
+# PROJECT_STATE
+
+PROJECT_SLUG: state-sidecar-fixture
+WORKSPACE_TYPE: test_fixture
+CURRENT_PHASE: implementation
+PROJECT_STATUS: active
+EXPECTED_BRANCH: fixture/main
+ACTUAL_BRANCH: fixture/markdown
+PUSH_ALLOWED: false
+IDENTITY_VALIDATION_STATUS: passed
+REPOSITORY_LOCK_STATUS: passed
+CHECKPOINT_ELIGIBILITY: not_required
