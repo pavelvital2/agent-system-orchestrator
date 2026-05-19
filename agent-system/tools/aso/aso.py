@@ -9,6 +9,7 @@ from pathlib import Path
 
 from commands import (
     archive_verify,
+    checkpoint_preflight,
     dashboard,
     doctor,
     lint,
@@ -224,6 +225,29 @@ def build_parser() -> argparse.ArgumentParser:
         help="Write the dry-run/read-only plan report JSON to this explicit path.",
     )
     plan_next_parser.set_defaults(handler=plan_next.run)
+
+    checkpoint_preflight_parser = subparsers.add_parser(
+        "checkpoint-preflight",
+        help="Read-only checkpoint eligibility preflight.",
+        description=(
+            "Read-only checkpoint eligibility preflight. Reports checkpoint "
+            "eligibility and blockers without staging, committing, pushing, "
+            "repairing state, or cleaning up files."
+        ),
+    )
+    _add_root_argument(checkpoint_preflight_parser, validate=False)
+    _add_mode_argument(checkpoint_preflight_parser)
+    checkpoint_preflight_parser.add_argument(
+        "--strict",
+        action="store_true",
+        help="Treat warnings as blocking checkpoint eligibility findings.",
+    )
+    checkpoint_preflight_parser.add_argument(
+        "--json-out",
+        metavar="PATH",
+        help="Write the read-only checkpoint preflight report JSON to this explicit path.",
+    )
+    checkpoint_preflight_parser.set_defaults(handler=checkpoint_preflight.run)
 
     dashboard_parser = subparsers.add_parser(
         "dashboard",
