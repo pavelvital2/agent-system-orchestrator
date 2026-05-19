@@ -11,6 +11,7 @@ from commands import (
     archive_verify,
     doctor,
     lint,
+    plan_next,
     state_verify,
     status,
     validate_context_pack,
@@ -200,6 +201,28 @@ def build_parser() -> argparse.ArgumentParser:
         help="Write the rule registry validation report JSON to this explicit path.",
     )
     validate_rules_parser.set_defaults(handler=validate_rules.run)
+
+    plan_next_parser = subparsers.add_parser(
+        "plan-next",
+        help="Dry-run/read-only next orchestrator action planning.",
+        description=(
+            "Dry-run/read-only planner that verifies workspace state sidecars, "
+            "reads governance rules, and reports the next orchestrator action "
+            "or blockers without mutating state."
+        ),
+    )
+    _add_root_argument(plan_next_parser, validate=False)
+    plan_next_parser.add_argument(
+        "--strict",
+        action="store_true",
+        help="Treat verification warnings as blocking dry-run planner findings.",
+    )
+    plan_next_parser.add_argument(
+        "--json-out",
+        metavar="PATH",
+        help="Write the dry-run/read-only plan report JSON to this explicit path.",
+    )
+    plan_next_parser.set_defaults(handler=plan_next.run)
 
     archive_parser = subparsers.add_parser(
         "archive",
