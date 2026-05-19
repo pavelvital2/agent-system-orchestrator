@@ -14,6 +14,7 @@ from commands import (
     dashboard,
     dag,
     doctor,
+    incident_fixture,
     lint,
     package_sync,
     plan_next,
@@ -320,6 +321,52 @@ def build_parser() -> argparse.ArgumentParser:
         help="Print the dry-run routing report as JSON to stdout.",
     )
     record_result_parser.set_defaults(handler=record_result.run)
+
+    incident_parser = subparsers.add_parser(
+        "incident",
+        help="Incident recovery proposal commands.",
+        description="Dry-run/read-only incident recovery proposal commands.",
+    )
+    incident_subparsers = incident_parser.add_subparsers(dest="incident_command", metavar="COMMAND")
+    incident_fixture_parser = incident_subparsers.add_parser(
+        "fixture",
+        help="Build a dry-run regression fixture proposal from an incident.",
+        description=(
+            "Parse explicit incident metadata and emit a deterministic regression "
+            "fixture proposal without mutating runtime state, dispatching agents, "
+            "checkpointing, committing, pushing, weakening validators, or approving "
+            "owner decisions."
+        ),
+    )
+    _add_root_argument(incident_fixture_parser, validate=False)
+    incident_fixture_parser.add_argument(
+        "--incident",
+        required=True,
+        metavar="INCIDENT.md",
+        help="Structured incident artifact to inspect.",
+    )
+    incident_fixture_parser.add_argument(
+        "--dry-run",
+        required=True,
+        action="store_true",
+        help="Required safety acknowledgement; command is proposal/read-only only.",
+    )
+    incident_fixture_parser.add_argument(
+        "--strict",
+        action="store_true",
+        help="Reject vague incidents, missing rule ids, and safety-bypass claims.",
+    )
+    incident_fixture_parser.add_argument(
+        "--json-out",
+        metavar="PATH",
+        help="Write the proposal JSON to this explicit path.",
+    )
+    incident_fixture_parser.add_argument(
+        "--out",
+        metavar="PATH",
+        help="Render the proposal Markdown to this explicit path.",
+    )
+    incident_fixture_parser.set_defaults(handler=incident_fixture.run_fixture)
 
     dashboard_parser = subparsers.add_parser(
         "dashboard",
