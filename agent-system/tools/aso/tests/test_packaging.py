@@ -60,8 +60,8 @@ class PackagingCommandTests(unittest.TestCase):
             encoding="utf-8"
         )
 
-        self.assertEqual(pyproject["project"]["version"], "3.1.0")
-        self.assertIn('__version__ = "3.1.0"', init_file)
+        self.assertEqual(pyproject["project"]["version"], "3.1.1")
+        self.assertIn('__version__ = "3.1.1"', init_file)
 
 
 if __name__ == "__main__":
