@@ -10,12 +10,16 @@ from collections import Counter
 from pathlib import Path
 from typing import Iterable
 
-from commands import checkpoint_preflight, dag, package_sync, plan_next, state_verify
+from commands import checkpoint_preflight, dag, output_policy, package_sync, plan_next, state_verify
 
 
 EXIT_OK = 0
 EXIT_IO_ERROR = 3
 NOT_AVAILABLE = "not_available"
+DAG_UNCHECKPOINTED_DEPENDENCY_RULES = {
+    "DAG_DEPENDENCY_AUDIT_PASSED_WITHOUT_CHECKPOINT",
+    "DAG_DEPENDENCY_CHECKPOINT_EVIDENCE_INCOMPLETE",
+}
 
 
 def _content(sidecars: dict[str, dict[str, object]], sidecar_type: str) -> dict[str, object]:
@@ -76,14 +80,34 @@ def _tasks(sidecars: dict[str, dict[str, object]]) -> list[dict[str, object]]:
 
 def _task_counts(tasks: list[dict[str, object]]) -> dict[str, object]:
     by_status = Counter(_as_text(task.get("status")) or "unknown" for task in tasks)
+    checkpoint_blocked = _ready_blocked_by_uncheckpointed_dependency(tasks)
     return {
         "total": len(tasks),
         "by_status": dict(sorted(by_status.items())),
         "with_result_refs": sum(1 for task in tasks if _string_list(task.get("result_refs"))),
         "with_audit_refs": sum(1 for task in tasks if _string_list(task.get("audit_refs"))),
         "audit_pending": by_status.get("audit_pending", 0),
+        "audit_passed_not_checkpointed": by_status.get("audit_passed", 0),
         "checkpoint_done": by_status.get("checkpoint_done", 0),
+        "ready_blocked_by_uncheckpointed_dependency": checkpoint_blocked,
     }
+
+
+def _ready_blocked_by_uncheckpointed_dependency(tasks: list[dict[str, object]]) -> int:
+    by_id = {_as_text(task.get("task_id")): task for task in tasks if _as_text(task.get("task_id"))}
+    blocked = 0
+    for task in tasks:
+        if _as_text(task.get("status")) != "ready":
+            continue
+        for dep in _string_list(task.get("dependencies")):
+            dep_task = by_id.get(dep)
+            if dep_task is None:
+                continue
+            dep_status = _as_text(dep_task.get("status"))
+            if dep_status == "audit_passed" or (dep_status == "checkpoint_done" and not dag._has_checkpoint_evidence(dep_task)):
+                blocked += 1
+                break
+    return blocked
 
 
 def _open_blockers(
@@ -298,8 +322,40 @@ def _dag_summary(root: Path, sidecars: dict[str, dict[str, object]]) -> dict[str
         "task_count": graph.get("task_count", 0),
         "edge_count": graph.get("edge_count", 0),
         "finding_count": len(findings),
+        "uncheckpointed_dependency_findings": sum(
+            1
+            for finding in findings
+            if isinstance(finding, dict) and _as_text(finding.get("rule_id")) in DAG_UNCHECKPOINTED_DEPENDENCY_RULES
+        ),
+        "finding_rule_counts": dict(
+            sorted(
+                Counter(
+                    _as_text(finding.get("rule_id"))
+                    for finding in findings
+                    if isinstance(finding, dict) and _as_text(finding.get("rule_id"))
+                ).items()
+            )
+        ),
         "task_ids": task_ids,
     }
+
+
+def _dag_blockers(dag_report: dict[str, object]) -> list[dict[str, str]]:
+    status = _as_text(dag_report.get("status"))
+    if not dag_report.get("available") or status in {"", NOT_AVAILABLE, "passed"}:
+        return []
+    rule_counts = dag_report.get("finding_rule_counts")
+    if not isinstance(rule_counts, dict):
+        return [
+            {
+                "source": "dag.verify",
+                "message": f"strict DAG verification status={status}; findings={dag_report.get('finding_count', 0)}",
+            }
+        ]
+    blockers = []
+    for rule_id, count in sorted(rule_counts.items()):
+        blockers.append({"source": f"dag.verify.{rule_id}", "message": f"{count} finding(s) block readiness"})
+    return blockers
 
 
 def _result_routing_summary(tasks: list[dict[str, object]], next_action: dict[str, object]) -> dict[str, object]:
@@ -447,7 +503,11 @@ def build_report(root: Path) -> dict[str, object]:
     current_gate = _content(sidecars, "CURRENT_GATE")
     next_action = _content(sidecars, "NEXT_ACTION")
     task_items = _tasks(sidecars)
-    blockers = _open_blockers(project_state, current_gate, next_action, task_items, planner)
+    dag_report = _dag_summary(root, sidecars)
+    blockers = [
+        *_open_blockers(project_state, current_gate, next_action, task_items, planner),
+        *_dag_blockers(dag_report),
+    ]
 
     return {
         "tool": "aso",
@@ -457,7 +517,10 @@ def build_report(root: Path) -> dict[str, object]:
         "root": str(root),
         "read_only": True,
         "mutations_performed": False,
-        "output_policy": "stdout by default; file output only under /tmp or <workspace>/project-runtime/dashboard",
+        "output_policy": (
+            "stdout by default; file output only under /tmp or "
+            "<workspace>/project-runtime/dashboard; rule_id=ASO_OUTPUT_PATH_FORBIDDEN"
+        ),
         "workspace": {
             "project_slug": project_state.get("project_slug", ""),
             "workspace_type": project_state.get("workspace_type", ""),
@@ -490,7 +553,7 @@ def build_report(root: Path) -> dict[str, object]:
         "task_counts": _task_counts(task_items),
         "open_blockers": blockers,
         "package_sync": _package_sync_status(root),
-        "dag_summary": _dag_summary(root, sidecars),
+        "dag_summary": dag_report,
         "audit_signals": _audit_signals(sidecars, current_gate, task_items, planner),
         "checkpoint_signals": _checkpoint_signals(project_state, current_gate, next_action, task_items),
         "context_budget": _context_budget(sidecars),
@@ -656,7 +719,9 @@ def render_html(report: dict[str, object]) -> str:
       <table>{_pairs((
         ("Total", task_counts.get("total", 0)),
         ("Audit pending", task_counts.get("audit_pending", 0)),
+        ("Audit passed not checkpointed", task_counts.get("audit_passed_not_checkpointed", 0)),
         ("Checkpoint done", task_counts.get("checkpoint_done", 0)),
+        ("Ready blocked by uncheckpointed dependency", task_counts.get("ready_blocked_by_uncheckpointed_dependency", 0)),
         ("With results", task_counts.get("with_result_refs", 0)),
         ("With audits", task_counts.get("with_audit_refs", 0)),
       ))}</table>
@@ -687,6 +752,7 @@ def render_html(report: dict[str, object]) -> str:
         ("Tasks", dag_report.get("task_count", NOT_AVAILABLE)),
         ("Edges", dag_report.get("edge_count", NOT_AVAILABLE)),
         ("Findings", dag_report.get("finding_count", NOT_AVAILABLE)),
+        ("Uncheckpointed dependency findings", dag_report.get("uncheckpointed_dependency_findings", NOT_AVAILABLE)),
       ))}</table>
       <ul>{_optional_list_items(dag_report.get("task_ids", []) if isinstance(dag_report.get("task_ids"), list) else [])}</ul>
     </section>
@@ -770,28 +836,16 @@ def render_html(report: dict[str, object]) -> str:
 """
 
 
-def _is_relative_to(path: Path, parent: Path) -> bool:
-    try:
-        path.relative_to(parent)
-    except ValueError:
-        return False
-    return True
-
-
 def _resolve_output_path(root: Path, path_text: str) -> tuple[Path | None, str]:
-    path = Path(path_text).expanduser()
-    resolved = path.resolve(strict=False)
-    tmp_root = Path("/tmp").resolve(strict=True)
-    workspace_dashboard = (root / "project-runtime" / "dashboard").resolve(strict=False)
-
-    if _is_relative_to(resolved, tmp_root) and resolved != tmp_root:
-        return resolved, ""
-    if _is_relative_to(resolved, workspace_dashboard) and resolved != workspace_dashboard:
-        return resolved, ""
-    return None, (
-        "dashboard output path is forbidden; use /tmp/... or "
-        "<workspace>/project-runtime/dashboard/..."
+    resolved = output_policy.resolve_output_path(path_text)
+    error = output_policy.validate_generated_output_path(
+        root,
+        resolved,
+        allowed_workspace_subdirs=("project-runtime/dashboard",),
     )
+    if error is None:
+        return resolved, ""
+    return None, f"{error.rule_id}: {error.message}"
 
 
 def _write_allowed(root: Path, path_text: str, content: str, *, label: str) -> bool:

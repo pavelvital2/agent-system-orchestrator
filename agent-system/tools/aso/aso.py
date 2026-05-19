@@ -199,7 +199,8 @@ def build_parser() -> argparse.ArgumentParser:
         help="Build a dry-run JSON context pack proposal from a task packet.",
         description=(
             "Parse a bounded task packet and emit a JSON context pack proposal to stdout "
-            "or an explicit --json-out path. This command does not dispatch agents, "
+            "or /tmp/... or <workspace>/project-runtime/proposals/... via --json-out. "
+            "This command does not dispatch agents, "
             "mutate runtime state, commit, push, checkpoint, or approve owner decisions."
         ),
     )
@@ -218,7 +219,7 @@ def build_parser() -> argparse.ArgumentParser:
     context_pack_build_parser.add_argument(
         "--json-out",
         metavar="PATH",
-        help="Write the proposal JSON to this explicit path instead of stdout.",
+        help="Write proposal JSON to /tmp/... or <workspace>/project-runtime/proposals/...",
     )
     context_pack_build_parser.set_defaults(handler=context_pack_build.run_build)
 
@@ -359,12 +360,12 @@ def build_parser() -> argparse.ArgumentParser:
     incident_fixture_parser.add_argument(
         "--json-out",
         metavar="PATH",
-        help="Write the proposal JSON to this explicit path.",
+        help="Write proposal JSON to /tmp/... or <workspace>/project-runtime/proposals/...",
     )
     incident_fixture_parser.add_argument(
         "--out",
         metavar="PATH",
-        help="Render the proposal Markdown to this explicit path.",
+        help="Render proposal Markdown to /tmp/... or <workspace>/project-runtime/proposals/...",
     )
     incident_fixture_parser.set_defaults(handler=incident_fixture.run_fixture)
 
@@ -418,7 +419,7 @@ def build_parser() -> argparse.ArgumentParser:
         help="Render TASK_REGISTRY dependency graph.",
         description=(
             "Read-only rendering for TASK_REGISTRY dependencies. Prints to stdout by "
-            "default or writes to an explicit --out path outside runtime/input/archive roots."
+            "default or writes to /tmp/... or <workspace>/project-runtime/reports/..."
         ),
     )
     _add_root_argument(dag_render_parser, validate=False)
@@ -431,7 +432,7 @@ def build_parser() -> argparse.ArgumentParser:
     dag_render_parser.add_argument(
         "--out",
         metavar="PATH",
-        help="Write rendered graph to this explicit path.",
+        help="Write rendered graph to /tmp/... or <workspace>/project-runtime/reports/...",
     )
     dag_render_parser.set_defaults(handler=dag.run_render)
 

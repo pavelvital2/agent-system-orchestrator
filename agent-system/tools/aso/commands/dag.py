@@ -9,7 +9,7 @@ import sys
 from dataclasses import dataclass
 from pathlib import Path
 
-from commands import state_verify
+from commands import output_policy, state_verify
 
 
 EXIT_OK = 0
@@ -21,7 +21,6 @@ DEPENDENCY_SATISFIED_STATUSES = {"checkpoint_done", "completed"}
 DEPENDENCY_ACTIVE_STATUSES = {"ready", "running", "audit_pending", "audit_passed", "checkpoint_done", "completed"}
 CHECKPOINT_TEXT_FIELDS = ("commit_hash", "branch", "checkpoint_ref")
 CHECKPOINT_LIST_FIELDS = ("accepted_files",)
-FORBIDDEN_OUTPUT_ROOTS = ("project-runtime", "project-input", "project-archive", ".tmp", "tmp")
 SAFE_LABEL_RE = re.compile(r"[^A-Za-z0-9 _./:#-]+")
 
 
@@ -510,23 +509,15 @@ def _render(root: Path, output_format: str) -> tuple[str, dict[str, object], int
     return _render_dot(tasks), report, EXIT_OK
 
 
-def _is_forbidden_output(root: Path, path: Path) -> bool:
-    resolved = path.expanduser().resolve(strict=False)
-    workspace = root.expanduser().resolve(strict=False)
-    for name in FORBIDDEN_OUTPUT_ROOTS:
-        candidate = workspace / name
-        try:
-            resolved.relative_to(candidate)
-            return True
-        except ValueError:
-            continue
-    return False
-
-
 def _write_output(root: Path, path_text: str, rendered: str) -> bool:
-    path = Path(path_text).expanduser()
-    if _is_forbidden_output(root, path):
-        print(f"aso dag render: forbidden output path: {path}", file=sys.stderr)
+    path = output_policy.resolve_output_path(path_text)
+    error = output_policy.validate_generated_output_path(
+        root,
+        path,
+        allowed_workspace_subdirs=("project-runtime/reports",),
+    )
+    if error is not None:
+        print(f"aso dag render: forbidden output path: {error.rule_id}: {error.message}: {error.evidence}", file=sys.stderr)
         return False
     if not path.parent.exists():
         print(f"aso dag render: output parent does not exist: {path.parent}", file=sys.stderr)

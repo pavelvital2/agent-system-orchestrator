@@ -194,7 +194,7 @@ class DagCommandTests(unittest.TestCase):
         self.assertNotIn('"] --> injected["', result.stdout)
 
     def test_forbidden_runtime_output_path_is_rejected(self) -> None:
-        with tempfile.TemporaryDirectory() as tmp:
+        with tempfile.TemporaryDirectory(dir="/tmp") as tmp:
             root = copy_dag_valid(tmp)
             out = root / "project-runtime" / "dag.mmd"
 
@@ -202,7 +202,35 @@ class DagCommandTests(unittest.TestCase):
 
             self.assertEqual(result.returncode, 3, result.stdout + result.stderr)
             self.assertIn("forbidden output path", result.stderr)
+            self.assertIn("ASO_OUTPUT_PATH_FORBIDDEN", result.stderr)
             self.assertFalse(out.exists())
+
+    def test_forbidden_workspace_output_roots_are_rejected_under_tmp_workspace(self) -> None:
+        for relpath in ("project-input/x.html", "project-archive/x.html", ".tmp/x.html", "tmp/x.html"):
+            with self.subTest(relpath=relpath):
+                with tempfile.TemporaryDirectory(dir="/tmp") as tmp:
+                    root = copy_dag_valid(tmp)
+                    out = root / relpath
+
+                    result = run_dag(root, "render", "--format", "mermaid", "--out", str(out))
+
+                    self.assertEqual(result.returncode, 3, result.stdout + result.stderr)
+                    self.assertIn("forbidden output path", result.stderr)
+                    self.assertIn("ASO_OUTPUT_PATH_FORBIDDEN", result.stderr)
+                    self.assertFalse(out.exists())
+
+    def test_workspace_reports_output_path_is_allowed_under_tmp_workspace(self) -> None:
+        with tempfile.TemporaryDirectory(dir="/tmp") as tmp:
+            root = copy_dag_valid(tmp)
+            reports_dir = root / "project-runtime" / "reports"
+            reports_dir.mkdir()
+            out = reports_dir / "dag.mmd"
+
+            result = run_dag(root, "render", "--format", "mermaid", "--out", str(out))
+
+            self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+            self.assertTrue(out.is_file())
+            self.assertTrue(out.read_text(encoding="utf-8").startswith("flowchart TD\n"))
 
 
 if __name__ == "__main__":

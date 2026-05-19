@@ -227,9 +227,14 @@ python3 agent-system/tools/aso/aso.py checkpoint-preflight --root . --mode packa
 `aso validate-rules` checks the packaged governance rule registry. `aso state
 verify` compares Markdown runtime files with JSON sidecars and emits optional
 JSON evidence. `aso plan-next` recommends the next orchestrator action as a
-dry-run report only. `aso dashboard` renders escaped static HTML to stdout or
-an allowed `/tmp` output path. `aso checkpoint-preflight` inspects checkpoint
-eligibility without staging, committing, pushing, or changing runtime state.
+dry-run report only. `aso dashboard` renders escaped static HTML to stdout,
+`/tmp`, or an explicit workspace `project-runtime/dashboard` path. `aso dag
+render`, `aso context-pack build`, and `aso incident fixture` likewise write
+generated render/proposal artifacts only to stdout, `/tmp`, or explicit
+workspace runtime report/proposal directories; tracked package paths are
+rejected with `ASO_OUTPUT_PATH_FORBIDDEN`. `aso checkpoint-preflight` inspects
+checkpoint eligibility without staging, committing, pushing, or changing
+runtime state.
 The corrected state examples use
 `agent-system/tests/fixtures/state/valid_workspace`; the dry-run plan evidence
 uses the canonical next action value `CREATE_AGENT` without dispatching an

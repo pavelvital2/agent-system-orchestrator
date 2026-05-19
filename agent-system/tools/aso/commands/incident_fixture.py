@@ -9,6 +9,8 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
+from commands import output_policy
+
 
 EXIT_OK = 0
 EXIT_FINDINGS = 1
@@ -16,8 +18,6 @@ EXIT_IO_ERROR = 3
 
 REQUIRED_STRICT_FIELDS = ("INCIDENT_ID", "INCIDENT_CLASS", "TRIGGERING_RULE_IDS", "EXPECTED_FAILURE_STATUS")
 ALLOWED_EXPECTED_FAILURE_STATUSES = {"failed", "blocked", "rejected", "gap"}
-FORBIDDEN_OUTPUT_PREFIXES = ("project-input", "project-runtime", "project-archive", ".tmp", "tmp")
-SAFE_TMP_ROOT = Path("/tmp")
 OWNER_APPROVAL_MARKERS = (
     "AUTO_APPROVE",
     "AUTO_APPROVAL",
@@ -118,28 +118,6 @@ def _as_list(fields: dict[str, Any], key: str) -> list[str]:
 def _slug(value: str) -> str:
     slug = re.sub(r"[^a-z0-9]+", "_", value.lower()).strip("_")
     return slug or "incident"
-
-
-def _relpath(root: Path, path: Path) -> str:
-    try:
-        return path.resolve(strict=False).relative_to(root.resolve(strict=False)).as_posix()
-    except ValueError:
-        return path.as_posix()
-
-
-def _is_relative_to(path: Path, root: Path) -> bool:
-    try:
-        path.resolve(strict=False).relative_to(root.resolve(strict=False))
-        return True
-    except ValueError:
-        return False
-
-
-def _policy_root(root: Path) -> Path:
-    resolved_root = root.resolve(strict=False)
-    if resolved_root.name == "agent-system":
-        return resolved_root.parent
-    return resolved_root
 
 
 def _contains_marker(text: str, markers: tuple[str, ...]) -> str:
@@ -304,25 +282,18 @@ def _output_path(root: Path, value: str) -> Path:
 
 
 def _validate_output_path(root: Path, path: Path) -> IncidentFinding | None:
-    policy_root = _policy_root(root)
-    policy_relpath = _relpath(policy_root, path)
-    if _is_relative_to(path, policy_root):
-        first_part = policy_relpath.split("/", 1)[0]
-        if first_part in FORBIDDEN_OUTPUT_PREFIXES:
-            return IncidentFinding(
-                "INCIDENT_OUTPUT_001",
-                "error",
-                "Proposal artifacts cannot be written under forbidden roots.",
-                policy_relpath,
-            )
-        return None
-    if _is_relative_to(path, SAFE_TMP_ROOT):
+    error = output_policy.validate_generated_output_path(
+        root,
+        path,
+        allowed_workspace_subdirs=("project-runtime/proposals", "project-runtime/reports"),
+    )
+    if error is None:
         return None
     return IncidentFinding(
-        "INCIDENT_OUTPUT_002",
+        error.rule_id,
         "error",
-        "Proposal artifacts cannot be written outside the repository root except under /tmp.",
-        path.as_posix(),
+        error.message,
+        error.evidence,
     )
 
 

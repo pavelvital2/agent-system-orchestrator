@@ -13,6 +13,7 @@ CLI = Path(__file__).resolve().parents[1] / "aso.py"
 REPO_ROOT = Path(__file__).resolve().parents[4]
 FIXTURE_ROOT = REPO_ROOT / "agent-system" / "tests" / "fixtures" / "state"
 VALID_WORKSPACE = FIXTURE_ROOT / "valid_workspace"
+DAG_AUDIT_ONLY_DEP = FIXTURE_ROOT / "dag_invalid_audit_passed_dependency_ready"
 
 
 def run_dashboard(root: Path, *extra: str) -> subprocess.CompletedProcess[str]:
@@ -29,6 +30,14 @@ def copy_valid_workspace(tmp: str) -> Path:
     root = Path(tmp) / "workspace"
     shutil.copytree(VALID_WORKSPACE, root)
     return root
+
+
+def unused_home_output_path() -> Path:
+    for suffix in range(1000):
+        candidate = Path.home() / f"aso-audit-outside-dashboard-test-{suffix}.txt"
+        if not candidate.exists():
+            return candidate
+    raise AssertionError("could not find an unused outside-root output path")
 
 
 def load_sidecar(root: Path, name: str) -> dict[str, object]:
@@ -69,6 +78,17 @@ class DashboardCommandTests(unittest.TestCase):
             self.assertIn("Task packet", html)
             self.assertIn("ASO dashboard written:", result.stdout)
 
+    def test_workspace_dashboard_output_writes_static_html(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = copy_valid_workspace(tmp)
+            out = root / "project-runtime" / "dashboard" / "dashboard.html"
+
+            result = run_dashboard(root, "--out", str(out))
+
+            self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+            self.assertTrue(out.is_file())
+            self.assertTrue(out.read_text(encoding="utf-8").startswith("<!doctype html>"))
+
     def test_forbidden_output_path_is_rejected(self) -> None:
         forbidden = REPO_ROOT / "agent-system" / "dashboard.html"
 
@@ -76,6 +96,15 @@ class DashboardCommandTests(unittest.TestCase):
 
         self.assertEqual(result.returncode, 3, result.stdout + result.stderr)
         self.assertIn("forbidden", result.stderr)
+        self.assertFalse(forbidden.exists())
+
+    def test_outside_root_absolute_output_path_is_rejected(self) -> None:
+        forbidden = unused_home_output_path()
+
+        result = run_dashboard(VALID_WORKSPACE, "--out", str(forbidden))
+
+        self.assertEqual(result.returncode, 3, result.stdout + result.stderr)
+        self.assertIn("ASO_OUTPUT_PATH_FORBIDDEN", result.stderr)
         self.assertFalse(forbidden.exists())
 
     def test_untrusted_state_text_is_html_escaped(self) -> None:
@@ -112,6 +141,17 @@ class DashboardCommandTests(unittest.TestCase):
         self.assertIn("<span>Package Sync</span><strong>not_available</strong>", result.stdout)
         self.assertIn("<th scope=\"row\">Status</th><td>not_available</td>", result.stdout)
         self.assertNotIn("<span>Package Sync</span><strong>passed</strong>", result.stdout)
+
+    def test_uncheckpointed_audit_dependency_blocks_dashboard_readiness(self) -> None:
+        result = run_dashboard(DAG_AUDIT_ONLY_DEP)
+
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        self.assertIn("<span>Dashboard Status</span><strong>blocked</strong>", result.stdout)
+        self.assertIn("<th scope=\"row\">Audit passed not checkpointed</th><td>1</td>", result.stdout)
+        self.assertIn("<th scope=\"row\">Checkpoint done</th><td>0</td>", result.stdout)
+        self.assertIn("<th scope=\"row\">Ready blocked by uncheckpointed dependency</th><td>1</td>", result.stdout)
+        self.assertIn("<th scope=\"row\">Uncheckpointed dependency findings</th><td>1</td>", result.stdout)
+        self.assertIn("dag.verify.DAG_DEPENDENCY_AUDIT_PASSED_WITHOUT_CHECKPOINT", result.stdout)
 
     def test_stage_3_dynamic_diagnostic_labels_are_html_escaped(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:

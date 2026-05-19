@@ -11,6 +11,8 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Iterable
 
+from commands import output_policy
+
 
 EXIT_OK = 0
 EXIT_FINDINGS = 1
@@ -582,10 +584,14 @@ def _build_report(
 
 
 def _write_json(path_text: str, payload: dict[str, object], root: Path) -> bool:
-    path = Path(path_text).expanduser()
-    relpath = _rel(root, path)
-    if any(_matches_path_prefix(relpath, forbidden) for forbidden in DEFAULT_FORBIDDEN_DOCS):
-        print(f"aso context-pack build: refusing to write json-out under forbidden root: {relpath}", file=sys.stderr)
+    path = output_policy.resolve_output_path(path_text)
+    error = output_policy.validate_generated_output_path(
+        root,
+        path,
+        allowed_workspace_subdirs=("project-runtime/proposals",),
+    )
+    if error is not None:
+        print(f"aso context-pack build: {error.rule_id}: {error.message}: {error.evidence}", file=sys.stderr)
         return False
     if not path.parent.exists():
         print(f"aso context-pack build: json-out parent does not exist: {path.parent}", file=sys.stderr)
