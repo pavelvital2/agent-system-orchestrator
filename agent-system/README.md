@@ -153,10 +153,11 @@ accepted repository lock explicitly allows it.
 The package includes an experimental read-only ASO helper CLI at
 `agent-system/tools/aso/aso.py`.
 
-This Stage 2 branch keeps the active package metadata coherent with the
-governed `3.0.1` tuple and adds read-only state sidecar verification,
-governance rule validation, dry-run next-action planning, static dashboard
-rendering, and checkpoint eligibility preflight.
+This Stage 2 state-contract correction branch updates the active package
+metadata to the governed `3.0.2` package/governance tuple with runtime schema
+`3.0.0`. It preserves the read-only Stage 2 command surfaces and resolves drift
+among runtime state sidecars, templates, schemas, fixtures, validator
+expectations, command examples, and release evidence.
 
 Install the local console command from the repository root with:
 
@@ -228,6 +229,10 @@ JSON evidence. `aso plan-next` recommends the next orchestrator action as a
 dry-run report only. `aso dashboard` renders escaped static HTML to stdout or
 an allowed `/tmp` output path. `aso checkpoint-preflight` inspects checkpoint
 eligibility without staging, committing, pushing, or changing runtime state.
+The corrected state examples use
+`agent-system/tests/fixtures/state/valid_workspace`; the dry-run plan evidence
+uses the canonical next action value `CREATE_AGENT` without dispatching an
+agent.
 
 Repeatable root targets are:
 
@@ -274,10 +279,17 @@ agent-system/11_release/STAGE2_UPGRADE_VALIDATION_REPORT.md
 ```
 
 The Stage 1 final validation report is accepted evidence and must remain
-intact. The Stage 2 report is a draft until the tester-owned final validation
-task completes it with real command evidence. Pending sections must remain
-marked pending and must not claim pass/fail results before Task 009 supplies
-evidence.
+intact. The original Stage 2 validation report remains historical evidence but
+is superseded for current acceptance by the Stage 2 state-contract correction.
+The correction draft report is:
+
+```text
+agent-system/11_release/STAGE2_STATE_CONTRACT_CORRECTION_VALIDATION_REPORT.md
+```
+
+Task 006 owns final correction validation evidence. Pending sections must
+remain marked pending and must not claim pass/fail results before Task 006
+supplies evidence.
 
 After all accepted upgrade tasks are committed and pushed by the orchestrator,
 cleanup is local:
@@ -399,10 +411,10 @@ agent-system/GOVERNANCE_CHANGELOG.md
 Current active tuple and Stage 2 marker:
 
 ```text
-CURRENT_PACKAGE_VERSION: 3.0.1
-CURRENT_GOVERNANCE_RULESET_VERSION: 3.0.1
+CURRENT_PACKAGE_VERSION: 3.0.2
+CURRENT_GOVERNANCE_RULESET_VERSION: 3.0.2
 CURRENT_RUNTIME_SCHEMA_VERSION: 3.0.0
-STAGE2_COMMAND_SURFACE_MARKER: state-dashboard-controls
+STAGE2_CORRECTION_MARKER: state-contract-correction
 ```
 
 ## Examples

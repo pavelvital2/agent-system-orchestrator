@@ -19,8 +19,8 @@ RUNTIME_SCHEMA_VERSION:
 ## Active version constants
 
 ```text
-CURRENT_PACKAGE_VERSION: 3.0.1
-CURRENT_GOVERNANCE_RULESET_VERSION: 3.0.1
+CURRENT_PACKAGE_VERSION: 3.0.2
+CURRENT_GOVERNANCE_RULESET_VERSION: 3.0.2
 CURRENT_RUNTIME_SCHEMA_VERSION: 3.0.0
 ```
 
@@ -160,6 +160,22 @@ with the installed package metadata and does not change runtime schema
 authority. Any future package version bump must update
 `CURRENT_PACKAGE_VERSION`, `pyproject.toml`, and
 `agent_system_orchestrator_aso.__version__` in one audited package update.
+
+The Stage 2 state-contract correction installs:
+
+```text
+CURRENT_PACKAGE_VERSION: 3.0.2
+CURRENT_GOVERNANCE_RULESET_VERSION: 3.0.2
+CURRENT_RUNTIME_SCHEMA_VERSION: 3.0.0
+```
+
+This patch resolves Stage 2 drift among runtime state sidecar templates,
+schemas, fixtures, validator expectations, command examples, and release
+evidence. It keeps the runtime schema version at `3.0.0` because the correction
+reconciles the accepted Stage 2 state contract rather than introducing a new
+runtime state meaning. It also preserves the read-only ASO helper boundary:
+ASO does not dispatch agents, mutate package or workspace state, perform
+checkpoints, commit, or push.
 
 ## Version semantics
 

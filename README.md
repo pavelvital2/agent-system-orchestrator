@@ -16,9 +16,11 @@ agent-system/README.md
 
 The package is a filesystem-governed instruction, template, lifecycle, and validation system for Codex CLI orchestration. It includes an experimental read-only ASO helper CLI at `agent-system/tools/aso/aso.py`.
 
-This Stage 2 branch keeps the active package metadata coherent with the
-governed `3.0.1` tuple and records the audited Stage 2 command-surface marker
-in the Stage 2 release report.
+This Stage 2 state-contract correction branch updates the active package
+metadata to the governed `3.0.2` package/governance tuple with runtime schema
+`3.0.0`. The correction resolves drift among state sidecars, templates,
+schemas, fixtures, validator expectations, command examples, and release
+evidence.
 
 ## Local install and command surface
 
@@ -87,6 +89,11 @@ runner. The CI target runs the local test, smoke, doctor, lint, and whitespace
 diff checks. CI should use the same local commands and must not require
 secrets, network credentials, real remotes, or publishing permissions.
 
+Stage 2 state-contract examples use the corrected valid workspace fixture at
+`agent-system/tests/fixtures/state/valid_workspace`. The dry-run plan example
+reports the canonical next action value `CREATE_AGENT`; it is evidence only and
+does not dispatch an agent.
+
 The helper supports read-only status, lint, doctor, design validation, context
 pack validation, rule validation, state verification, dry-run next-action
 planning, static dashboard rendering, checkpoint eligibility preflight, and
@@ -112,6 +119,10 @@ git ls-files project-input project-runtime project-archive
 
 The expected tracked-file result is empty. Stable release or validation
 summaries belong under accepted package paths such as `agent-system/11_release/`.
-The Stage 2 draft report is
-`agent-system/11_release/STAGE2_UPGRADE_VALIDATION_REPORT.md`; Task 009 owns
-final validation evidence and must not be pre-claimed here.
+The historical Stage 2 validation report is
+`agent-system/11_release/STAGE2_UPGRADE_VALIDATION_REPORT.md`; it is superseded
+for current acceptance by the Stage 2 state-contract correction. The draft
+correction report is
+`agent-system/11_release/STAGE2_STATE_CONTRACT_CORRECTION_VALIDATION_REPORT.md`.
+Task 006 owns final correction validation evidence and must not be pre-claimed
+here.

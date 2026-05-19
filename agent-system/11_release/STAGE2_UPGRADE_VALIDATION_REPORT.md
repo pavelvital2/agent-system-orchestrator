@@ -3,20 +3,30 @@
 ## Status
 
 ```text
-REPORT_STATUS: final_validation_complete
+REPORT_STATUS: superseded_by_stage2_state_contract_correction
 OWNER_TASK: TASK_ASO_STAGE2_009_FINAL_VALIDATION
 STAGE: 2
-PACKAGE_VERSION_MARKER: 3.0.1 + audited Stage 2 state-dashboard-controls marker
-RESULT_STATUS: completed
+PACKAGE_VERSION_MARKER: original 3.0.1 + audited Stage 2 state-dashboard-controls marker
+RESULT_STATUS: historical_evidence_superseded
 VALIDATION_DATE: 2026-05-19
 PROFILE_AGENT_COMMIT_PUSH_AUTHORITY: none
 CLEANUP_PERFORMED_BY_PROFILE_AGENT: no
+SUPERSEDED_BY: agent-system/11_release/STAGE2_STATE_CONTRACT_CORRECTION_VALIDATION_REPORT.md
+CORRECTION_PACKAGE_VERSION_MARKER: 3.0.2
+CORRECTION_FINAL_VALIDATION_OWNER: TASK_ASO_STAGE2_CORRECTION_006
 ```
 
-This report records final Stage 2 validation evidence for state sidecars,
+This report records historical Stage 2 validation evidence for state sidecars,
 dashboard rendering, checkpoint preflight, rule validation, dry-run planning,
 direct script execution, installed `aso` execution, publication boundaries, and
-offline package tests.
+offline package tests. It is no longer unqualified final acceptance evidence for
+the current Stage 2 package because the state-contract correction branch amends
+state sidecar/template/schema/fixture/validator drift.
+
+The current correction evidence is drafted in
+`agent-system/11_release/STAGE2_STATE_CONTRACT_CORRECTION_VALIDATION_REPORT.md`.
+Task 006 owns final correction validation evidence; this historical report must
+not be used to claim the corrected package has passed final validation.
 
 The profile agent did not commit, push, dispatch workflows, mutate runtime
 state, perform checkpoint publication, or execute final cleanup.
