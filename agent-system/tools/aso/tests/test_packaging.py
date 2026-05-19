@@ -29,6 +29,7 @@ class PackagingCommandTests(unittest.TestCase):
         self.assertIn("doctor", result.stdout)
         self.assertIn("validate-rules", result.stdout)
         self.assertIn("plan-next", result.stdout)
+        self.assertIn("record-result", result.stdout)
         self.assertIn("checkpoint-preflight", result.stdout)
         self.assertIn("dashboard", result.stdout)
         self.assertIn("dag", result.stdout)
@@ -50,6 +51,7 @@ class PackagingCommandTests(unittest.TestCase):
         self.assertTrue((bundled_tool_dir / "commands" / "dag.py").is_file())
         self.assertTrue((bundled_tool_dir / "commands" / "package_checks.py").is_file())
         self.assertTrue((bundled_tool_dir / "commands" / "package_sync.py").is_file())
+        self.assertTrue((bundled_tool_dir / "commands" / "record_result.py").is_file())
         self.assertFalse((bundled_tool_dir / "tests").exists())
 
     def test_stage2_package_version_is_coherent(self) -> None:

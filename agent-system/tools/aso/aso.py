@@ -17,6 +17,7 @@ from commands import (
     lint,
     package_sync,
     plan_next,
+    record_result,
     state_verify,
     status,
     validate_context_pack,
@@ -285,6 +286,40 @@ def build_parser() -> argparse.ArgumentParser:
         help="Write the read-only checkpoint preflight report JSON to this explicit path.",
     )
     checkpoint_preflight_parser.set_defaults(handler=checkpoint_preflight.run)
+
+    record_result_parser = subparsers.add_parser(
+        "record-result",
+        help="Dry-run/read-only RESULT routing proposal.",
+        description=(
+            "Dry-run/read-only parser for a profile-agent RESULT or AUDIT_RESULT. "
+            "Reports the governed "
+            "next-action proposal without mutating state, dispatching agents, "
+            "checkpointing, committing, pushing, or approving owner decisions."
+        ),
+    )
+    record_result_parser.add_argument(
+        "--result",
+        required=True,
+        metavar="RESULT.md",
+        help="Profile RESULT or AUDIT_RESULT Markdown artifact to inspect.",
+    )
+    record_result_parser.add_argument(
+        "--dry-run",
+        required=True,
+        action="store_true",
+        help="Required safety acknowledgement; command is proposal/read-only only.",
+    )
+    record_result_parser.add_argument(
+        "--strict",
+        action="store_true",
+        help="Reject malformed or overclaiming RESULT files.",
+    )
+    record_result_parser.add_argument(
+        "--json",
+        action="store_true",
+        help="Print the dry-run routing report as JSON to stdout.",
+    )
+    record_result_parser.set_defaults(handler=record_result.run)
 
     dashboard_parser = subparsers.add_parser(
         "dashboard",
