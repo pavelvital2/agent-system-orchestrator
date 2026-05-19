@@ -105,10 +105,16 @@ def set_next_action(root: Path, **updates: object) -> None:
         "dependency_status": "DEPENDENCY_STATUS",
         "action_semantic": "ACTION_SEMANTIC",
         "checkpoint_policy": "CHECKPOINT_POLICY",
+        "checkpoint_preflight_required": "CHECKPOINT_PREFLIGHT_REQUIRED",
+        "checkpoint_receipt_required": "CHECKPOINT_RECEIPT_REQUIRED",
     }
     for key, field in markdown_fields.items():
-        if key in updates and isinstance(updates[key], str):
-            update_markdown_field(root, "NEXT_ACTION.md", field, str(updates[key]))
+        if key in updates:
+            value = updates[key]
+            if isinstance(value, bool):
+                update_markdown_field(root, "NEXT_ACTION.md", field, "yes" if value else "no")
+            elif isinstance(value, str):
+                update_markdown_field(root, "NEXT_ACTION.md", field, value)
 
 
 def set_project_state(root: Path, **updates: object) -> None:
@@ -118,6 +124,7 @@ def set_project_state(root: Path, **updates: object) -> None:
     write_sidecar(root, "PROJECT_STATE.json", payload)
     markdown_fields = {
         "checkpoint_eligibility": "CHECKPOINT_ELIGIBILITY",
+        "checkpoint_eligibility_status": "CHECKPOINT_ELIGIBILITY_STATUS",
         "project_status": "PROJECT_STATUS",
     }
     for key, field in markdown_fields.items():
@@ -133,6 +140,7 @@ def set_current_gate(root: Path, **updates: object) -> None:
     markdown_fields = {
         "action_semantic": "ACTION_SEMANTIC",
         "checkpoint_eligibility": "CHECKPOINT_ELIGIBILITY",
+        "checkpoint_eligibility_status": "CHECKPOINT_ELIGIBILITY_STATUS",
     }
     for key, field in markdown_fields.items():
         if key in updates and isinstance(updates[key], str):
@@ -149,13 +157,6 @@ def set_task(root: Path, **updates: object) -> None:
     write_sidecar(root, "TASK_REGISTRY.json", payload)
     if "status" in updates and isinstance(updates["status"], str):
         update_markdown_field(root, "TASK_REGISTRY.md", "STATUS", str(updates["status"]))
-    if "checkpoint_required" in updates and isinstance(updates["checkpoint_required"], bool):
-        update_markdown_field(
-            root,
-            "TASK_REGISTRY.md",
-            "CHECKPOINT_REQUIRED",
-            "true" if updates["checkpoint_required"] else "false",
-        )
 
 
 class CheckpointPreflightCommandTests(unittest.TestCase):
@@ -221,12 +222,14 @@ class CheckpointPreflightCommandTests(unittest.TestCase):
             root = copy_valid_workspace(tmp)
             set_next_action(
                 root,
-                action_type="checkpoint",
-                action_semantic="checkpoint",
-                checkpoint_policy="after_audit_pass",
+                action_type="update_state",
+                action_semantic="normal",
+                checkpoint_policy="local_only",
+                checkpoint_preflight_required=True,
+                checkpoint_receipt_required=True,
             )
-            set_project_state(root, checkpoint_eligibility="pending")
-            set_current_gate(root, action_semantic="checkpoint", checkpoint_eligibility="pending")
+            set_project_state(root, checkpoint_eligibility="local_only", checkpoint_eligibility_status="not_checked")
+            set_current_gate(root, action_semantic="normal", checkpoint_eligibility="local_only", checkpoint_eligibility_status="not_checked")
             json_out = Path(tmp) / "checkpoint-preflight.json"
 
             result = run_preflight(root, "--mode", "workspace", "--json-out", str(json_out))
@@ -244,16 +247,17 @@ class CheckpointPreflightCommandTests(unittest.TestCase):
             root = copy_valid_workspace(tmp)
             set_next_action(
                 root,
-                action_type="checkpoint",
-                action_semantic="checkpoint",
-                checkpoint_policy="after_audit_pass",
+                action_type="update_state",
+                action_semantic="normal",
+                checkpoint_policy="local_only",
+                checkpoint_preflight_required=True,
+                checkpoint_receipt_required=True,
             )
-            set_project_state(root, checkpoint_eligibility="eligible")
-            set_current_gate(root, action_semantic="checkpoint", checkpoint_eligibility="eligible")
+            set_project_state(root, checkpoint_eligibility="local_only", checkpoint_eligibility_status="eligible")
+            set_current_gate(root, action_semantic="normal", checkpoint_eligibility="local_only", checkpoint_eligibility_status="eligible")
             set_task(
                 root,
                 status="audit_passed",
-                checkpoint_required=True,
                 audit_refs=["project-runtime/audits/AUDIT_TASK_FIXTURE_STATE_001_PASS.md"],
             )
             json_out = Path(tmp) / "checkpoint-preflight.json"

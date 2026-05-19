@@ -15,7 +15,8 @@ EXIT_OK = 0
 EXIT_BLOCKED = 1
 EXIT_IO_ERROR = 3
 
-BLOCKING_CHECKPOINT_ELIGIBILITY = {"blocked", "ineligible"}
+BLOCKING_CHECKPOINT_ELIGIBILITY = {"blocked"}
+BLOCKING_CHECKPOINT_ELIGIBILITY_STATUS = {"blocked", "ineligible"}
 
 
 def _is_none(value: object) -> bool:
@@ -231,11 +232,21 @@ def _artifact_audit_refs(sidecars: dict[str, dict[str, object]], task_id: str) -
     if not isinstance(artifacts, list):
         return refs
     for artifact in artifacts:
-        if not isinstance(artifact, dict) or artifact.get("task_id") != task_id:
+        if not isinstance(artifact, dict):
+            continue
+        if artifact.get("source_task") != task_id and artifact.get("task_id") != task_id:
             continue
         audit_ref = artifact.get("audit_ref")
         if isinstance(audit_ref, str) and not _is_none(audit_ref):
             refs.append(audit_ref.strip())
+    return refs
+
+
+def _current_gate_audit_evidence(sidecars: dict[str, dict[str, object]]) -> list[str]:
+    refs: list[str] = []
+    for item in _truthy_string_list(_content(sidecars, "CURRENT_GATE").get("gate_evidence")):
+        if "audit" in item.lower():
+            refs.append(item)
     return refs
 
 
@@ -247,7 +258,7 @@ def _audit_pass_evidence(
     task_status = _as_text(task.get("status"))
     task_audit_refs = _truthy_string_list(task.get("audit_refs"))
     artifact_audit_refs = _artifact_audit_refs(sidecars, task_id)
-    current_gate_refs = _truthy_string_list(_content(sidecars, "CURRENT_GATE").get("evidence_refs"))
+    current_gate_refs = _current_gate_audit_evidence(sidecars)
     audit_status_passed = task_status == "audit_passed"
     present = bool(task_audit_refs or artifact_audit_refs or current_gate_refs)
     return {
@@ -256,7 +267,7 @@ def _audit_pass_evidence(
         "task_status_audit_passed": audit_status_passed,
         "task_audit_refs": task_audit_refs,
         "accepted_artifact_audit_refs": artifact_audit_refs,
-        "current_gate_evidence_refs": current_gate_refs,
+        "current_gate_audit_evidence_refs": current_gate_refs,
     }
 
 
@@ -296,6 +307,7 @@ def _workspace_report(root: Path, strict: bool) -> tuple[dict[str, object], int]
     audit_evidence = _audit_pass_evidence(sidecars, task, task_id)
     is_checkpoint_attempt = plan_next._is_checkpoint_attempt(next_action)
     checkpoint_eligibility = _as_text(project_state.get("checkpoint_eligibility"))
+    checkpoint_eligibility_status = _as_text(project_state.get("checkpoint_eligibility_status"))
 
     blocking_rules = _state_verify_blockers(verify_report)
     warnings: list[dict[str, object]] = []
@@ -348,11 +360,20 @@ def _workspace_report(root: Path, strict: bool) -> tuple[dict[str, object], int]
                 recommendation="Resolve checkpoint_blocked_by state before checkpointing.",
             )
         )
-    elif checkpoint_eligibility and checkpoint_eligibility != "eligible":
+    elif checkpoint_eligibility_status in BLOCKING_CHECKPOINT_ELIGIBILITY_STATUS:
+        blocking_rules.append(
+            _blocking_rule(
+                "GOV-CHECKPOINT-AUDIT-GATE",
+                "Runtime state marks checkpoint eligibility status as blocked or ineligible.",
+                f"checkpoint_eligibility_status={checkpoint_eligibility_status}",
+                recommendation="Resolve checkpoint_blocked_by state before checkpointing.",
+            )
+        )
+    elif checkpoint_eligibility and checkpoint_eligibility not in {"local_only", "push_allowed", "not_applicable"}:
         warnings.append(
             _warning(
                 "GOV-CHECKPOINT-AUDIT-GATE",
-                "Runtime checkpoint eligibility is not already eligible; this command reports preflight eligibility only.",
+                "Runtime checkpoint eligibility is not a canonical eligible or not-applicable value.",
                 f"checkpoint_eligibility={checkpoint_eligibility}",
             )
         )
@@ -403,6 +424,8 @@ def _workspace_report(root: Path, strict: bool) -> tuple[dict[str, object], int]
             "project_state": {
                 "project_status": project_state.get("project_status", ""),
                 "checkpoint_eligibility": checkpoint_eligibility,
+                "checkpoint_eligibility_status": checkpoint_eligibility_status,
+                "checkpoint_preflight_status": project_state.get("checkpoint_preflight_status", ""),
                 "checkpoint_blocked_by": project_state.get("checkpoint_blocked_by", []),
                 "active_blockers": project_state.get("active_blockers", []),
             },

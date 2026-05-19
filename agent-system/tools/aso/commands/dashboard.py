@@ -46,6 +46,17 @@ def _string_list(value: object) -> list[str]:
     return result
 
 
+def _blocking_status_messages(value: object) -> list[str]:
+    if not isinstance(value, dict):
+        return []
+    parts = []
+    for key in ("blocker_id", "blocker_type", "blocks", "blocked_by", "resolution_path"):
+        text = _as_text(value.get(key))
+        if text and text not in {"NONE", "none", "null", "UNKNOWN"}:
+            parts.append(f"{key}={text}")
+    return ["; ".join(parts)] if parts else []
+
+
 def _tasks(sidecars: dict[str, dict[str, object]]) -> list[dict[str, object]]:
     raw_tasks = _content(sidecars, "TASK_REGISTRY").get("tasks")
     if not isinstance(raw_tasks, list):
@@ -58,10 +69,10 @@ def _task_counts(tasks: list[dict[str, object]]) -> dict[str, object]:
     return {
         "total": len(tasks),
         "by_status": dict(sorted(by_status.items())),
-        "audit_required": sum(1 for task in tasks if task.get("audit_required") is True),
-        "checkpoint_required": sum(1 for task in tasks if task.get("checkpoint_required") is True),
         "with_result_refs": sum(1 for task in tasks if _string_list(task.get("result_refs"))),
         "with_audit_refs": sum(1 for task in tasks if _string_list(task.get("audit_refs"))),
+        "audit_pending": by_status.get("audit_pending", 0),
+        "checkpoint_done": by_status.get("checkpoint_done", 0),
     }
 
 
@@ -77,7 +88,7 @@ def _open_blockers(
     for source, values in (
         ("project_state.active_blockers", _string_list(project_state.get("active_blockers"))),
         ("project_state.checkpoint_blocked_by", _string_list(project_state.get("checkpoint_blocked_by"))),
-        ("current_gate.checkpoint_blocked_by", _string_list(current_gate.get("checkpoint_blocked_by"))),
+        ("current_gate.blocking_status", _blocking_status_messages(current_gate.get("blocking_status"))),
         ("next_action.blocked_by", _string_list(next_action.get("blocked_by"))),
     ):
         for value in values:
@@ -130,7 +141,7 @@ def _audit_signals(
     for task in tasks:
         refs = _string_list(task.get("audit_refs"))
         task_audit_refs.extend(refs)
-        if task.get("audit_required") is True and not refs:
+        if _as_text(task.get("status")) == "audit_pending" and not refs:
             pending += 1
 
     evidence = plan_report.get("evidence")
@@ -139,11 +150,10 @@ def _audit_signals(
         audit_pass_evidence = evidence["audit_pass_evidence"]
 
     return {
-        "audit_required": sum(1 for task in tasks if task.get("audit_required") is True),
         "audit_pending": pending,
         "task_audit_refs": task_audit_refs,
         "accepted_artifact_audit_refs": _accepted_artifact_audit_refs(sidecars),
-        "current_gate_evidence_refs": _string_list(current_gate.get("evidence_refs")),
+        "current_gate_gate_evidence": _string_list(current_gate.get("gate_evidence")),
         "plan_audit_pass_evidence_present": audit_pass_evidence.get("present", False),
     }
 
@@ -158,11 +168,11 @@ def _checkpoint_signals(
         "project_checkpoint_eligibility": _as_text(project_state.get("checkpoint_eligibility")) or "unknown",
         "current_gate_checkpoint_eligibility": _as_text(current_gate.get("checkpoint_eligibility")) or "unknown",
         "next_action_checkpoint_policy": _as_text(next_action.get("checkpoint_policy")) or "unknown",
-        "checkpoint_required_tasks": sum(1 for task in tasks if task.get("checkpoint_required") is True),
+        "checkpoint_done_tasks": sum(1 for task in tasks if _as_text(task.get("status")) == "checkpoint_done"),
         "checkpoint_blocked_by": sorted(
             set(
                 _string_list(project_state.get("checkpoint_blocked_by"))
-                + _string_list(current_gate.get("checkpoint_blocked_by"))
+                + _blocking_status_messages(current_gate.get("blocking_status"))
             )
         ),
     }
@@ -243,6 +253,8 @@ def build_report(root: Path) -> dict[str, object]:
             "owner_role": current_gate.get("owner_role", ""),
             "task_id": current_gate.get("task_id", ""),
             "action_semantic": current_gate.get("action_semantic", ""),
+            "gate_evidence": current_gate.get("gate_evidence", []),
+            "blocking_status": current_gate.get("blocking_status", "NONE"),
         },
         "next_action": {
             "recommended_next_action": planner.get("recommended_next_action", ""),
@@ -382,6 +394,8 @@ def render_html(report: dict[str, object]) -> str:
         ("Owner", current_gate.get("owner_role", "")),
         ("Task", current_gate.get("task_id", "")),
         ("Semantic", current_gate.get("action_semantic", "")),
+        ("Gate evidence", len(current_gate.get("gate_evidence", [])) if isinstance(current_gate.get("gate_evidence"), list) else 0),
+        ("Blocking status", current_gate.get("blocking_status", "")),
       ))}</table>
     </section>
 
@@ -402,8 +416,8 @@ def render_html(report: dict[str, object]) -> str:
       <h2>Tasks</h2>
       <table>{_pairs((
         ("Total", task_counts.get("total", 0)),
-        ("Audit required", task_counts.get("audit_required", 0)),
-        ("Checkpoint required", task_counts.get("checkpoint_required", 0)),
+        ("Audit pending", task_counts.get("audit_pending", 0)),
+        ("Checkpoint done", task_counts.get("checkpoint_done", 0)),
         ("With results", task_counts.get("with_result_refs", 0)),
         ("With audits", task_counts.get("with_audit_refs", 0)),
       ))}</table>
@@ -418,12 +432,11 @@ def render_html(report: dict[str, object]) -> str:
     <section>
       <h2>Audit Signals</h2>
       <table>{_pairs((
-        ("Audit required", audit.get("audit_required", 0)),
         ("Audit pending", audit.get("audit_pending", 0)),
         ("Plan audit evidence", audit.get("plan_audit_pass_evidence_present", False)),
         ("Task audit refs", len(audit.get("task_audit_refs", [])) if isinstance(audit.get("task_audit_refs"), list) else 0),
         ("Artifact audit refs", len(audit.get("accepted_artifact_audit_refs", [])) if isinstance(audit.get("accepted_artifact_audit_refs"), list) else 0),
-        ("Gate evidence refs", len(audit.get("current_gate_evidence_refs", [])) if isinstance(audit.get("current_gate_evidence_refs"), list) else 0),
+        ("Gate evidence refs", len(audit.get("current_gate_gate_evidence", [])) if isinstance(audit.get("current_gate_gate_evidence"), list) else 0),
       ))}</table>
     </section>
 
@@ -433,7 +446,7 @@ def render_html(report: dict[str, object]) -> str:
         ("Project eligibility", checkpoint.get("project_checkpoint_eligibility", "")),
         ("Gate eligibility", checkpoint.get("current_gate_checkpoint_eligibility", "")),
         ("Next policy", checkpoint.get("next_action_checkpoint_policy", "")),
-        ("Required tasks", checkpoint.get("checkpoint_required_tasks", 0)),
+        ("Checkpoint done tasks", checkpoint.get("checkpoint_done_tasks", 0)),
       ))}</table>
       <ul>{_list_items(checkpoint.get("checkpoint_blocked_by", []) if isinstance(checkpoint.get("checkpoint_blocked_by"), list) else [])}</ul>
     </section>

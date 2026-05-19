@@ -76,10 +76,16 @@ def set_next_action(root: Path, **updates: object) -> None:
         "dependency_status": "DEPENDENCY_STATUS",
         "action_semantic": "ACTION_SEMANTIC",
         "checkpoint_policy": "CHECKPOINT_POLICY",
+        "checkpoint_preflight_required": "CHECKPOINT_PREFLIGHT_REQUIRED",
+        "checkpoint_receipt_required": "CHECKPOINT_RECEIPT_REQUIRED",
     }
     for key, field in markdown_fields.items():
-        if key in updates and isinstance(updates[key], str):
-            update_markdown_field(root, "NEXT_ACTION.md", field, str(updates[key]))
+        if key in updates:
+            value = updates[key]
+            if isinstance(value, bool):
+                update_markdown_field(root, "NEXT_ACTION.md", field, "yes" if value else "no")
+            elif isinstance(value, str):
+                update_markdown_field(root, "NEXT_ACTION.md", field, value)
 
 
 def set_project_state(root: Path, **updates: object) -> None:
@@ -109,13 +115,6 @@ def set_task(root: Path, **updates: object) -> None:
     write_sidecar(root, "TASK_REGISTRY.json", payload)
     if "status" in updates and isinstance(updates["status"], str):
         update_markdown_field(root, "TASK_REGISTRY.md", "STATUS", str(updates["status"]))
-    if "checkpoint_required" in updates and isinstance(updates["checkpoint_required"], bool):
-        update_markdown_field(
-            root,
-            "TASK_REGISTRY.md",
-            "CHECKPOINT_REQUIRED",
-            "true" if updates["checkpoint_required"] else "false",
-        )
 
 
 class PlanNextCommandTests(unittest.TestCase):
@@ -147,7 +146,7 @@ class PlanNextCommandTests(unittest.TestCase):
             self.assertTrue(report["read_only"])
             self.assertFalse(report["mutations_performed"])
             self.assertEqual(report["recommended_next_action"], "CREATE_AGENT")
-            self.assertEqual(report["target_role"], "runtime_architect")
+            self.assertEqual(report["target_role"], "developer")
             self.assertEqual(report["task_packet"], "project-runtime/tasks/active/TASK_FIXTURE_STATE_001.md")
             self.assertEqual(report["blocking_rules"], [])
         self.assertEqual(mtimes_before, {path: path.stat().st_mtime_ns for path in tracked})
@@ -157,14 +156,15 @@ class PlanNextCommandTests(unittest.TestCase):
             root = copy_valid_workspace(tmp)
             set_next_action(
                 root,
-                action_type="checkpoint",
-                action_semantic="checkpoint",
-                checkpoint_policy="after_audit_pass",
+                action_type="update_state",
+                action_semantic="normal",
+                checkpoint_policy="local_only",
+                checkpoint_preflight_required=True,
+                checkpoint_receipt_required=True,
             )
             set_task(
                 root,
                 status="audit_passed",
-                checkpoint_required=True,
                 audit_refs=["project-runtime/audits/AUDIT_TASK_FIXTURE_STATE_001_PASS.md"],
             )
             json_out = Path(tmp) / "plan-next.json"
@@ -182,9 +182,11 @@ class PlanNextCommandTests(unittest.TestCase):
             root = copy_valid_workspace(tmp)
             set_next_action(
                 root,
-                action_type="checkpoint",
-                action_semantic="checkpoint",
-                checkpoint_policy="after_audit_pass",
+                action_type="update_state",
+                action_semantic="normal",
+                checkpoint_policy="local_only",
+                checkpoint_preflight_required=True,
+                checkpoint_receipt_required=True,
             )
             json_out = Path(tmp) / "plan-next.json"
 
@@ -199,41 +201,44 @@ class PlanNextCommandTests(unittest.TestCase):
             self.assertIn("GOV-CHECKPOINT-AUDIT-GATE", rule_ids)
             self.assertFalse(report["evidence"]["audit_pass_evidence"]["present"])
 
-    def test_checkpoint_completed_without_audit_refs_is_blocked(self) -> None:
+    def test_checkpoint_completed_or_checkpoint_done_without_audit_refs_is_blocked(self) -> None:
+        for status in ("completed", "checkpoint_done"):
+            with self.subTest(status=status), tempfile.TemporaryDirectory() as tmp:
+                root = copy_valid_workspace(tmp)
+                set_next_action(
+                    root,
+                    action_type="update_state",
+                    action_semantic="normal",
+                    checkpoint_policy="local_only",
+                    checkpoint_preflight_required=True,
+                    checkpoint_receipt_required=True,
+                )
+                set_task(root, status=status, audit_refs=[])
+                json_out = Path(tmp) / f"plan-next-{status}.json"
+
+                result = run_plan_next(root, "--strict", "--json-out", str(json_out))
+
+                self.assertEqual(result.returncode, 1, result.stdout + result.stderr)
+                report = json.loads(json_out.read_text(encoding="utf-8"))
+                self.assertEqual(report["status"], "blocked")
+                self.assertEqual(report["recommended_next_action"], "CREATE_AUDITOR")
+                rule_ids = {item["rule_id"] for item in report["blocking_rules"]}
+                self.assertIn("GOV-CHECKPOINT-AUDIT-GATE", rule_ids)
+                audit_evidence = report["evidence"]["audit_pass_evidence"]
+                self.assertFalse(audit_evidence["present"])
+                self.assertEqual(audit_evidence["task_status"], status)
+                self.assertEqual(audit_evidence["task_audit_refs"], [])
+
+    def test_stop_action_recommends_stop(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             root = copy_valid_workspace(tmp)
             set_next_action(
                 root,
-                action_type="checkpoint",
-                action_semantic="checkpoint",
-                checkpoint_policy="after_audit_pass",
-            )
-            set_task(root, status="completed", checkpoint_required=True, audit_refs=[])
-            json_out = Path(tmp) / "plan-next.json"
-
-            result = run_plan_next(root, "--strict", "--json-out", str(json_out))
-
-            self.assertEqual(result.returncode, 1, result.stdout + result.stderr)
-            report = json.loads(json_out.read_text(encoding="utf-8"))
-            self.assertEqual(report["status"], "blocked")
-            self.assertEqual(report["recommended_next_action"], "CREATE_AUDITOR")
-            rule_ids = {item["rule_id"] for item in report["blocking_rules"]}
-            self.assertIn("GOV-CHECKPOINT-AUDIT-GATE", rule_ids)
-            audit_evidence = report["evidence"]["audit_pass_evidence"]
-            self.assertFalse(audit_evidence["present"])
-            self.assertEqual(audit_evidence["task_status"], "completed")
-            self.assertEqual(audit_evidence["task_audit_refs"], [])
-
-    def test_none_action_recommends_none(self) -> None:
-        with tempfile.TemporaryDirectory() as tmp:
-            root = copy_valid_workspace(tmp)
-            set_next_action(
-                root,
-                action_type="none",
+                action_type="stop",
                 target_role="none",
-                dependency_status="not_required",
-                action_semantic="none",
-                checkpoint_policy="not_required",
+                dependency_status="not_applicable",
+                action_semantic="stop_terminal",
+                checkpoint_policy="no_checkpoint",
             )
             json_out = Path(tmp) / "plan-next.json"
 
@@ -241,7 +246,7 @@ class PlanNextCommandTests(unittest.TestCase):
 
             self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
             report = json.loads(json_out.read_text(encoding="utf-8"))
-            self.assertEqual(report["recommended_next_action"], "NONE")
+            self.assertEqual(report["recommended_next_action"], "STOP")
             self.assertEqual(report["blocking_rules"], [])
 
     def test_blocked_gap_owner_decision_recommends_ask_owner(self) -> None:
@@ -254,7 +259,7 @@ class PlanNextCommandTests(unittest.TestCase):
             )
             set_next_action(
                 root,
-                action_type="manual",
+                action_type="wait_for_owner",
                 dependency_status="blocked",
                 blocked_by=["GAP-001 owner_decision_required"],
             )
@@ -279,7 +284,7 @@ class PlanNextCommandTests(unittest.TestCase):
             )
             set_next_action(
                 root,
-                action_type="manual",
+                action_type="wait_for_owner",
                 dependency_status="blocked",
                 blocked_by=["incident_recovery: wrong_branch_push"],
             )

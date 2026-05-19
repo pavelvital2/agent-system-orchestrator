@@ -29,6 +29,7 @@ INCIDENT_MARKERS = {
     "audit_false_pass",
     "AUDIT_FALSE_PASS_DETECTED",
 }
+CHECKPOINT_PREFLIGHT_POLICIES = {"local_only", "commit_and_push"}
 
 
 def _is_none(value: object) -> bool:
@@ -150,11 +151,21 @@ def _accepted_artifact_audit_refs(sidecars: dict[str, dict[str, object]], task_i
     if not isinstance(artifacts, list):
         return refs
     for artifact in artifacts:
-        if not isinstance(artifact, dict) or artifact.get("task_id") != task_id:
+        if not isinstance(artifact, dict):
+            continue
+        if artifact.get("source_task") != task_id and artifact.get("task_id") != task_id:
             continue
         audit_ref = artifact.get("audit_ref")
         if isinstance(audit_ref, str) and not _is_none(audit_ref):
             refs.append(audit_ref.strip())
+    return refs
+
+
+def _current_gate_audit_evidence(sidecars: dict[str, dict[str, object]]) -> list[str]:
+    refs: list[str] = []
+    for item in _truthy_string_list(_content(sidecars, "CURRENT_GATE").get("gate_evidence")):
+        if "audit" in item.lower():
+            refs.append(item)
     return refs
 
 
@@ -166,14 +177,14 @@ def _audit_pass_evidence(
     task_status = _as_text(task.get("status"))
     task_audit_refs = _truthy_string_list(task.get("audit_refs"))
     artifact_audit_refs = _accepted_artifact_audit_refs(sidecars, task_id)
-    current_gate_refs = _truthy_string_list(_content(sidecars, "CURRENT_GATE").get("evidence_refs"))
+    current_gate_refs = _current_gate_audit_evidence(sidecars)
     present = bool(task_audit_refs or artifact_audit_refs or current_gate_refs)
     return {
         "present": present,
         "task_status": task_status,
         "task_audit_refs": task_audit_refs,
         "accepted_artifact_audit_refs": artifact_audit_refs,
-        "current_gate_evidence_refs": current_gate_refs,
+        "current_gate_audit_evidence_refs": current_gate_refs,
     }
 
 
@@ -240,11 +251,25 @@ def _dedupe_rules(blockers: list[dict[str, object]]) -> list[dict[str, object]]:
 
 
 def _is_checkpoint_attempt(next_action: dict[str, object]) -> bool:
-    return (
-        next_action.get("action_type") == "checkpoint"
-        or next_action.get("action_semantic") == "checkpoint"
-        or next_action.get("checkpoint_policy") in {"required", "after_audit_pass", "audit_pass_required"}
-    )
+    return next_action.get("checkpoint_policy") in CHECKPOINT_PREFLIGHT_POLICIES
+
+
+def _recommended_for_action_type(action_type: str, target_role: str, blockers: list[str]) -> str:
+    if action_type == "create_agent":
+        return "CREATE_AUDITOR" if target_role == "auditor" else "CREATE_AGENT"
+    if action_type == "route_result":
+        return "ROUTE_RESULT"
+    if action_type == "update_state":
+        return "UPDATE_STATE"
+    if action_type == "wait_for_owner":
+        return "ASK_OWNER"
+    if action_type == "correction":
+        return "CREATE_AGENT"
+    if action_type == "finalize":
+        return "FINALIZE"
+    if action_type == "stop":
+        return "STOP"
+    return "ASK_OWNER" if blockers else "NONE"
 
 
 def _plan(
@@ -291,7 +316,7 @@ def _plan(
                 ", ".join(blockers) or _as_text(project_state.get("current_phase")),
             )
         )
-    elif _has_owner_or_gap_blocker(blockers) or dependency_status in {"blocked", "waiting"}:
+    elif _has_owner_or_gap_blocker(blockers) or dependency_status == "blocked":
         recommended_next_action = "ASK_OWNER"
         blocking_rules.append(
             _rule(
@@ -317,16 +342,18 @@ def _plan(
             )
     elif verify_exit_code != 0:
         recommended_next_action = "NONE"
-    elif action_type == "create_agent":
-        recommended_next_action = "CREATE_AGENT"
-    elif action_type == "run_audit":
-        recommended_next_action = "CREATE_AUDITOR"
-    elif action_type == "return_to_requester":
-        recommended_next_action = "CREATE_AGENT"
-    elif action_type == "manual":
-        recommended_next_action = "ASK_OWNER" if blockers else "NONE"
-    elif action_type == "none":
-        recommended_next_action = "NONE"
+    elif action_type == "wait_for_owner":
+        recommended_next_action = "ASK_OWNER"
+        blocking_rules.append(
+            _rule(
+                rules,
+                "GOV-ACTION-SEMANTICS",
+                "NEXT_ACTION requires owner-facing routing before dependent work continues.",
+                f"action_type={action_type}",
+            )
+        )
+    elif action_type in {"create_agent", "route_result", "update_state", "correction", "finalize", "stop"}:
+        recommended_next_action = _recommended_for_action_type(action_type, target_role, blockers)
 
     blocking_rules = _dedupe_rules(blocking_rules)
     status = "blocked" if blocking_rules else "ready"
@@ -370,8 +397,8 @@ def _plan(
             "task": {
                 "task_id": task_id,
                 "status": task.get("status", ""),
-                "audit_required": task.get("audit_required", ""),
-                "checkpoint_required": task.get("checkpoint_required", ""),
+                "result_refs": task.get("result_refs", []),
+                "audit_refs": task.get("audit_refs", []),
             },
             "audit_pass_evidence": audit_evidence,
         },
