@@ -10,11 +10,12 @@ from collections import Counter
 from pathlib import Path
 from typing import Iterable
 
-from commands import plan_next, state_verify
+from commands import checkpoint_preflight, dag, package_sync, plan_next, state_verify
 
 
 EXIT_OK = 0
 EXIT_IO_ERROR = 3
+NOT_AVAILABLE = "not_available"
 
 
 def _content(sidecars: dict[str, dict[str, object]], sidecar_type: str) -> dict[str, object]:
@@ -44,6 +45,15 @@ def _string_list(value: object) -> list[str]:
         if text and text not in {"NONE", "none", "null", "UNKNOWN"}:
             result.append(text)
     return result
+
+
+def _is_meaningful(value: object) -> bool:
+    text = _as_text(value)
+    return bool(text) and text not in {"NONE", "none", "null", "UNKNOWN", NOT_AVAILABLE}
+
+
+def _count_items(value: object) -> int:
+    return len(value) if isinstance(value, list) else 0
 
 
 def _blocking_status_messages(value: object) -> list[str]:
@@ -208,10 +218,222 @@ def _context_budget(sidecars: dict[str, dict[str, object]]) -> dict[str, object]
             }
     return {
         "available": False,
-        "source": "not_available",
-        "max_docs": "",
-        "max_sections_per_doc": "",
-        "max_chars_total": "",
+        "source": NOT_AVAILABLE,
+        "max_docs": NOT_AVAILABLE,
+        "max_sections_per_doc": NOT_AVAILABLE,
+        "max_chars_total": NOT_AVAILABLE,
+    }
+
+
+def _package_sync_status(root: Path) -> dict[str, object]:
+    source_root = root / package_sync.SOURCE_TOOL_RELPATH
+    bundled_root = root / package_sync.BUNDLED_TOOL_RELPATH
+    if not source_root.is_dir() or not bundled_root.is_dir():
+        return {
+            "available": False,
+            "status": NOT_AVAILABLE,
+            "source_files": NOT_AVAILABLE,
+            "bundled_files": NOT_AVAILABLE,
+            "mismatches": NOT_AVAILABLE,
+            "errors": NOT_AVAILABLE,
+            "warnings": NOT_AVAILABLE,
+        }
+    try:
+        report, exit_code = package_sync.build_report(root, True)
+    except Exception as exc:  # pragma: no cover - defensive dashboard isolation
+        return {
+            "available": True,
+            "status": "error",
+            "exit_code": EXIT_IO_ERROR,
+            "source_files": NOT_AVAILABLE,
+            "bundled_files": NOT_AVAILABLE,
+            "mismatches": NOT_AVAILABLE,
+            "errors": 1,
+            "warnings": 0,
+            "details": str(exc),
+        }
+    summary = report.get("summary") if isinstance(report.get("summary"), dict) else {}
+    return {
+        "available": True,
+        "status": report.get("status", "unknown"),
+        "exit_code": exit_code,
+        "source_files": summary.get("source_files", 0),
+        "bundled_files": summary.get("bundled_files", 0),
+        "mismatches": summary.get("mismatches", 0),
+        "errors": summary.get("errors", 0),
+        "warnings": summary.get("warnings", 0),
+    }
+
+
+def _dag_summary(root: Path, sidecars: dict[str, dict[str, object]]) -> dict[str, object]:
+    if "TASK_REGISTRY" not in sidecars:
+        return {
+            "available": False,
+            "status": NOT_AVAILABLE,
+            "task_count": NOT_AVAILABLE,
+            "edge_count": NOT_AVAILABLE,
+            "finding_count": NOT_AVAILABLE,
+            "task_ids": [],
+        }
+    try:
+        report, exit_code = dag.verify_report(root)
+    except Exception as exc:  # pragma: no cover - defensive dashboard isolation
+        return {
+            "available": True,
+            "status": "error",
+            "exit_code": EXIT_IO_ERROR,
+            "task_count": NOT_AVAILABLE,
+            "edge_count": NOT_AVAILABLE,
+            "finding_count": NOT_AVAILABLE,
+            "task_ids": [],
+            "details": str(exc),
+        }
+    graph = report.get("graph") if isinstance(report.get("graph"), dict) else {}
+    findings = report.get("findings") if isinstance(report.get("findings"), list) else []
+    task_ids = graph.get("task_ids") if isinstance(graph.get("task_ids"), list) else []
+    return {
+        "available": True,
+        "status": report.get("status", "unknown"),
+        "exit_code": exit_code,
+        "task_count": graph.get("task_count", 0),
+        "edge_count": graph.get("edge_count", 0),
+        "finding_count": len(findings),
+        "task_ids": task_ids,
+    }
+
+
+def _result_routing_summary(tasks: list[dict[str, object]], next_action: dict[str, object]) -> dict[str, object]:
+    routes: list[str] = []
+    requester_return_count = 0
+    correction_link_count = 0
+
+    for task in tasks:
+        task_id = _as_text(task.get("task_id")) or "UNKNOWN_TASK"
+        return_enabled = task.get("return_to_requester_after_audit_pass") is True
+        return_role = task.get("return_to_role_after_audit_pass")
+        return_task = task.get("return_task_after_audit_pass")
+        requested_by_role = task.get("requested_by_role")
+        requested_by_task = task.get("requested_by_task")
+        correction_links = _string_list(task.get("correction_links"))
+        correction_link_count += len(correction_links)
+
+        if return_enabled or _is_meaningful(return_role) or _is_meaningful(return_task):
+            requester_return_count += 1
+            routes.append(
+                f"{task_id}: return_to_requester={return_enabled}; "
+                f"role={_as_text(return_role) or NOT_AVAILABLE}; "
+                f"task={_as_text(return_task) or NOT_AVAILABLE}"
+            )
+        elif _is_meaningful(requested_by_role) or _is_meaningful(requested_by_task):
+            routes.append(
+                f"{task_id}: requested_by_role={_as_text(requested_by_role) or NOT_AVAILABLE}; "
+                f"requested_by_task={_as_text(requested_by_task) or NOT_AVAILABLE}"
+            )
+
+    next_contexts = [
+        _as_text(next_action.get("requester_return_context")),
+        _as_text(next_action.get("blocking_or_resume_context")),
+    ]
+    next_context_available = any(_is_meaningful(value) for value in next_contexts)
+    if next_context_available:
+        routes.append(
+            "NEXT_ACTION: "
+            f"requester_return_context={next_contexts[0] or NOT_AVAILABLE}; "
+            f"blocking_or_resume_context={next_contexts[1] or NOT_AVAILABLE}"
+        )
+
+    if not routes and correction_link_count == 0:
+        return {
+            "available": False,
+            "status": NOT_AVAILABLE,
+            "requester_return_tasks": NOT_AVAILABLE,
+            "correction_links": NOT_AVAILABLE,
+            "routes": [],
+        }
+    return {
+        "available": True,
+        "status": "present",
+        "requester_return_tasks": requester_return_count,
+        "correction_links": correction_link_count,
+        "routes": routes,
+    }
+
+
+def _incident_health(project_state: dict[str, object], blockers: list[dict[str, str]]) -> dict[str, object]:
+    if not project_state:
+        return {
+            "available": False,
+            "status": NOT_AVAILABLE,
+            "incident_markers": NOT_AVAILABLE,
+            "signals": [],
+        }
+
+    signal_values: list[tuple[str, str]] = []
+    for key in ("current_phase", "project_status", "semantic_reason", "last_checkpoint_failure_reason"):
+        text = _as_text(project_state.get(key))
+        if text:
+            signal_values.append((f"project_state.{key}", text))
+    for key in ("active_risks", "active_blockers", "active_gaps", "checkpoint_blocked_by"):
+        for value in _string_list(project_state.get(key)):
+            signal_values.append((f"project_state.{key}", value))
+    for blocker in blockers:
+        signal_values.append((blocker.get("source", "open_blocker"), blocker.get("message", "")))
+
+    markers = []
+    signals = []
+    for source, value in signal_values:
+        lower_value = value.lower()
+        matched = sorted(marker for marker in plan_next.INCIDENT_MARKERS if marker.lower() in lower_value)
+        if matched:
+            markers.extend(matched)
+            signals.append(f"{source}: {value}")
+
+    unique_markers = sorted(set(markers))
+    return {
+        "available": True,
+        "status": "active_signal_detected" if unique_markers else "no_active_signal",
+        "incident_markers": len(unique_markers),
+        "signals": signals,
+    }
+
+
+def _checkpoint_preflight_readiness(root: Path, sidecars: dict[str, dict[str, object]]) -> dict[str, object]:
+    if not {"PROJECT_STATE", "CURRENT_GATE", "NEXT_ACTION", "TASK_REGISTRY"}.issubset(sidecars):
+        return {
+            "available": False,
+            "status": NOT_AVAILABLE,
+            "eligible": NOT_AVAILABLE,
+            "blocking_rules": NOT_AVAILABLE,
+            "warnings": NOT_AVAILABLE,
+            "audit_evidence": NOT_AVAILABLE,
+            "state_status": NOT_AVAILABLE,
+        }
+    try:
+        report, exit_code = checkpoint_preflight._workspace_report(root, False)
+    except Exception as exc:  # pragma: no cover - defensive dashboard isolation
+        return {
+            "available": True,
+            "status": "error",
+            "exit_code": EXIT_IO_ERROR,
+            "eligible": False,
+            "blocking_rules": 1,
+            "warnings": 0,
+            "audit_evidence": False,
+            "state_status": "error",
+            "details": str(exc),
+        }
+    evidence = report.get("evidence") if isinstance(report.get("evidence"), dict) else {}
+    project_evidence = evidence.get("project_state") if isinstance(evidence.get("project_state"), dict) else {}
+    audit_evidence = evidence.get("audit_pass_evidence") if isinstance(evidence.get("audit_pass_evidence"), dict) else {}
+    return {
+        "available": True,
+        "status": report.get("status", "unknown"),
+        "exit_code": exit_code,
+        "eligible": report.get("eligible", False),
+        "blocking_rules": _count_items(report.get("blocking_rules")),
+        "warnings": _count_items(report.get("warnings")),
+        "audit_evidence": audit_evidence.get("present", False),
+        "state_status": project_evidence.get("checkpoint_preflight_status", NOT_AVAILABLE),
     }
 
 
@@ -267,9 +489,14 @@ def build_report(root: Path) -> dict[str, object]:
         },
         "task_counts": _task_counts(task_items),
         "open_blockers": blockers,
+        "package_sync": _package_sync_status(root),
+        "dag_summary": _dag_summary(root, sidecars),
         "audit_signals": _audit_signals(sidecars, current_gate, task_items, planner),
         "checkpoint_signals": _checkpoint_signals(project_state, current_gate, next_action, task_items),
         "context_budget": _context_budget(sidecars),
+        "result_routing": _result_routing_summary(task_items, next_action),
+        "incident_health": _incident_health(project_state, blockers),
+        "checkpoint_preflight": _checkpoint_preflight_readiness(root, sidecars),
         "state_verify": {
             "status": verify_report.get("status", ""),
             "summary": verify_report.get("summary", {}),
@@ -306,6 +533,11 @@ def _list_items(values: Iterable[object]) -> str:
     return "\n".join(rendered) if rendered else "<li>None</li>"
 
 
+def _optional_list_items(values: Iterable[object]) -> str:
+    rendered = [f"<li>{_h(value)}</li>" for value in values]
+    return "\n".join(rendered) if rendered else f"<li>{NOT_AVAILABLE}</li>"
+
+
 def _render_blockers(blockers: object) -> str:
     if not isinstance(blockers, list) or not blockers:
         return "<li>None</li>"
@@ -321,9 +553,14 @@ def render_html(report: dict[str, object]) -> str:
     current_gate = report["current_gate"] if isinstance(report.get("current_gate"), dict) else {}
     next_action = report["next_action"] if isinstance(report.get("next_action"), dict) else {}
     task_counts = report["task_counts"] if isinstance(report.get("task_counts"), dict) else {}
+    package_sync_report = report["package_sync"] if isinstance(report.get("package_sync"), dict) else {}
+    dag_report = report["dag_summary"] if isinstance(report.get("dag_summary"), dict) else {}
     audit = report["audit_signals"] if isinstance(report.get("audit_signals"), dict) else {}
     checkpoint = report["checkpoint_signals"] if isinstance(report.get("checkpoint_signals"), dict) else {}
     context_budget = report["context_budget"] if isinstance(report.get("context_budget"), dict) else {}
+    result_routing = report["result_routing"] if isinstance(report.get("result_routing"), dict) else {}
+    incident_health = report["incident_health"] if isinstance(report.get("incident_health"), dict) else {}
+    checkpoint_preflight = report["checkpoint_preflight"] if isinstance(report.get("checkpoint_preflight"), dict) else {}
     state_verify_report = report["state_verify"] if isinstance(report.get("state_verify"), dict) else {}
     plan_report = report["plan_next"] if isinstance(report.get("plan_next"), dict) else {}
     by_status = task_counts.get("by_status") if isinstance(task_counts.get("by_status"), dict) else {}
@@ -368,6 +605,8 @@ def render_html(report: dict[str, object]) -> str:
     <div class="metric"><span>Current Gate</span><strong>{_h(current_gate.get("status", ""))}</strong></div>
     <div class="metric"><span>Next Action</span><strong>{_h(next_action.get("recommended_next_action", ""))}</strong></div>
     <div class="metric"><span>Open Blockers</span><strong>{_h(len(report.get("open_blockers", [])) if isinstance(report.get("open_blockers"), list) else 0)}</strong></div>
+    <div class="metric"><span>Package Sync</span><strong>{_h(package_sync_report.get("status", NOT_AVAILABLE))}</strong></div>
+    <div class="metric"><span>Checkpoint Preflight</span><strong>{_h(checkpoint_preflight.get("status", NOT_AVAILABLE))}</strong></div>
   </div>
 
   <div class="grid">
@@ -430,6 +669,29 @@ def render_html(report: dict[str, object]) -> str:
     </section>
 
     <section>
+      <h2>Package Sync Status</h2>
+      <table>{_pairs((
+        ("Status", package_sync_report.get("status", NOT_AVAILABLE)),
+        ("Source files", package_sync_report.get("source_files", NOT_AVAILABLE)),
+        ("Bundled files", package_sync_report.get("bundled_files", NOT_AVAILABLE)),
+        ("Mismatches", package_sync_report.get("mismatches", NOT_AVAILABLE)),
+        ("Errors", package_sync_report.get("errors", NOT_AVAILABLE)),
+        ("Warnings", package_sync_report.get("warnings", NOT_AVAILABLE)),
+      ))}</table>
+    </section>
+
+    <section>
+      <h2>DAG Summary</h2>
+      <table>{_pairs((
+        ("Status", dag_report.get("status", NOT_AVAILABLE)),
+        ("Tasks", dag_report.get("task_count", NOT_AVAILABLE)),
+        ("Edges", dag_report.get("edge_count", NOT_AVAILABLE)),
+        ("Findings", dag_report.get("finding_count", NOT_AVAILABLE)),
+      ))}</table>
+      <ul>{_optional_list_items(dag_report.get("task_ids", []) if isinstance(dag_report.get("task_ids"), list) else [])}</ul>
+    </section>
+
+    <section>
       <h2>Audit Signals</h2>
       <table>{_pairs((
         ("Audit pending", audit.get("audit_pending", 0)),
@@ -454,11 +716,42 @@ def render_html(report: dict[str, object]) -> str:
     <section>
       <h2>Context Budget</h2>
       <table>{_pairs((
-        ("Available", context_budget.get("available", False)),
-        ("Source", context_budget.get("source", "")),
-        ("Max docs", context_budget.get("max_docs", "")),
-        ("Max sections/doc", context_budget.get("max_sections_per_doc", "")),
-        ("Max chars total", context_budget.get("max_chars_total", "")),
+        ("Status", "available" if context_budget.get("available") is True else NOT_AVAILABLE),
+        ("Source", context_budget.get("source", NOT_AVAILABLE)),
+        ("Max docs", context_budget.get("max_docs", NOT_AVAILABLE)),
+        ("Max sections/doc", context_budget.get("max_sections_per_doc", NOT_AVAILABLE)),
+        ("Max chars total", context_budget.get("max_chars_total", NOT_AVAILABLE)),
+      ))}</table>
+    </section>
+
+    <section>
+      <h2>Result Routing Summary</h2>
+      <table>{_pairs((
+        ("Status", result_routing.get("status", NOT_AVAILABLE)),
+        ("Requester return tasks", result_routing.get("requester_return_tasks", NOT_AVAILABLE)),
+        ("Correction links", result_routing.get("correction_links", NOT_AVAILABLE)),
+      ))}</table>
+      <ul>{_optional_list_items(result_routing.get("routes", []) if isinstance(result_routing.get("routes"), list) else [])}</ul>
+    </section>
+
+    <section>
+      <h2>Incident Health</h2>
+      <table>{_pairs((
+        ("Status", incident_health.get("status", NOT_AVAILABLE)),
+        ("Incident markers", incident_health.get("incident_markers", NOT_AVAILABLE)),
+      ))}</table>
+      <ul>{_optional_list_items(incident_health.get("signals", []) if isinstance(incident_health.get("signals"), list) else [])}</ul>
+    </section>
+
+    <section>
+      <h2>Checkpoint-Preflight Readiness</h2>
+      <table>{_pairs((
+        ("Status", checkpoint_preflight.get("status", NOT_AVAILABLE)),
+        ("Eligible", checkpoint_preflight.get("eligible", NOT_AVAILABLE)),
+        ("Blocking rules", checkpoint_preflight.get("blocking_rules", NOT_AVAILABLE)),
+        ("Warnings", checkpoint_preflight.get("warnings", NOT_AVAILABLE)),
+        ("Audit evidence", checkpoint_preflight.get("audit_evidence", NOT_AVAILABLE)),
+        ("State status", checkpoint_preflight.get("state_status", NOT_AVAILABLE)),
       ))}</table>
     </section>
 

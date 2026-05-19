@@ -100,6 +100,58 @@ class DashboardCommandTests(unittest.TestCase):
             self.assertIn("A &amp; B &lt; C", result.stdout)
             self.assertNotIn("<script>alert(1)</script>", result.stdout)
 
+    def test_stage_3_observability_sections_render_missing_optional_as_not_available(self) -> None:
+        result = run_dashboard(VALID_WORKSPACE)
+
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        self.assertIn("Package Sync Status", result.stdout)
+        self.assertIn("DAG Summary", result.stdout)
+        self.assertIn("Result Routing Summary", result.stdout)
+        self.assertIn("Incident Health", result.stdout)
+        self.assertIn("Checkpoint-Preflight Readiness", result.stdout)
+        self.assertIn("<span>Package Sync</span><strong>not_available</strong>", result.stdout)
+        self.assertIn("<th scope=\"row\">Status</th><td>not_available</td>", result.stdout)
+        self.assertNotIn("<span>Package Sync</span><strong>passed</strong>", result.stdout)
+
+    def test_stage_3_dynamic_diagnostic_labels_are_html_escaped(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = copy_valid_workspace(tmp)
+            task_registry = load_sidecar(root, "TASK_REGISTRY.json")
+            registry_content = task_registry["content"]
+            self.assertIsInstance(registry_content, dict)
+            tasks = registry_content["tasks"]
+            self.assertIsInstance(tasks, list)
+            self.assertIsInstance(tasks[0], dict)
+            tasks[0]["task_id"] = "<img src=x onerror=alert(1)>"
+            tasks[0]["return_to_requester_after_audit_pass"] = True
+            tasks[0]["return_to_role_after_audit_pass"] = "developer & <lead>"
+            tasks[0]["return_task_after_audit_pass"] = "TASK_REQUESTER_<1>"
+            write_sidecar(root, "TASK_REGISTRY.json", task_registry)
+
+            project_state = load_sidecar(root, "PROJECT_STATE.json")
+            project_content = project_state["content"]
+            self.assertIsInstance(project_content, dict)
+            project_content["active_blockers"] = ["incident <script>alert(2)</script>"]
+            write_sidecar(root, "PROJECT_STATE.json", project_state)
+
+            result = run_dashboard(root)
+
+            self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+            self.assertIn("&lt;img src=x onerror=alert(1)&gt;", result.stdout)
+            self.assertIn("developer &amp; &lt;lead&gt;", result.stdout)
+            self.assertIn("incident &lt;script&gt;alert(2)&lt;/script&gt;", result.stdout)
+            self.assertNotIn("<img src=x onerror=alert(1)>", result.stdout)
+            self.assertNotIn("<script>alert(2)</script>", result.stdout)
+
+    def test_dashboard_remains_static_without_interactive_write_controls(self) -> None:
+        result = run_dashboard(VALID_WORKSPACE)
+
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        lowered = result.stdout.lower()
+        self.assertNotIn("<form", lowered)
+        self.assertNotIn("<button", lowered)
+        self.assertNotIn("type=\"submit\"", lowered)
+
 
 if __name__ == "__main__":
     unittest.main()
