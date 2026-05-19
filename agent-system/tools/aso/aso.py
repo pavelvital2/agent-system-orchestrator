@@ -406,6 +406,11 @@ def build_parser() -> argparse.ArgumentParser:
         ),
     )
     _add_root_argument(dag_verify_parser, validate=False)
+    dag_verify_parser.add_argument(
+        "--strict",
+        action="store_true",
+        help="Accepted for consistency with verification commands; DAG findings are always enforced.",
+    )
     dag_verify_parser.set_defaults(handler=dag.run_verify)
 
     dag_render_parser = dag_subparsers.add_parser(

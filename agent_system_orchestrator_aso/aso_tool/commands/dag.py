@@ -17,8 +17,10 @@ EXIT_FINDINGS = 1
 EXIT_IO_ERROR = 3
 
 NONE_VALUES = {"", "NONE", "none", "null", "UNKNOWN"}
-DEPENDENCY_SATISFIED_STATUSES = {"audit_passed", "checkpoint_done", "completed"}
+DEPENDENCY_SATISFIED_STATUSES = {"checkpoint_done", "completed"}
 DEPENDENCY_ACTIVE_STATUSES = {"ready", "running", "audit_pending", "audit_passed", "checkpoint_done", "completed"}
+CHECKPOINT_TEXT_FIELDS = ("commit_hash", "branch", "checkpoint_ref")
+CHECKPOINT_LIST_FIELDS = ("accepted_files",)
 FORBIDDEN_OUTPUT_ROOTS = ("project-runtime", "project-input", "project-archive", ".tmp", "tmp")
 SAFE_LABEL_RE = re.compile(r"[^A-Za-z0-9 _./:#-]+")
 
@@ -90,6 +92,31 @@ def _truthy_string_list(value: object) -> list[str]:
         if isinstance(item, str) and not _is_none(item):
             refs.append(item.strip())
     return refs
+
+
+def _has_checkpoint_evidence(task: dict[str, object]) -> bool:
+    for field in CHECKPOINT_TEXT_FIELDS:
+        if field in task and _is_none(task.get(field)):
+            return False
+    if "push_status" in task and _as_text(task.get("push_status")) != "pushed":
+        return False
+    for field in CHECKPOINT_LIST_FIELDS:
+        if field in task and not _truthy_string_list(task.get(field)):
+            return False
+    return True
+
+
+def _missing_checkpoint_evidence_fields(task: dict[str, object]) -> list[str]:
+    missing: list[str] = []
+    for field in CHECKPOINT_TEXT_FIELDS:
+        if field in task and _is_none(task.get(field)):
+            missing.append(field)
+    if "push_status" in task and _as_text(task.get("push_status")) != "pushed":
+        missing.append("push_status")
+    for field in CHECKPOINT_LIST_FIELDS:
+        if field in task and not _truthy_string_list(task.get(field)):
+            missing.append(field)
+    return missing
 
 
 def _task_registry_spec() -> state_verify.SidecarSpec:
@@ -232,6 +259,35 @@ def _status_dependency_findings(tasks: list[dict[str, object]]) -> list[Finding]
             if dep_task is None:
                 continue
             dep_status = _as_text(dep_task.get("status"))
+            if dep_status == "audit_passed":
+                findings.append(
+                    _finding(
+                        "DAG_DEPENDENCY_AUDIT_PASSED_WITHOUT_CHECKPOINT",
+                        "Task dependency has audit pass but no checkpoint evidence",
+                        (
+                            f"{task_id} is {status!r}, but dependency {dep} is only audit_passed; "
+                            "normal downstream readiness requires checkpoint_done with checkpoint evidence."
+                        ),
+                        f"content.tasks[{index}].dependencies",
+                        "Keep downstream work pending/blocked until the dependency records post-audit checkpoint evidence.",
+                    )
+                )
+                continue
+            if dep_status == "checkpoint_done" and not _has_checkpoint_evidence(dep_task):
+                missing = ", ".join(_missing_checkpoint_evidence_fields(dep_task))
+                findings.append(
+                    _finding(
+                        "DAG_DEPENDENCY_CHECKPOINT_EVIDENCE_INCOMPLETE",
+                        "Task dependency checkpoint evidence is incomplete",
+                        (
+                            f"{task_id} is {status!r}, but dependency {dep} is checkpoint_done "
+                            f"without coherent checkpoint evidence: {missing}."
+                        ),
+                        f"content.tasks[{index}].dependencies",
+                        "Record commit hash, branch, pushed status, accepted files, and checkpoint reference before unblocking downstream work.",
+                    )
+                )
+                continue
             if dep_status in DEPENDENCY_SATISFIED_STATUSES:
                 continue
             rule_id = "DAG_READY_TASK_BLOCKED_BY_DEPENDENCY" if status == "ready" else "DAG_STATUS_DEPENDENCY_INVALID"
@@ -244,7 +300,7 @@ def _status_dependency_findings(tasks: list[dict[str, object]]) -> list[Finding]
                         "there is no satisfied dependency evidence."
                     ),
                     f"content.tasks[{index}].status",
-                    "Keep the task pending/blocked until dependency tasks have audit_passed, checkpoint_done, or completed status.",
+                    "Keep the task pending/blocked until dependency tasks have checkpoint_done or completed status.",
                 )
             )
     return findings

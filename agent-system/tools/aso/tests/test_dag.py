@@ -83,6 +83,7 @@ class DagCommandTests(unittest.TestCase):
             "dag_invalid_cycle": "DAG_DEPENDENCY_CYCLE",
             "dag_invalid_missing_dependency": "DAG_DEPENDENCY_MISSING",
             "dag_invalid_blocked_ready": "DAG_READY_TASK_BLOCKED_BY_DEPENDENCY",
+            "dag_invalid_audit_passed_dependency_ready": "DAG_DEPENDENCY_AUDIT_PASSED_WITHOUT_CHECKPOINT",
         }
         for fixture_name, rule_id in cases.items():
             with self.subTest(fixture_name=fixture_name):
@@ -130,6 +131,19 @@ class DagCommandTests(unittest.TestCase):
 
         self.assertEqual(result.returncode, 1, result.stdout + result.stderr)
         self.assertIn("DAG_TASK_ID_DUPLICATE", result.stdout)
+
+    def test_checkpoint_done_dependency_requires_checkpoint_evidence(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = copy_dag_valid(tmp)
+            payload = load_registry(root)
+            middle = tasks(payload)[1]
+            middle["checkpoint_ref"] = "NONE"
+            write_registry(root, payload)
+
+            result = run_dag(root, "verify")
+
+        self.assertEqual(result.returncode, 1, result.stdout + result.stderr)
+        self.assertIn("DAG_DEPENDENCY_CHECKPOINT_EVIDENCE_INCOMPLETE", result.stdout)
 
     def test_requester_return_metadata_inconsistency_fails(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
