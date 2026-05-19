@@ -6,6 +6,8 @@ import unittest
 import tomllib
 from pathlib import Path
 
+import agent_system_orchestrator_aso.cli as wrapper_cli
+
 
 REPO_ROOT = Path(__file__).resolve().parents[4]
 
@@ -38,14 +40,21 @@ class PackagingCommandTests(unittest.TestCase):
         self.assertIn("[project.scripts]", pyproject)
         self.assertIn('aso = "agent_system_orchestrator_aso.cli:main"', pyproject)
 
+    def test_non_editable_install_has_bundled_script_fallback(self) -> None:
+        bundled_tool_dir = wrapper_cli._bundled_aso_tool_dir()
+
+        self.assertTrue((bundled_tool_dir / "aso.py").is_file())
+        self.assertTrue((bundled_tool_dir / "commands" / "status.py").is_file())
+        self.assertTrue((bundled_tool_dir / "commands" / "package_checks.py").is_file())
+
     def test_stage2_package_version_is_coherent(self) -> None:
         pyproject = tomllib.loads((REPO_ROOT / "pyproject.toml").read_text(encoding="utf-8"))
         init_file = (REPO_ROOT / "agent_system_orchestrator_aso" / "__init__.py").read_text(
             encoding="utf-8"
         )
 
-        self.assertEqual(pyproject["project"]["version"], "3.0.1")
-        self.assertIn('__version__ = "3.0.1"', init_file)
+        self.assertEqual(pyproject["project"]["version"], "3.0.2")
+        self.assertIn('__version__ = "3.0.2"', init_file)
 
 
 if __name__ == "__main__":

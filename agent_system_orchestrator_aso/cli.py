@@ -1,7 +1,8 @@
-"""Console-script bridge for the existing ASO helper script.
+"""Console-script bridge for the ASO helper script.
 
-The implementation intentionally delegates to agent-system/tools/aso/aso.py so
-direct script execution and installed ``aso`` use the same command parser.
+The implementation prefers the repository script at
+agent-system/tools/aso/aso.py and falls back to the packaged copy used by
+non-editable installs. Both paths use the same command parser source.
 """
 
 from __future__ import annotations
@@ -19,8 +20,19 @@ def _repo_root() -> Path:
     return Path(__file__).resolve().parents[1]
 
 
-def _aso_tool_dir() -> Path:
+def _repo_aso_tool_dir() -> Path:
     return _repo_root() / "agent-system" / "tools" / "aso"
+
+
+def _bundled_aso_tool_dir() -> Path:
+    return Path(__file__).resolve().parent / "aso_tool"
+
+
+def _aso_tool_dir() -> Path:
+    for tool_dir in (_repo_aso_tool_dir(), _bundled_aso_tool_dir()):
+        if (tool_dir / "aso.py").is_file():
+            return tool_dir
+    return _repo_aso_tool_dir()
 
 
 def _load_script_module() -> ModuleType:

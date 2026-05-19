@@ -40,8 +40,8 @@ PROJECT_CHECKPOINT_STATUS: pending
 CHECKPOINT_ELIGIBILITY: eligible
 CHECKPOINT_BLOCKED_BY: NONE
 PUSH_ALLOWED: false
-PACKAGE_VERSION: 3.0.1
-GOVERNANCE_RULESET_VERSION: 3.0.1
+PACKAGE_VERSION: 3.0.2
+GOVERNANCE_RULESET_VERSION: 3.0.2
 RUNTIME_SCHEMA_VERSION: 3.0.0
 """,
     "CURRENT_GATE.md": """# CURRENT_GATE
@@ -160,8 +160,8 @@ def write_package_fixture(root: Path) -> list[Path]:
 
 ## Active version constants
 
-CURRENT_PACKAGE_VERSION: 3.0.1
-CURRENT_GOVERNANCE_RULESET_VERSION: 3.0.1
+CURRENT_PACKAGE_VERSION: 3.0.2
+CURRENT_GOVERNANCE_RULESET_VERSION: 3.0.2
 CURRENT_RUNTIME_SCHEMA_VERSION: 3.0.0
 """,
         "pyproject.toml": """[build-system]
@@ -170,7 +170,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "agent-system-orchestrator"
-version = "3.0.1"
+version = "3.0.2"
 
 [project.scripts]
 aso = "agent_system_orchestrator_aso.cli:main"
@@ -196,7 +196,7 @@ lint:
         "agent-system/tools/aso/commands/archive_verify.py": "",
         "agent-system/tools/aso/commands/doctor.py": "",
         "agent-system/tools/aso/commands/validate_context_pack.py": "",
-        "agent_system_orchestrator_aso/__init__.py": '__version__ = "3.0.1"\n',
+        "agent_system_orchestrator_aso/__init__.py": '__version__ = "3.0.2"\n',
         "agent_system_orchestrator_aso/cli.py": "",
         "agent-system/tools/aso/tests/test_placeholder.py": "",
     }.items():

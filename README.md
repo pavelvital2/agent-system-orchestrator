@@ -121,8 +121,8 @@ The expected tracked-file result is empty. Stable release or validation
 summaries belong under accepted package paths such as `agent-system/11_release/`.
 The historical Stage 2 validation report is
 `agent-system/11_release/STAGE2_UPGRADE_VALIDATION_REPORT.md`; it is superseded
-for current acceptance by the Stage 2 state-contract correction. The draft
-correction report is
+for current acceptance by the Stage 2 state-contract correction. The final
+correction validation report is
 `agent-system/11_release/STAGE2_STATE_CONTRACT_CORRECTION_VALIDATION_REPORT.md`.
-Task 006 owns final correction validation evidence and must not be pre-claimed
-here.
+That report records Task 006 command evidence and the current validation
+blocker status.

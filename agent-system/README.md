@@ -281,15 +281,17 @@ agent-system/11_release/STAGE2_UPGRADE_VALIDATION_REPORT.md
 The Stage 1 final validation report is accepted evidence and must remain
 intact. The original Stage 2 validation report remains historical evidence but
 is superseded for current acceptance by the Stage 2 state-contract correction.
-The correction draft report is:
+That historical Stage 2 evidence used `CURRENT_PACKAGE_VERSION: 3.0.1`; the
+correction report is the current acceptance source for the governed `3.0.2`
+package/governance tuple.
+The final correction validation report is:
 
 ```text
 agent-system/11_release/STAGE2_STATE_CONTRACT_CORRECTION_VALIDATION_REPORT.md
 ```
 
-Task 006 owns final correction validation evidence. Pending sections must
-remain marked pending and must not claim pass/fail results before Task 006
-supplies evidence.
+Task 006 supplied final local command evidence in that report, including the
+current validation blocker status.
 
 After all accepted upgrade tasks are committed and pushed by the orchestrator,
 cleanup is local:

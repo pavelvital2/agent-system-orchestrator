@@ -13,5 +13,6 @@ dependencies = []
 [project.scripts]
 aso = "agent_system_orchestrator_aso.cli:main"
 
-[tool.setuptools]
-packages = ["agent_system_orchestrator_aso"]
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["agent_system_orchestrator_aso*"]

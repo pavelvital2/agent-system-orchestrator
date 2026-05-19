@@ -13,7 +13,7 @@ PROFILE_AGENT_COMMIT_PUSH_AUTHORITY: none
 CLEANUP_PERFORMED_BY_PROFILE_AGENT: no
 SUPERSEDED_BY: agent-system/11_release/STAGE2_STATE_CONTRACT_CORRECTION_VALIDATION_REPORT.md
 CORRECTION_PACKAGE_VERSION_MARKER: 3.0.2
-CORRECTION_FINAL_VALIDATION_OWNER: TASK_ASO_STAGE2_CORRECTION_006
+CORRECTION_FINAL_VALIDATION_OWNER: TASK_ASO_STAGE2_CORRECTION_006C_SMOKE_VERSION_COHERENCE
 ```
 
 This report records historical Stage 2 validation evidence for state sidecars,
@@ -23,10 +23,10 @@ offline package tests. It is no longer unqualified final acceptance evidence for
 the current Stage 2 package because the state-contract correction branch amends
 state sidecar/template/schema/fixture/validator drift.
 
-The current correction evidence is drafted in
+The current correction evidence is recorded in
 `agent-system/11_release/STAGE2_STATE_CONTRACT_CORRECTION_VALIDATION_REPORT.md`.
-Task 006 owns final correction validation evidence; this historical report must
-not be used to claim the corrected package has passed final validation.
+This historical report must not be used to claim the corrected package has
+passed final validation.
 
 The profile agent did not commit, push, dispatch workflows, mutate runtime
 state, perform checkpoint publication, or execute final cleanup.
@@ -139,7 +139,7 @@ the orchestrator audits, commits, and pushes the report update.
 | AC-009 | pass | `aso checkpoint-preflight` passed as dry-run/read-only with JSON output under `/tmp`; smoke and Make targets passed. |
 | AC-010 | pass | Direct script, direct temporary copy, and installed `aso` expose Stage 2 command surfaces and pass validation commands. |
 | AC-011 | pass | Unittest suites, governance smoke, `make test`, `make smoke`, `make doctor`, `make lint`, and `make ci` passed. |
-| AC-012 | pass | Installed package evidence reports `agent-system-orchestrator-3.0.1`; smoke version coherence passed for 3.0.1 package/governance and runtime schema 3.0.0. |
+| AC-012 | superseded_by_correction_report | Historical installed package evidence reported `agent-system-orchestrator-3.0.1`. Current acceptance is superseded by the Stage 2 correction report, where smoke version coherence validates the active `3.0.2 / 3.0.2 / 3.0.0` tuple from bounded current-version sections. |
 | AC-013 | pass | This report exists at `agent-system/11_release/STAGE2_UPGRADE_VALIDATION_REPORT.md`. |
 | AC-014 | pass | `git ls-files project-input project-runtime project-archive` produced no output. |
 | AC-015 | pass | This Task 009 profile agent recorded no commit/push/cleanup authority and requires separate orchestrator/auditor continuation for commit, push, final CI, and cleanup. |
