@@ -62,11 +62,13 @@ make test
 make smoke
 make doctor
 make lint
+make ci
 ```
 
 The smoke target includes CLI help, package status, strict package lint,
 strict package doctor, valid design/context-pack fixtures, and the local
-governance smoke runner. CI should use the same local commands and must not
+governance smoke runner. The CI target runs the local test, smoke, doctor,
+lint, and whitespace diff checks. CI should use the same local commands and must not
 require secrets, network credentials, real remotes, or publishing permissions.
 
 The helper supports read-only status, lint, doctor, design validation, context

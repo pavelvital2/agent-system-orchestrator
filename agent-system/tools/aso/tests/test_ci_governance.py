@@ -22,27 +22,31 @@ FORBIDDEN_WORKFLOW_PATTERNS = (
 )
 
 REQUIRED_WORKFLOW_COMMANDS = (
-    "python3 agent-system/tools/aso/aso.py status --root . --mode package",
-    "python3 agent-system/tools/aso/aso.py lint --root . --mode package --strict",
-    "python3 agent-system/tools/aso/aso.py doctor --root . --mode package --strict",
-    "python3 agent-system/tools/aso/aso.py validate-design agent-system/tests/fixtures/design/valid_design.md --root . --strict",
-    "python3 agent-system/tools/aso/aso.py validate-context-pack agent-system/tests/fixtures/context_pack/valid_context_pack.json --root . --strict",
-    "python3 -m unittest discover -s agent-system/tools/aso/tests",
-    "python3 -m unittest discover -s agent-system/tests",
+    "make ci",
+)
+
+REQUIRED_MAKEFILE_COMMANDS = (
+    "unittest discover -s agent-system/tools/aso/tests",
+    "unittest discover -s agent-system/tests",
+    "status --root . --mode package",
+    "lint --root . --mode package --strict",
+    "doctor --root . --mode package --strict",
+    "validate-design agent-system/tests/fixtures/design/valid_design.md --root . --strict",
+    "validate-context-pack agent-system/tests/fixtures/context_pack/valid_context_pack.json --root . --strict",
     "./agent-system/scripts/run_governance_smoke_tests.sh",
-    "make test",
-    "make smoke",
-    "make doctor",
-    "make lint",
     "git diff --check",
 )
 
 
-class Stage1CIGovernanceTests(unittest.TestCase):
-    def test_stage1_governance_workflow_uses_local_secretless_checks(self) -> None:
+class Stage2CIGovernanceTests(unittest.TestCase):
+    def test_governance_workflow_runs_on_upgrade_branches_with_read_only_checkout(self) -> None:
         workflow = WORKFLOW.read_text(encoding="utf-8")
 
+        self.assertIn("- upgrade/**", workflow)
+        self.assertNotIn("- upgrade/stage-1-executable-controls", workflow)
         self.assertIn("permissions:\n  contents: read", workflow)
+        self.assertIn("uses: actions/checkout@v5", workflow)
+        self.assertNotIn("uses: actions/checkout@v4", workflow)
         self.assertIn("persist-credentials: false", workflow)
         for command in REQUIRED_WORKFLOW_COMMANDS:
             with self.subTest(command=command):
@@ -52,21 +56,18 @@ class Stage1CIGovernanceTests(unittest.TestCase):
             with self.subTest(pattern=pattern):
                 self.assertIsNone(re.search(pattern, workflow, flags=re.IGNORECASE))
 
-    def test_makefile_targets_run_stage1_governance_surface(self) -> None:
+    def test_makefile_ci_target_runs_offline_governance_surface(self) -> None:
         makefile = MAKEFILE.read_text(encoding="utf-8")
 
+        self.assertRegex(makefile, r"(?m)^ci:\s+test\s+smoke\s+doctor\s+lint$")
         self.assertRegex(makefile, r"(?m)^test:")
         self.assertRegex(makefile, r"(?m)^smoke:")
         self.assertRegex(makefile, r"(?m)^doctor:")
         self.assertRegex(makefile, r"(?m)^lint:")
-        self.assertIn("unittest discover -s agent-system/tools/aso/tests", makefile)
-        self.assertIn("unittest discover -s agent-system/tests", makefile)
-        self.assertIn("status --root . --mode package", makefile)
-        self.assertIn("lint --root . --mode package --strict", makefile)
-        self.assertIn("doctor --root . --mode package --strict", makefile)
-        self.assertIn("validate-design agent-system/tests/fixtures/design/valid_design.md --root . --strict", makefile)
-        self.assertIn("validate-context-pack agent-system/tests/fixtures/context_pack/valid_context_pack.json --root . --strict", makefile)
-        self.assertIn("./agent-system/scripts/run_governance_smoke_tests.sh", makefile)
+        self.assertNotIn("pytest", makefile)
+        for command in REQUIRED_MAKEFILE_COMMANDS:
+            with self.subTest(command=command):
+                self.assertIn(command, makefile)
 
 
 if __name__ == "__main__":

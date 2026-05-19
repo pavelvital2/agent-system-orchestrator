@@ -3,7 +3,7 @@ name: Stage 1 Governance
 on:
   push:
     branches:
-      - upgrade/stage-1-executable-controls
+      - upgrade/**
   pull_request:
   workflow_dispatch:
 
@@ -20,43 +20,12 @@ jobs:
       PYTHONUNBUFFERED: "1"
     steps:
       - name: Check out repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         with:
           persist-credentials: false
 
       - name: Show Python version
         run: python3 --version
 
-      - name: ASO package status
-        run: python3 agent-system/tools/aso/aso.py status --root . --mode package
-
-      - name: ASO package lint
-        run: python3 agent-system/tools/aso/aso.py lint --root . --mode package --strict
-
-      - name: ASO package doctor
-        run: python3 agent-system/tools/aso/aso.py doctor --root . --mode package --strict
-
-      - name: Validate design fixture
-        run: python3 agent-system/tools/aso/aso.py validate-design agent-system/tests/fixtures/design/valid_design.md --root . --strict
-
-      - name: Validate context pack fixture
-        run: python3 agent-system/tools/aso/aso.py validate-context-pack agent-system/tests/fixtures/context_pack/valid_context_pack.json --root . --strict
-
-      - name: ASO unit tests
-        run: python3 -m unittest discover -s agent-system/tools/aso/tests
-
-      - name: Package governance tests
-        run: python3 -m unittest discover -s agent-system/tests
-
-      - name: Governance smoke tests
-        run: ./agent-system/scripts/run_governance_smoke_tests.sh
-
-      - name: Makefile smoke surface
-        run: |
-          make test
-          make smoke
-          make doctor
-          make lint
-
-      - name: Whitespace diff check
-        run: git diff --check
+      - name: CI governance checks
+        run: make ci

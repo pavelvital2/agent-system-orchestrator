@@ -1,4 +1,4 @@
-.PHONY: install test smoke doctor lint
+.PHONY: install test smoke doctor lint ci
 
 PYTHON ?= python3
 ASO_SCRIPT := agent-system/tools/aso/aso.py
@@ -24,3 +24,6 @@ doctor:
 
 lint:
 	PYTHONDONTWRITEBYTECODE=1 $(PYTHON) $(ASO_SCRIPT) lint --root . --mode package --strict
+
+ci: test smoke doctor lint
+	git diff --check
