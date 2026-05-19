@@ -40,6 +40,96 @@ agent-system/03_templates/state/accepted_artifacts.schema.json
 agent-system/03_templates/state/workspace_identity.schema.json
 ```
 
+## Authoritative Stage 2 sidecar contract
+
+Stage 2 sidecars use one canonical JSON shape: an envelope object with
+governed lower-case fields under `content`.
+
+```text
+{
+  "schema_version": "<stable package schema version>",
+  "sidecar_type": "<PROJECT_STATE | CURRENT_GATE | NEXT_ACTION | TASK_REGISTRY | ACCEPTED_ARTIFACTS | WORKSPACE_IDENTITY>",
+  "markdown_source": "<matching project-runtime/*.md path>",
+  "state_revision": <positive integer>,
+  "updated_at": "<RFC 3339 UTC timestamp>",
+  "updated_by": "orchestrator",
+  "content": {
+    "<lower_case_field_name>": "<governed value>"
+  }
+}
+```
+
+The Markdown runtime templates remain the authoritative human-readable
+compatibility view. They use uppercase fields so operators can review and
+compare runtime state consistently. JSON sidecars do not replace that view in
+Stage 2; they mirror it through the envelope and lower-case `content` model.
+
+The JSON schemas used for sidecar validation must describe this same envelope
+and lower-case `content` model. A direct JSON object that contains uppercase
+Markdown fields at the sidecar root is not valid Stage 2 sidecar shape.
+
+Field-name mapping is deterministic:
+
+```text
+PROJECT_STATE.CURRENT_PHASE -> PROJECT_STATE.content.current_phase
+PROJECT_STATE.PUSH_ALLOWED -> PROJECT_STATE.content.push_allowed
+CURRENT_GATE.STATUS -> CURRENT_GATE.content.status
+CURRENT_GATE.CHECKPOINT_ELIGIBILITY -> CURRENT_GATE.content.checkpoint_eligibility
+NEXT_ACTION.ACTION_TYPE -> NEXT_ACTION.content.action_type
+NEXT_ACTION.TARGET_ROLE -> NEXT_ACTION.content.target_role
+NEXT_ACTION.WORKSPACE_IDENTITY_REQUIRED -> NEXT_ACTION.content.workspace_identity_required
+NEXT_ACTION.CHECKPOINT_POLICY -> NEXT_ACTION.content.checkpoint_policy
+TASK_REGISTRY.STATUS -> TASK_REGISTRY.content.status
+ACCEPTED_ARTIFACTS.STATUS -> ACCEPTED_ARTIFACTS.content.status
+```
+
+For all governed fields, strip the Markdown file prefix, convert the uppercase
+field name to lower snake case, and place the value under `content`. List or
+record sections use lower-case content names and must retain the canonical
+values documented by the matching runtime template and
+`agent-system/04_state/RUNTIME_STATE_SCHEMA.md`.
+
+Boolean mapping is also deterministic:
+
+```text
+Markdown yes -> JSON true
+Markdown no -> JSON false
+Markdown true -> JSON true
+Markdown false -> JSON false
+```
+
+If a Markdown compatibility field is governed as `yes | no` or `true | false`,
+the sidecar content field must be a JSON boolean. Validators must not accept
+string spellings of those booleans as governed JSON values.
+
+Canonical enum sets for the governed sidecars are defined by the runtime
+templates and `agent-system/04_state/RUNTIME_STATE_SCHEMA.md`:
+
+```text
+PROJECT_STATE: PROJECT_STATE_TEMPLATE.md and RUNTIME_STATE_SCHEMA.md PROJECT_STATE.md schema.
+CURRENT_GATE: CURRENT_GATE_TEMPLATE.md and RUNTIME_STATE_SCHEMA.md CURRENT_GATE.md schema.
+NEXT_ACTION: NEXT_ACTION_TEMPLATE.md and RUNTIME_STATE_SCHEMA.md NEXT_ACTION.md schema.
+TASK_REGISTRY: TASK_REGISTRY_TEMPLATE.md and RUNTIME_STATE_SCHEMA.md TASK_REGISTRY.md schema.
+ACCEPTED_ARTIFACTS: ACCEPTED_ARTIFACTS_TEMPLATE.md and RUNTIME_STATE_SCHEMA.md ACCEPTED_ARTIFACTS.md schema.
+```
+
+Schemas, fixtures, and validators must not permit enum values outside those
+runtime templates and schema sections. In particular, these Stage 2 values are
+invalid and must hard-fail if present:
+
+```text
+NEXT_ACTION.content.target_role: runtime_architect
+NEXT_ACTION.content.action_semantic: dispatch
+NEXT_ACTION.content.checkpoint_policy: not_required
+CURRENT_GATE.content.status: active
+CURRENT_GATE.content.checkpoint_eligibility: not_required
+```
+
+These exclusions do not create new valid alternatives. `runtime_architect` is
+not a profile execution role or routing pseudo-role; `dispatch` is not a valid
+action semantic; `not_required` is not a valid `CHECKPOINT_POLICY`; and
+`active` is not a valid `CURRENT_GATE.status`.
+
 ## Hard-fail rules
 
 A validator must fail a sidecar workspace when any rule below is violated:
@@ -50,6 +140,11 @@ SIDECAR_JSON_PARSE_ERROR
 
 SIDECAR_TOP_LEVEL_NOT_OBJECT
   The parsed sidecar root is not a JSON object.
+
+SIDECAR_ENVELOPE_INVALID
+  A sidecar does not use the required Stage 2 envelope with governed values
+  under a lower-case content object, or it presents Markdown uppercase fields
+  as the direct sidecar object.
 
 SIDECAR_SCHEMA_VERSION_MISSING_OR_INVALID
   schema_version is missing or is not the stable value required by the package
@@ -71,6 +166,14 @@ SIDECAR_REQUIRED_FIELD_EMPTY
 
 SIDECAR_TYPE_INVALID
   A field has a JSON type that does not match the package template.
+
+SIDECAR_ENUM_VALUE_INVALID
+  A governed content value is outside the canonical enum set documented by the
+  matching runtime template and RUNTIME_STATE_SCHEMA.md.
+
+SIDECAR_BOOLEAN_VALUE_INVALID
+  A governed JSON boolean field is encoded as a string or otherwise fails the
+  Markdown yes/no or true/false to JSON true/false mapping.
 
 SIDECAR_UNKNOWN_GOVERNED_FIELD
   A sidecar contains unknown top-level fields or unknown governed content
