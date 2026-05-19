@@ -7,7 +7,7 @@ import argparse
 import sys
 from pathlib import Path
 
-from commands import archive_verify, doctor, lint, status, validate_context_pack, validate_design
+from commands import archive_verify, doctor, lint, state_verify, status, validate_context_pack, validate_design
 
 
 EXIT_USAGE = 2
@@ -195,6 +195,33 @@ def build_parser() -> argparse.ArgumentParser:
         help="Write the archive verification report JSON to this explicit path.",
     )
     verify_parser.set_defaults(handler=archive_verify.run)
+
+    state_parser = subparsers.add_parser(
+        "state",
+        help="Workspace state inspection commands.",
+        description="Read-only workspace state inspection commands.",
+    )
+    state_subparsers = state_parser.add_subparsers(dest="state_command", metavar="COMMAND")
+    state_verify_parser = state_subparsers.add_parser(
+        "verify",
+        help="Verify workspace JSON state sidecars.",
+        description=(
+            "Read-only verification for project-runtime/state JSON sidecars, "
+            "matching Markdown compatibility views, task references, and checkpoint policy signals."
+        ),
+    )
+    _add_root_argument(state_verify_parser, validate=False)
+    state_verify_parser.add_argument(
+        "--strict",
+        action="store_true",
+        help="Treat warnings as a failing state verification result.",
+    )
+    state_verify_parser.add_argument(
+        "--json-out",
+        metavar="PATH",
+        help="Write the state verification report JSON to this explicit path.",
+    )
+    state_verify_parser.set_defaults(handler=state_verify.run)
 
     return parser
 
