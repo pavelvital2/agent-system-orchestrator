@@ -28,6 +28,21 @@ ENVELOPE_FIELDS = (
 ENVELOPE_FIELD_SET = set(ENVELOPE_FIELDS)
 RFC3339_UTC_RE = re.compile(r"^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z$")
 NONE_VALUES = {"", "NONE", "none", "null", "UNKNOWN"}
+PROFILE_ROLES = {
+    "requirements_analyst",
+    "solution_architect",
+    "designer",
+    "developer",
+    "auditor",
+    "tester",
+    "technical_writer",
+    "devops_setup_engineer",
+    "release_manager",
+}
+CONTROL_OR_TARGET_ROLES = PROFILE_ROLES | {"orchestrator", "project_owner", "none"}
+OWNER_ROLES = PROFILE_ROLES | {"orchestrator", "project_owner"}
+ACTION_SEMANTICS = {"normal", "wait_for_owner", "pause", "stop_terminal", "completed_state_transition"}
+BLOCKER_TYPES = {"owner_decision", "pause", "audit_fail", "gap", "runtime", "dependency", "governance", "other"}
 
 
 @dataclass(frozen=True)
@@ -45,16 +60,21 @@ SIDECARS: tuple[SidecarSpec, ...] = (
         "PROJECT_STATE.json",
         "project-runtime/PROJECT_STATE.md",
         (
+            "project_name",
             "project_slug",
-            "workspace_type",
-            "current_phase",
-            "project_status",
+            "project_root",
+            "tz_path",
             "active_doc_root",
             "package_version",
             "governance_ruleset_version",
             "runtime_schema_version",
+            "workspace_type",
             "workspace_identity_ref",
             "repository_lock_ref",
+            "project_root_expected",
+            "git_toplevel_actual",
+            "expected_remote",
+            "actual_remote",
             "expected_git_remote",
             "actual_git_remote",
             "expected_branch",
@@ -62,11 +82,36 @@ SIDECARS: tuple[SidecarSpec, ...] = (
             "push_allowed",
             "identity_validation_status",
             "identity_validation_error",
+            "identity_validation_evidence",
             "repository_lock_status",
+            "baseline_tracking_status",
+            "project_input_tracking_policy",
             "checkpoint_eligibility",
+            "audit_status",
+            "checkpoint_eligibility_status",
+            "checkpoint_preflight_status",
+            "checkpoint_preflight_ref",
+            "checkpoint_receipt_ref",
+            "commit_status",
+            "last_commit_hash",
+            "last_commit_branch",
+            "push_status",
+            "last_push_remote",
+            "last_push_branch",
+            "last_push_target_status",
+            "project_checkpoint_status",
             "checkpoint_blocked_by",
-            "active_blockers",
+            "last_checkpoint_failure_reason",
+            "current_phase",
+            "project_status",
+            "action_semantic",
+            "semantic_reason",
             "active_branches",
+            "completed_milestones",
+            "active_risks",
+            "active_blockers",
+            "active_gaps",
+            "last_accepted_result",
         ),
         {
             "active_branches": (
@@ -77,6 +122,14 @@ SIDECARS: tuple[SidecarSpec, ...] = (
                 "dependencies",
                 "blocked_by",
             ),
+            "active_blockers": (
+                "blocker_id",
+                "blocker_type",
+                "status",
+                "blocks",
+                "blocked_by",
+                "resolution_path",
+            ),
         },
     ),
     SidecarSpec(
@@ -85,6 +138,7 @@ SIDECARS: tuple[SidecarSpec, ...] = (
         "project-runtime/CURRENT_GATE.md",
         (
             "gate_id",
+            "gate_name",
             "gate_type",
             "status",
             "owner_role",
@@ -93,9 +147,16 @@ SIDECARS: tuple[SidecarSpec, ...] = (
             "action_semantic",
             "workspace_identity_status",
             "repository_lock_status",
+            "baseline_tracking_status",
             "checkpoint_eligibility",
-            "checkpoint_blocked_by",
-            "evidence_refs",
+            "checkpoint_eligibility_status",
+            "project_checkpoint_status",
+            "entry_criteria",
+            "exit_criteria",
+            "required_next_role",
+            "gate_evidence",
+            "blocking_status",
+            "notes",
         ),
         {},
     ),
@@ -110,13 +171,20 @@ SIDECARS: tuple[SidecarSpec, ...] = (
             "task_id",
             "task_packet",
             "dependency_status",
+            "blocked_by",
             "action_semantic",
             "workspace_identity_required",
             "repository_lock_required",
             "checkpoint_policy",
+            "checkpoint_preflight_required",
+            "checkpoint_receipt_required",
+            "checkpoint_receipt_ref",
             "requester_return_context",
-            "blocked_by",
-            "summary",
+            "blocking_or_resume_context",
+            "required_universal_docs",
+            "required_project_docs",
+            "expected_result",
+            "instruction_for_orchestrator",
         ),
         {},
     ),
@@ -128,15 +196,29 @@ SIDECARS: tuple[SidecarSpec, ...] = (
         {
             "tasks": (
                 "task_id",
-                "task_packet",
-                "role",
+                "task_title",
+                "task_type",
+                "task_kind",
+                "owner_role",
                 "status",
-                "audit_required",
-                "checkpoint_required",
-                "requester_return_metadata",
-                "blocked_by",
+                "task_packet",
+                "dependencies",
+                "requested_by_role",
+                "requested_by_task",
+                "return_to_requester_after_audit_pass",
+                "return_to_role_after_audit_pass",
+                "return_task_after_audit_pass",
+                "research_question_id",
                 "result_refs",
                 "audit_refs",
+                "correction_links",
+                "commit_hash",
+                "branch",
+                "push_status",
+                "accepted_files",
+                "checkpoint_ref",
+                "created_at",
+                "updated_at",
             ),
         },
     ),
@@ -148,12 +230,20 @@ SIDECARS: tuple[SidecarSpec, ...] = (
         {
             "artifacts": (
                 "artifact_id",
-                "path",
-                "task_id",
-                "accepted_result_ref",
-                "audit_ref",
+                "artifact_type",
+                "artifact_ref",
                 "status",
+                "source_task",
+                "source_result_ref",
+                "audit_ref",
+                "supersedes",
+                "superseded_by",
                 "commit_hash",
+                "branch",
+                "push_status",
+                "checkpoint_ref",
+                "accepted_at",
+                "updated_at",
                 "notes",
             ),
         },
@@ -180,36 +270,205 @@ SIDECARS: tuple[SidecarSpec, ...] = (
     ),
 )
 
-STATUS_FIELDS = {
-    ("PROJECT_STATE", "project_status"): {"active", "blocked", "paused", "completed", "archived", "initialized"},
-    ("PROJECT_STATE", "identity_validation_status"): {"passed", "pending", "failed", "blocked", "not_required"},
-    ("PROJECT_STATE", "repository_lock_status"): {"passed", "accepted", "pending", "failed", "blocked", "not_required"},
-    ("PROJECT_STATE", "checkpoint_eligibility"): {"eligible", "not_required", "blocked", "pending", "ineligible"},
-    ("PROJECT_STATE", "active_branches[].status"): {"active", "blocked", "complete", "completed", "paused", "pending"},
-    ("CURRENT_GATE", "status"): {"active", "open", "blocked", "passed", "failed", "complete", "completed", "pending"},
-    ("CURRENT_GATE", "action_semantic"): {"dispatch", "checkpoint", "audit", "return", "none"},
-    ("CURRENT_GATE", "workspace_identity_status"): {"passed", "pending", "failed", "blocked", "not_required"},
-    ("CURRENT_GATE", "repository_lock_status"): {"passed", "accepted", "pending", "failed", "blocked", "not_required"},
-    ("CURRENT_GATE", "checkpoint_eligibility"): {"eligible", "not_required", "blocked", "pending", "ineligible"},
-    ("NEXT_ACTION", "action_type"): {"create_agent", "run_audit", "checkpoint", "return_to_requester", "none", "manual"},
-    ("NEXT_ACTION", "dependency_status"): {"ready", "blocked", "pending", "waiting", "not_required", "failed"},
-    ("NEXT_ACTION", "action_semantic"): {"dispatch", "checkpoint", "audit", "return", "none"},
-    ("NEXT_ACTION", "checkpoint_policy"): {"not_required", "required", "forbidden", "after_audit_pass", "audit_pass_required"},
+ENUM_FIELDS = {
+    ("PROJECT_STATE", "workspace_type"): {"package_repo", "project_workspace", "implementation_repo", "test_fixture"},
+    ("PROJECT_STATE", "identity_validation_status"): {"not_checked", "passed", "failed", "blocked"},
+    ("PROJECT_STATE", "identity_validation_error"): {
+        "NONE",
+        "repository_identity_mismatch",
+        "repository_branch_mismatch",
+        "workspace_identity_leakage",
+        "unapproved_ssh_host_alias",
+        "missing_identity_manifest",
+        "repository_lock_missing",
+        "push_without_repository_lock",
+    },
+    ("PROJECT_STATE", "repository_lock_status"): {"absent", "draft", "accepted", "revoked", "blocked"},
+    ("PROJECT_STATE", "baseline_tracking_status"): {"not_checked", "passed", "blocked", "owner_action_required"},
+    ("PROJECT_STATE", "project_input_tracking_policy"): {"tracked", "owner-private/untracked", "not_set"},
+    ("PROJECT_STATE", "checkpoint_eligibility"): {"blocked", "local_only", "push_allowed", "not_applicable"},
+    ("PROJECT_STATE", "audit_status"): {"not_applicable", "pending", "passed", "failed", "blocked", "gap"},
+    ("PROJECT_STATE", "checkpoint_eligibility_status"): {"not_checked", "eligible", "ineligible", "blocked"},
+    ("PROJECT_STATE", "checkpoint_preflight_status"): {"not_run", "passed", "failed", "blocked"},
+    ("PROJECT_STATE", "commit_status"): {"not_required", "not_attempted", "committed", "failed", "blocked"},
+    ("PROJECT_STATE", "push_status"): {"not_required", "not_attempted", "pushed", "failed", "blocked"},
+    ("PROJECT_STATE", "last_push_target_status"): {"not_checked", "matched", "mismatched", "blocked", "not_required"},
+    ("PROJECT_STATE", "project_checkpoint_status"): {"not_required", "pending", "passed", "failed", "blocked"},
+    ("PROJECT_STATE", "current_phase"): {
+        "bootstrap",
+        "requirements",
+        "design",
+        "design_audit",
+        "implementation",
+        "implementation_audit",
+        "audit",
+        "testing",
+        "setup",
+        "run",
+        "launch",
+        "documentation",
+        "handover",
+        "correction",
+        "blocked",
+        "finalization",
+        "final_acceptance",
+        "completed",
+    },
+    ("PROJECT_STATE", "project_status"): {"active", "blocked", "completed", "archived"},
+    ("PROJECT_STATE", "action_semantic"): ACTION_SEMANTICS,
+    ("PROJECT_STATE", "active_branches[].status"): {"active", "blocked", "completed", "archived"},
+    ("PROJECT_STATE", "active_branches[].current_agent_role"): PROFILE_ROLES,
+    ("PROJECT_STATE", "active_blockers[].blocker_type"): BLOCKER_TYPES,
+    ("PROJECT_STATE", "active_blockers[].status"): {"active", "resolving"},
+    ("PROJECT_STATE", "last_accepted_result.role"): PROFILE_ROLES,
+    ("CURRENT_GATE", "gate_type"): {
+        "bootstrap",
+        "requirements",
+        "design",
+        "audit",
+        "implementation",
+        "testing",
+        "setup",
+        "run",
+        "launch",
+        "documentation",
+        "handover",
+        "correction",
+        "finalization",
+        "final_acceptance",
+        "terminal",
+    },
+    ("CURRENT_GATE", "status"): {"open", "passed", "failed", "blocked", "skipped"},
+    ("CURRENT_GATE", "owner_role"): OWNER_ROLES,
+    ("CURRENT_GATE", "action_semantic"): ACTION_SEMANTICS,
+    ("CURRENT_GATE", "workspace_identity_status"): {"not_checked", "passed", "failed", "blocked"},
+    ("CURRENT_GATE", "repository_lock_status"): {"absent", "draft", "accepted", "revoked", "blocked", "not_required"},
+    ("CURRENT_GATE", "baseline_tracking_status"): {"not_checked", "passed", "blocked", "owner_action_required"},
+    ("CURRENT_GATE", "checkpoint_eligibility"): {"blocked", "local_only", "push_allowed", "not_applicable"},
+    ("CURRENT_GATE", "checkpoint_eligibility_status"): {"not_checked", "eligible", "ineligible", "blocked"},
+    ("CURRENT_GATE", "project_checkpoint_status"): {"not_required", "pending", "passed", "failed", "blocked"},
+    ("CURRENT_GATE", "required_next_role"): CONTROL_OR_TARGET_ROLES,
+    ("CURRENT_GATE", "blocking_status.blocker_type"): BLOCKER_TYPES,
+    ("NEXT_ACTION", "action_type"): {"create_agent", "route_result", "update_state", "wait_for_owner", "correction", "finalize", "stop"},
+    ("NEXT_ACTION", "target_role"): CONTROL_OR_TARGET_ROLES,
+    ("NEXT_ACTION", "dependency_status"): {"ready", "blocked", "completed", "not_applicable"},
+    ("NEXT_ACTION", "action_semantic"): ACTION_SEMANTICS,
+    ("NEXT_ACTION", "checkpoint_policy"): {"forbidden", "local_only", "commit_and_push", "no_checkpoint"},
+    ("NEXT_ACTION", "requester_return_context.requested_by_role"): PROFILE_ROLES | {"NONE"},
+    ("NEXT_ACTION", "requester_return_context.return_to_role_after_audit_pass"): PROFILE_ROLES | {"none"},
+    ("NEXT_ACTION", "blocking_or_resume_context.blocker_type"): BLOCKER_TYPES,
+    ("TASK_REGISTRY", "tasks[].task_type"): PROFILE_ROLES,
+    ("TASK_REGISTRY", "tasks[].task_kind"): {
+        "normal",
+        "research_dependency",
+        "design_continuation",
+        "task_continuation",
+        "correction",
+        "audit",
+        "testing",
+        "setup",
+        "launch",
+        "handover",
+    },
+    ("TASK_REGISTRY", "tasks[].owner_role"): CONTROL_OR_TARGET_ROLES,
     ("TASK_REGISTRY", "tasks[].status"): {
-        "active",
-        "ready",
         "pending",
-        "in_progress",
+        "ready",
+        "running",
         "audit_pending",
         "audit_passed",
-        "completed",
+        "checkpoint_done",
         "blocked",
         "failed",
-        "cancelled",
+        "superseded",
+        "completed",
     },
-    ("ACCEPTED_ARTIFACTS", "artifacts[].status"): {"accepted", "pending", "rejected", "superseded"},
+    ("TASK_REGISTRY", "tasks[].requested_by_role"): PROFILE_ROLES | {"NONE"},
+    ("TASK_REGISTRY", "tasks[].return_to_role_after_audit_pass"): PROFILE_ROLES | {"none"},
+    ("TASK_REGISTRY", "tasks[].push_status"): {"not_required", "not_attempted", "pushed", "failed"},
+    ("ACCEPTED_ARTIFACTS", "artifacts[].status"): {"draft", "accepted", "failed", "superseded"},
+    ("ACCEPTED_ARTIFACTS", "artifacts[].push_status"): {"not_required", "not_attempted", "pushed", "failed"},
+    ("WORKSPACE_IDENTITY", "workspace_type"): {"package_repo", "project_workspace", "implementation_repo", "test_fixture"},
     ("WORKSPACE_IDENTITY", "identity_validation_status"): {"passed", "pending", "failed", "blocked", "not_required"},
     ("WORKSPACE_IDENTITY", "repository_lock_status"): {"passed", "accepted", "pending", "failed", "blocked", "not_required"},
+}
+
+BOOLEAN_FIELDS = {
+    ("PROJECT_STATE", "push_allowed"),
+    ("NEXT_ACTION", "workspace_identity_required"),
+    ("NEXT_ACTION", "repository_lock_required"),
+    ("NEXT_ACTION", "checkpoint_preflight_required"),
+    ("NEXT_ACTION", "checkpoint_receipt_required"),
+    ("WORKSPACE_IDENTITY", "push_allowed"),
+}
+
+INTEGER_FIELDS = {("TASK_REGISTRY", "registry_revision")}
+
+LIST_OR_NONE_FIELDS = {
+    ("PROJECT_STATE", "checkpoint_blocked_by"),
+    ("PROJECT_STATE", "active_branches"),
+    ("PROJECT_STATE", "completed_milestones"),
+    ("PROJECT_STATE", "active_risks"),
+    ("PROJECT_STATE", "active_blockers"),
+    ("PROJECT_STATE", "active_gaps"),
+    ("CURRENT_GATE", "entry_criteria"),
+    ("CURRENT_GATE", "exit_criteria"),
+    ("CURRENT_GATE", "gate_evidence"),
+    ("CURRENT_GATE", "notes"),
+    ("NEXT_ACTION", "blocked_by"),
+    ("NEXT_ACTION", "required_universal_docs"),
+    ("NEXT_ACTION", "required_project_docs"),
+    ("NEXT_ACTION", "expected_result"),
+    ("TASK_REGISTRY", "tasks"),
+    ("ACCEPTED_ARTIFACTS", "artifacts"),
+    ("WORKSPACE_IDENTITY", "validation_errors"),
+}
+
+OBJECT_OR_NONE_FIELDS = {
+    ("PROJECT_STATE", "last_accepted_result"),
+    ("CURRENT_GATE", "blocking_status"),
+    ("NEXT_ACTION", "requester_return_context"),
+    ("NEXT_ACTION", "blocking_or_resume_context"),
+}
+
+NESTED_OBJECT_FIELDS = {
+    ("PROJECT_STATE", "last_accepted_result"): ("role", "task", "date", "status", "result_ref"),
+    ("CURRENT_GATE", "blocking_status"): ("blocker_id", "blocker_type", "blocks", "blocked_by", "resolution_path"),
+    ("NEXT_ACTION", "requester_return_context"): (
+        "requested_by_role",
+        "requested_by_task",
+        "return_to_requester_after_audit_pass",
+        "return_to_role_after_audit_pass",
+        "return_task_after_audit_pass",
+        "research_question_id",
+        "accepted_research_result_ref",
+        "accepted_research_audit_ref",
+    ),
+    ("NEXT_ACTION", "blocking_or_resume_context"): (
+        "blocker_id",
+        "blocker_type",
+        "blocks",
+        "resolution_path",
+        "owner_question",
+        "resume_condition",
+    ),
+}
+
+NESTED_BOOLEAN_FIELDS = {
+    ("NEXT_ACTION", "requester_return_context.return_to_requester_after_audit_pass"),
+}
+
+LIST_ITEM_LIST_OR_NONE_FIELDS = {
+    ("PROJECT_STATE", "active_branches[].dependencies"),
+    ("TASK_REGISTRY", "tasks[].dependencies"),
+    ("TASK_REGISTRY", "tasks[].result_refs"),
+    ("TASK_REGISTRY", "tasks[].audit_refs"),
+    ("TASK_REGISTRY", "tasks[].correction_links"),
+    ("TASK_REGISTRY", "tasks[].accepted_files"),
+}
+
+LIST_ITEM_BOOLEAN_FIELDS = {
+    ("TASK_REGISTRY", "tasks[].return_to_requester_after_audit_pass"),
 }
 
 
@@ -289,6 +548,26 @@ def _value_to_text(value: object) -> str:
     return json.dumps(value, sort_keys=True)
 
 
+def _markdown_scalar(value: str) -> object:
+    normalized = value.strip()
+    lowered = normalized.lower()
+    if lowered in {"yes", "true"}:
+        return True
+    if lowered in {"no", "false"}:
+        return False
+    return normalized
+
+
+def _json_scalar(value: object) -> object:
+    if isinstance(value, bool):
+        return value
+    if isinstance(value, int) and not isinstance(value, bool):
+        return str(value)
+    if isinstance(value, str):
+        return value.strip()
+    return value
+
+
 def _parse_markdown_fields(path: Path) -> dict[str, str]:
     fields: dict[str, str] = {}
     try:
@@ -302,77 +581,68 @@ def _parse_markdown_fields(path: Path) -> dict[str, str]:
     return fields
 
 
+def _type_finding(spec: SidecarSpec, relpath: str, field: str, expected: str) -> Finding:
+    return _finding(
+        "SIDECAR_TYPE_INVALID",
+        "Sidecar field type is invalid",
+        f"{spec.sidecar_type}.{field} must be {expected}.",
+        relpath,
+        field,
+        "Use the documented JSON type for every governed field.",
+    )
+
+
+def _boolean_finding(spec: SidecarSpec, relpath: str, field: str) -> Finding:
+    return _finding(
+        "SIDECAR_BOOLEAN_VALUE_INVALID",
+        "Sidecar boolean value is invalid",
+        f"{spec.sidecar_type}.{field} must be a JSON boolean, not a Markdown string spelling.",
+        relpath,
+        field,
+        "Use true or false for boolean governed fields.",
+    )
+
+
+def _enum_finding(spec: SidecarSpec, relpath: str, field: str, raw: object, allowed: set[str]) -> Finding:
+    return _finding(
+        "SIDECAR_ENUM_VALUE_INVALID",
+        "Sidecar enum value is invalid",
+        f"{spec.sidecar_type}.{field}={raw!r} is not allowed.",
+        relpath,
+        field,
+        f"Use one of: {', '.join(sorted(allowed))}.",
+    )
+
+
+def _is_list_or_none(value: object) -> bool:
+    return isinstance(value, list) or value == "NONE"
+
+
+def _is_object_or_none(value: object) -> bool:
+    return isinstance(value, dict) or value == "NONE"
+
+
 def _validate_content_type(spec: SidecarSpec, content: dict[str, object], relpath: str) -> list[Finding]:
     findings: list[Finding] = []
     for field in spec.required_fields:
         if field not in content:
             continue
         value = content[field]
-        if field in spec.list_item_fields or field in {"checkpoint_blocked_by", "active_blockers", "evidence_refs", "blocked_by", "validation_errors"}:
-            if not isinstance(value, list):
-                findings.append(
-                    _finding(
-                        "SIDECAR_TYPE_INVALID",
-                        "Sidecar field type is invalid",
-                        f"{spec.sidecar_type}.content.{field} must be a list.",
-                        relpath,
-                        f"content.{field}",
-                        "Use the documented JSON type for every governed field.",
-                    )
-                )
-        elif field in {
-            "push_allowed",
-            "workspace_identity_required",
-            "repository_lock_required",
-            "audit_required",
-            "checkpoint_required",
-        }:
+        field_key = (spec.sidecar_type, field)
+        if field_key in LIST_OR_NONE_FIELDS:
+            if not _is_list_or_none(value):
+                findings.append(_type_finding(spec, relpath, f"content.{field}", "a list or 'NONE'"))
+        elif field_key in OBJECT_OR_NONE_FIELDS:
+            if not _is_object_or_none(value):
+                findings.append(_type_finding(spec, relpath, f"content.{field}", "an object or 'NONE'"))
+        elif field_key in BOOLEAN_FIELDS:
             if not isinstance(value, bool):
-                findings.append(
-                    _finding(
-                        "SIDECAR_TYPE_INVALID",
-                        "Sidecar field type is invalid",
-                        f"{spec.sidecar_type}.content.{field} must be a boolean.",
-                        relpath,
-                        f"content.{field}",
-                        "Use true or false for boolean governed fields.",
-                    )
-                )
-        elif field in {"registry_revision"}:
+                findings.append(_boolean_finding(spec, relpath, f"content.{field}"))
+        elif field_key in INTEGER_FIELDS:
             if not isinstance(value, int) or isinstance(value, bool) or value < 1:
-                findings.append(
-                    _finding(
-                        "SIDECAR_TYPE_INVALID",
-                        "Sidecar field type is invalid",
-                        f"{spec.sidecar_type}.content.{field} must be a positive integer.",
-                        relpath,
-                        f"content.{field}",
-                        "Use a positive integer for revision fields.",
-                    )
-                )
-        elif field in {"requester_return_context", "requester_return_metadata"}:
-            if not isinstance(value, dict):
-                findings.append(
-                    _finding(
-                        "SIDECAR_TYPE_INVALID",
-                        "Sidecar field type is invalid",
-                        f"{spec.sidecar_type}.content.{field} must be an object.",
-                        relpath,
-                        f"content.{field}",
-                        "Use the documented JSON type for every governed field.",
-                    )
-                )
+                findings.append(_type_finding(spec, relpath, f"content.{field}", "a positive integer"))
         elif not isinstance(value, str):
-            findings.append(
-                _finding(
-                    "SIDECAR_TYPE_INVALID",
-                    "Sidecar field type is invalid",
-                    f"{spec.sidecar_type}.content.{field} must be a string.",
-                    relpath,
-                    f"content.{field}",
-                    "Use the documented JSON type for every governed field.",
-                )
-            )
+            findings.append(_type_finding(spec, relpath, f"content.{field}", "a string"))
     return findings
 
 
@@ -420,6 +690,68 @@ def _validate_list_items(spec: SidecarSpec, content: dict[str, object], relpath:
                         "Remove unknown governed fields or update the contract in a separate bounded task.",
                     )
                 )
+            for item_field in item_fields:
+                if item_field not in item:
+                    continue
+                item_value = item[item_field]
+                item_field_key = (spec.sidecar_type, f"{field}[].{item_field}")
+                display_field = f"{item_path}.{item_field}"
+                if item_field_key in LIST_ITEM_LIST_OR_NONE_FIELDS:
+                    if not _is_list_or_none(item_value):
+                        findings.append(_type_finding(spec, relpath, display_field, "a list or 'NONE'"))
+                elif item_field_key in LIST_ITEM_BOOLEAN_FIELDS:
+                    if not isinstance(item_value, bool):
+                        findings.append(_boolean_finding(spec, relpath, display_field))
+                elif not isinstance(item_value, str):
+                    findings.append(_type_finding(spec, relpath, display_field, "a string"))
+    return findings
+
+
+def _validate_nested_objects(spec: SidecarSpec, content: dict[str, object], relpath: str) -> list[Finding]:
+    findings: list[Finding] = []
+    for (sidecar_type, field), required_fields in NESTED_OBJECT_FIELDS.items():
+        if sidecar_type != spec.sidecar_type or field not in content:
+            continue
+        value = content[field]
+        if value == "NONE":
+            continue
+        if not isinstance(value, dict):
+            continue
+        item_path = f"content.{field}"
+        for required in required_fields:
+            if required not in value:
+                findings.append(
+                    _finding(
+                        "SIDECAR_REQUIRED_FIELD_MISSING",
+                        "Required sidecar field is missing",
+                        f"{spec.sidecar_type}.{item_path}.{required} is missing.",
+                        relpath,
+                        f"{item_path}.{required}",
+                        "Populate every required governed field from the sidecar contract.",
+                    )
+                )
+        for extra in sorted(set(value) - set(required_fields)):
+            findings.append(
+                _finding(
+                    "SIDECAR_UNKNOWN_GOVERNED_FIELD",
+                    "Sidecar has an unknown governed field",
+                    f"{spec.sidecar_type}.{item_path}.{extra} is not part of the documented contract.",
+                    relpath,
+                    f"{item_path}.{extra}",
+                    "Remove unknown governed fields or update the contract in a separate bounded task.",
+                )
+            )
+        for nested_field in required_fields:
+            if nested_field not in value:
+                continue
+            nested_value = value[nested_field]
+            nested_key = (spec.sidecar_type, f"{field}.{nested_field}")
+            display_field = f"{item_path}.{nested_field}"
+            if nested_key in NESTED_BOOLEAN_FIELDS:
+                if not isinstance(nested_value, bool):
+                    findings.append(_boolean_finding(spec, relpath, display_field))
+            elif not isinstance(nested_value, str):
+                findings.append(_type_finding(spec, relpath, display_field, "a string"))
     return findings
 
 
@@ -478,12 +810,13 @@ def _validate_required_fields(spec: SidecarSpec, content: object, relpath: str) 
 
     findings.extend(_validate_content_type(spec, content, relpath))
     findings.extend(_validate_list_items(spec, content, relpath))
+    findings.extend(_validate_nested_objects(spec, content, relpath))
     return findings
 
 
-def _validate_status_values(spec: SidecarSpec, content: dict[str, object], relpath: str) -> list[Finding]:
+def _validate_enum_values(spec: SidecarSpec, content: dict[str, object], relpath: str) -> list[Finding]:
     findings: list[Finding] = []
-    for (sidecar_type, field), allowed in STATUS_FIELDS.items():
+    for (sidecar_type, field), allowed in ENUM_FIELDS.items():
         if sidecar_type != spec.sidecar_type:
             continue
         if "[]." in field:
@@ -496,32 +829,23 @@ def _validate_status_values(spec: SidecarSpec, content: dict[str, object], relpa
                     continue
                 raw = item[item_field]
                 if not isinstance(raw, str) or raw not in allowed:
-                    findings.append(
-                        _finding(
-                            "SIDECAR_STATUS_INVALID",
-                            "Sidecar status value is invalid",
-                            f"{spec.sidecar_type}.content.{list_name}[{index}].{item_field}={raw!r} is not allowed.",
-                            relpath,
-                            f"content.{list_name}[{index}].{item_field}",
-                            f"Use one of: {', '.join(sorted(allowed))}.",
-                        )
-                    )
+                    findings.append(_enum_finding(spec, relpath, f"content.{list_name}[{index}].{item_field}", raw, allowed))
+            continue
+        if "." in field:
+            object_name, item_field = field.split(".", 1)
+            entry = content.get(object_name)
+            if entry == "NONE" or not isinstance(entry, dict) or item_field not in entry:
+                continue
+            raw = entry[item_field]
+            if not isinstance(raw, str) or raw not in allowed:
+                findings.append(_enum_finding(spec, relpath, f"content.{object_name}.{item_field}", raw, allowed))
             continue
 
         raw = content.get(field)
         if raw is None:
             continue
         if not isinstance(raw, str) or raw not in allowed:
-            findings.append(
-                _finding(
-                    "SIDECAR_STATUS_INVALID",
-                    "Sidecar status value is invalid",
-                    f"{spec.sidecar_type}.content.{field}={raw!r} is not allowed.",
-                    relpath,
-                    f"content.{field}",
-                    f"Use one of: {', '.join(sorted(allowed))}.",
-                )
-            )
+            findings.append(_enum_finding(spec, relpath, f"content.{field}", raw, allowed))
     return findings
 
 
@@ -547,7 +871,7 @@ def _validate_markdown_parity(root: Path, spec: SidecarSpec, content: dict[str, 
             continue
         markdown_value = markdown_fields[markdown_key].strip()
         json_value = _value_to_text(value)
-        if markdown_value != json_value:
+        if _markdown_scalar(markdown_value) != _json_scalar(value):
             findings.append(
                 _finding(
                     "SIDECAR_MARKDOWN_DRIFT",
@@ -742,7 +1066,7 @@ def _validate_sidecar(root: Path, spec: SidecarSpec) -> tuple[dict[str, object] 
     content = payload.get("content")
     findings.extend(_validate_required_fields(spec, content, relpath))
     if isinstance(content, dict):
-        findings.extend(_validate_status_values(spec, content, relpath))
+        findings.extend(_validate_enum_values(spec, content, relpath))
         findings.extend(_validate_markdown_parity(root, spec, content, relpath))
     return payload, findings
 
@@ -786,7 +1110,7 @@ def _reference_findings(sidecars: dict[str, dict[str, object]]) -> list[Finding]
     if isinstance(artifacts, list):
         for index, artifact in enumerate(artifacts):
             if isinstance(artifact, dict):
-                refs.append(("ACCEPTED_ARTIFACTS.json", f"content.artifacts[{index}].task_id", str(artifact.get("task_id", ""))))
+                refs.append(("ACCEPTED_ARTIFACTS.json", f"content.artifacts[{index}].source_task", str(artifact.get("source_task", ""))))
 
     findings: list[Finding] = []
     for filename, field, task_id in refs:
@@ -814,14 +1138,8 @@ def _truthy_refs(value: object) -> bool:
 
 def _checkpoint_findings(sidecars: dict[str, dict[str, object]]) -> list[Finding]:
     next_action = _content(sidecars, "NEXT_ACTION")
-    action_type = next_action.get("action_type")
-    action_semantic = next_action.get("action_semantic")
     checkpoint_policy = next_action.get("checkpoint_policy")
-    checkpoint_attempt = (
-        action_type == "checkpoint"
-        or action_semantic == "checkpoint"
-        or checkpoint_policy in {"required", "after_audit_pass", "audit_pass_required"}
-    )
+    checkpoint_attempt = checkpoint_policy in {"local_only", "commit_and_push"} or next_action.get("checkpoint_receipt_required") is True
     if not checkpoint_attempt:
         return []
 
@@ -832,10 +1150,9 @@ def _checkpoint_findings(sidecars: dict[str, dict[str, object]]) -> list[Finding
     if not task:
         return []
 
-    audit_required = task.get("audit_required")
     status = task.get("status")
     has_audit_ref = _truthy_refs(task.get("audit_refs"))
-    if audit_required is False or status in {"audit_passed", "completed"} or has_audit_ref:
+    if status in {"audit_passed", "checkpoint_done", "completed"} or has_audit_ref:
         return []
 
     return [
@@ -843,12 +1160,12 @@ def _checkpoint_findings(sidecars: dict[str, dict[str, object]]) -> list[Finding
             "SIDECAR_CHECKPOINT_POLICY_INVALID",
             "NEXT_ACTION checkpoint attempt lacks audit-pass evidence",
             (
-                "NEXT_ACTION requests a checkpoint for an audit-required task, "
+                "NEXT_ACTION requests a checkpoint-capable policy, "
                 f"but TASK_REGISTRY task {task_id} has no audit-pass status or audit_refs evidence."
             ),
             "project-runtime/state/NEXT_ACTION.json",
             "content.checkpoint_policy",
-            "Record audit-pass evidence before a checkpoint action, or mark checkpoint_policy not_required/forbidden.",
+            "Record audit-pass evidence before a checkpoint action, or use checkpoint_policy forbidden/no_checkpoint.",
         )
     ]
 

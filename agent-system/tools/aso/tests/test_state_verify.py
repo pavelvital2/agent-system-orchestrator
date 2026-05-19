@@ -64,8 +64,12 @@ class StateVerifyCommandTests(unittest.TestCase):
     def test_existing_negative_fixtures_fail_with_stable_rule_ids(self) -> None:
         cases = {
             "invalid_bad_schema_version": "SIDECAR_SCHEMA_VERSION_MISSING_OR_INVALID",
+            "invalid_checkpoint_policy_not_required": "SIDECAR_ENUM_VALUE_INVALID",
+            "invalid_current_gate_status_active": "SIDECAR_ENUM_VALUE_INVALID",
+            "invalid_dispatch_action_semantic": "SIDECAR_ENUM_VALUE_INVALID",
             "invalid_markdown_json_drift": "SIDECAR_MARKDOWN_DRIFT",
             "invalid_missing_required": "SIDECAR_REQUIRED_FIELD_MISSING",
+            "invalid_runtime_architect": "SIDECAR_ENUM_VALUE_INVALID",
         }
         for fixture_name, rule_id in cases.items():
             with self.subTest(fixture_name=fixture_name):
@@ -112,7 +116,22 @@ class StateVerifyCommandTests(unittest.TestCase):
             result = run_state_verify(root, "--strict")
 
             self.assertEqual(result.returncode, 1, result.stdout + result.stderr)
-            self.assertIn("SIDECAR_STATUS_INVALID", result.stdout)
+            self.assertIn("SIDECAR_ENUM_VALUE_INVALID", result.stdout)
+
+    def test_stale_next_action_action_types_fail(self) -> None:
+        for action_type in ("run_audit", "checkpoint", "return_to_requester", "manual", "none"):
+            with self.subTest(action_type=action_type), tempfile.TemporaryDirectory() as tmp:
+                root = copy_valid_workspace(tmp)
+                payload = load_sidecar(root, "NEXT_ACTION.json")
+                content = payload["content"]
+                self.assertIsInstance(content, dict)
+                content["action_type"] = action_type
+                write_sidecar(root, "NEXT_ACTION.json", payload)
+
+                result = run_state_verify(root, "--strict")
+
+                self.assertEqual(result.returncode, 1, result.stdout + result.stderr)
+                self.assertIn("SIDECAR_ENUM_VALUE_INVALID", result.stdout)
 
     def test_active_task_reference_must_exist_in_task_registry(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
@@ -138,9 +157,10 @@ class StateVerifyCommandTests(unittest.TestCase):
             payload = load_sidecar(root, "NEXT_ACTION.json")
             content = payload["content"]
             self.assertIsInstance(content, dict)
-            content["action_type"] = "checkpoint"
-            content["action_semantic"] = "checkpoint"
-            content["checkpoint_policy"] = "after_audit_pass"
+            content["checkpoint_policy"] = "commit_and_push"
+            content["checkpoint_preflight_required"] = True
+            content["checkpoint_receipt_required"] = True
+            content["checkpoint_receipt_ref"] = "project-runtime/checkpoints/CHECKPOINT_ELIGIBILITY_TASK_FIXTURE_STATE_001_1.md"
             write_sidecar(root, "NEXT_ACTION.json", payload)
 
             result = run_state_verify(root, "--strict")
