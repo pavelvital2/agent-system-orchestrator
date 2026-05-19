@@ -54,14 +54,14 @@ class PackagingCommandTests(unittest.TestCase):
         self.assertTrue((bundled_tool_dir / "commands" / "record_result.py").is_file())
         self.assertFalse((bundled_tool_dir / "tests").exists())
 
-    def test_stage2_package_version_is_coherent(self) -> None:
+    def test_stage3_package_version_is_coherent(self) -> None:
         pyproject = tomllib.loads((REPO_ROOT / "pyproject.toml").read_text(encoding="utf-8"))
         init_file = (REPO_ROOT / "agent_system_orchestrator_aso" / "__init__.py").read_text(
             encoding="utf-8"
         )
 
-        self.assertEqual(pyproject["project"]["version"], "3.0.2")
-        self.assertIn('__version__ = "3.0.2"', init_file)
+        self.assertEqual(pyproject["project"]["version"], "3.1.0")
+        self.assertIn('__version__ = "3.1.0"', init_file)
 
 
 if __name__ == "__main__":

@@ -153,11 +153,12 @@ accepted repository lock explicitly allows it.
 The package includes an experimental read-only ASO helper CLI at
 `agent-system/tools/aso/aso.py`.
 
-This Stage 2 state-contract correction branch updates the active package
-metadata to the governed `3.0.2` package/governance tuple with runtime schema
-`3.0.0`. It preserves the read-only Stage 2 command surfaces and resolves drift
-among runtime state sidecars, templates, schemas, fixtures, validator
-expectations, command examples, and release evidence.
+This Stage 3 safe automation diagnostics branch updates the active package
+metadata to the governed `3.1.0` package/governance tuple with runtime schema
+`3.0.0`. It preserves the read-only Stage 2 command surfaces and adds Stage 3
+package synchronization diagnostics without adding live dispatch, mutation,
+governed checkpoint execution, autonomous owner-decision approval, commit,
+push, or publication authority.
 
 Install the local console command from the repository root with:
 
@@ -234,6 +235,19 @@ The corrected state examples use
 uses the canonical next action value `CREATE_AGENT` without dispatching an
 agent.
 
+Stage 3 command surfaces are local, read-only, dry-run, or proposal-only. The
+package-sync guard checks active package metadata and command surface
+coherence:
+
+```text
+python3 agent-system/tools/aso/aso.py package-sync verify --root . --strict
+```
+
+`aso package-sync verify` is an inspection command. It reports version or
+documentation drift and exits nonzero on strict mismatches. It does not repair
+files, edit package state, initialize workspaces, stage changes, commit, push,
+publish release artifacts, or approve cleanup.
+
 Repeatable root targets are:
 
 ```text
@@ -247,35 +261,38 @@ make ci
 
 `make test` runs the ASO command unit tests and package governance tests.
 `make smoke` runs CLI help, package status, strict package lint, strict package
-doctor, valid design/context-pack fixtures, rule validation, state sidecar
-verification, dry-run next-action planning, static dashboard rendering to
-`/tmp`, checkpoint preflight, and the local governance smoke runner. `make ci`
-runs `test`, `smoke`, `doctor`, `lint`, and `git diff --check`. The smoke and
-CI surfaces are local and diagnostic: they must not require secrets, network
-credentials, real remotes, publishing permissions, or live service access.
+doctor, read-only package-sync verification, valid design/context-pack
+fixtures, rule validation, state sidecar verification, dry-run next-action
+planning, static dashboard rendering to `/tmp`, checkpoint preflight, and the
+local Stage 3 diagnostics. `make ci` runs `test`, `smoke`, `doctor`, `lint`,
+and `git diff --check`. The smoke and CI surfaces are local and diagnostic:
+they must not require secrets, network credentials, real remotes, publishing
+permissions, live service access, or live automation authority.
 
-The helper supports read-only status, lint, doctor, design validation, context
-pack validation, rule validation, state verification, dry-run next-action
-planning, static dashboard rendering, checkpoint eligibility preflight, and
-archive verify inspection. Its read-only behavior is part of the ASO boundary.
-It does not dispatch agents, mutate package or workspace state, perform
-checkpoints, commit, or push. For package lint compatibility, this boundary is
-also stated as: ASO does not provide mutation, dispatch, or checkpoint
-commands.
+The helper supports read-only status, lint, doctor, package-sync verification,
+design validation, context pack validation, rule validation, state
+verification, dry-run next-action planning, static dashboard rendering,
+checkpoint eligibility preflight, and archive verify inspection. Its read-only
+behavior is part of the ASO boundary. It does not dispatch agents, mutate
+package or workspace state, perform checkpoints, commit, or push. For package
+lint compatibility, this boundary is also stated as: ASO does not provide
+mutation, dispatch, or checkpoint commands.
 
 ## Publication and cleanup boundary
 
-Stage 1 and Stage 2 working upgrade packages and generated execution artifacts are local
-inputs/evidence, not public package documentation. Do not publish or checkpoint
-the working upgrade package, generated runtime task packets, profile results,
-audit results, local scratch notes, command logs, Codex artifacts, or
-`project-runtime`/`project-archive` material as accepted package docs.
+Stage 1, Stage 2, and Stage 3 working upgrade packages and generated execution
+artifacts are local inputs/evidence, not public package documentation. Do not
+publish or checkpoint the working upgrade package, generated runtime task
+packets, profile results, audit results, local scratch notes, command logs,
+Codex artifacts, or `project-runtime`/`project-archive` material as accepted
+package docs.
 
 Accepted stable summaries may be added under package-controlled paths such as:
 
 ```text
 agent-system/11_release/STAGE1_UPGRADE_VALIDATION_REPORT.md
 agent-system/11_release/STAGE2_UPGRADE_VALIDATION_REPORT.md
+agent-system/11_release/STAGE3_SAFE_AUTOMATION_DIAGNOSTICS_RELEASE_NOTES.md
 ```
 
 The Stage 1 final validation report is accepted evidence and must remain
@@ -292,6 +309,10 @@ agent-system/11_release/STAGE2_STATE_CONTRACT_CORRECTION_VALIDATION_REPORT.md
 
 Task 006 supplied final local command evidence in that report, including the
 current validation blocker status.
+The Stage 3 release notes are Task 007 documentation evidence only. They record
+the intended `3.1.0 / 3.1.0 / 3.0.0` package tuple and safety boundary, but
+they do not claim final Stage 3 validation before Task 008 supplies its command
+evidence.
 
 After all accepted upgrade tasks are committed and pushed by the orchestrator,
 cleanup is local:
@@ -374,7 +395,7 @@ Profile agents do not commit or push. Auditors do not replace the checkpoint. Fa
 
 ## Governance smoke tests
 
-Run local package governance smoke tests with:
+Run standalone package governance smoke tests with:
 
 ```text
 ./agent-system/scripts/run_governance_smoke_tests.sh
@@ -384,7 +405,8 @@ The smoke runner creates temporary local Git repositories and uses dry-run
 preflight checks only. It does not stage, commit, push, contact a real remote,
 or require real secrets.
 
-Expected pass behavior:
+Expected pass behavior after the standalone fixture expectations are aligned
+with the active package tuple:
 
 ```text
 SMOKE_RESULT: passed
@@ -410,13 +432,13 @@ Governance and package changes are recorded in:
 agent-system/GOVERNANCE_CHANGELOG.md
 ```
 
-Current active tuple and Stage 2 marker:
+Current active tuple and Stage 3 marker:
 
 ```text
-CURRENT_PACKAGE_VERSION: 3.0.2
-CURRENT_GOVERNANCE_RULESET_VERSION: 3.0.2
+CURRENT_PACKAGE_VERSION: 3.1.0
+CURRENT_GOVERNANCE_RULESET_VERSION: 3.1.0
 CURRENT_RUNTIME_SCHEMA_VERSION: 3.0.0
-STAGE2_CORRECTION_MARKER: state-contract-correction
+STAGE3_RELEASE_MARKER: safe-automation-diagnostics
 ```
 
 ## Examples
@@ -447,6 +469,7 @@ Documentation-only examples and the final smoke checklist live in:
 agent-system/10_examples/MINIMAL_EXAMPLE_FIXTURE.md
 agent-system/10_examples/EXPECTED_FLOW_EXAMPLE.md
 agent-system/10_examples/FINAL_SMOKE_CHECKLIST.md
+agent-system/10_examples/STAGE3_SAFE_AUTOMATION_DIAGNOSTICS_COMMANDS.md
 ```
 
 These examples demonstrate the generic TZ -> requirements/design -> task ->

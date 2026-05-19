@@ -11,7 +11,7 @@ test:
 	$(PYTHON) -m unittest discover -s agent-system/tests
 
 smoke:
-	$(PYTHON) $(ASO_SCRIPT) --help >/dev/null
+	PYTHONDONTWRITEBYTECODE=1 $(PYTHON) $(ASO_SCRIPT) --help >/dev/null
 	PYTHONDONTWRITEBYTECODE=1 $(PYTHON) $(ASO_SCRIPT) status --root . --mode package
 	PYTHONDONTWRITEBYTECODE=1 $(PYTHON) $(ASO_SCRIPT) lint --root . --mode package --strict
 	PYTHONDONTWRITEBYTECODE=1 $(PYTHON) $(ASO_SCRIPT) doctor --root . --mode package --strict
@@ -23,7 +23,7 @@ smoke:
 	PYTHONDONTWRITEBYTECODE=1 $(PYTHON) $(ASO_SCRIPT) plan-next --root agent-system/tests/fixtures/state/valid_workspace --strict --json-out /tmp/aso-stage2-plan-smoke.json
 	PYTHONDONTWRITEBYTECODE=1 $(PYTHON) $(ASO_SCRIPT) dashboard --root agent-system/tests/fixtures/state/valid_workspace --out /tmp/aso-stage2-dashboard-smoke.html
 	PYTHONDONTWRITEBYTECODE=1 $(PYTHON) $(ASO_SCRIPT) checkpoint-preflight --root . --mode package --strict --json-out /tmp/aso-stage2-checkpoint-preflight-smoke.json
-	./agent-system/scripts/run_governance_smoke_tests.sh
+	PYTHONDONTWRITEBYTECODE=1 ./agent-system/scripts/run_governance_smoke_tests.sh
 
 doctor:
 	PYTHONDONTWRITEBYTECODE=1 $(PYTHON) $(ASO_SCRIPT) doctor --root . --mode package --strict

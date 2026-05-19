@@ -19,8 +19,8 @@ RUNTIME_SCHEMA_VERSION:
 ## Active version constants
 
 ```text
-CURRENT_PACKAGE_VERSION: 3.0.2
-CURRENT_GOVERNANCE_RULESET_VERSION: 3.0.2
+CURRENT_PACKAGE_VERSION: 3.1.0
+CURRENT_GOVERNANCE_RULESET_VERSION: 3.1.0
 CURRENT_RUNTIME_SCHEMA_VERSION: 3.0.0
 ```
 
@@ -176,6 +176,22 @@ reconciles the accepted Stage 2 state contract rather than introducing a new
 runtime state meaning. It also preserves the read-only ASO helper boundary:
 ASO does not dispatch agents, mutate package or workspace state, perform
 checkpoints, commit, or push.
+
+The Stage 3 safe automation diagnostics package installs:
+
+```text
+CURRENT_PACKAGE_VERSION: 3.1.0
+CURRENT_GOVERNANCE_RULESET_VERSION: 3.1.0
+CURRENT_RUNTIME_SCHEMA_VERSION: 3.0.0
+```
+
+This minor update adds package synchronization diagnostics and release cleanup
+documentation while preserving the runtime schema version at `3.0.0`.
+Stage 3 command surfaces are read-only, dry-run, or proposal-only. They may
+inspect package metadata, command readiness, generated reports, and cleanup
+eligibility, but they do not dispatch agents, mutate package or workspace
+state, perform governed checkpoints, approve owner decisions, commit, push, or
+publish local input/runtime/archive roots.
 
 ## Version semantics
 

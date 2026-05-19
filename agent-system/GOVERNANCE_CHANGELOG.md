@@ -1166,4 +1166,44 @@ MIGRATION_NOTE: No runtime schema migration is introduced. The active tuple rema
 AUTHORIZED_BY: project_owner
 AUDIT_REQUIRED: yes
 STATUS: accepted
+
+CHANGE_ID: GOV-2026-05-19-001
+CHANGE_TITLE: ASO_STAGE3_SAFE_AUTOMATION_DIAGNOSTICS_VERSION_RELEASE_CLEANUP
+DATE: 2026-05-19
+PACKAGE_VERSION_BEFORE: 3.0.2
+PACKAGE_VERSION_AFTER: 3.1.0
+GOVERNANCE_RULESET_BEFORE: 3.0.2
+GOVERNANCE_RULESET_AFTER: 3.1.0
+RUNTIME_SCHEMA_BEFORE: 3.0.0
+RUNTIME_SCHEMA_AFTER: 3.0.0
+CHANGE_TYPE: minor
+CHANGE_SUBTYPE: docs_version_release_cleanup
+AFFECTED_FILES:
+- README.md
+- pyproject.toml
+- Makefile
+- agent-system/README.md
+- agent-system/PACKAGE_VERSIONING.md
+- agent-system/GOVERNANCE_CHANGELOG.md
+- agent-system/10_examples/STAGE3_SAFE_AUTOMATION_DIAGNOSTICS_COMMANDS.md
+- agent-system/11_release/STAGE3_SAFE_AUTOMATION_DIAGNOSTICS_RELEASE_NOTES.md
+- agent_system_orchestrator_aso/__init__.py
+AFFECTED_INVARIANTS:
+- Active package/governance/runtime tuple is 3.1.0 / 3.1.0 / 3.0.0.
+- Stage 3 command surfaces are read-only, dry-run, or proposal-only.
+- ASO package-sync verification is a guard for metadata and command surface coherence, not a repair or publishing command.
+- Direct script execution remains the compatibility baseline; installed `aso` console-script use is additive after local editable install.
+- Root project-input, project-runtime, and project-archive remain local generated or owner-input roots and must not be published as accepted package documentation.
+- Stage 1 and Stage 2 release reports remain historical package evidence.
+- Stage 3 Task 007 release notes do not claim final validation pass before Task 008 supplies command evidence.
+AFFECTED_TRANSITIONS:
+- package metadata update -> independent audit -> orchestrator-owned checkpoint only after audit pass.
+- package-sync verify -> read-only diagnostic result; no mutation, repair, checkpoint, commit, push, or publication.
+- Stage 3 cleanup -> Task 008 final validation evidence before final acceptance can be claimed.
+SCHEMA_TEMPLATE_IMPACT: none
+MIGRATION_REQUIRED: no
+MIGRATION_NOTE: No runtime schema migration is introduced. Existing v3.0.x workspaces should update the package and governance docs to v3.1.0 before relying on Stage 3 package-sync guard documentation. Runtime schema remains 3.0.0.
+AUTHORIZED_BY: project_owner
+AUDIT_REQUIRED: yes
+STATUS: proposed
 ```

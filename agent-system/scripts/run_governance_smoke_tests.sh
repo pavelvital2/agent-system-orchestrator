@@ -760,8 +760,8 @@ assert_coverage_matrix() {
 }
 
 assert_version_changelog_coherence() {
-  awk -v pkg="CURRENT_PACKAGE_VERSION: 3.0.2" \
-    -v governance="CURRENT_GOVERNANCE_RULESET_VERSION: 3.0.2" \
+  awk -v pkg="CURRENT_PACKAGE_VERSION: 3.1.0" \
+    -v governance="CURRENT_GOVERNANCE_RULESET_VERSION: 3.1.0" \
     -v runtime="CURRENT_RUNTIME_SCHEMA_VERSION: 3.0.0" '
     /^## Active version constants$/ { in_section=1; section_seen=1; next }
     section_seen && in_section && /^## / { in_section=0 }
@@ -769,22 +769,22 @@ assert_version_changelog_coherence() {
     in_section && $0 == governance { governance_found=1 }
     in_section && $0 == runtime { runtime_found=1 }
     END { exit(section_seen && pkg_found && governance_found && runtime_found ? 0 : 1) }
-  ' "$PACKAGE_VERSIONING" || die "PACKAGE_VERSIONING active version constants missing 3.0.2 / 3.0.2 / 3.0.0"
+  ' "$PACKAGE_VERSIONING" || die "PACKAGE_VERSIONING active version constants missing 3.1.0 / 3.1.0 / 3.0.0"
 
-  awk -v pkg="CURRENT_PACKAGE_VERSION: 3.0.2" \
-    -v governance="CURRENT_GOVERNANCE_RULESET_VERSION: 3.0.2" \
+  awk -v pkg="CURRENT_PACKAGE_VERSION: 3.1.0" \
+    -v governance="CURRENT_GOVERNANCE_RULESET_VERSION: 3.1.0" \
     -v runtime="CURRENT_RUNTIME_SCHEMA_VERSION: 3.0.0" \
-    -v marker="STAGE2_CORRECTION_MARKER: state-contract-correction" '
-    /^Current active tuple and Stage 2 marker:$/ { in_section=1; section_seen=1; next }
+    -v marker="STAGE3_RELEASE_MARKER: safe-automation-diagnostics" '
+    /^Current active tuple and Stage 3 marker:$/ { in_section=1; section_seen=1; next }
     section_seen && in_section && /^## Examples$/ { in_section=0 }
     in_section && $0 == pkg { pkg_found=1 }
     in_section && $0 == governance { governance_found=1 }
     in_section && $0 == runtime { runtime_found=1 }
     in_section && $0 == marker { marker_found=1 }
     END { exit(section_seen && pkg_found && governance_found && runtime_found && marker_found ? 0 : 1) }
-  ' "$PACKAGE_README" || die "README current active tuple missing 3.0.2 / 3.0.2 / 3.0.0 Stage 2 marker"
+  ' "$PACKAGE_README" || die "README current active tuple missing 3.1.0 / 3.1.0 / 3.0.0 Stage 3 marker"
 
-  printf 'PASS: version coherence asserts active 3.0.2 package/governance with runtime schema 3.0.0\n'
+  printf 'PASS: version coherence asserts active 3.1.0 package/governance with runtime schema 3.0.0\n'
   PASS_COUNT=$((PASS_COUNT + 1))
 }
 

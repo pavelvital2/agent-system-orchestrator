@@ -16,11 +16,12 @@ agent-system/README.md
 
 The package is a filesystem-governed instruction, template, lifecycle, and validation system for Codex CLI orchestration. It includes an experimental read-only ASO helper CLI at `agent-system/tools/aso/aso.py`.
 
-This Stage 2 state-contract correction branch updates the active package
-metadata to the governed `3.0.2` package/governance tuple with runtime schema
-`3.0.0`. The correction resolves drift among state sidecars, templates,
-schemas, fixtures, validator expectations, command examples, and release
-evidence.
+This Stage 3 safe automation diagnostics branch updates the active package
+metadata to the governed `3.1.0` package/governance tuple with runtime schema
+`3.0.0`. Stage 3 keeps ASO helper commands read-only, dry-run, or
+proposal-only and adds package synchronization diagnostics without adding live
+agent dispatch, autonomous owner approval, governed checkpoint execution,
+commit, push, or publishing authority.
 
 ## Local install and command surface
 
@@ -70,6 +71,12 @@ python3 agent-system/tools/aso/aso.py dashboard --root agent-system/tests/fixtur
 python3 agent-system/tools/aso/aso.py checkpoint-preflight --root . --mode package --strict --json-out /tmp/aso-stage2-checkpoint-preflight.json
 ```
 
+Stage 3 diagnostics are read-only and verify package metadata coherence:
+
+```text
+python3 agent-system/tools/aso/aso.py package-sync verify --root . --strict
+```
+
 Repeatable root targets:
 
 ```text
@@ -82,26 +89,27 @@ make ci
 ```
 
 The smoke target includes CLI help, package status, strict package lint,
-strict package doctor, valid design/context-pack fixtures, rule validation,
-state sidecar verification, dry-run next-action planning, static dashboard
-rendering to `/tmp`, checkpoint preflight, and the local governance smoke
-runner. The CI target runs the local test, smoke, doctor, lint, and whitespace
-diff checks. CI should use the same local commands and must not require
-secrets, network credentials, real remotes, or publishing permissions.
+strict package doctor, read-only package-sync verification, valid
+design/context-pack fixtures, rule validation, state sidecar verification,
+dry-run next-action planning, static dashboard rendering to `/tmp`,
+and checkpoint preflight. The CI target runs the local test, smoke, doctor,
+lint, and whitespace diff checks. CI should use the same local commands and
+must not require secrets, network credentials, real remotes, publishing
+permissions, or live automation authority.
 
 Stage 2 state-contract examples use the corrected valid workspace fixture at
 `agent-system/tests/fixtures/state/valid_workspace`. The dry-run plan example
 reports the canonical next action value `CREATE_AGENT`; it is evidence only and
 does not dispatch an agent.
 
-The helper supports read-only status, lint, doctor, design validation, context
-pack validation, rule validation, state verification, dry-run next-action
-planning, static dashboard rendering, checkpoint eligibility preflight, and
-archive verify inspection. Its read-only behavior is part of the ASO boundary.
-It does not dispatch agents, mutate package or workspace state, perform
-checkpoints, commit, or push. For package lint compatibility, this boundary is
-also stated as: ASO does not provide mutation, dispatch, or checkpoint
-commands.
+The helper supports read-only status, lint, doctor, package-sync verification,
+design validation, context pack validation, rule validation, state
+verification, dry-run next-action planning, static dashboard rendering,
+checkpoint eligibility preflight, and archive verify inspection. Its read-only
+behavior is part of the ASO boundary. It does not dispatch agents, mutate
+package or workspace state, perform checkpoints, commit, or push. For package
+lint compatibility, this boundary is also stated as: ASO does not provide
+mutation, dispatch, or checkpoint commands.
 
 ## Publication boundary
 
@@ -125,4 +133,7 @@ for current acceptance by the Stage 2 state-contract correction. The final
 correction validation report is
 `agent-system/11_release/STAGE2_STATE_CONTRACT_CORRECTION_VALIDATION_REPORT.md`.
 That report records Task 006 command evidence and the current validation
-blocker status.
+blocker status. Stage 3 release cleanup notes are recorded in
+`agent-system/11_release/STAGE3_SAFE_AUTOMATION_DIAGNOSTICS_RELEASE_NOTES.md`;
+that file is Task 007 documentation evidence only and does not claim the final
+Stage 3 validation pass before Task 008 supplies command evidence.
