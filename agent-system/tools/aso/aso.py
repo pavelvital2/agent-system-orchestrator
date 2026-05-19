@@ -10,6 +10,7 @@ from pathlib import Path
 from commands import (
     archive_verify,
     checkpoint_preflight,
+    context_pack_build,
     dashboard,
     dag,
     doctor,
@@ -184,6 +185,40 @@ def build_parser() -> argparse.ArgumentParser:
         help="Write the context pack validation report JSON to this explicit path.",
     )
     validate_context_pack_parser.set_defaults(handler=validate_context_pack.run)
+
+    context_pack_parser = subparsers.add_parser(
+        "context-pack",
+        help="Context pack proposal commands.",
+        description="Dry-run/read-only context pack proposal commands.",
+    )
+    context_pack_subparsers = context_pack_parser.add_subparsers(dest="context_pack_command", metavar="COMMAND")
+    context_pack_build_parser = context_pack_subparsers.add_parser(
+        "build",
+        help="Build a dry-run JSON context pack proposal from a task packet.",
+        description=(
+            "Parse a bounded task packet and emit a JSON context pack proposal to stdout "
+            "or an explicit --json-out path. This command does not dispatch agents, "
+            "mutate runtime state, commit, push, checkpoint, or approve owner decisions."
+        ),
+    )
+    _add_root_argument(context_pack_build_parser, validate=False)
+    context_pack_build_parser.add_argument(
+        "--task-packet",
+        required=True,
+        metavar="TASK_PACKET.md",
+        help="Markdown task packet to parse.",
+    )
+    context_pack_build_parser.add_argument(
+        "--strict",
+        action="store_true",
+        help="Reject missing required docs and warnings as failed proposal builds.",
+    )
+    context_pack_build_parser.add_argument(
+        "--json-out",
+        metavar="PATH",
+        help="Write the proposal JSON to this explicit path instead of stdout.",
+    )
+    context_pack_build_parser.set_defaults(handler=context_pack_build.run_build)
 
     validate_rules_parser = subparsers.add_parser(
         "validate-rules",

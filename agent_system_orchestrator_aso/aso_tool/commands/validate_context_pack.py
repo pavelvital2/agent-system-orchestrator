@@ -25,6 +25,36 @@ REQUIRED_DOC_FIELDS = ("path", "sections", "why_needed")
 BUDGET_FIELDS = ("max_docs", "max_sections_per_doc", "max_chars_total")
 ARCHIVE_PREFIXES = ("project-archive",)
 DEPRECATED_MARKERS = ("deprecated", "superseded")
+GENERATED_PARTS = {"__pycache__"}
+GENERATED_SUFFIXES = (".pyc",)
+MAX_DIRECTORY_CONTEXT_FILES = 40
+MAX_DIRECTORY_CONTEXT_BYTES = 250_000
+BROAD_DIRECTORY_CONTEXT_PATHS = {
+    "agent-system",
+    "agent-system/00_start",
+    "agent-system/01_roles",
+    "agent-system/02_runtime",
+    "agent-system/03_templates",
+    "agent-system/04_state",
+    "agent-system/05_gap_flow",
+    "agent-system/06_logs",
+    "agent-system/07_lifecycle",
+    "agent-system/08_profiles",
+    "agent-system/09_validators",
+    "agent-system/10_examples",
+    "agent-system/11_release",
+    "agent-system/scripts",
+    "agent-system/tests",
+    "agent-system/tests/fixtures",
+    "agent-system/tools",
+    "agent-system/tools/aso",
+    "agent-system/tools/aso/commands",
+    "project-archive",
+    "project-input",
+    "project-runtime",
+    ".tmp",
+    "tmp",
+}
 
 
 @dataclass(frozen=True)
@@ -156,6 +186,32 @@ def _is_archive_path(path: str) -> bool:
 def _is_deprecated_path(path: str) -> bool:
     lowered_parts = [part.lower() for part in path.split("/")]
     return any(any(marker in part for marker in DEPRECATED_MARKERS) for part in lowered_parts)
+
+
+def _is_generated_artifact(path: Path) -> bool:
+    return any(part in GENERATED_PARTS for part in path.parts) or path.name.endswith(GENERATED_SUFFIXES)
+
+
+def _is_broad_directory_context(path: str) -> bool:
+    return path.rstrip("/") in BROAD_DIRECTORY_CONTEXT_PATHS
+
+
+def _directory_context_stats(root: Path, directory: Path) -> tuple[int, int, bool]:
+    file_count = 0
+    total_bytes = 0
+    escapes_root = False
+    root_resolved = root.resolve(strict=False)
+    for child in sorted(directory.rglob("*")):
+        if _is_generated_artifact(child) or not child.is_file():
+            continue
+        try:
+            child.resolve(strict=False).relative_to(root_resolved)
+        except ValueError:
+            escapes_root = True
+            continue
+        file_count += 1
+        total_bytes += child.stat().st_size
+    return file_count, total_bytes, escapes_root
 
 
 def _required_doc_paths(payload: dict[str, object]) -> list[str]:
@@ -306,18 +362,85 @@ def _validate_required_docs(
                     )
                 )
                 continue
-            if not absolute_doc.is_file():
+            if not absolute_doc.is_file() and not absolute_doc.is_dir():
                 findings.append(
                     _finding(
                         "CPP-005",
                         "Required document is missing",
-                        f"{field_prefix}.path does not exist as a file under --root: {doc_path}",
+                        f"{field_prefix}.path does not exist as a file or bounded directory under --root: {doc_path}",
                         relpath,
                         f"{field_prefix}.path",
-                        "Reference only existing source-of-truth documents.",
+                        "Reference only existing source-of-truth documents or bounded fixture directories.",
                     )
                 )
+            elif absolute_doc.is_dir():
+                findings.extend(
+                    _validate_directory_context(doc_path, absolute_doc, root, relpath, f"{field_prefix}.path")
+                )
 
+    return findings
+
+
+def _validate_directory_context(
+    path: str,
+    absolute_dir: Path,
+    root: Path,
+    relpath: str,
+    field: str,
+) -> list[ContextPackFinding]:
+    findings: list[ContextPackFinding] = []
+    if _is_broad_directory_context(path):
+        findings.append(
+            _finding(
+                "CPP-006",
+                "Context directory is too broad",
+                f"{field} references a broad directory context: {path}",
+                relpath,
+                field,
+                "Reference bounded files or a specific fixture/template/test subdirectory instead of a top-level package root.",
+            )
+        )
+
+    file_count, total_bytes, escapes_root = _directory_context_stats(root, absolute_dir)
+    if escapes_root:
+        findings.append(
+            _finding(
+                "CPP-001",
+                "Context directory escapes the repository root",
+                f"{field} contains a file that resolves outside --root: {path}",
+                relpath,
+                field,
+                "Remove symlinked or escaped files from directory context.",
+            )
+        )
+    if file_count > MAX_DIRECTORY_CONTEXT_FILES:
+        findings.append(
+            _finding(
+                "CPB-004",
+                "Context directory exceeds file-count budget",
+                (
+                    f"{field} includes {file_count} files; directory context is limited to "
+                    f"{MAX_DIRECTORY_CONTEXT_FILES} files."
+                ),
+                relpath,
+                field,
+                "Replace the directory with specific files or a smaller bounded subdirectory.",
+            )
+        )
+    if total_bytes > MAX_DIRECTORY_CONTEXT_BYTES:
+        findings.append(
+            _finding(
+                "CPB-005",
+                "Context directory exceeds byte budget",
+                (
+                    f"{field} includes {total_bytes} bytes; directory context is limited to "
+                    f"{MAX_DIRECTORY_CONTEXT_BYTES} bytes."
+                ),
+                relpath,
+                field,
+                "Replace the directory with specific files or a smaller bounded subdirectory.",
+            )
+        )
     return findings
 
 
@@ -393,6 +516,7 @@ def _validate_forbidden_docs(payload: dict[str, object], relpath: str) -> tuple[
 def _validate_source_of_truth(
     payload: dict[str, object],
     relpath: str,
+    root: Path,
     forbidden_prefixes: list[str],
 ) -> list[ContextPackFinding]:
     findings: list[ContextPackFinding] = []
@@ -417,6 +541,26 @@ def _validate_source_of_truth(
             findings.append(path_finding)
             continue
         findings.extend(_validate_context_path_policy(path, relpath, field, forbidden_prefixes))
+        if root.exists() and root.is_dir():
+            absolute_path = (root / path).resolve(strict=False)
+            try:
+                absolute_path.relative_to(root.resolve(strict=False))
+            except ValueError:
+                findings.append(
+                    _finding(
+                        "CPP-001",
+                        "Source-of-truth path escapes the repository root",
+                        f"{field} resolves outside --root: {path}",
+                        relpath,
+                        field,
+                        "Use repository-relative paths inside --root.",
+                    )
+                )
+            else:
+                if absolute_path.is_dir():
+                    findings.extend(
+                        _validate_directory_context(path, absolute_path, root, relpath, field)
+                    )
         if path not in required_paths:
             findings.append(
                 _finding(
@@ -528,7 +672,7 @@ def _validate_payload(payload: dict[str, object], relpath: str, root: Path, raw_
     forbidden_prefixes, forbidden_findings = _validate_forbidden_docs(payload, relpath)
     findings.extend(forbidden_findings)
     findings.extend(_validate_required_docs(payload, relpath, root, forbidden_prefixes))
-    findings.extend(_validate_source_of_truth(payload, relpath, forbidden_prefixes))
+    findings.extend(_validate_source_of_truth(payload, relpath, root, forbidden_prefixes))
     findings.extend(_validate_budget(payload, relpath, raw_text))
     return sorted(findings, key=lambda item: (item.rule_id, item.field, item.details))
 

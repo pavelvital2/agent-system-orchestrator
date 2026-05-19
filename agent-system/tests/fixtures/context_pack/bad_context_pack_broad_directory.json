@@ -1,0 +1,25 @@
+{
+  "task_id": "TASK_ASO_STAGE3_003A_BROAD_DIRECTORY",
+  "required_docs": [
+    {
+      "path": "agent-system/",
+      "sections": [
+        "Whole package"
+      ],
+      "why_needed": "Regression fixture for broad directory context rejection."
+    }
+  ],
+  "forbidden_docs": [
+    "project-archive/",
+    "project-input/",
+    "project-runtime/"
+  ],
+  "source_of_truth": [
+    "agent-system/"
+  ],
+  "context_budget": {
+    "max_docs": 5,
+    "max_sections_per_doc": 4,
+    "max_chars_total": 5000
+  }
+}
