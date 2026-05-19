@@ -145,6 +145,26 @@ class DagCommandTests(unittest.TestCase):
         self.assertEqual(result.returncode, 1, result.stdout + result.stderr)
         self.assertIn("DAG_DEPENDENCY_CHECKPOINT_EVIDENCE_INCOMPLETE", result.stdout)
 
+    def test_ready_task_requires_checkpoint_done_not_audit_passed_dependency(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = copy_dag_valid(tmp)
+            payload = load_registry(root)
+            middle = tasks(payload)[1]
+            self.assertEqual(middle["status"], "checkpoint_done")
+            middle["status"] = "audit_passed"
+            middle["commit_hash"] = "NONE"
+            middle["branch"] = "NONE"
+            middle["push_status"] = "not_required"
+            middle["accepted_files"] = []
+            middle["checkpoint_ref"] = "NONE"
+            write_registry(root, payload)
+
+            result = run_dag(root, "verify", "--strict")
+
+        self.assertEqual(result.returncode, 1, result.stdout + result.stderr)
+        self.assertIn("DAG_DEPENDENCY_AUDIT_PASSED_WITHOUT_CHECKPOINT", result.stdout)
+        self.assertNotIn("DAG_DEPENDENCY_CHECKPOINT_EVIDENCE_INCOMPLETE", result.stdout)
+
     def test_requester_return_metadata_inconsistency_fails(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             root = copy_dag_valid(tmp)
