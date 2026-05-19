@@ -6,13 +6,14 @@
   "updated_at": "2026-01-01T00:00:00Z",
   "updated_by": "orchestrator",
   "content": {
-    "action_id": "ACTION-FIXTURE-MISSING-001",
+    "action_id": "ACTION-INVALID-DISPATCH",
     "action_type": "create_agent",
-    "task_id": "TASK_FIXTURE_MISSING_001",
-    "task_packet": "project-runtime/tasks/active/TASK_FIXTURE_MISSING_001.md",
+    "target_role": "developer",
+    "task_id": "TASK_INVALID_DISPATCH",
+    "task_packet": "project-runtime/tasks/active/TASK_INVALID_DISPATCH.md",
     "dependency_status": "ready",
     "blocked_by": [],
-    "action_semantic": "normal",
+    "action_semantic": "dispatch",
     "workspace_identity_required": true,
     "repository_lock_required": true,
     "checkpoint_policy": "no_checkpoint",
@@ -26,6 +27,6 @@
     "expected_result": [
       "agent-system/03_templates/AGENT_RESULT_TEMPLATE.md"
     ],
-    "instruction_for_orchestrator": "This fixture intentionally omits target_role."
+    "instruction_for_orchestrator": "Create the invalid dispatch fixture task."
   }
 }

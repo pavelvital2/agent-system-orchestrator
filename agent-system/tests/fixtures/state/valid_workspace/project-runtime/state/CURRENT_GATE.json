@@ -7,16 +7,24 @@
   "updated_by": "orchestrator",
   "content": {
     "gate_id": "GATE-FIXTURE-001",
+    "gate_name": "Fixture implementation gate",
     "gate_type": "implementation",
-    "status": "active",
+    "status": "open",
     "owner_role": "orchestrator",
     "task_id": "TASK_FIXTURE_STATE_001",
     "task_packet": "project-runtime/tasks/active/TASK_FIXTURE_STATE_001.md",
-    "action_semantic": "dispatch",
+    "action_semantic": "normal",
     "workspace_identity_status": "passed",
-    "repository_lock_status": "passed",
-    "checkpoint_eligibility": "not_required",
-    "checkpoint_blocked_by": [],
-    "evidence_refs": []
+    "repository_lock_status": "accepted",
+    "baseline_tracking_status": "passed",
+    "checkpoint_eligibility": "not_applicable",
+    "checkpoint_eligibility_status": "not_checked",
+    "project_checkpoint_status": "not_required",
+    "entry_criteria": [],
+    "exit_criteria": [],
+    "required_next_role": "developer",
+    "gate_evidence": [],
+    "blocking_status": "NONE",
+    "notes": []
   }
 }

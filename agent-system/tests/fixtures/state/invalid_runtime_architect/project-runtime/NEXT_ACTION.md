@@ -1,10 +1,10 @@
 # NEXT_ACTION
 
-ACTION_ID: ACTION-FIXTURE-001
+ACTION_ID: ACTION-INVALID-RUNTIME-ARCHITECT
 ACTION_TYPE: create_agent
-TARGET_ROLE: developer
-TASK_ID: TASK_FIXTURE_STATE_001
-TASK_PACKET: project-runtime/tasks/active/TASK_FIXTURE_STATE_001.md
+TARGET_ROLE: runtime_architect
+TASK_ID: TASK_INVALID_RUNTIME_ARCHITECT
+TASK_PACKET: project-runtime/tasks/active/TASK_INVALID_RUNTIME_ARCHITECT.md
 DEPENDENCY_STATUS: ready
 BLOCKED_BY: NONE
 ACTION_SEMANTIC: normal
@@ -31,4 +31,4 @@ EXPECTED_RESULT:
 - agent-system/03_templates/AGENT_RESULT_TEMPLATE.md
 
 ## Instruction for orchestrator
-Create the fixture developer agent task.
+Create the invalid runtime architect fixture task.

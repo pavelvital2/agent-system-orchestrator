@@ -2,67 +2,81 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://agent-system.local/schemas/task_registry.schema.json",
   "title": "TASK_REGISTRY",
-  "description": "Machine-readable sidecar for agent-system/04_state/TASK_REGISTRY_TEMPLATE.md.",
+  "description": "Stage 2 envelope sidecar for project-runtime/TASK_REGISTRY.md.",
   "type": "object",
   "additionalProperties": false,
-  "required": ["TASK_ENTRIES"],
+  "required": [
+    "schema_version",
+    "sidecar_type",
+    "markdown_source",
+    "state_revision",
+    "updated_at",
+    "updated_by",
+    "content"
+  ],
   "properties": {
-    "TASK_ENTRIES": {
-      "oneOf": [
-        { "const": "NONE" },
-        {
-          "type": "array",
-          "items": { "$ref": "#/$defs/taskEntry" }
-        }
-      ]
-    }
+    "schema_version": { "type": "string", "const": "2.0.0" },
+    "sidecar_type": { "type": "string", "const": "TASK_REGISTRY" },
+    "markdown_source": { "type": "string", "const": "project-runtime/TASK_REGISTRY.md" },
+    "state_revision": { "type": "integer", "minimum": 1 },
+    "updated_at": { "type": "string", "format": "date-time" },
+    "updated_by": { "type": "string", "const": "orchestrator" },
+    "content": { "$ref": "#/$defs/content" }
   },
   "$defs": {
+    "content": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["registry_revision", "tasks"],
+      "properties": {
+        "registry_revision": { "type": "integer", "minimum": 1 },
+        "tasks": {
+          "oneOf": [
+            { "const": "NONE" },
+            { "type": "array", "items": { "$ref": "#/$defs/taskEntry" } }
+          ]
+        }
+      }
+    },
     "taskEntry": {
       "type": "object",
       "additionalProperties": false,
       "required": [
-        "TASK_ID",
-        "TASK_TITLE",
-        "TASK_TYPE",
-        "TASK_KIND",
-        "OWNER_ROLE",
-        "STATUS",
-        "TASK_PACKET",
-        "DEPENDENCIES",
-        "REQUESTED_BY_ROLE",
-        "REQUESTED_BY_TASK",
-        "RETURN_TO_REQUESTER_AFTER_AUDIT_PASS",
-        "RETURN_TO_ROLE_AFTER_AUDIT_PASS",
-        "RETURN_TASK_AFTER_AUDIT_PASS",
-        "RESEARCH_QUESTION_ID",
-        "RESULT_REFS",
-        "AUDIT_REFS",
-        "CORRECTION_LINKS",
-        "COMMIT_HASH",
-        "BRANCH",
-        "PUSH_STATUS",
-        "ACCEPTED_FILES",
-        "CHECKPOINT_REF",
-        "CREATED_AT",
-        "UPDATED_AT"
+        "task_id",
+        "task_title",
+        "task_type",
+        "task_kind",
+        "owner_role",
+        "status",
+        "task_packet",
+        "dependencies",
+        "requested_by_role",
+        "requested_by_task",
+        "return_to_requester_after_audit_pass",
+        "return_to_role_after_audit_pass",
+        "return_task_after_audit_pass",
+        "research_question_id",
+        "result_refs",
+        "audit_refs",
+        "correction_links",
+        "commit_hash",
+        "branch",
+        "push_status",
+        "accepted_files",
+        "checkpoint_ref",
+        "created_at",
+        "updated_at"
       ],
       "properties": {
-        "TASK_ID": { "type": "string" },
-        "TASK_TITLE": { "type": "string" },
-        "TASK_TYPE": {
-          "type": "string",
-          "enum": ["requirements_analyst", "solution_architect", "designer", "developer", "auditor", "tester", "technical_writer", "devops_setup_engineer", "release_manager"]
-        },
-        "TASK_KIND": {
+        "task_id": { "type": "string" },
+        "task_title": { "type": "string" },
+        "task_type": { "$ref": "#/$defs/profileRole" },
+        "task_kind": {
           "type": "string",
           "enum": ["normal", "research_dependency", "design_continuation", "task_continuation", "correction", "audit", "testing", "setup", "launch", "handover"]
         },
-        "OWNER_ROLE": {
-          "type": "string",
-          "enum": ["orchestrator", "requirements_analyst", "solution_architect", "designer", "developer", "auditor", "tester", "technical_writer", "devops_setup_engineer", "release_manager", "project_owner", "none"]
-        },
-        "STATUS": {
+        "owner_role": { "$ref": "#/$defs/controlOrTargetRole" },
+        "status": {
           "type": "string",
           "enum": [
             "pending",
@@ -77,31 +91,66 @@
             "completed"
           ]
         },
-        "TASK_PACKET": { "type": "string" },
-        "DEPENDENCIES": { "$ref": "#/$defs/listOrNone" },
-        "REQUESTED_BY_ROLE": {
-          "type": "string",
-          "enum": ["requirements_analyst", "solution_architect", "designer", "developer", "auditor", "tester", "technical_writer", "devops_setup_engineer", "release_manager", "NONE"]
+        "task_packet": { "type": "string" },
+        "dependencies": { "$ref": "#/$defs/listOrNone" },
+        "requested_by_role": {
+          "oneOf": [
+            { "$ref": "#/$defs/profileRole" },
+            { "const": "NONE" }
+          ]
         },
-        "REQUESTED_BY_TASK": { "type": "string" },
-        "RETURN_TO_REQUESTER_AFTER_AUDIT_PASS": { "type": "string", "enum": ["yes", "no"] },
-        "RETURN_TO_ROLE_AFTER_AUDIT_PASS": {
-          "type": "string",
-          "enum": ["requirements_analyst", "solution_architect", "designer", "developer", "auditor", "tester", "technical_writer", "devops_setup_engineer", "release_manager", "none"]
+        "requested_by_task": { "type": "string" },
+        "return_to_requester_after_audit_pass": { "type": "boolean" },
+        "return_to_role_after_audit_pass": {
+          "oneOf": [
+            { "$ref": "#/$defs/profileRole" },
+            { "const": "none" }
+          ]
         },
-        "RETURN_TASK_AFTER_AUDIT_PASS": { "type": "string" },
-        "RESEARCH_QUESTION_ID": { "type": "string" },
-        "RESULT_REFS": { "$ref": "#/$defs/listOrNone" },
-        "AUDIT_REFS": { "$ref": "#/$defs/listOrNone" },
-        "CORRECTION_LINKS": { "$ref": "#/$defs/listOrNone" },
-        "COMMIT_HASH": { "type": "string" },
-        "BRANCH": { "type": "string" },
-        "PUSH_STATUS": { "type": "string", "enum": ["not_required", "not_attempted", "pushed", "failed"] },
-        "ACCEPTED_FILES": { "$ref": "#/$defs/listOrNone" },
-        "CHECKPOINT_REF": { "type": "string" },
-        "CREATED_AT": { "type": "string" },
-        "UPDATED_AT": { "type": "string" }
+        "return_task_after_audit_pass": { "type": "string" },
+        "research_question_id": { "type": "string" },
+        "result_refs": { "$ref": "#/$defs/listOrNone" },
+        "audit_refs": { "$ref": "#/$defs/listOrNone" },
+        "correction_links": { "$ref": "#/$defs/listOrNone" },
+        "commit_hash": { "type": "string" },
+        "branch": { "type": "string" },
+        "push_status": { "type": "string", "enum": ["not_required", "not_attempted", "pushed", "failed"] },
+        "accepted_files": { "$ref": "#/$defs/listOrNone" },
+        "checkpoint_ref": { "type": "string" },
+        "created_at": { "type": "string" },
+        "updated_at": { "type": "string" }
       }
+    },
+    "profileRole": {
+      "type": "string",
+      "enum": [
+        "requirements_analyst",
+        "solution_architect",
+        "designer",
+        "developer",
+        "auditor",
+        "tester",
+        "technical_writer",
+        "devops_setup_engineer",
+        "release_manager"
+      ]
+    },
+    "controlOrTargetRole": {
+      "type": "string",
+      "enum": [
+        "orchestrator",
+        "requirements_analyst",
+        "solution_architect",
+        "designer",
+        "developer",
+        "auditor",
+        "tester",
+        "technical_writer",
+        "devops_setup_engineer",
+        "release_manager",
+        "project_owner",
+        "none"
+      ]
     },
     "listOrNone": {
       "oneOf": [

@@ -1,13 +1,13 @@
 # NEXT_ACTION
 
-ACTION_ID: ACTION-FIXTURE-001
+ACTION_ID: ACTION-INVALID-DISPATCH
 ACTION_TYPE: create_agent
 TARGET_ROLE: developer
-TASK_ID: TASK_FIXTURE_STATE_001
-TASK_PACKET: project-runtime/tasks/active/TASK_FIXTURE_STATE_001.md
+TASK_ID: TASK_INVALID_DISPATCH
+TASK_PACKET: project-runtime/tasks/active/TASK_INVALID_DISPATCH.md
 DEPENDENCY_STATUS: ready
 BLOCKED_BY: NONE
-ACTION_SEMANTIC: normal
+ACTION_SEMANTIC: dispatch
 WORKSPACE_IDENTITY_REQUIRED: yes
 REPOSITORY_LOCK_REQUIRED: yes
 CHECKPOINT_POLICY: no_checkpoint
@@ -31,4 +31,4 @@ EXPECTED_RESULT:
 - agent-system/03_templates/AGENT_RESULT_TEMPLATE.md
 
 ## Instruction for orchestrator
-Create the fixture developer agent task.
+Create the invalid dispatch fixture task.

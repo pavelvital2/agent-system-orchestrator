@@ -1,12 +1,12 @@
 # CURRENT_GATE
 
-GATE_ID: GATE-FIXTURE-001
-GATE_NAME: Fixture implementation gate
+GATE_ID: GATE-INVALID-ACTIVE
+GATE_NAME: Invalid active status gate
 GATE_TYPE: implementation
-STATUS: open
+STATUS: active
 OWNER_ROLE: orchestrator
-TASK_ID: TASK_FIXTURE_STATE_001
-TASK_PACKET: project-runtime/tasks/active/TASK_FIXTURE_STATE_001.md
+TASK_ID: TASK_INVALID_GATE_ACTIVE
+TASK_PACKET: project-runtime/tasks/active/TASK_INVALID_GATE_ACTIVE.md
 ACTION_SEMANTIC: normal
 WORKSPACE_IDENTITY_STATUS: passed
 REPOSITORY_LOCK_STATUS: accepted
