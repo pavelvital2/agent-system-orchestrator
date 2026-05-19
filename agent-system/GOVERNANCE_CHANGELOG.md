@@ -1236,6 +1236,7 @@ AFFECTED_INVARIANTS:
 - The workflow display name is package-neutral and no longer labels current governance checks as Stage 1.
 - Root project-input, project-runtime, and project-archive remain local generated or owner-input roots and must not be published as accepted package documentation.
 - This Task 004 documentation/version update does not claim the final correction pass before Task 005 supplies validation command evidence.
+- This changelog entry has exactly one status field, its value is accepted, and adjacent entry status fields are outside this entry boundary.
 AFFECTED_TRANSITIONS:
 - package metadata correction -> independent audit -> orchestrator-owned checkpoint only after audit pass.
 - DAG dependency evaluation -> downstream readiness only after dependency checkpoint completion evidence, not merely `audit_passed`.

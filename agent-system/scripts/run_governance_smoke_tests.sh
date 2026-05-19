@@ -13,6 +13,7 @@ SECRET_RULES="${REPO_ROOT}/agent-system/09_validators/SECRET_SCAN_RULES.md"
 RECEIPT_TEMPLATE="${REPO_ROOT}/agent-system/03_templates/CHECKPOINT_ELIGIBILITY_TEMPLATE.md"
 PACKAGE_VERSIONING="${REPO_ROOT}/agent-system/PACKAGE_VERSIONING.md"
 PACKAGE_README="${REPO_ROOT}/agent-system/README.md"
+GOVERNANCE_CHANGELOG="${REPO_ROOT}/agent-system/GOVERNANCE_CHANGELOG.md"
 FIXTURES_ROOT="${REPO_ROOT}/agent-system/tests/fixtures"
 PYTHON_BIN="${PYTHON_BIN:-python3}"
 
@@ -783,6 +784,21 @@ assert_version_changelog_coherence() {
     in_section && $0 == marker { marker_found=1 }
     END { exit(section_seen && pkg_found && governance_found && runtime_found && marker_found ? 0 : 1) }
   ' "$PACKAGE_README" || die "README current active tuple missing 3.1.1 / 3.1.1 / 3.0.0 Stage 3 marker"
+
+  awk -v change_id="CHANGE_ID: GOV-2026-05-19-002" '
+    $0 == change_id { in_entry=1; entry_seen=1 }
+    in_entry && $0 != change_id && /^CHANGE_ID: / { in_entry=0 }
+    in_entry {
+      if (index($0, "STATUS: proposed") > 0) { proposed_seen=1 }
+      if ($0 ~ /^STATUS:/) {
+        status_count++
+        status_value=$0
+      }
+    }
+    END {
+      exit(entry_seen && !proposed_seen && status_count == 1 && status_value == "STATUS: accepted" ? 0 : 1)
+    }
+  ' "$GOVERNANCE_CHANGELOG" || die "GOVERNANCE_CHANGELOG GOV-2026-05-19-002 must have exactly one accepted status and no proposed status within entry boundary"
 
   printf 'PASS: version coherence asserts active 3.1.1 package/governance with runtime schema 3.0.0\n'
   PASS_COUNT=$((PASS_COUNT + 1))
