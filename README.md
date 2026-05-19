@@ -16,12 +16,17 @@ agent-system/README.md
 
 The package is a filesystem-governed instruction, template, lifecycle, and validation system for Codex CLI orchestration. It includes an experimental read-only ASO helper CLI at `agent-system/tools/aso/aso.py`.
 
-This Stage 3 safe automation diagnostics branch updates the active package
-metadata to the governed `3.1.0` package/governance tuple with runtime schema
+This Stage 3 DAG checkpoint correction branch records the active package
+metadata as the governed `3.1.1` package/governance tuple with runtime schema
 `3.0.0`. Stage 3 keeps ASO helper commands read-only, dry-run, or
 proposal-only and adds package synchronization diagnostics without adding live
 agent dispatch, autonomous owner approval, governed checkpoint execution,
 commit, push, or publishing authority.
+
+Stage 3 acceptance for the current correction is tied to the
+`upgrade/stage-3-dag-checkpoint-correction` branch and the Task 005 final
+validation report. This documentation/version update does not claim the final
+correction pass before that command evidence exists.
 
 ## Local install and command surface
 
@@ -76,6 +81,11 @@ Stage 3 diagnostics are read-only and verify package metadata coherence:
 ```text
 python3 agent-system/tools/aso/aso.py package-sync verify --root . --strict
 ```
+
+For DAG readiness, `audit_passed` is not a completed dependency. Downstream
+work that depends on accepted task output requires `checkpoint_done` with
+checkpoint evidence, or another explicitly completed terminal state allowed by
+the governance rules.
 
 Repeatable root targets:
 
@@ -133,7 +143,10 @@ for current acceptance by the Stage 2 state-contract correction. The final
 correction validation report is
 `agent-system/11_release/STAGE2_STATE_CONTRACT_CORRECTION_VALIDATION_REPORT.md`.
 That report records Task 006 command evidence and the current validation
-blocker status. Stage 3 release cleanup notes are recorded in
+blocker status. Stage 3 v3.1.0 release cleanup notes are recorded in
 `agent-system/11_release/STAGE3_SAFE_AUTOMATION_DIAGNOSTICS_RELEASE_NOTES.md`;
-that file is Task 007 documentation evidence only and does not claim the final
-Stage 3 validation pass before Task 008 supplies command evidence.
+that file is historical Task 007 documentation evidence only. Current Stage 3
+acceptance for the DAG checkpoint correction is through the
+`upgrade/stage-3-dag-checkpoint-correction` branch and the Task 005 final
+validation report; this Task 004 documentation/version update does not claim
+that final correction pass.

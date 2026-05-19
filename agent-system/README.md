@@ -153,12 +153,17 @@ accepted repository lock explicitly allows it.
 The package includes an experimental read-only ASO helper CLI at
 `agent-system/tools/aso/aso.py`.
 
-This Stage 3 safe automation diagnostics branch updates the active package
-metadata to the governed `3.1.0` package/governance tuple with runtime schema
+This Stage 3 DAG checkpoint correction branch records the active package
+metadata as the governed `3.1.1` package/governance tuple with runtime schema
 `3.0.0`. It preserves the read-only Stage 2 command surfaces and adds Stage 3
 package synchronization diagnostics without adding live dispatch, mutation,
 governed checkpoint execution, autonomous owner-decision approval, commit,
 push, or publication authority.
+
+Stage 3 acceptance for the current correction is tied to the
+`upgrade/stage-3-dag-checkpoint-correction` branch and the Task 005 final
+validation report. This documentation/version update does not claim the final
+correction pass before that command evidence exists.
 
 Install the local console command from the repository root with:
 
@@ -253,6 +258,11 @@ documentation drift and exits nonzero on strict mismatches. It does not repair
 files, edit package state, initialize workspaces, stage changes, commit, push,
 publish release artifacts, or approve cleanup.
 
+For DAG readiness, `audit_passed` is not a completed dependency. Downstream
+work that depends on accepted task output requires `checkpoint_done` with
+checkpoint evidence, or another explicitly completed terminal state allowed by
+the governance rules.
+
 Repeatable root targets are:
 
 ```text
@@ -314,9 +324,12 @@ agent-system/11_release/STAGE2_STATE_CONTRACT_CORRECTION_VALIDATION_REPORT.md
 
 Task 006 supplied final local command evidence in that report, including the
 current validation blocker status.
-The Stage 3 release notes are Task 007 documentation evidence only. They record
-the intended `3.1.0 / 3.1.0 / 3.0.0` package tuple and safety boundary, but
-they do not claim final Stage 3 validation before Task 008 supplies its command
+The Stage 3 v3.1.0 release notes are historical Task 007 documentation
+evidence only. Current Stage 3 acceptance for the DAG checkpoint correction is
+through the `upgrade/stage-3-dag-checkpoint-correction` branch and the Task 005
+final validation report. This Task 004 documentation/version update records
+the intended `3.1.1 / 3.1.1 / 3.0.0` package tuple and safety boundary, but it
+does not claim the final correction pass before Task 005 supplies command
 evidence.
 
 After all accepted upgrade tasks are committed and pushed by the orchestrator,
@@ -440,8 +453,8 @@ agent-system/GOVERNANCE_CHANGELOG.md
 Current active tuple and Stage 3 marker:
 
 ```text
-CURRENT_PACKAGE_VERSION: 3.1.0
-CURRENT_GOVERNANCE_RULESET_VERSION: 3.1.0
+CURRENT_PACKAGE_VERSION: 3.1.1
+CURRENT_GOVERNANCE_RULESET_VERSION: 3.1.1
 CURRENT_RUNTIME_SCHEMA_VERSION: 3.0.0
 STAGE3_RELEASE_MARKER: safe-automation-diagnostics
 ```

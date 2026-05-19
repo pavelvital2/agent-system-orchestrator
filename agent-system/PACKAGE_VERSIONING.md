@@ -19,8 +19,8 @@ RUNTIME_SCHEMA_VERSION:
 ## Active version constants
 
 ```text
-CURRENT_PACKAGE_VERSION: 3.1.0
-CURRENT_GOVERNANCE_RULESET_VERSION: 3.1.0
+CURRENT_PACKAGE_VERSION: 3.1.1
+CURRENT_GOVERNANCE_RULESET_VERSION: 3.1.1
 CURRENT_RUNTIME_SCHEMA_VERSION: 3.0.0
 ```
 
@@ -192,6 +192,27 @@ inspect package metadata, command readiness, generated reports, and cleanup
 eligibility, but they do not dispatch agents, mutate package or workspace
 state, perform governed checkpoints, approve owner decisions, commit, push, or
 publish local input/runtime/archive roots.
+
+The Stage 3 DAG checkpoint correction package installs:
+
+```text
+CURRENT_PACKAGE_VERSION: 3.1.1
+CURRENT_GOVERNANCE_RULESET_VERSION: 3.1.1
+CURRENT_RUNTIME_SCHEMA_VERSION: 3.0.0
+```
+
+This patch resolves `ASO-STAGE3-AUDIT-BLOCKER-001` by recording the accepted
+Stage 3 governance state through the DAG checkpoint correction branch and its
+Task 005 validation report. It keeps the runtime schema at `3.0.0` because the
+correction clarifies checkpoint dependency semantics and documentation
+authority rather than changing runtime state meaning.
+
+Stage 3 remains read-only, dry-run, or proposal-only. `audit_passed` is not a
+satisfied dependency for downstream readiness; dependency completion requires
+`checkpoint_done` with checkpoint evidence, or another explicitly completed
+terminal state allowed by the governance rules. This documentation/version
+correction does not claim the final correction pass before Task 005 supplies
+command evidence.
 
 ## Version semantics
 

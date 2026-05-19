@@ -1206,4 +1206,44 @@ MIGRATION_NOTE: No runtime schema migration is introduced. Existing v3.0.x works
 AUTHORIZED_BY: project_owner
 AUDIT_REQUIRED: yes
 STATUS: proposed
+
+CHANGE_ID: GOV-2026-05-19-002
+CHANGE_TITLE: ASO_STAGE3_DAG_CHECKPOINT_CORRECTION_DOCS_VERSION_WORKFLOW
+DATE: 2026-05-19
+PACKAGE_VERSION_BEFORE: 3.1.0
+PACKAGE_VERSION_AFTER: 3.1.1
+GOVERNANCE_RULESET_BEFORE: 3.1.0
+GOVERNANCE_RULESET_AFTER: 3.1.1
+RUNTIME_SCHEMA_BEFORE: 3.0.0
+RUNTIME_SCHEMA_AFTER: 3.0.0
+CHANGE_TYPE: patch
+CHANGE_SUBTYPE: docs_version_workflow_correction
+AFFECTED_FILES:
+- README.md
+- agent-system/README.md
+- agent-system/PACKAGE_VERSIONING.md
+- agent-system/GOVERNANCE_CHANGELOG.md
+- .github/workflows/stage1-governance.yml
+- pyproject.toml
+- agent_system_orchestrator_aso/__init__.py
+AFFECTED_INVARIANTS:
+- Active package/governance/runtime tuple is 3.1.1 / 3.1.1 / 3.0.0.
+- Stage 3 acceptance is recorded through the DAG checkpoint correction branch and Task 005 validation report, not the earlier proposed v3.1.0 release cleanup entry alone.
+- `ASO-STAGE3-AUDIT-BLOCKER-001` is addressed by documenting that `audit_passed` is not a satisfied dependency for downstream readiness.
+- Downstream readiness requires `checkpoint_done` with complete checkpoint evidence, or another explicitly completed terminal state allowed by governance.
+- Stage 3 command surfaces remain read-only, dry-run, or proposal-only.
+- ASO package-sync verification remains a read-only guard for metadata and command surface coherence, not repair, checkpoint, commit, push, or publication authority.
+- The workflow display name is package-neutral and no longer labels current governance checks as Stage 1.
+- Root project-input, project-runtime, and project-archive remain local generated or owner-input roots and must not be published as accepted package documentation.
+- This Task 004 documentation/version update does not claim the final correction pass before Task 005 supplies validation command evidence.
+AFFECTED_TRANSITIONS:
+- package metadata correction -> independent audit -> orchestrator-owned checkpoint only after audit pass.
+- DAG dependency evaluation -> downstream readiness only after dependency checkpoint completion evidence, not merely `audit_passed`.
+- package-sync verify -> read-only diagnostic result; no mutation, repair, checkpoint, commit, push, or publication.
+SCHEMA_TEMPLATE_IMPACT: none
+MIGRATION_REQUIRED: no
+MIGRATION_NOTE: No runtime schema migration is introduced. Existing v3.1.0 workspaces should update package and governance docs to v3.1.1 before relying on Stage 3 DAG checkpoint dependency documentation. Runtime schema remains 3.0.0.
+AUTHORIZED_BY: project_owner
+AUDIT_REQUIRED: yes
+STATUS: accepted
 ```
