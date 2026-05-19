@@ -9,6 +9,7 @@ from pathlib import Path
 
 from commands import (
     archive_verify,
+    dashboard,
     doctor,
     lint,
     plan_next,
@@ -223,6 +224,29 @@ def build_parser() -> argparse.ArgumentParser:
         help="Write the dry-run/read-only plan report JSON to this explicit path.",
     )
     plan_next_parser.set_defaults(handler=plan_next.run)
+
+    dashboard_parser = subparsers.add_parser(
+        "dashboard",
+        help="Render a safe static workspace dashboard.",
+        description=(
+            "Render static HTML summarizing workspace state, blockers, task, audit, "
+            "checkpoint, and context-budget signals. Prints HTML to stdout by "
+            "default; explicit file output is restricted to /tmp or "
+            "<workspace>/project-runtime/dashboard."
+        ),
+    )
+    _add_root_argument(dashboard_parser, validate=False)
+    dashboard_parser.add_argument(
+        "--out",
+        metavar="PATH",
+        help="Write static HTML to /tmp/... or <workspace>/project-runtime/dashboard/...",
+    )
+    dashboard_parser.add_argument(
+        "--json-out",
+        metavar="PATH",
+        help="Write the dashboard report JSON to /tmp/... or <workspace>/project-runtime/dashboard/...",
+    )
+    dashboard_parser.set_defaults(handler=dashboard.run)
 
     archive_parser = subparsers.add_parser(
         "archive",
