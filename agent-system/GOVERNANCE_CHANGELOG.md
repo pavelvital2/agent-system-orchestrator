@@ -1284,5 +1284,5 @@ MIGRATION_REQUIRED: no
 MIGRATION_NOTE: No runtime schema migration is introduced. Existing v3.1.1 workspaces should update package and governance docs to v3.1.2 before relying on pre-main package-layout verification and merge-readiness evidence. Runtime schema remains 3.0.0.
 AUTHORIZED_BY: project_owner
 AUDIT_REQUIRED: yes
-STATUS: proposed
+STATUS: accepted
 ```

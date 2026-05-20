@@ -793,11 +793,14 @@ assert_version_changelog_coherence() {
         status_count++
         status_value=$0
       }
+      if ($0 == "STATUS: proposed") {
+        proposed_seen=1
+      }
     }
     END {
-      exit(entry_seen && status_count == 1 && status_value == "STATUS: proposed" ? 0 : 1)
+      exit(entry_seen && status_count == 1 && status_value == "STATUS: accepted" && !proposed_seen ? 0 : 1)
     }
-  ' "$GOVERNANCE_CHANGELOG" || die "GOVERNANCE_CHANGELOG GOV-2026-05-20-001 must have exactly one proposed status within entry boundary"
+  ' "$GOVERNANCE_CHANGELOG" || die "GOVERNANCE_CHANGELOG GOV-2026-05-20-001 must exist with exactly one accepted status and no proposed status within entry boundary"
 
   printf 'PASS: version coherence asserts active 3.1.2 package/governance with runtime schema 3.0.0\n'
   PASS_COUNT=$((PASS_COUNT + 1))
