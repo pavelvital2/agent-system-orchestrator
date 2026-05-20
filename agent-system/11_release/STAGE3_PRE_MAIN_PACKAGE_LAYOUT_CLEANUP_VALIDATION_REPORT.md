@@ -2,20 +2,23 @@
 
 ```text
 REPORT_ID: STAGE3_PRE_MAIN_PACKAGE_LAYOUT_CLEANUP_VALIDATION_REPORT
-TASK_ID: TASK_ASO_PRE_MAIN_005_DOCS_VERSION_CHANGELOG
+TASK_ID: TASK_ASO_PRE_MAIN_006A_FINAL_VALIDATION_BLOCKER_FIX
+AGENT_INSTANCE_ID: TASK_ASO_PRE_MAIN_006A_FINAL_VALIDATION_BLOCKER_FIX_PROFILE_AGENT_20260520
 DATE: 2026-05-20
 BRANCH: upgrade/stage-3-pre-main-package-layout-cleanup
-VALIDATION_COMMAND_HEAD: 0e8468431c67faf8d6cf4ba1dddc6869be94f7b5
 FINAL_COMMIT_PENDING: yes
-REMOTE_HEAD_VERIFICATION_REQUIRED_AFTER_PUSH: yes
+REMOTE_HEAD_VERIFICATION_REQUIRED_AFTER_ORCHESTRATOR_PUSH: yes
+REMOTE_CI_CLAIMED: no
 MAIN_MERGE_CLAIMED: no
 PACKAGE_VERSION: 3.1.2
 GOVERNANCE_RULESET_VERSION: 3.1.2
 RUNTIME_SCHEMA_VERSION: 3.0.0
 CANONICAL_PACKAGE_SOURCE: agent-system/tools/aso/agent_system_orchestrator_aso/
 ROOT_DUPLICATE_PACKAGE_TRACKED: no
-VALIDATION_STATUS: passed
-BLOCKER: none
+REUSE_ALLOWED: false
+AGENT_TERMINATION_REQUIRED: true
+VALIDATION_STATUS: passed-local
+BLOCKER_FIXED: yes
 ```
 
 ## Package Layout
@@ -40,75 +43,75 @@ where = ["agent-system/tools/aso"]
 include = ["agent_system_orchestrator_aso*"]
 ```
 
-## Installation And Verification
-
-User install from repository root:
+## Correction Summary
 
 ```text
-bash install.sh
-source .venv/bin/activate
-make verify-install
-```
-
-Manual editable install:
-
-```text
-python3 -m pip install -e .
-aso --help
-aso package-layout verify --root . --strict
-```
-
-Direct compatibility check:
-
-```text
-python3 agent-system/tools/aso/aso.py --help
-python3 agent-system/tools/aso/aso.py package-layout verify --root . --strict
+1. Updated agent-system/tools/aso/tests/test_packaging.py so the active package version guard is 3.1.2 and the __version__ assertion is derived from pyproject metadata.
+2. Updated the final source archive hygiene command to reject only root project-input/, root project-runtime/, root project-archive/, root agent_system_orchestrator_aso/, pycache directories, and pyc/pyo artifacts.
+3. Preserved intentional tracked nested fixtures under agent-system/tests/fixtures/state/*/project-runtime/.
 ```
 
 ## Command Evidence
 
 ```text
-COMMAND: PYTHONDONTWRITEBYTECODE=1 python3 agent-system/tools/aso/aso.py --help
+COMMAND: git status --short --branch
 EXIT_CODE: 0
-OUTCOME: passed; help output lists package-layout and deprecated package-sync alias.
+OUTCOME: passed; branch is upgrade/stage-3-pre-main-package-layout-cleanup; tracked local modified files were the validation report and packaging test. The final validation commands doc is under ignored root project-input/ and is intentionally not listed by git status.
 
-COMMAND: PYTHONDONTWRITEBYTECODE=1 python3 agent-system/tools/aso/aso.py lint --root . --mode package --strict
+COMMAND: PYTHONDONTWRITEBYTECODE=1 python3 -m unittest agent-system/tools/aso/tests/test_packaging.py
 EXIT_CODE: 0
-OUTCOME: passed; ASO lint reported Errors: 0, Warnings: 0, Findings: 0.
+OUTCOME: passed; 5 tests ran successfully.
 
-COMMAND: PYTHONDONTWRITEBYTECODE=1 python3 agent-system/tools/aso/aso.py package-layout verify --root . --strict
+COMMAND: PYTHONDONTWRITEBYTECODE=1 make ci
 EXIT_CODE: 0
-OUTCOME: passed; canonical package is agent-system/tools/aso/agent_system_orchestrator_aso, root duplicate package path is agent_system_orchestrator_aso, Findings: 0.
+OUTCOME: passed; source_hygiene passed; 119 ASO tool tests passed; 5 agent-system tests passed; package status/lint/doctor/package-layout checks passed; validate-design, validate-context-pack, validate-rules, state verify, plan-next, dashboard, checkpoint-preflight, governance smoke tests, doctor, lint, and git diff --check passed.
+
+COMMAND: git archive --format=tar HEAD > /tmp/aso-pre-main-source.tar; if tar -tf /tmp/aso-pre-main-source.tar | grep -E '^project-input/|^project-runtime/|^project-archive/|(^|/)__pycache__/|\.py[co]$|^agent_system_orchestrator_aso/'; then echo "source archive hygiene failed"; rm -f /tmp/aso-pre-main-source.tar; exit 1; fi; rm -f /tmp/aso-pre-main-source.tar
+EXIT_CODE: 0
+OUTCOME: passed; no forbidden root generated roots, root duplicate package, pycache directories, or pyc/pyo artifacts were found in the source archive.
 
 COMMAND: git diff --check
 EXIT_CODE: 0
 OUTCOME: passed; no whitespace errors reported.
 
-COMMAND: git ls-files project-input project-runtime project-archive agent_system_orchestrator_aso
+COMMAND: git ls-files project-input project-runtime project-archive agent_system_orchestrator_aso '*__pycache__*' '*.pyc' '*.pyo'
 EXIT_CODE: 0
 OUTCOME: passed; output empty.
+```
 
-COMMAND: git diff --cached --name-only
-EXIT_CODE: 0
-OUTCOME: passed; output empty.
+## Acceptance Criteria Status
 
-COMMAND: grep -R 'CURRENT_PACKAGE_VERSION: 3.1.2' agent-system/PACKAGE_VERSIONING.md
-EXIT_CODE: 0
-OUTCOME: passed; two matching lines reported.
+```text
+Branch: pass; validation ran on upgrade/stage-3-pre-main-package-layout-cleanup.
+Version tuple: pass; packaging test now confirms pyproject version 3.1.2 and package __version__ coherence.
+Root duplicate package: pass; agent_system_orchestrator_aso/ tracked output is empty.
+Canonical ASO package: pass; make ci package-layout verification confirmed agent-system/tools/aso/agent_system_orchestrator_aso/.
+Make targets: pass; make ci completed successfully.
+Tracked hygiene: pass; root project-input, project-runtime, project-archive, root duplicate package, pycache, pyc, and pyo tracked output is empty.
+Source archive hygiene: pass; corrected command rejects forbidden root paths while allowing intentional nested state fixtures.
+Merge readiness: local validation unblocked only; no merge to main performed.
+Checkpoint policy: no commit or push by this validation agent.
+```
 
-COMMAND: grep -R 'version = "3.1.2"' pyproject.toml
-EXIT_CODE: 0
-OUTCOME: passed; one matching line reported.
+## Forbidden Root Evidence
 
-COMMAND: PYTHONDONTWRITEBYTECODE=1 ./agent-system/scripts/run_governance_smoke_tests.sh
-EXIT_CODE: 0
-OUTCOME: passed; SMOKE_RESULT: passed (18 assertions), including version_changelog_coherence for 3.1.2 / 3.1.2 / 3.0.0 and GOV-2026-05-20-001 STATUS: proposed.
+```text
+git ls-files project-input project-runtime project-archive agent_system_orchestrator_aso '*__pycache__*' '*.pyc' '*.pyo': exit 0, output empty
+corrected source archive hygiene command: exit 0, output empty
 ```
 
 ## Merge Readiness
 
-This report does not claim merge readiness by itself and does not claim a merge
-to `main`. Merge readiness must follow
-`09_MAIN_MERGE_READINESS_PROCEDURE.md` or accepted package merge-readiness docs,
-with independent audit, orchestrator-owned checkpoint, push, remote CI evidence,
-and post-push remote HEAD verification.
+This local blocker-fix validation unblocks the final validation commands that
+previously failed on the stale `3.1.1` packaging assertion and over-broad source
+archive hygiene pattern. This report does not claim a merge to `main`, does not
+claim a final commit hash, and does not claim remote CI success. Those remain
+orchestrator-owned post-push checks.
+
+## Limitations And Follow-Up Risks
+
+```text
+1. Changes are local and uncommitted by instruction; final commit and push remain orchestrator-owned.
+2. Remote HEAD verification and GitHub Actions success cannot be claimed before orchestrator push.
+3. git archive validation used HEAD, which is appropriate for tracked source archive hygiene; uncommitted documentation/test corrections still require orchestrator commit before remote validation.
+```

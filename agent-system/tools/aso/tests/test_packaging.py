@@ -71,9 +71,10 @@ class PackagingCommandTests(unittest.TestCase):
     def test_stage3_package_version_is_coherent(self) -> None:
         pyproject = tomllib.loads((REPO_ROOT / "pyproject.toml").read_text(encoding="utf-8"))
         init_file = (ASO_TOOL_ROOT / "agent_system_orchestrator_aso" / "__init__.py").read_text(encoding="utf-8")
+        package_version = pyproject["project"]["version"]
 
-        self.assertEqual(pyproject["project"]["version"], "3.1.1")
-        self.assertIn('__version__ = "3.1.1"', init_file)
+        self.assertEqual(package_version, "3.1.2")
+        self.assertIn(f'__version__ = "{package_version}"', init_file)
 
 
 if __name__ == "__main__":
