@@ -15,7 +15,7 @@ smoke:
 	PYTHONDONTWRITEBYTECODE=1 $(PYTHON) $(ASO_SCRIPT) status --root . --mode package
 	PYTHONDONTWRITEBYTECODE=1 $(PYTHON) $(ASO_SCRIPT) lint --root . --mode package --strict
 	PYTHONDONTWRITEBYTECODE=1 $(PYTHON) $(ASO_SCRIPT) doctor --root . --mode package --strict
-	PYTHONDONTWRITEBYTECODE=1 $(PYTHON) $(ASO_SCRIPT) package-sync verify --root . --strict
+	PYTHONDONTWRITEBYTECODE=1 $(PYTHON) $(ASO_SCRIPT) package-layout verify --root . --strict
 	PYTHONDONTWRITEBYTECODE=1 $(PYTHON) $(ASO_SCRIPT) validate-design agent-system/tests/fixtures/design/valid_design.md --root . --strict
 	PYTHONDONTWRITEBYTECODE=1 $(PYTHON) $(ASO_SCRIPT) validate-context-pack agent-system/tests/fixtures/context_pack/valid_context_pack.json --root . --strict
 	PYTHONDONTWRITEBYTECODE=1 $(PYTHON) $(ASO_SCRIPT) validate-rules --root . --strict

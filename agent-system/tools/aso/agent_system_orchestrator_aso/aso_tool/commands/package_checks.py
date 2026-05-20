@@ -2,10 +2,17 @@
 
 from __future__ import annotations
 
+import os
 import re
 import subprocess
+import sys
 from dataclasses import dataclass
 from pathlib import Path
+
+try:
+    import tomllib
+except ModuleNotFoundError:  # pragma: no cover - Python < 3.11 fallback
+    tomllib = None
 
 
 GENERATED_ROOTS = ("project-runtime", "project-input", "project-archive")
@@ -47,6 +54,9 @@ PYPROJECT_DISCOVERY_MARKERS = (
     'where = ["agent-system/tools/aso"]',
     'include = ["agent_system_orchestrator_aso*"]',
 )
+CONSOLE_ENTRYPOINT = "agent_system_orchestrator_aso.cli:main"
+WORKFLOW_DIR_RELPATH = ".github/workflows"
+WORKFLOW_TRIGGER_MARKERS = ("upgrade/",)
 
 
 @dataclass(frozen=True)
@@ -81,6 +91,7 @@ class PackageInspection:
     generated_roots: dict[str, str]
     readmes: dict[str, str]
     git_tracked_generated_files: list[str]
+    git_tracked_root_duplicate_files: list[str]
 
 
 def inspect_package(root: Path) -> PackageInspection:
@@ -89,6 +100,7 @@ def inspect_package(root: Path) -> PackageInspection:
     generated_roots: dict[str, str] = {}
     readmes: dict[str, str] = {}
     tracked_generated_files: list[str] = []
+    tracked_root_duplicate_files: list[str] = []
 
     if not root.exists() or not root.is_dir():
         findings.append(
@@ -101,17 +113,27 @@ def inspect_package(root: Path) -> PackageInspection:
                 "Pass --root pointing at the ASO package repository root.",
             )
         )
-        return PackageInspection(findings, files, generated_roots, readmes, tracked_generated_files)
+        return PackageInspection(findings, files, generated_roots, readmes, tracked_generated_files, [])
 
     _check_required_dirs(root, files, findings)
     _check_package_layout(root, files, findings)
     tracked_generated_files = _tracked_generated_files(root, findings)
     _check_generated_roots(root, tracked_generated_files, generated_roots, findings)
     _check_generated_cache_files(root, findings)
+    tracked_root_duplicate_files = _tracked_root_duplicate_files(root, findings)
+    _check_tracked_root_duplicate(tracked_root_duplicate_files, findings)
+    _check_workflows(root, files, findings)
     _check_readmes(root, files, readmes, findings)
     _check_gitignore(root, files, findings)
 
-    return PackageInspection(findings, files, generated_roots, readmes, tracked_generated_files)
+    return PackageInspection(
+        findings,
+        files,
+        generated_roots,
+        readmes,
+        tracked_generated_files,
+        tracked_root_duplicate_files,
+    )
 
 
 def consistency(findings: list[Finding]) -> str:
@@ -231,6 +253,8 @@ def _check_package_layout(
                         "Update the wrapper to import agent_system_orchestrator_aso.aso_tool.aso.",
                     )
                 )
+            else:
+                _check_direct_wrapper_runs(root, direct_wrapper, findings)
 
     try:
         pyproject_text = pyproject.read_text(encoding="utf-8")
@@ -247,6 +271,67 @@ def _check_package_layout(
         )
         return
 
+    if tomllib is not None:
+        try:
+            metadata = tomllib.loads(pyproject_text)
+        except tomllib.TOMLDecodeError as exc:
+            findings.append(
+                Finding(
+                    "PACKAGE_LAYOUT_006",
+                    "error",
+                    "pyproject.toml is invalid",
+                    f"pyproject.toml could not be parsed: {exc}.",
+                    ["pyproject.toml"],
+                    "Restore valid pyproject.toml package discovery metadata.",
+                )
+            )
+            return
+
+        project = metadata.get("project", {})
+        scripts = project.get("scripts", {}) if isinstance(project, dict) else {}
+        aso_entrypoint = scripts.get("aso") if isinstance(scripts, dict) else None
+        tool = metadata.get("tool", {})
+        setuptools = tool.get("setuptools", {}) if isinstance(tool, dict) else {}
+        packages = setuptools.get("packages", {}) if isinstance(setuptools, dict) else {}
+        find_config = packages.get("find", {}) if isinstance(packages, dict) else {}
+        where = find_config.get("where", []) if isinstance(find_config, dict) else []
+        include = find_config.get("include", []) if isinstance(find_config, dict) else []
+
+        if aso_entrypoint != CONSOLE_ENTRYPOINT:
+            findings.append(
+                Finding(
+                    "PACKAGE_LAYOUT_007",
+                    "error",
+                    "Console script entrypoint is not canonical",
+                    f"pyproject.toml project.scripts.aso must be {CONSOLE_ENTRYPOINT!r}.",
+                    ["pyproject.toml"],
+                    "Point the aso console script at agent_system_orchestrator_aso.cli:main.",
+                )
+            )
+        if CANONICAL_PACKAGE_RELPATH.rsplit("/", 1)[0] not in where:
+            findings.append(
+                Finding(
+                    "PACKAGE_LAYOUT_006",
+                    "error",
+                    "pyproject package discovery root is not canonical",
+                    "pyproject.toml must set tool.setuptools.packages.find.where to agent-system/tools/aso.",
+                    ["pyproject.toml"],
+                    "Point setuptools package discovery at agent-system/tools/aso.",
+                )
+            )
+        if "agent_system_orchestrator_aso*" not in include:
+            findings.append(
+                Finding(
+                    "PACKAGE_LAYOUT_006",
+                    "error",
+                    "pyproject package include pattern is not canonical",
+                    "pyproject.toml must include agent_system_orchestrator_aso* packages.",
+                    ["pyproject.toml"],
+                    "Keep setuptools package discovery limited to agent_system_orchestrator_aso*.",
+                )
+            )
+        return
+
     missing_markers = [marker for marker in PYPROJECT_DISCOVERY_MARKERS if marker not in pyproject_text]
     if missing_markers:
         findings.append(
@@ -257,6 +342,46 @@ def _check_package_layout(
                 f"pyproject.toml is missing: {', '.join(missing_markers)}.",
                 ["pyproject.toml"],
                 "Point setuptools package discovery at agent-system/tools/aso and keep the aso console script entrypoint.",
+            )
+        )
+
+
+def _check_direct_wrapper_runs(root: Path, direct_wrapper: Path, findings: list[Finding]) -> None:
+    env = dict(os.environ)
+    env["PYTHONDONTWRITEBYTECODE"] = "1"
+    try:
+        result = subprocess.run(
+            [sys.executable, str(direct_wrapper.resolve()), "--help"],
+            cwd=str(root),
+            check=False,
+            text=True,
+            capture_output=True,
+            timeout=10,
+            env=env,
+        )
+    except (OSError, subprocess.TimeoutExpired) as exc:
+        findings.append(
+            Finding(
+                "PACKAGE_LAYOUT_005",
+                "error",
+                "Direct ASO wrapper is not runnable",
+                f"agent-system/tools/aso/aso.py --help failed to run: {exc}.",
+                ["agent-system/tools/aso/aso.py"],
+                "Repair the direct wrapper so it can run from the repository root.",
+            )
+        )
+        return
+
+    if result.returncode != 0:
+        details = (result.stderr or result.stdout or "direct wrapper returned a non-zero exit code").strip()
+        findings.append(
+            Finding(
+                "PACKAGE_LAYOUT_005",
+                "error",
+                "Direct ASO wrapper is not runnable",
+                details,
+                ["agent-system/tools/aso/aso.py"],
+                "Repair the direct wrapper so it can run from the repository root.",
             )
         )
 
@@ -390,6 +515,119 @@ def _check_generated_cache_files(root: Path, findings: list[Finding]) -> None:
             "Remove generated cache files from package tracking and keep them ignored locally.",
         )
     )
+
+
+def _tracked_root_duplicate_files(root: Path, findings: list[Finding]) -> list[str]:
+    try:
+        result = subprocess.run(
+            ["git", "-C", str(root), "ls-files", "--", ROOT_PACKAGE_RELPATH],
+            check=False,
+            text=True,
+            capture_output=True,
+        )
+    except FileNotFoundError:
+        findings.append(
+            Finding(
+                "PACKAGE_GIT_001",
+                "error",
+                "Git is unavailable",
+                "git executable was not found, so package mode cannot verify root duplicate tracking.",
+                [ROOT_PACKAGE_RELPATH],
+                "Run package mode in an environment with git available.",
+            )
+        )
+        return []
+
+    if result.returncode != 0:
+        if "not a git repository" in result.stderr.lower():
+            return []
+        findings.append(
+            Finding(
+                "PACKAGE_GIT_002",
+                "error",
+                "Root duplicate tracking check failed",
+                (result.stderr or result.stdout or "git ls-files failed").strip(),
+                [ROOT_PACKAGE_RELPATH],
+                "Repair the Git worktree before running package layout verification.",
+            )
+        )
+        return []
+
+    return [line.strip() for line in result.stdout.splitlines() if line.strip()]
+
+
+def _check_tracked_root_duplicate(tracked_files: list[str], findings: list[Finding]) -> None:
+    if not tracked_files:
+        return
+
+    findings.append(
+        Finding(
+            "PACKAGE_LAYOUT_004",
+            "error",
+            "Root duplicate ASO package is tracked",
+            f"Git tracks forbidden root duplicate package files: {', '.join(sorted(tracked_files)[:10])}.",
+            sorted(tracked_files),
+            "Remove the duplicate root package from Git tracking.",
+        )
+    )
+
+
+def _check_workflows(root: Path, files: dict[str, dict[str, object]], findings: list[Finding]) -> None:
+    workflows = root / WORKFLOW_DIR_RELPATH
+    workflow_files = sorted(workflows.glob("*.yml")) + sorted(workflows.glob("*.yaml")) if workflows.is_dir() else []
+    files[WORKFLOW_DIR_RELPATH] = {
+        "exists": workflows.exists(),
+        "type": "directory" if workflows.is_dir() else "missing",
+        "workflow_count": len(workflow_files),
+    }
+    if not workflow_files:
+        findings.append(
+            Finding(
+                "PACKAGE_LAYOUT_008",
+                "error",
+                "Governance workflow is missing",
+                "No .github/workflows/*.yml or *.yaml file was found.",
+                [WORKFLOW_DIR_RELPATH],
+                "Restore a governance workflow before package-layout verification.",
+            )
+        )
+        return
+
+    readable_texts: list[str] = []
+    unreadable_files: list[str] = []
+    for path in workflow_files:
+        relpath = path.relative_to(root).as_posix()
+        try:
+            readable_texts.append(path.read_text(encoding="utf-8"))
+        except OSError:
+            unreadable_files.append(relpath)
+
+    if unreadable_files:
+        findings.append(
+            Finding(
+                "PACKAGE_LAYOUT_008",
+                "error",
+                "Governance workflow is unreadable",
+                f"Workflow file(s) are unreadable: {', '.join(unreadable_files)}.",
+                unreadable_files,
+                "Repair workflow file permissions before package-layout verification.",
+            )
+        )
+        return
+
+    combined = "\n".join(readable_texts)
+    missing_markers = [marker for marker in WORKFLOW_TRIGGER_MARKERS if marker not in combined]
+    if missing_markers:
+        findings.append(
+            Finding(
+                "PACKAGE_LAYOUT_008",
+                "error",
+                "Governance workflow trigger surface is incomplete",
+                f"Workflow files are missing trigger marker(s): {', '.join(missing_markers)}.",
+                [path.relative_to(root).as_posix() for path in workflow_files],
+                "Keep governance workflow triggers for upgrade/** branches.",
+            )
+        )
 
 
 def _is_generated_cache_file(relpath: str) -> bool:

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import os
 import subprocess
 import sys
 import tempfile
@@ -16,17 +17,73 @@ def _write(path: Path, text: str) -> None:
     path.write_text(text, encoding="utf-8")
 
 
-def _minimal_sync_fixture(root: Path) -> None:
-    source = root / "agent-system" / "tools" / "aso"
-    bundled = root / "agent_system_orchestrator_aso" / "aso_tool"
-    for base in (source, bundled):
-        _write(base / "aso.py", "print('aso')\n")
-        _write(base / "commands" / "__init__.py", "\n")
-        _write(base / "commands" / "status.py", "STATUS = 'ok'\n")
-        _write(base / "models" / "__init__.py", "\n")
+def _minimal_layout_fixture(root: Path) -> None:
+    aso_root = root / "agent-system" / "tools" / "aso"
+    package = aso_root / "agent_system_orchestrator_aso"
+    _write(
+        aso_root / "aso.py",
+        (
+            "import sys\n"
+            "from agent_system_orchestrator_aso.aso_tool.aso import build_parser, main\n"
+            'if __name__ == "__main__":\n'
+            "    sys.exit(main())\n"
+        ),
+    )
+    _write(package / "__init__.py", "\n")
+    _write(package / "cli.py", "from .aso_tool.aso import main\n")
+    _write(package / "aso_tool" / "__init__.py", "\n")
+    _write(
+        package / "aso_tool" / "aso.py",
+        (
+            "import argparse\n"
+            "def build_parser():\n"
+            "    return argparse.ArgumentParser(prog='aso')\n"
+            "def main(argv=None):\n"
+            "    build_parser().parse_args(argv)\n"
+            "    return 0\n"
+        ),
+    )
+    _write(
+        root / "pyproject.toml",
+        (
+            "[project]\n"
+            'name = "aso-fixture"\n'
+            'version = "0.0.0"\n'
+            "\n"
+            "[project.scripts]\n"
+            'aso = "agent_system_orchestrator_aso.cli:main"\n'
+            "\n"
+            "[tool.setuptools.packages.find]\n"
+            'where = ["agent-system/tools/aso"]\n'
+            'include = ["agent_system_orchestrator_aso*"]\n'
+        ),
+    )
+    readme = (
+        "ASO CLI path: agent-system/tools/aso/aso.py\n"
+        "Use --mode package for package mode and --mode workspace for workspace mode.\n"
+        "The status command and lint command are read-only.\n"
+        "The helper does not provide mutation, dispatch, or checkpoint authority.\n"
+    )
+    _write(root / "README.md", readme)
+    _write(root / "agent-system" / "README.md", readme)
+    _write(root / ".gitignore", "/project-runtime/\n/project-input/\n/project-archive/\n")
+    _write(
+        root / ".github" / "workflows" / "governance.yml",
+        (
+            "name: governance\n"
+            "on:\n"
+            "  push:\n"
+            "    branches:\n"
+            "      - main\n"
+            "      - upgrade/**\n"
+            "      - merge-preparation/**\n"
+        ),
+    )
 
 
 def _run_package_sync(root: Path) -> subprocess.CompletedProcess[str]:
+    env = dict(os.environ)
+    env["PYTHONDONTWRITEBYTECODE"] = "1"
     return subprocess.run(
         [
             sys.executable,
@@ -41,98 +98,23 @@ def _run_package_sync(root: Path) -> subprocess.CompletedProcess[str]:
         check=False,
         text=True,
         capture_output=True,
+        env=env,
     )
 
 
-class PackageSyncTests(unittest.TestCase):
-    def test_matching_fixture_passes_and_ignores_generated_artifacts(self) -> None:
+class PackageSyncAliasTests(unittest.TestCase):
+    def test_package_sync_verify_delegates_to_package_layout_without_copy_sync(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
-            _minimal_sync_fixture(root)
-            _write(
-                root / "agent-system" / "tools" / "aso" / "__pycache__" / "aso.cpython-312.pyc",
-                "source cache",
-            )
-            _write(
-                root
-                / "agent_system_orchestrator_aso"
-                / "aso_tool"
-                / "__pycache__"
-                / "aso.cpython-312.pyc",
-                "bundled cache",
-            )
+            _minimal_layout_fixture(root)
 
             result = _run_package_sync(root)
             report = json.loads(result.stdout)
 
         self.assertEqual(result.returncode, 0, result.stderr)
         self.assertEqual(report["status"], "passed")
-        self.assertEqual(report["mismatches"], [])
-        self.assertEqual(report["summary"]["mismatches"], 0)
-        self.assertIn("tests/", report["summary"]["excluded_paths"])
-
-    def test_stale_bundled_file_fails_with_stable_rule_id(self) -> None:
-        with tempfile.TemporaryDirectory() as tmp:
-            root = Path(tmp)
-            _minimal_sync_fixture(root)
-            _write(
-                root / "agent_system_orchestrator_aso" / "aso_tool" / "commands" / "status.py",
-                "STATUS = 'stale'\n",
-            )
-
-            result = _run_package_sync(root)
-            report = json.loads(result.stdout)
-
-        self.assertEqual(result.returncode, 1, result.stderr)
-        self.assertEqual(report["status"], "failed")
-        self.assertEqual(report["mismatches"][0]["rule_id"], "PACKAGE_SYNC_002")
-        self.assertEqual(report["mismatches"][0]["path"], "commands/status.py")
-
-    def test_missing_bundled_file_fails(self) -> None:
-        with tempfile.TemporaryDirectory() as tmp:
-            root = Path(tmp)
-            _minimal_sync_fixture(root)
-            (root / "agent_system_orchestrator_aso" / "aso_tool" / "models" / "__init__.py").unlink()
-
-            result = _run_package_sync(root)
-            report = json.loads(result.stdout)
-
-        self.assertEqual(result.returncode, 1, result.stderr)
-        self.assertEqual(report["mismatches"][0]["rule_id"], "PACKAGE_SYNC_001")
-        self.assertEqual(report["mismatches"][0]["path"], "models/__init__.py")
-
-    def test_bundled_only_command_file_fails(self) -> None:
-        with tempfile.TemporaryDirectory() as tmp:
-            root = Path(tmp)
-            _minimal_sync_fixture(root)
-            _write(
-                root / "agent_system_orchestrator_aso" / "aso_tool" / "commands" / "extra.py",
-                "EXTRA = True\n",
-            )
-
-            result = _run_package_sync(root)
-            report = json.loads(result.stdout)
-
-        self.assertEqual(result.returncode, 1, result.stderr)
-        self.assertEqual(report["mismatches"][0]["rule_id"], "PACKAGE_SYNC_003")
-        self.assertEqual(report["mismatches"][0]["path"], "commands/extra.py")
-
-    def test_tests_are_explicitly_excluded_from_bundled_sync(self) -> None:
-        with tempfile.TemporaryDirectory() as tmp:
-            root = Path(tmp)
-            _minimal_sync_fixture(root)
-            _write(
-                root / "agent-system" / "tools" / "aso" / "tests" / "test_direct_only.py",
-                "REPO_ROOT = 'repository-specific test fixture'\n",
-            )
-
-            result = _run_package_sync(root)
-            report = json.loads(result.stdout)
-
-        self.assertEqual(result.returncode, 0, result.stderr)
-        self.assertEqual(report["status"], "passed")
-        self.assertEqual(report["mismatches"], [])
-        self.assertIn("tests/", report["summary"]["excluded_paths"])
+        self.assertEqual(report["command"], "package-sync verify")
+        self.assertNotIn("mismatches", report)
 
 
 if __name__ == "__main__":

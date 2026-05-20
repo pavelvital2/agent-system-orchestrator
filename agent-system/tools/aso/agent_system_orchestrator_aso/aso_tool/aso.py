@@ -16,6 +16,7 @@ from .commands import (
     doctor,
     incident_fixture,
     lint,
+    package_layout,
     package_sync,
     plan_next,
     record_result,
@@ -489,7 +490,7 @@ def build_parser() -> argparse.ArgumentParser:
         action="store_true",
         help="Print the package-layout verification report as JSON to stdout.",
     )
-    package_layout_verify_parser.set_defaults(handler=package_sync.run_verify)
+    package_layout_verify_parser.set_defaults(handler=package_layout.run_verify)
 
     package_sync_parser = subparsers.add_parser(
         "package-sync",
