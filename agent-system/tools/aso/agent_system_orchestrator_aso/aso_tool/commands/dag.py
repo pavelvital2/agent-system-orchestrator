@@ -9,7 +9,7 @@ import sys
 from dataclasses import dataclass
 from pathlib import Path
 
-from commands import output_policy, state_verify
+from . import output_policy, state_verify
 
 
 EXIT_OK = 0

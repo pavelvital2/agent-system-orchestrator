@@ -7,7 +7,7 @@ import json
 import sys
 from pathlib import Path
 
-from rules.design import validate_design_file
+from ..rules.design import validate_design_file
 
 
 EXIT_IO_ERROR = 3

@@ -10,7 +10,7 @@ from collections import Counter
 from pathlib import Path
 from typing import Iterable
 
-from commands import checkpoint_preflight, dag, output_policy, package_sync, plan_next, state_verify
+from . import checkpoint_preflight, dag, output_policy, package_sync, plan_next, state_verify
 
 
 EXIT_OK = 0

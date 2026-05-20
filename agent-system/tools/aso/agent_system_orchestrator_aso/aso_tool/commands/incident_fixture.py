@@ -9,7 +9,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
-from commands import output_policy
+from . import output_policy
 
 
 EXIT_OK = 0

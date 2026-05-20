@@ -6,10 +6,13 @@ import unittest
 import tomllib
 from pathlib import Path
 
-import agent_system_orchestrator_aso.cli as wrapper_cli
-
 
 REPO_ROOT = Path(__file__).resolve().parents[4]
+ASO_TOOL_ROOT = REPO_ROOT / "agent-system" / "tools" / "aso"
+
+sys.path.insert(0, str(ASO_TOOL_ROOT))
+
+import agent_system_orchestrator_aso.cli as wrapper_cli  # noqa: E402
 
 
 class PackagingCommandTests(unittest.TestCase):
@@ -20,6 +23,7 @@ class PackagingCommandTests(unittest.TestCase):
             check=False,
             text=True,
             capture_output=True,
+            env={"PYTHONDONTWRITEBYTECODE": "1", "PYTHONPATH": str(ASO_TOOL_ROOT)},
         )
 
         self.assertEqual(result.returncode, 0, result.stderr)
@@ -35,6 +39,7 @@ class PackagingCommandTests(unittest.TestCase):
         self.assertIn("dag", result.stdout)
         self.assertIn("state", result.stdout)
         self.assertIn("archive", result.stdout)
+        self.assertIn("package-layout", result.stdout)
         self.assertIn("package-sync", result.stdout)
 
     def test_console_script_entrypoint_is_registered_in_project_metadata(self) -> None:
@@ -42,9 +47,10 @@ class PackagingCommandTests(unittest.TestCase):
 
         self.assertIn("[project.scripts]", pyproject)
         self.assertIn('aso = "agent_system_orchestrator_aso.cli:main"', pyproject)
+        self.assertTrue(callable(wrapper_cli.main))
 
-    def test_non_editable_install_has_bundled_script_fallback(self) -> None:
-        bundled_tool_dir = wrapper_cli._bundled_aso_tool_dir()
+    def test_canonical_package_contains_aso_implementation(self) -> None:
+        bundled_tool_dir = ASO_TOOL_ROOT / "agent_system_orchestrator_aso" / "aso_tool"
 
         self.assertTrue((bundled_tool_dir / "aso.py").is_file())
         self.assertTrue((bundled_tool_dir / "commands" / "status.py").is_file())
@@ -54,11 +60,17 @@ class PackagingCommandTests(unittest.TestCase):
         self.assertTrue((bundled_tool_dir / "commands" / "record_result.py").is_file())
         self.assertFalse((bundled_tool_dir / "tests").exists())
 
+    def test_setuptools_discovers_canonical_package_only(self) -> None:
+        pyproject = tomllib.loads((REPO_ROOT / "pyproject.toml").read_text(encoding="utf-8"))
+        package_find = pyproject["tool"]["setuptools"]["packages"]["find"]
+
+        self.assertEqual(package_find["where"], ["agent-system/tools/aso"])
+        self.assertEqual(package_find["include"], ["agent_system_orchestrator_aso*"])
+        self.assertFalse((REPO_ROOT / "agent_system_orchestrator_aso").exists())
+
     def test_stage3_package_version_is_coherent(self) -> None:
         pyproject = tomllib.loads((REPO_ROOT / "pyproject.toml").read_text(encoding="utf-8"))
-        init_file = (REPO_ROOT / "agent_system_orchestrator_aso" / "__init__.py").read_text(
-            encoding="utf-8"
-        )
+        init_file = (ASO_TOOL_ROOT / "agent_system_orchestrator_aso" / "__init__.py").read_text(encoding="utf-8")
 
         self.assertEqual(pyproject["project"]["version"], "3.1.1")
         self.assertIn('__version__ = "3.1.1"', init_file)

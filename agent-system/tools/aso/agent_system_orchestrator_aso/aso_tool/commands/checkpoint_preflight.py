@@ -8,7 +8,7 @@ import subprocess
 import sys
 from pathlib import Path
 
-from commands import package_checks, plan_next, state_verify
+from . import package_checks, plan_next, state_verify
 
 
 EXIT_OK = 0

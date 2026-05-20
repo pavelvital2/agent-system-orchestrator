@@ -6,7 +6,7 @@ import re
 from dataclasses import dataclass
 from pathlib import Path
 
-from parsers.markdown_design import (
+from ..parsers.markdown_design import (
     MarkdownDocument,
     MarkdownSection,
     all_field_values,

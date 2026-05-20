@@ -39,6 +39,14 @@ README_REQUIRED_TERMS = (
     ("read-only behavior", "read-only"),
     ("no mutation/dispatch/checkpoint commands", "mutation, dispatch, or checkpoint"),
 )
+CANONICAL_PACKAGE_RELPATH = "agent-system/tools/aso/agent_system_orchestrator_aso"
+CANONICAL_TOOL_RELPATH = f"{CANONICAL_PACKAGE_RELPATH}/aso_tool"
+ROOT_PACKAGE_RELPATH = "agent_system_orchestrator_aso"
+PYPROJECT_DISCOVERY_MARKERS = (
+    'aso = "agent_system_orchestrator_aso.cli:main"',
+    'where = ["agent-system/tools/aso"]',
+    'include = ["agent_system_orchestrator_aso*"]',
+)
 
 
 @dataclass(frozen=True)
@@ -96,6 +104,7 @@ def inspect_package(root: Path) -> PackageInspection:
         return PackageInspection(findings, files, generated_roots, readmes, tracked_generated_files)
 
     _check_required_dirs(root, files, findings)
+    _check_package_layout(root, files, findings)
     tracked_generated_files = _tracked_generated_files(root, findings)
     _check_generated_roots(root, tracked_generated_files, generated_roots, findings)
     _check_generated_cache_files(root, findings)
@@ -139,6 +148,117 @@ def _check_required_dirs(
                     "Run package mode from the repository root that contains agent-system/.",
                 )
             )
+
+
+def _check_package_layout(
+    root: Path,
+    files: dict[str, dict[str, object]],
+    findings: list[Finding],
+) -> None:
+    canonical_package = root / CANONICAL_PACKAGE_RELPATH
+    canonical_tool = root / CANONICAL_TOOL_RELPATH
+    root_package = root / ROOT_PACKAGE_RELPATH
+    direct_wrapper = root / "agent-system" / "tools" / "aso" / "aso.py"
+    pyproject = root / "pyproject.toml"
+
+    for relpath, path in (
+        (CANONICAL_PACKAGE_RELPATH, canonical_package),
+        (CANONICAL_TOOL_RELPATH, canonical_tool),
+    ):
+        files[relpath] = {"exists": path.exists(), "type": "directory" if path.is_dir() else "missing"}
+        if not path.is_dir():
+            findings.append(
+                Finding(
+                    "PACKAGE_LAYOUT_003",
+                    "error",
+                    "Canonical ASO package directory is missing",
+                    f"Required canonical package directory {relpath}/ is not present.",
+                    [relpath],
+                    "Move the installable ASO package under agent-system/tools/aso/.",
+                )
+            )
+
+    files[ROOT_PACKAGE_RELPATH] = {
+        "exists": root_package.exists(),
+        "type": "directory" if root_package.is_dir() else "absent",
+    }
+    if root_package.exists():
+        findings.append(
+            Finding(
+                "PACKAGE_LAYOUT_004",
+                "error",
+                "Root duplicate ASO package is present",
+                f"{ROOT_PACKAGE_RELPATH}/ must be absent from the package repository root.",
+                [ROOT_PACKAGE_RELPATH],
+                "Remove the duplicate root package after moving the canonical package under agent-system/tools/aso/.",
+            )
+        )
+
+    if not direct_wrapper.is_file():
+        findings.append(
+            Finding(
+                "PACKAGE_LAYOUT_005",
+                "error",
+                "Direct ASO wrapper is missing",
+                "agent-system/tools/aso/aso.py must remain runnable directly.",
+                ["agent-system/tools/aso/aso.py"],
+                "Restore the direct wrapper and import the canonical package from agent-system/tools/aso/.",
+            )
+        )
+    else:
+        try:
+            wrapper_text = direct_wrapper.read_text(encoding="utf-8")
+        except OSError as exc:
+            findings.append(
+                Finding(
+                    "PACKAGE_LAYOUT_005",
+                    "error",
+                    "Direct ASO wrapper is unreadable",
+                    f"agent-system/tools/aso/aso.py: {exc}",
+                    ["agent-system/tools/aso/aso.py"],
+                    "Repair the direct wrapper before running package mode lint.",
+                )
+            )
+        else:
+            if "agent_system_orchestrator_aso.aso_tool.aso" not in wrapper_text:
+                findings.append(
+                    Finding(
+                        "PACKAGE_LAYOUT_005",
+                        "error",
+                        "Direct ASO wrapper does not import canonical package",
+                        "agent-system/tools/aso/aso.py must delegate to the canonical ASO package.",
+                        ["agent-system/tools/aso/aso.py"],
+                        "Update the wrapper to import agent_system_orchestrator_aso.aso_tool.aso.",
+                    )
+                )
+
+    try:
+        pyproject_text = pyproject.read_text(encoding="utf-8")
+    except OSError as exc:
+        findings.append(
+            Finding(
+                "PACKAGE_LAYOUT_006",
+                "error",
+                "pyproject.toml is unreadable",
+                f"pyproject.toml: {exc}",
+                ["pyproject.toml"],
+                "Restore pyproject.toml package discovery metadata.",
+            )
+        )
+        return
+
+    missing_markers = [marker for marker in PYPROJECT_DISCOVERY_MARKERS if marker not in pyproject_text]
+    if missing_markers:
+        findings.append(
+            Finding(
+                "PACKAGE_LAYOUT_006",
+                "error",
+                "pyproject package discovery is not canonical",
+                f"pyproject.toml is missing: {', '.join(missing_markers)}.",
+                ["pyproject.toml"],
+                "Point setuptools package discovery at agent-system/tools/aso and keep the aso console script entrypoint.",
+            )
+        )
 
 
 def _tracked_generated_files(root: Path, findings: list[Finding]) -> list[str]:

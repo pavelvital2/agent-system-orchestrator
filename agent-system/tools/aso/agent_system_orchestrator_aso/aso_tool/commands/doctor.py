@@ -11,7 +11,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Iterable
 
-from commands import lint, package_checks
+from . import lint, package_checks
 
 
 EXIT_OK = 0
@@ -33,15 +33,16 @@ PACKAGE_REQUIRED_PATHS = (
     "agent-system",
     "agent-system/tools/aso",
     "agent-system/tools/aso/aso.py",
-    "agent-system/tools/aso/commands",
-    "agent-system/tools/aso/commands/status.py",
-    "agent-system/tools/aso/commands/lint.py",
-    "agent-system/tools/aso/commands/archive_verify.py",
-    "agent-system/tools/aso/commands/doctor.py",
-    "agent-system/tools/aso/commands/validate_context_pack.py",
+    "agent-system/tools/aso/agent_system_orchestrator_aso",
+    "agent-system/tools/aso/agent_system_orchestrator_aso/cli.py",
+    "agent-system/tools/aso/agent_system_orchestrator_aso/aso_tool",
+    "agent-system/tools/aso/agent_system_orchestrator_aso/aso_tool/commands",
+    "agent-system/tools/aso/agent_system_orchestrator_aso/aso_tool/commands/status.py",
+    "agent-system/tools/aso/agent_system_orchestrator_aso/aso_tool/commands/lint.py",
+    "agent-system/tools/aso/agent_system_orchestrator_aso/aso_tool/commands/archive_verify.py",
+    "agent-system/tools/aso/agent_system_orchestrator_aso/aso_tool/commands/doctor.py",
+    "agent-system/tools/aso/agent_system_orchestrator_aso/aso_tool/commands/validate_context_pack.py",
     "agent-system/tools/aso/tests",
-    "agent_system_orchestrator_aso",
-    "agent_system_orchestrator_aso/cli.py",
     "pyproject.toml",
     "Makefile",
 )
@@ -178,7 +179,7 @@ def _pyproject_version(root: Path) -> str:
 
 
 def _init_version(root: Path) -> str:
-    path = root / "agent_system_orchestrator_aso" / "__init__.py"
+    path = root / "agent-system" / "tools" / "aso" / "agent_system_orchestrator_aso" / "__init__.py"
     text, error = _read_text(path)
     if error:
         return ""
@@ -270,7 +271,7 @@ def _check_pyproject(root: Path) -> list[Diagnostic]:
 
 
 def _check_command_registration(root: Path) -> list[Diagnostic]:
-    path = root / "agent-system" / "tools" / "aso" / "aso.py"
+    path = root / "agent-system" / "tools" / "aso" / "agent_system_orchestrator_aso" / "aso_tool" / "aso.py"
     text, error = _read_text(path)
     if error:
         return [
@@ -278,12 +279,12 @@ def _check_command_registration(root: Path) -> list[Diagnostic]:
                 "DOCTOR_PKG_COMMAND_001",
                 "error",
                 "ASO command parser is unreadable",
-                f"agent-system/tools/aso/aso.py: {error}",
-                ["agent-system/tools/aso/aso.py"],
+                f"{path.relative_to(root).as_posix()}: {error}",
+                [path.relative_to(root).as_posix()],
                 "Restore the ASO command parser.",
             )
         ]
-    required_terms = ('"doctor"', "handler=doctor.run", "from commands import")
+    required_terms = ('"doctor"', "handler=doctor.run", "from .commands import")
     missing = [term for term in required_terms if term not in text]
     if not missing:
         return []
@@ -292,8 +293,8 @@ def _check_command_registration(root: Path) -> list[Diagnostic]:
             "DOCTOR_PKG_COMMAND_002",
             "error",
             "doctor command is not registered",
-            f"agent-system/tools/aso/aso.py is missing registration marker(s): {', '.join(missing)}.",
-            ["agent-system/tools/aso/aso.py"],
+            f"{path.relative_to(root).as_posix()} is missing registration marker(s): {', '.join(missing)}.",
+            [path.relative_to(root).as_posix()],
             "Register doctor in the top-level ASO parser.",
         )
     ]

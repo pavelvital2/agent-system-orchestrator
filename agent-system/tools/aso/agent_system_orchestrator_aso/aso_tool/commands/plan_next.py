@@ -8,7 +8,7 @@ import sys
 from pathlib import Path
 from typing import Any
 
-from commands import state_verify
+from . import state_verify
 
 
 EXIT_OK = 0

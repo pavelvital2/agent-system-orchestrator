@@ -7,7 +7,7 @@ import argparse
 import sys
 from pathlib import Path
 
-from commands import (
+from .commands import (
     archive_verify,
     checkpoint_preflight,
     context_pack_build,
@@ -461,13 +461,40 @@ def build_parser() -> argparse.ArgumentParser:
     )
     verify_parser.set_defaults(handler=archive_verify.run)
 
+    package_layout_parser = subparsers.add_parser(
+        "package-layout",
+        help="Package layout inspection commands.",
+        description="Read-only package layout inspection commands.",
+    )
+    package_layout_subparsers = package_layout_parser.add_subparsers(
+        dest="package_layout_command",
+        metavar="COMMAND",
+    )
+    package_layout_verify_parser = package_layout_subparsers.add_parser(
+        "verify",
+        help="Verify the canonical ASO package layout.",
+        description=(
+            "Read-only verification that the canonical ASO package lives under "
+            "agent-system/tools/aso and no root duplicate package is tracked."
+        ),
+    )
+    _add_root_argument(package_layout_verify_parser, validate=False)
+    package_layout_verify_parser.add_argument(
+        "--strict",
+        action="store_true",
+        help="Treat warnings as a failing package-layout result.",
+    )
+    package_layout_verify_parser.add_argument(
+        "--json",
+        action="store_true",
+        help="Print the package-layout verification report as JSON to stdout.",
+    )
+    package_layout_verify_parser.set_defaults(handler=package_sync.run_verify)
+
     package_sync_parser = subparsers.add_parser(
         "package-sync",
-        help="Package source synchronization inspection commands.",
-        description=(
-            "Read-only package source synchronization inspection commands. "
-            "Verifies the direct ASO source tree against the bundled install copy."
-        ),
+        help="Deprecated alias for package-layout inspection commands.",
+        description="Deprecated read-only alias for package-layout inspection commands.",
     )
     package_sync_subparsers = package_sync_parser.add_subparsers(
         dest="package_sync_command",
@@ -475,23 +502,19 @@ def build_parser() -> argparse.ArgumentParser:
     )
     package_sync_verify_parser = package_sync_subparsers.add_parser(
         "verify",
-        help="Verify direct and bundled ASO source copies are synchronized.",
-        description=(
-            "Read-only verification that agent-system/tools/aso and "
-            "agent_system_orchestrator_aso/aso_tool have matching normalized file "
-            "lists and sha256 content hashes."
-        ),
+        help="Deprecated alias for package-layout verify.",
+        description="Deprecated read-only alias for package-layout verify.",
     )
     _add_root_argument(package_sync_verify_parser, validate=False)
     package_sync_verify_parser.add_argument(
         "--strict",
         action="store_true",
-        help="Reserve strict package-sync failure semantics for future warning classes.",
+        help="Treat warnings as a failing package-layout result.",
     )
     package_sync_verify_parser.add_argument(
         "--json",
         action="store_true",
-        help="Print the package-sync verification report as JSON to stdout.",
+        help="Print the package-layout verification report as JSON to stdout.",
     )
     package_sync_verify_parser.set_defaults(handler=package_sync.run_verify)
 
