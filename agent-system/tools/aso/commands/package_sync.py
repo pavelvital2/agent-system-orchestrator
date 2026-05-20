@@ -5,7 +5,11 @@ from __future__ import annotations
 import argparse
 from pathlib import Path
 
-from agent_system_orchestrator_aso.aso_tool.commands import package_layout
+from agent_system_orchestrator_aso.aso_tool.commands import package_checks, package_layout
+
+
+SOURCE_TOOL_RELPATH = Path("agent-system/tools/aso/commands")
+BUNDLED_TOOL_RELPATH = Path(package_checks.CANONICAL_TOOL_RELPATH) / "commands"
 
 
 def build_report(root: Path, strict: bool, command: str = "package-sync verify") -> tuple[dict[str, object], int]:

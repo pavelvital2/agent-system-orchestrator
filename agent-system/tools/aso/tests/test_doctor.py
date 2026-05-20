@@ -174,6 +174,10 @@ version = "3.1.1"
 
 [project.scripts]
 aso = "agent_system_orchestrator_aso.cli:main"
+
+[tool.setuptools.packages.find]
+where = ["agent-system/tools/aso"]
+include = ["agent_system_orchestrator_aso*"]
 """,
         "Makefile": """.PHONY: test smoke doctor lint
 
@@ -190,14 +194,41 @@ lint:
 \tpython3 agent-system/tools/aso/aso.py lint --root . --mode package --strict
 """,
         ".gitignore": "/project-runtime/\n/project-input/\n/project-archive/\n",
-        "agent-system/tools/aso/aso.py": 'from commands import doctor\n"doctor"\nhandler=doctor.run\n',
-        "agent-system/tools/aso/commands/status.py": "",
-        "agent-system/tools/aso/commands/lint.py": "",
-        "agent-system/tools/aso/commands/archive_verify.py": "",
-        "agent-system/tools/aso/commands/doctor.py": "",
-        "agent-system/tools/aso/commands/validate_context_pack.py": "",
-        "agent_system_orchestrator_aso/__init__.py": '__version__ = "3.1.1"\n',
-        "agent_system_orchestrator_aso/cli.py": "",
+        ".github/workflows/governance.yml": """name: governance
+on:
+  push:
+    branches:
+      - main
+      - upgrade/**
+""",
+        "agent-system/tools/aso/aso.py": (
+            "import sys\n"
+            "from agent_system_orchestrator_aso.aso_tool.aso import build_parser, main\n"
+            'if __name__ == "__main__":\n'
+            "    sys.exit(main())\n"
+        ),
+        "agent-system/tools/aso/agent_system_orchestrator_aso/__init__.py": '__version__ = "3.1.1"\n',
+        "agent-system/tools/aso/agent_system_orchestrator_aso/cli.py": "from .aso_tool.aso import main\n",
+        "agent-system/tools/aso/agent_system_orchestrator_aso/aso_tool/__init__.py": "",
+        "agent-system/tools/aso/agent_system_orchestrator_aso/aso_tool/aso.py": (
+            "import argparse\n"
+            "from .commands import doctor\n"
+            "def build_parser():\n"
+            "    parser = argparse.ArgumentParser(prog='aso')\n"
+            "    subparsers = parser.add_subparsers(dest='command')\n"
+            '    doctor_parser = subparsers.add_parser("doctor")\n'
+            "    doctor_parser.set_defaults(handler=doctor.run)\n"
+            "    return parser\n"
+            "def main(argv=None):\n"
+            "    build_parser().parse_args(argv)\n"
+            "    return 0\n"
+        ),
+        "agent-system/tools/aso/agent_system_orchestrator_aso/aso_tool/commands/__init__.py": "",
+        "agent-system/tools/aso/agent_system_orchestrator_aso/aso_tool/commands/status.py": "",
+        "agent-system/tools/aso/agent_system_orchestrator_aso/aso_tool/commands/lint.py": "",
+        "agent-system/tools/aso/agent_system_orchestrator_aso/aso_tool/commands/archive_verify.py": "",
+        "agent-system/tools/aso/agent_system_orchestrator_aso/aso_tool/commands/doctor.py": "def run(args):\n    return 0\n",
+        "agent-system/tools/aso/agent_system_orchestrator_aso/aso_tool/commands/validate_context_pack.py": "",
         "agent-system/tools/aso/tests/test_placeholder.py": "",
     }.items():
         path = root / relpath
@@ -283,7 +314,7 @@ class DoctorCommandTests(unittest.TestCase):
             self.assertEqual(report["status"], "passed")
             self.assertEqual(report["summary"]["errors"], 0)
             self.assertEqual(report["summary"]["warnings"], 0)
-            self.assertGreaterEqual(report["summary"]["info"], 1)
+            self.assertEqual(report["summary"]["info"], 0)
 
             self.assertEqual(mtimes_before, {path: path.stat().st_mtime_ns for path in paths})
             forbidden_after = sorted(path.relative_to(root).as_posix() for path in (root / "project-input").rglob("*"))

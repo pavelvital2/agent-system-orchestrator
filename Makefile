@@ -1,4 +1,4 @@
-.PHONY: install install-user verify-install test smoke doctor lint ci
+.PHONY: install install-user verify-install test smoke doctor lint source-hygiene ci
 
 PYTHON ?= python3
 ASO_SCRIPT := agent-system/tools/aso/aso.py
@@ -19,7 +19,7 @@ verify-install:
 	PYTHONDONTWRITEBYTECODE=1 "$(ASO_BIN)" doctor --root . --mode package --strict
 	PYTHONDONTWRITEBYTECODE=1 "$(ASO_BIN)" package-layout verify --root . --strict
 
-test:
+test: source-hygiene
 	$(PYTHON) -m unittest discover -s agent-system/tools/aso/tests
 	$(PYTHON) -m unittest discover -s agent-system/tests
 
@@ -43,6 +43,9 @@ doctor:
 
 lint:
 	PYTHONDONTWRITEBYTECODE=1 $(PYTHON) $(ASO_SCRIPT) lint --root . --mode package --strict
+
+source-hygiene:
+	PYTHONDONTWRITEBYTECODE=1 bash agent-system/scripts/source_hygiene.sh
 
 ci: test smoke doctor lint
 	git diff --check

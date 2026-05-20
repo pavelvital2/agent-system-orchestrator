@@ -3,9 +3,12 @@ name: ASO Package Governance
 on:
   push:
     branches:
+      - main
       - upgrade/**
+      - merge/**
   pull_request:
-  workflow_dispatch:
+    branches:
+      - main
 
 permissions:
   contents: read

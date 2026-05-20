@@ -47,7 +47,10 @@ def _content(sidecars: dict[str, dict[str, object]], sidecar_type: str) -> dict[
 
 
 def _repo_root() -> Path:
-    return Path(__file__).resolve().parents[4]
+    for parent in Path(__file__).resolve().parents:
+        if (parent / RULES_RELATIVE_PATH).is_file():
+            return parent
+    return Path(__file__).resolve().parents[6]
 
 
 def _rules_path(workspace_root: Path) -> Path:
