@@ -168,6 +168,21 @@ correction pass before that command evidence exists.
 Install the local console command from the repository root with:
 
 ```text
+bash install.sh
+source .venv/bin/activate
+make verify-install
+```
+
+The user installer creates `.venv`, installs the package in editable mode, and
+verifies the installed `aso` command. It does not require secrets, GitHub
+credentials, remote repository access, dispatch authority, checkpoint
+execution, commit, push, or publication rights. Activation, update,
+verification, and cleanup commands are documented in the repository-root
+`README_INSTALL.md`.
+
+Manual editable install remains available:
+
+```text
 python3 -m pip install -e .
 aso --help
 ```

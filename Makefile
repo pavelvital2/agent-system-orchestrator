@@ -1,10 +1,23 @@
-.PHONY: install test smoke doctor lint ci
+.PHONY: install install-user verify-install test smoke doctor lint ci
 
 PYTHON ?= python3
 ASO_SCRIPT := agent-system/tools/aso/aso.py
+VENV ?= .venv
+ASO_BIN := $(VENV)/bin/aso
 
 install:
 	$(PYTHON) -m pip install -e .
+
+install-user:
+	PYTHONDONTWRITEBYTECODE=1 bash install.sh --python "$(PYTHON)" --venv "$(VENV)"
+
+verify-install:
+	test -x "$(ASO_BIN)"
+	PYTHONDONTWRITEBYTECODE=1 "$(ASO_BIN)" --help >/dev/null
+	PYTHONDONTWRITEBYTECODE=1 "$(ASO_BIN)" status --root . --mode package
+	PYTHONDONTWRITEBYTECODE=1 "$(ASO_BIN)" lint --root . --mode package --strict
+	PYTHONDONTWRITEBYTECODE=1 "$(ASO_BIN)" doctor --root . --mode package --strict
+	PYTHONDONTWRITEBYTECODE=1 "$(ASO_BIN)" package-layout verify --root . --strict
 
 test:
 	$(PYTHON) -m unittest discover -s agent-system/tools/aso/tests

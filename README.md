@@ -30,6 +30,21 @@ correction pass before that command evidence exists.
 
 ## Local install and command surface
 
+For a repeatable user install from the repository root:
+
+```text
+bash install.sh
+source .venv/bin/activate
+make verify-install
+```
+
+The installer creates `.venv`, installs this checkout in editable mode, and
+verifies the installed `aso` command. It does not require secrets, GitHub
+credentials, remote repository access, dispatch authority, checkpoint
+execution, commit, push, or publication rights. See
+`README_INSTALL.md` for activation, verification, update, and cleanup
+commands.
+
 For local console-script use from this repository:
 
 ```text
@@ -91,6 +106,8 @@ Repeatable root targets:
 
 ```text
 make install
+make install-user
+make verify-install
 make test
 make smoke
 make doctor
@@ -106,6 +123,11 @@ and checkpoint preflight. The CI target runs the local test, smoke, doctor,
 lint, and whitespace diff checks. CI should use the same local commands and
 must not require secrets, network credentials, real remotes, publishing
 permissions, or live automation authority.
+
+`make install-user` runs `install.sh` against `.venv`. `make verify-install`
+uses the installed `.venv/bin/aso` command for package status, strict lint,
+strict doctor, and strict package-layout verification. Package validation does
+not require `.venv`; direct script checks remain the compatibility baseline.
 
 Stage 2 state-contract examples use the corrected valid workspace fixture at
 `agent-system/tests/fixtures/state/valid_workspace`. The dry-run plan example
@@ -137,6 +159,8 @@ git ls-files project-input project-runtime project-archive
 
 The expected tracked-file result is empty. Stable release or validation
 summaries belong under accepted package paths such as `agent-system/11_release/`.
+Local `.venv` directories are generated user install state and must not be
+staged or published.
 The historical Stage 2 validation report is
 `agent-system/11_release/STAGE2_UPGRADE_VALIDATION_REPORT.md`; it is superseded
 for current acceptance by the Stage 2 state-contract correction. The final
