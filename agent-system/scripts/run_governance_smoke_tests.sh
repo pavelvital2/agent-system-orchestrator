@@ -11,9 +11,9 @@ RUNTIME_SCHEMA="${REPO_ROOT}/agent-system/04_state/RUNTIME_STATE_SCHEMA.md"
 SCOPE_MATRIX="${REPO_ROOT}/agent-system/09_validators/CHANGED_FILES_SCOPE_MATRIX.md"
 SECRET_RULES="${REPO_ROOT}/agent-system/09_validators/SECRET_SCAN_RULES.md"
 RECEIPT_TEMPLATE="${REPO_ROOT}/agent-system/03_templates/CHECKPOINT_ELIGIBILITY_TEMPLATE.md"
-CHANGELOG="${REPO_ROOT}/agent-system/GOVERNANCE_CHANGELOG.md"
 PACKAGE_VERSIONING="${REPO_ROOT}/agent-system/PACKAGE_VERSIONING.md"
 PACKAGE_README="${REPO_ROOT}/agent-system/README.md"
+GOVERNANCE_CHANGELOG="${REPO_ROOT}/agent-system/GOVERNANCE_CHANGELOG.md"
 FIXTURES_ROOT="${REPO_ROOT}/agent-system/tests/fixtures"
 PYTHON_BIN="${PYTHON_BIN:-python3}"
 
@@ -761,20 +761,48 @@ assert_coverage_matrix() {
 }
 
 assert_version_changelog_coherence() {
-  grep -Fq "CURRENT_PACKAGE_VERSION: 3.0.1" "$PACKAGE_VERSIONING" || die "PACKAGE_VERSIONING missing package 3.0.1"
-  grep -Fq "CURRENT_GOVERNANCE_RULESET_VERSION: 3.0.1" "$PACKAGE_VERSIONING" || die "PACKAGE_VERSIONING missing governance 3.0.1"
-  grep -Fq "CURRENT_RUNTIME_SCHEMA_VERSION: 3.0.0" "$PACKAGE_VERSIONING" || die "PACKAGE_VERSIONING missing runtime schema 3.0.0"
-  grep -Fq "CURRENT_PACKAGE_VERSION: 3.0.1" "$PACKAGE_README" || die "README missing package 3.0.1"
-  grep -Fq "GOV-2026-05-18-002" "$CHANGELOG" || die "changelog missing GOV-2026-05-18-002"
-  grep -Fq "ASO_V3_0_1_DOCS_EXAMPLES_COHERENCE_PATCH" "$CHANGELOG" || die "changelog missing v3.0.1 patch title"
-  grep -Fq "PACKAGE_VERSION_AFTER: 3.0.1" "$CHANGELOG" || die "changelog missing PACKAGE_VERSION_AFTER: 3.0.1"
-  awk '
-    /CHANGE_ID: GOV-2026-05-18-002/ { entry="v301" }
-    entry == "v301" && /STATUS: accepted/ { found_v301=1 }
-    END { exit(found_v301 ? 0 : 1) }
-  ' "$CHANGELOG" || die "changelog missing accepted status for v3.0.1 patch entry"
+  awk -v pkg="CURRENT_PACKAGE_VERSION: 3.1.2" \
+    -v governance="CURRENT_GOVERNANCE_RULESET_VERSION: 3.1.2" \
+    -v runtime="CURRENT_RUNTIME_SCHEMA_VERSION: 3.0.0" '
+    /^## Active version constants$/ { in_section=1; section_seen=1; next }
+    section_seen && in_section && /^## / { in_section=0 }
+    in_section && $0 == pkg { pkg_found=1 }
+    in_section && $0 == governance { governance_found=1 }
+    in_section && $0 == runtime { runtime_found=1 }
+    END { exit(section_seen && pkg_found && governance_found && runtime_found ? 0 : 1) }
+  ' "$PACKAGE_VERSIONING" || die "PACKAGE_VERSIONING active version constants missing 3.1.2 / 3.1.2 / 3.0.0"
 
-  printf 'PASS: version_changelog coherent for 3.0.1 package/governance with runtime schema 3.0.0\n'
+  awk -v pkg="CURRENT_PACKAGE_VERSION: 3.1.2" \
+    -v governance="CURRENT_GOVERNANCE_RULESET_VERSION: 3.1.2" \
+    -v runtime="CURRENT_RUNTIME_SCHEMA_VERSION: 3.0.0" \
+    -v marker="STAGE3_RELEASE_MARKER: pre-main-package-layout-cleanup" '
+    /^Current active tuple and Stage 3 marker:$/ { in_section=1; section_seen=1; next }
+    section_seen && in_section && /^## Examples$/ { in_section=0 }
+    in_section && $0 == pkg { pkg_found=1 }
+    in_section && $0 == governance { governance_found=1 }
+    in_section && $0 == runtime { runtime_found=1 }
+    in_section && $0 == marker { marker_found=1 }
+    END { exit(section_seen && pkg_found && governance_found && runtime_found && marker_found ? 0 : 1) }
+  ' "$PACKAGE_README" || die "README current active tuple missing 3.1.2 / 3.1.2 / 3.0.0 Stage 3 marker"
+
+  awk -v change_id="CHANGE_ID: GOV-2026-05-20-001" '
+    $0 == change_id { in_entry=1; entry_seen=1 }
+    in_entry && $0 != change_id && /^CHANGE_ID: / { in_entry=0 }
+    in_entry {
+      if ($0 ~ /^STATUS:/) {
+        status_count++
+        status_value=$0
+      }
+      if ($0 == "STATUS: proposed") {
+        proposed_seen=1
+      }
+    }
+    END {
+      exit(entry_seen && status_count == 1 && status_value == "STATUS: accepted" && !proposed_seen ? 0 : 1)
+    }
+  ' "$GOVERNANCE_CHANGELOG" || die "GOVERNANCE_CHANGELOG GOV-2026-05-20-001 must exist with exactly one accepted status and no proposed status within entry boundary"
+
+  printf 'PASS: version coherence asserts active 3.1.2 package/governance with runtime schema 3.0.0\n'
   PASS_COUNT=$((PASS_COUNT + 1))
 }
 

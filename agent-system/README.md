@@ -153,11 +153,57 @@ accepted repository lock explicitly allows it.
 The package includes an experimental read-only ASO helper CLI at
 `agent-system/tools/aso/aso.py`.
 
+This pre-main package layout cleanup branch records the active package metadata
+as the governed `3.1.2` package/governance tuple with runtime schema `3.0.0`.
+It preserves the read-only Stage 2 command surfaces and replaces duplicate
+package-copy synchronization diagnostics with package-layout verification.
+
+The canonical installable ASO package source is:
+
+```text
+agent-system/tools/aso/agent_system_orchestrator_aso/
+```
+
+The former root-level duplicate package path
+`agent_system_orchestrator_aso/` is not canonical package source and must remain
+absent from tracked files. `pyproject.toml` package discovery points to
+`agent-system/tools/aso`.
+
+Install the local console command from the repository root with:
+
+```text
+bash install.sh
+source .venv/bin/activate
+make verify-install
+```
+
+The user installer creates `.venv`, installs the package in editable mode, and
+verifies the installed `aso` command. It does not require secrets, GitHub
+credentials, remote repository access, dispatch authority, checkpoint
+execution, commit, push, or publication rights. Activation, update,
+verification, and cleanup commands are documented in the repository-root
+`README_INSTALL.md`.
+
+Manual editable install remains available:
+
+```text
+python3 -m pip install -e .
+aso --help
+```
+
+The installed `aso` command is additive. Direct script execution remains
+supported and should be used by compatibility checks:
+
+```text
+python3 agent-system/tools/aso/aso.py --help
+```
+
 Package repository checks use explicit package mode:
 
 ```text
 python3 agent-system/tools/aso/aso.py status --root . --mode package
 python3 agent-system/tools/aso/aso.py lint --root . --mode package --strict
+python3 agent-system/tools/aso/aso.py doctor --root . --mode package --strict
 ```
 
 Initialized project workspaces use explicit workspace mode:
@@ -165,10 +211,174 @@ Initialized project workspaces use explicit workspace mode:
 ```text
 python3 agent-system/tools/aso/aso.py status --root /path/to/project --mode workspace
 python3 agent-system/tools/aso/aso.py lint --root /path/to/project --mode workspace --strict
+python3 agent-system/tools/aso/aso.py doctor --root /path/to/project --mode workspace --strict
 ```
 
-The helper supports read-only status, lint, and archive verify inspection. It
-does not provide mutation, dispatch, or checkpoint commands.
+`aso doctor` inspects package command readiness in package mode and workspace
+runtime, identity, repository lock, and checkpoint readiness signals in
+workspace mode. It emits text output by default, supports `--json-out`, and
+uses nonzero exit status for hard failures. `--strict` treats warnings as a
+failed result.
+
+The design validator checks solution architect design Markdown:
+
+```text
+python3 agent-system/tools/aso/aso.py validate-design path/to/DESIGN.md --root . --strict
+```
+
+It validates design contract coverage, traceability, assumptions/GAP
+separation, downstream task readiness, acceptance criteria, testing strategy,
+and product capability evidence. The context-pack validator checks bounded JSON
+context packs:
+
+```text
+python3 agent-system/tools/aso/aso.py validate-context-pack path/to/CONTEXT_PACK.json --root . --strict
+```
+
+It validates required shape, context budget, archive/deprecated path rejection,
+forbidden document checks, and required document existence under `--root`.
+
+Stage 2 command surfaces are local, read-only, and offline:
+
+```text
+python3 agent-system/tools/aso/aso.py validate-rules --root . --strict
+python3 agent-system/tools/aso/aso.py state verify --root agent-system/tests/fixtures/state/valid_workspace --strict --json-out /tmp/aso-stage2-state.json
+python3 agent-system/tools/aso/aso.py plan-next --root agent-system/tests/fixtures/state/valid_workspace --strict --json-out /tmp/aso-stage2-plan.json
+python3 agent-system/tools/aso/aso.py dashboard --root agent-system/tests/fixtures/state/valid_workspace --out /tmp/aso-stage2-dashboard.html
+python3 agent-system/tools/aso/aso.py checkpoint-preflight --root . --mode package --strict --json-out /tmp/aso-stage2-checkpoint-preflight.json
+```
+
+`aso validate-rules` checks the packaged governance rule registry. `aso state
+verify` compares Markdown runtime files with JSON sidecars and emits optional
+JSON evidence. `aso plan-next` recommends the next orchestrator action as a
+dry-run report only. `aso dashboard` renders escaped static HTML to stdout,
+`/tmp`, or an explicit workspace `project-runtime/dashboard` path. `aso dag
+render`, `aso context-pack build`, and `aso incident fixture` likewise write
+generated render/proposal artifacts only to stdout, `/tmp`, or explicit
+workspace runtime report/proposal directories; tracked package paths are
+rejected with `ASO_OUTPUT_PATH_FORBIDDEN`. `aso checkpoint-preflight` inspects
+checkpoint eligibility without staging, committing, pushing, or changing
+runtime state.
+The corrected state examples use
+`agent-system/tests/fixtures/state/valid_workspace`; the dry-run plan evidence
+uses the canonical next action value `CREATE_AGENT` without dispatching an
+agent.
+
+Stage 3 command surfaces are local, read-only, dry-run, or proposal-only. The
+package-layout guard checks active package metadata, command surface coherence,
+canonical package placement, entrypoint configuration, and repository hygiene:
+
+```text
+python3 agent-system/tools/aso/aso.py package-layout verify --root . --strict
+```
+
+`aso package-layout verify` is an inspection command. It reports layout,
+version, entrypoint, workflow, or hygiene drift and exits nonzero on strict
+mismatches. It checks that the root duplicate package is absent and the
+canonical package is under `agent-system/tools/aso/agent_system_orchestrator_aso/`.
+
+For DAG readiness, `audit_passed` is not a completed dependency. Downstream
+work that depends on accepted task output requires `checkpoint_done` with
+checkpoint evidence, or another explicitly completed terminal state allowed by
+the governance rules.
+
+Repeatable root targets are:
+
+```text
+make install
+make install-user
+make verify-install
+make test
+make smoke
+make doctor
+make lint
+make ci
+```
+
+`make test` runs the ASO command unit tests and package governance tests.
+`make smoke` runs CLI help, package status, strict package lint, strict package
+doctor, read-only package-layout verification, valid design/context-pack
+fixtures, rule validation, state sidecar verification, dry-run next-action
+planning, static dashboard rendering to `/tmp`, checkpoint preflight, and the
+local Stage 3 diagnostics. `make ci` runs `test`, `smoke`, `doctor`, `lint`,
+and `git diff --check`. The smoke and CI surfaces are local and diagnostic:
+they must not require secrets, network credentials, real remotes, publishing
+permissions, live service access, or live automation authority.
+
+`make install-user` runs `install.sh` against `.venv`. `make verify-install`
+uses the installed `.venv/bin/aso` command for package status, strict lint,
+strict doctor, and strict package-layout verification.
+
+The helper supports read-only status, lint, doctor, package-layout verification,
+design validation, context pack validation, rule validation, state
+verification, dry-run next-action planning, static dashboard rendering,
+checkpoint eligibility preflight, and archive verify inspection. Its read-only
+behavior is part of the ASO boundary. It does not dispatch agents, mutate
+package or workspace state, perform checkpoints, commit, or push. For package
+lint compatibility, this boundary is also stated as: ASO does not provide
+mutation, dispatch, or checkpoint commands.
+
+## Publication and cleanup boundary
+
+Stage 1, Stage 2, and Stage 3 working upgrade packages and generated execution
+artifacts are local inputs/evidence, not public package documentation. Do not
+publish or checkpoint the working upgrade package, generated runtime task
+packets, profile results, audit results, local scratch notes, command logs,
+Codex artifacts, or `project-runtime`/`project-archive` material as accepted
+package docs.
+
+Accepted stable summaries may be added under package-controlled paths such as:
+
+```text
+agent-system/11_release/STAGE1_UPGRADE_VALIDATION_REPORT.md
+agent-system/11_release/STAGE2_UPGRADE_VALIDATION_REPORT.md
+agent-system/11_release/STAGE3_SAFE_AUTOMATION_DIAGNOSTICS_RELEASE_NOTES.md
+```
+
+The Stage 1 final validation report is accepted evidence and must remain
+intact. The original Stage 2 validation report remains historical evidence but
+is superseded for current acceptance by the Stage 2 state-contract correction.
+That historical Stage 2 evidence used `CURRENT_PACKAGE_VERSION: 3.0.1`; the
+correction report is the current acceptance source for the governed `3.0.2`
+package/governance tuple.
+The final correction validation report is:
+
+```text
+agent-system/11_release/STAGE2_STATE_CONTRACT_CORRECTION_VALIDATION_REPORT.md
+```
+
+Task 006 supplied final local command evidence in that report, including the
+current validation blocker status.
+The Stage 3 v3.1.0 release notes are historical Task 007 documentation
+evidence only. Current pre-main package layout cleanup evidence belongs in:
+
+```text
+agent-system/11_release/STAGE3_PRE_MAIN_PACKAGE_LAYOUT_CLEANUP_VALIDATION_REPORT.md
+```
+
+That report records command evidence for the `3.1.2 / 3.1.2 / 3.0.0` package
+tuple, the canonical package layout under `agent-system/tools/aso/`, and the
+absence of tracked `agent_system_orchestrator_aso/**`,
+`project-input/**`, `project-runtime/**`, and `project-archive/**` files. It
+must record `VALIDATION_COMMAND_HEAD`, `FINAL_COMMIT_PENDING: yes`, and
+`REMOTE_HEAD_VERIFICATION_REQUIRED_AFTER_PUSH: yes` instead of claiming a
+self-referential final commit.
+
+Merge readiness must follow `09_MAIN_MERGE_READINESS_PROCEDURE.md` or accepted
+package merge-readiness docs after audit pass, orchestrator-owned checkpoint,
+push, and remote CI evidence. This package does not merge to `main`.
+
+After all accepted upgrade tasks are committed and pushed by the orchestrator,
+cleanup is local:
+
+```text
+rm -rf project-input/<stage-upgrade-package>
+git status --short project-input project-runtime project-archive
+git ls-files project-input project-runtime project-archive
+```
+
+Expected tracked output for those roots is empty. If any file from those roots
+is staged or tracked, stop and treat it as a governance incident.
 
 ## Templates, state, and logs
 
@@ -239,7 +449,7 @@ Profile agents do not commit or push. Auditors do not replace the checkpoint. Fa
 
 ## Governance smoke tests
 
-Run local package governance smoke tests with:
+Run standalone package governance smoke tests with:
 
 ```text
 ./agent-system/scripts/run_governance_smoke_tests.sh
@@ -249,7 +459,8 @@ The smoke runner creates temporary local Git repositories and uses dry-run
 preflight checks only. It does not stage, commit, push, contact a real remote,
 or require real secrets.
 
-Expected pass behavior:
+Expected pass behavior after the standalone fixture expectations are aligned
+with the active package tuple:
 
 ```text
 SMOKE_RESULT: passed
@@ -275,12 +486,13 @@ Governance and package changes are recorded in:
 agent-system/GOVERNANCE_CHANGELOG.md
 ```
 
-Current v3.0.1 tuple:
+Current active tuple and Stage 3 marker:
 
 ```text
-CURRENT_PACKAGE_VERSION: 3.0.1
-CURRENT_GOVERNANCE_RULESET_VERSION: 3.0.1
+CURRENT_PACKAGE_VERSION: 3.1.2
+CURRENT_GOVERNANCE_RULESET_VERSION: 3.1.2
 CURRENT_RUNTIME_SCHEMA_VERSION: 3.0.0
+STAGE3_RELEASE_MARKER: pre-main-package-layout-cleanup
 ```
 
 ## Examples
@@ -311,6 +523,7 @@ Documentation-only examples and the final smoke checklist live in:
 agent-system/10_examples/MINIMAL_EXAMPLE_FIXTURE.md
 agent-system/10_examples/EXPECTED_FLOW_EXAMPLE.md
 agent-system/10_examples/FINAL_SMOKE_CHECKLIST.md
+agent-system/10_examples/STAGE3_SAFE_AUTOMATION_DIAGNOSTICS_COMMANDS.md
 ```
 
 These examples demonstrate the generic TZ -> requirements/design -> task ->

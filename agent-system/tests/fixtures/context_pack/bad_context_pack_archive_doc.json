@@ -1,0 +1,23 @@
+{
+  "task_id": "TASK_BAD_ARCHIVE_DOC",
+  "required_docs": [
+    {
+      "path": "project-archive/old-design.md",
+      "sections": [
+        "Archived decision"
+      ],
+      "why_needed": "Invalid archived context"
+    }
+  ],
+  "forbidden_docs": [
+    "project-archive/"
+  ],
+  "source_of_truth": [
+    "project-archive/old-design.md"
+  ],
+  "context_budget": {
+    "max_docs": 3,
+    "max_sections_per_doc": 4,
+    "max_chars_total": 5000
+  }
+}

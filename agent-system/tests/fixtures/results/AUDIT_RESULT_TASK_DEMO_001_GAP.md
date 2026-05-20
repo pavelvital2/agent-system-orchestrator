@@ -1,0 +1,51 @@
+# AUDIT_RESULT
+
+STATUS: gap
+TASK_ID: TASK_DEMO_001
+AGENT_INSTANCE_ID: audit_TASK_DEMO_001_attempt_004
+ROLE: auditor
+TASK: TASK_DEMO_001
+SUMMARY:
+Audit found an owner-facing gap.
+READ_DOCS:
+- NONE
+READ_INPUTS:
+- NONE
+CHANGED_FILES:
+- NONE
+CREATED_FILES:
+- NONE
+DELETED_FILES:
+- NONE
+COMMANDS_RUN:
+- NONE
+TESTS_RUN:
+- NONE
+EVIDENCE:
+- SOURCE_RESULT_REF: agent-system/tests/fixtures/results/RESULT_TASK_DEMO_001_PASS.md
+- AUDIT_STATUS: gap
+SCOPE_VERIFICATION:
+- NONE
+FORBIDDEN_CHANGES_CHECK:
+- NONE
+RISKS:
+- NONE
+LIMITATIONS:
+- NONE
+BLOCKERS:
+- NONE
+GAPS:
+- GAP_ID: GAP-DEMO-001
+  TYPE: technical
+  BLOCKS: TASK_DEMO_001 audit acceptance
+  QUESTION_TO_OWNER: Which correction route should be used?
+  RECOMMENDED_OPTIONS:
+    A. Correct the implementation.
+    B. Pause the task.
+    C. Supersede the task.
+  RECOMMENDED_OPTION: A
+  REASON: Audit cannot accept the current result.
+NEXT_RECOMMENDED_ACTION:
+- REGISTER_GAP
+REUSE_ALLOWED: false
+AGENT_TERMINATION_REQUIRED: true

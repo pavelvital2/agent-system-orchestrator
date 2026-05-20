@@ -9,6 +9,19 @@ It is a preparation and specification document only. It does not authorize
 creation of active `project-runtime/state/*` files, does not migrate current
 runtime state, and does not add runtime mutation commands.
 
+Stage 2 adds package-level sidecar schemas and validation rules in:
+
+```text
+agent-system/02_runtime/CANONICAL_JSON_STATE.md
+agent-system/03_templates/state/*.json
+agent-system/09_validators/STATE_SIDECAR_VALIDATION_RULES.md
+```
+
+These package files define preferred machine-verifiable sidecar shapes for
+future workspace state validation. They do not create active runtime state,
+do not change runtime ownership, and do not supersede the later aggregate
+`project-runtime/state/state.json` migration described below.
+
 In v0, the existing Markdown runtime files remain compatible and authoritative:
 
 ```text

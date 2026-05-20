@@ -2,60 +2,79 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://agent-system.local/schemas/accepted_artifacts.schema.json",
   "title": "ACCEPTED_ARTIFACTS",
-  "description": "Machine-readable sidecar for agent-system/04_state/ACCEPTED_ARTIFACTS_TEMPLATE.md.",
+  "description": "Stage 2 envelope sidecar for project-runtime/ACCEPTED_ARTIFACTS.md.",
   "type": "object",
   "additionalProperties": false,
-  "required": ["ARTIFACT_ENTRIES"],
+  "required": [
+    "schema_version",
+    "sidecar_type",
+    "markdown_source",
+    "state_revision",
+    "updated_at",
+    "updated_by",
+    "content"
+  ],
   "properties": {
-    "ARTIFACT_ENTRIES": {
-      "oneOf": [
-        { "const": "NONE" },
-        {
-          "type": "array",
-          "items": { "$ref": "#/$defs/artifactEntry" }
-        }
-      ]
-    }
+    "schema_version": { "type": "string", "const": "2.0.0" },
+    "sidecar_type": { "type": "string", "const": "ACCEPTED_ARTIFACTS" },
+    "markdown_source": { "type": "string", "const": "project-runtime/ACCEPTED_ARTIFACTS.md" },
+    "state_revision": { "type": "integer", "minimum": 1 },
+    "updated_at": { "type": "string", "format": "date-time" },
+    "updated_by": { "type": "string", "const": "orchestrator" },
+    "content": { "$ref": "#/$defs/content" }
   },
   "$defs": {
+    "content": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["artifacts"],
+      "properties": {
+        "artifacts": {
+          "oneOf": [
+            { "const": "NONE" },
+            { "type": "array", "items": { "$ref": "#/$defs/artifactEntry" } }
+          ]
+        }
+      }
+    },
     "artifactEntry": {
       "type": "object",
       "additionalProperties": false,
       "required": [
-        "ARTIFACT_ID",
-        "ARTIFACT_TYPE",
-        "ARTIFACT_REF",
-        "STATUS",
-        "SOURCE_TASK",
-        "SOURCE_RESULT_REF",
-        "AUDIT_REF",
-        "SUPERSEDES",
-        "SUPERSEDED_BY",
-        "COMMIT_HASH",
-        "BRANCH",
-        "PUSH_STATUS",
-        "CHECKPOINT_REF",
-        "ACCEPTED_AT",
-        "UPDATED_AT",
-        "NOTES"
+        "artifact_id",
+        "artifact_type",
+        "artifact_ref",
+        "status",
+        "source_task",
+        "source_result_ref",
+        "audit_ref",
+        "supersedes",
+        "superseded_by",
+        "commit_hash",
+        "branch",
+        "push_status",
+        "checkpoint_ref",
+        "accepted_at",
+        "updated_at",
+        "notes"
       ],
       "properties": {
-        "ARTIFACT_ID": { "type": "string" },
-        "ARTIFACT_TYPE": { "type": "string" },
-        "ARTIFACT_REF": { "type": "string" },
-        "STATUS": { "type": "string", "enum": ["draft", "accepted", "failed", "superseded"] },
-        "SOURCE_TASK": { "type": "string" },
-        "SOURCE_RESULT_REF": { "type": "string" },
-        "AUDIT_REF": { "type": "string" },
-        "SUPERSEDES": { "type": "string" },
-        "SUPERSEDED_BY": { "type": "string" },
-        "COMMIT_HASH": { "type": "string" },
-        "BRANCH": { "type": "string" },
-        "PUSH_STATUS": { "type": "string", "enum": ["not_required", "not_attempted", "pushed", "failed"] },
-        "CHECKPOINT_REF": { "type": "string" },
-        "ACCEPTED_AT": { "type": "string" },
-        "UPDATED_AT": { "type": "string" },
-        "NOTES": { "type": "string" }
+        "artifact_id": { "type": "string" },
+        "artifact_type": { "type": "string" },
+        "artifact_ref": { "type": "string" },
+        "status": { "type": "string", "enum": ["draft", "accepted", "failed", "superseded"] },
+        "source_task": { "type": "string" },
+        "source_result_ref": { "type": "string" },
+        "audit_ref": { "type": "string" },
+        "supersedes": { "type": "string" },
+        "superseded_by": { "type": "string" },
+        "commit_hash": { "type": "string" },
+        "branch": { "type": "string" },
+        "push_status": { "type": "string", "enum": ["not_required", "not_attempted", "pushed", "failed"] },
+        "checkpoint_ref": { "type": "string" },
+        "accepted_at": { "type": "string" },
+        "updated_at": { "type": "string" },
+        "notes": { "type": "string" }
       }
     }
   }

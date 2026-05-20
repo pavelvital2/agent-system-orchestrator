@@ -1,0 +1,32 @@
+{
+  "task_id": "TASK_BAD_BUDGET_OVERFLOW",
+  "required_docs": [
+    {
+      "path": "agent-system/README.md",
+      "sections": [
+        "ASO helper CLI",
+        "Runtime governance"
+      ],
+      "why_needed": "Too many sections for the declared budget"
+    },
+    {
+      "path": "agent-system/09_validators/TASK_PACKET_SCHEMA_VALIDATION_RULES.md",
+      "sections": [
+        "Dispatch validation"
+      ],
+      "why_needed": "Too many documents for the declared budget"
+    }
+  ],
+  "forbidden_docs": [
+    "project-archive/"
+  ],
+  "source_of_truth": [
+    "agent-system/README.md",
+    "agent-system/09_validators/TASK_PACKET_SCHEMA_VALIDATION_RULES.md"
+  ],
+  "context_budget": {
+    "max_docs": 1,
+    "max_sections_per_doc": 1,
+    "max_chars_total": 80
+  }
+}

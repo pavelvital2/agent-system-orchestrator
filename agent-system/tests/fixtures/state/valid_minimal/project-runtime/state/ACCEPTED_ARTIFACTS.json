@@ -1,0 +1,30 @@
+{
+  "schema_version": "2.0.0",
+  "sidecar_type": "ACCEPTED_ARTIFACTS",
+  "markdown_source": "project-runtime/ACCEPTED_ARTIFACTS.md",
+  "state_revision": 1,
+  "updated_at": "2026-01-01T00:00:00Z",
+  "updated_by": "orchestrator",
+  "content": {
+    "artifacts": [
+      {
+        "artifact_id": "ARTIFACT-FIXTURE-001",
+        "artifact_type": "runtime_doc",
+        "artifact_ref": "agent-system/02_runtime/CANONICAL_JSON_STATE.md",
+        "status": "accepted",
+        "source_task": "TASK_FIXTURE_STATE_001",
+        "source_result_ref": "project-runtime/results/worker/RESULT_TASK_FIXTURE_STATE_001_ATTEMPT_1.md",
+        "audit_ref": "NONE",
+        "supersedes": "NONE",
+        "superseded_by": "NONE",
+        "commit_hash": "NONE",
+        "branch": "NONE",
+        "push_status": "not_required",
+        "checkpoint_ref": "NONE",
+        "accepted_at": "2026-01-01T00:00:00Z",
+        "updated_at": "2026-01-01T00:00:00Z",
+        "notes": "Fixture reference only."
+      }
+    ]
+  }
+}

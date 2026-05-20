@@ -1,0 +1,22 @@
+{
+  "schema_version": "2.0.0",
+  "sidecar_type": "WORKSPACE_IDENTITY",
+  "markdown_source": "project-runtime/WORKSPACE_IDENTITY.md",
+  "state_revision": 1,
+  "updated_at": "2026-01-01T00:00:00Z",
+  "updated_by": "orchestrator",
+  "content": {
+    "workspace_id": "WORKSPACE-FIXTURE-STATE",
+    "project_slug": "state-sidecar-fixture",
+    "workspace_type": "test_fixture",
+    "expected_git_remote": "git@example.invalid:fixture/state-sidecar.git",
+    "actual_git_remote": "git@example.invalid:fixture/state-sidecar.git",
+    "expected_branch": "fixture/main",
+    "actual_branch": "fixture/main",
+    "identity_validation_status": "passed",
+    "repository_lock_status": "passed",
+    "push_allowed": false,
+    "validated_at": "2026-01-01T00:00:00Z",
+    "validation_errors": []
+  }
+}

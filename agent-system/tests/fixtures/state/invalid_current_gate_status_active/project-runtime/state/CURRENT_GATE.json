@@ -1,0 +1,30 @@
+{
+  "schema_version": "2.0.0",
+  "sidecar_type": "CURRENT_GATE",
+  "markdown_source": "project-runtime/CURRENT_GATE.md",
+  "state_revision": 1,
+  "updated_at": "2026-01-01T00:00:00Z",
+  "updated_by": "orchestrator",
+  "content": {
+    "gate_id": "GATE-INVALID-ACTIVE",
+    "gate_name": "Invalid active status gate",
+    "gate_type": "implementation",
+    "status": "active",
+    "owner_role": "orchestrator",
+    "task_id": "TASK_INVALID_GATE_ACTIVE",
+    "task_packet": "project-runtime/tasks/active/TASK_INVALID_GATE_ACTIVE.md",
+    "action_semantic": "normal",
+    "workspace_identity_status": "passed",
+    "repository_lock_status": "accepted",
+    "baseline_tracking_status": "passed",
+    "checkpoint_eligibility": "not_applicable",
+    "checkpoint_eligibility_status": "not_checked",
+    "project_checkpoint_status": "not_required",
+    "entry_criteria": [],
+    "exit_criteria": [],
+    "required_next_role": "developer",
+    "gate_evidence": [],
+    "blocking_status": "NONE",
+    "notes": []
+  }
+}

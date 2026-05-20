@@ -81,11 +81,64 @@ def write_runtime(root: Path, overrides: dict[str, str] | None = None) -> list[P
 
 
 def write_package_fixture(root: Path, *, include_untracked_input: bool = False) -> None:
-    (root / "agent-system" / "tools" / "aso").mkdir(parents=True)
+    aso_root = root / "agent-system" / "tools" / "aso"
+    package = aso_root / "agent_system_orchestrator_aso"
+    (package / "aso_tool" / "commands").mkdir(parents=True)
+    (root / ".github" / "workflows").mkdir(parents=True)
     (root / "README.md").write_text(PACKAGE_README, encoding="utf-8")
     (root / "agent-system" / "README.md").write_text(PACKAGE_README, encoding="utf-8")
+    (aso_root / "aso.py").write_text(
+        (
+            "import sys\n"
+            "from agent_system_orchestrator_aso.aso_tool.aso import build_parser, main\n"
+            'if __name__ == "__main__":\n'
+            "    sys.exit(main())\n"
+        ),
+        encoding="utf-8",
+    )
+    (package / "__init__.py").write_text("\n", encoding="utf-8")
+    (package / "cli.py").write_text("from .aso_tool.aso import main\n", encoding="utf-8")
+    (package / "aso_tool" / "__init__.py").write_text("\n", encoding="utf-8")
+    (package / "aso_tool" / "commands" / "__init__.py").write_text("\n", encoding="utf-8")
+    (package / "aso_tool" / "aso.py").write_text(
+        (
+            "import argparse\n"
+            "def build_parser():\n"
+            "    return argparse.ArgumentParser(prog='aso')\n"
+            "def main(argv=None):\n"
+            "    build_parser().parse_args(argv)\n"
+            "    return 0\n"
+        ),
+        encoding="utf-8",
+    )
+    (root / "pyproject.toml").write_text(
+        (
+            "[project]\n"
+            'name = "aso-fixture"\n'
+            'version = "0.0.0"\n'
+            "\n"
+            "[project.scripts]\n"
+            'aso = "agent_system_orchestrator_aso.cli:main"\n'
+            "\n"
+            "[tool.setuptools.packages.find]\n"
+            'where = ["agent-system/tools/aso"]\n'
+            'include = ["agent_system_orchestrator_aso*"]\n'
+        ),
+        encoding="utf-8",
+    )
     (root / ".gitignore").write_text(
         "/project-runtime/\n/project-input/\n/project-archive/\n",
+        encoding="utf-8",
+    )
+    (root / ".github" / "workflows" / "governance.yml").write_text(
+        (
+            "name: governance\n"
+            "on:\n"
+            "  push:\n"
+            "    branches:\n"
+            "      - main\n"
+            "      - upgrade/**\n"
+        ),
         encoding="utf-8",
     )
     if include_untracked_input:
