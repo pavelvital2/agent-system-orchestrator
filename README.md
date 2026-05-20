@@ -16,17 +16,21 @@ agent-system/README.md
 
 The package is a filesystem-governed instruction, template, lifecycle, and validation system for Codex CLI orchestration. It includes an experimental read-only ASO helper CLI at `agent-system/tools/aso/aso.py`.
 
-This Stage 3 DAG checkpoint correction branch records the active package
-metadata as the governed `3.1.1` package/governance tuple with runtime schema
-`3.0.0`. Stage 3 keeps ASO helper commands read-only, dry-run, or
-proposal-only and adds package synchronization diagnostics without adding live
-agent dispatch, autonomous owner approval, governed checkpoint execution,
-commit, push, or publishing authority.
+This pre-main package layout cleanup branch records the active package metadata
+as the governed `3.1.2` package/governance tuple with runtime schema `3.0.0`.
+The runtime schema remains unchanged because this package changes repository
+layout and installation ergonomics, not accepted runtime state meaning.
 
-Stage 3 acceptance for the current correction is tied to the
-`upgrade/stage-3-dag-checkpoint-correction` branch and the Task 005 final
-validation report. This documentation/version update does not claim the final
-correction pass before that command evidence exists.
+The canonical ASO Python package is:
+
+```text
+agent-system/tools/aso/agent_system_orchestrator_aso/
+```
+
+The former root-level duplicate package path
+`agent_system_orchestrator_aso/` is not a package source and must remain absent
+from tracked files before merge. Package-layout verification replaces duplicate
+copy synchronization checks for this cleanup.
 
 ## Local install and command surface
 
@@ -91,10 +95,11 @@ python3 agent-system/tools/aso/aso.py dashboard --root agent-system/tests/fixtur
 python3 agent-system/tools/aso/aso.py checkpoint-preflight --root . --mode package --strict --json-out /tmp/aso-stage2-checkpoint-preflight.json
 ```
 
-Stage 3 diagnostics are read-only and verify package metadata coherence:
+Stage 3 package-layout diagnostics are read-only and verify package metadata,
+entrypoint, hygiene, and canonical package-source coherence:
 
 ```text
-python3 agent-system/tools/aso/aso.py package-sync verify --root . --strict
+python3 agent-system/tools/aso/aso.py package-layout verify --root . --strict
 ```
 
 For DAG readiness, `audit_passed` is not a completed dependency. Downstream
@@ -116,7 +121,7 @@ make ci
 ```
 
 The smoke target includes CLI help, package status, strict package lint,
-strict package doctor, read-only package-sync verification, valid
+strict package doctor, read-only package-layout verification, valid
 design/context-pack fixtures, rule validation, state sidecar verification,
 dry-run next-action planning, static dashboard rendering to `/tmp`,
 and checkpoint preflight. The CI target runs the local test, smoke, doctor,
@@ -134,7 +139,7 @@ Stage 2 state-contract examples use the corrected valid workspace fixture at
 reports the canonical next action value `CREATE_AGENT`; it is evidence only and
 does not dispatch an agent.
 
-The helper supports read-only status, lint, doctor, package-sync verification,
+The helper supports read-only status, lint, doctor, package-layout verification,
 design validation, context pack validation, rule validation, state
 verification, dry-run next-action planning, static dashboard rendering,
 checkpoint eligibility preflight, and archive verify inspection. Its read-only
@@ -169,8 +174,12 @@ correction validation report is
 That report records Task 006 command evidence and the current validation
 blocker status. Stage 3 v3.1.0 release cleanup notes are recorded in
 `agent-system/11_release/STAGE3_SAFE_AUTOMATION_DIAGNOSTICS_RELEASE_NOTES.md`;
-that file is historical Task 007 documentation evidence only. Current Stage 3
-acceptance for the DAG checkpoint correction is through the
-`upgrade/stage-3-dag-checkpoint-correction` branch and the Task 005 final
-validation report; this Task 004 documentation/version update does not claim
-that final correction pass.
+that file is historical Task 007 documentation evidence only. Current pre-main
+package layout cleanup evidence belongs in
+`agent-system/11_release/STAGE3_PRE_MAIN_PACKAGE_LAYOUT_CLEANUP_VALIDATION_REPORT.md`.
+That report must separate `VALIDATION_COMMAND_HEAD` from post-push remote HEAD
+verification and must not claim a merge to `main`.
+
+Merge readiness is governed by
+`09_MAIN_MERGE_READINESS_PROCEDURE.md` or the accepted package merge-readiness
+docs after audit, orchestrator-owned checkpoint, push, and remote CI evidence.

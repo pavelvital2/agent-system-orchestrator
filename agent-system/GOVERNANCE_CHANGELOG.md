@@ -1247,4 +1247,42 @@ MIGRATION_NOTE: No runtime schema migration is introduced. Existing v3.1.0 works
 AUTHORIZED_BY: project_owner
 AUDIT_REQUIRED: yes
 STATUS: accepted
+
+CHANGE_ID: GOV-2026-05-20-001
+CHANGE_TITLE: ASO_STAGE3_PRE_MAIN_PACKAGE_LAYOUT_CLEANUP_DOCS_VERSION_CHANGELOG
+DATE: 2026-05-20
+PACKAGE_VERSION_BEFORE: 3.1.1
+PACKAGE_VERSION_AFTER: 3.1.2
+GOVERNANCE_RULESET_BEFORE: 3.1.1
+GOVERNANCE_RULESET_AFTER: 3.1.2
+RUNTIME_SCHEMA_BEFORE: 3.0.0
+RUNTIME_SCHEMA_AFTER: 3.0.0
+CHANGE_TYPE: patch
+CHANGE_SUBTYPE: pre_main_package_layout_cleanup_docs_version_changelog
+AFFECTED_FILES:
+- README.md
+- pyproject.toml
+- agent-system/README.md
+- agent-system/PACKAGE_VERSIONING.md
+- agent-system/GOVERNANCE_CHANGELOG.md
+- agent-system/11_release/STAGE3_PRE_MAIN_PACKAGE_LAYOUT_CLEANUP_VALIDATION_REPORT.md
+- agent-system/tools/aso/agent_system_orchestrator_aso/__init__.py
+AFFECTED_INVARIANTS:
+- Active package/governance/runtime tuple is 3.1.2 / 3.1.2 / 3.0.0.
+- Canonical installable ASO package source is agent-system/tools/aso/agent_system_orchestrator_aso/.
+- Root duplicate package path agent_system_orchestrator_aso/ is absent from tracked package files.
+- pyproject.toml package discovery points to agent-system/tools/aso.
+- Package-layout verification replaces duplicate copy synchronization for package-source coherence.
+- Final validation evidence records VALIDATION_COMMAND_HEAD separately from post-push remote HEAD verification.
+- Merge readiness points to 09_MAIN_MERGE_READINESS_PROCEDURE.md or accepted package merge-readiness docs and does not claim a main merge.
+AFFECTED_TRANSITIONS:
+- pre-main package layout cleanup -> independent audit -> orchestrator-owned checkpoint only after audit pass.
+- package-layout verify -> read-only diagnostic result for package-source layout and hygiene.
+- validation report -> records command evidence with FINAL_COMMIT_PENDING: yes and REMOTE_HEAD_VERIFICATION_REQUIRED_AFTER_PUSH: yes.
+SCHEMA_TEMPLATE_IMPACT: none
+MIGRATION_REQUIRED: no
+MIGRATION_NOTE: No runtime schema migration is introduced. Existing v3.1.1 workspaces should update package and governance docs to v3.1.2 before relying on pre-main package-layout verification and merge-readiness evidence. Runtime schema remains 3.0.0.
+AUTHORIZED_BY: project_owner
+AUDIT_REQUIRED: yes
+STATUS: proposed
 ```

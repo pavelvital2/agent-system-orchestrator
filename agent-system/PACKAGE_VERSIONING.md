@@ -19,8 +19,8 @@ RUNTIME_SCHEMA_VERSION:
 ## Active version constants
 
 ```text
-CURRENT_PACKAGE_VERSION: 3.1.1
-CURRENT_GOVERNANCE_RULESET_VERSION: 3.1.1
+CURRENT_PACKAGE_VERSION: 3.1.2
+CURRENT_GOVERNANCE_RULESET_VERSION: 3.1.2
 CURRENT_RUNTIME_SCHEMA_VERSION: 3.0.0
 ```
 
@@ -213,6 +213,29 @@ satisfied dependency for downstream readiness; dependency completion requires
 terminal state allowed by the governance rules. This documentation/version
 correction does not claim the final correction pass before Task 005 supplies
 command evidence.
+
+The Stage 3 pre-main package layout cleanup installs:
+
+```text
+CURRENT_PACKAGE_VERSION: 3.1.2
+CURRENT_GOVERNANCE_RULESET_VERSION: 3.1.2
+CURRENT_RUNTIME_SCHEMA_VERSION: 3.0.0
+```
+
+This patch makes the installable ASO package canonical under
+`agent-system/tools/aso/agent_system_orchestrator_aso/` and removes the former
+root duplicate package path from the governed package layout. It keeps the
+runtime schema at `3.0.0` because the cleanup changes repository package
+layout, installation ergonomics, and verification evidence rather than accepted
+runtime state meaning.
+
+Package discovery in `pyproject.toml` points to `agent-system/tools/aso`.
+Package-layout verification replaces duplicate copy synchronization as the
+current package-source coherence check. Final validation evidence for this
+cleanup must record command evidence without claiming an unknowable final
+commit before the orchestrator-owned checkpoint and push. Merge readiness must
+follow `09_MAIN_MERGE_READINESS_PROCEDURE.md` or accepted package
+merge-readiness docs after audit, checkpoint, push, and remote CI evidence.
 
 ## Version semantics
 

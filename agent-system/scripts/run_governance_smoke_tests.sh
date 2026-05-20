@@ -761,8 +761,8 @@ assert_coverage_matrix() {
 }
 
 assert_version_changelog_coherence() {
-  awk -v pkg="CURRENT_PACKAGE_VERSION: 3.1.1" \
-    -v governance="CURRENT_GOVERNANCE_RULESET_VERSION: 3.1.1" \
+  awk -v pkg="CURRENT_PACKAGE_VERSION: 3.1.2" \
+    -v governance="CURRENT_GOVERNANCE_RULESET_VERSION: 3.1.2" \
     -v runtime="CURRENT_RUNTIME_SCHEMA_VERSION: 3.0.0" '
     /^## Active version constants$/ { in_section=1; section_seen=1; next }
     section_seen && in_section && /^## / { in_section=0 }
@@ -770,12 +770,12 @@ assert_version_changelog_coherence() {
     in_section && $0 == governance { governance_found=1 }
     in_section && $0 == runtime { runtime_found=1 }
     END { exit(section_seen && pkg_found && governance_found && runtime_found ? 0 : 1) }
-  ' "$PACKAGE_VERSIONING" || die "PACKAGE_VERSIONING active version constants missing 3.1.1 / 3.1.1 / 3.0.0"
+  ' "$PACKAGE_VERSIONING" || die "PACKAGE_VERSIONING active version constants missing 3.1.2 / 3.1.2 / 3.0.0"
 
-  awk -v pkg="CURRENT_PACKAGE_VERSION: 3.1.1" \
-    -v governance="CURRENT_GOVERNANCE_RULESET_VERSION: 3.1.1" \
+  awk -v pkg="CURRENT_PACKAGE_VERSION: 3.1.2" \
+    -v governance="CURRENT_GOVERNANCE_RULESET_VERSION: 3.1.2" \
     -v runtime="CURRENT_RUNTIME_SCHEMA_VERSION: 3.0.0" \
-    -v marker="STAGE3_RELEASE_MARKER: safe-automation-diagnostics" '
+    -v marker="STAGE3_RELEASE_MARKER: pre-main-package-layout-cleanup" '
     /^Current active tuple and Stage 3 marker:$/ { in_section=1; section_seen=1; next }
     section_seen && in_section && /^## Examples$/ { in_section=0 }
     in_section && $0 == pkg { pkg_found=1 }
@@ -783,24 +783,23 @@ assert_version_changelog_coherence() {
     in_section && $0 == runtime { runtime_found=1 }
     in_section && $0 == marker { marker_found=1 }
     END { exit(section_seen && pkg_found && governance_found && runtime_found && marker_found ? 0 : 1) }
-  ' "$PACKAGE_README" || die "README current active tuple missing 3.1.1 / 3.1.1 / 3.0.0 Stage 3 marker"
+  ' "$PACKAGE_README" || die "README current active tuple missing 3.1.2 / 3.1.2 / 3.0.0 Stage 3 marker"
 
-  awk -v change_id="CHANGE_ID: GOV-2026-05-19-002" '
+  awk -v change_id="CHANGE_ID: GOV-2026-05-20-001" '
     $0 == change_id { in_entry=1; entry_seen=1 }
     in_entry && $0 != change_id && /^CHANGE_ID: / { in_entry=0 }
     in_entry {
-      if (index($0, "STATUS: proposed") > 0) { proposed_seen=1 }
       if ($0 ~ /^STATUS:/) {
         status_count++
         status_value=$0
       }
     }
     END {
-      exit(entry_seen && !proposed_seen && status_count == 1 && status_value == "STATUS: accepted" ? 0 : 1)
+      exit(entry_seen && status_count == 1 && status_value == "STATUS: proposed" ? 0 : 1)
     }
-  ' "$GOVERNANCE_CHANGELOG" || die "GOVERNANCE_CHANGELOG GOV-2026-05-19-002 must have exactly one accepted status and no proposed status within entry boundary"
+  ' "$GOVERNANCE_CHANGELOG" || die "GOVERNANCE_CHANGELOG GOV-2026-05-20-001 must have exactly one proposed status within entry boundary"
 
-  printf 'PASS: version coherence asserts active 3.1.1 package/governance with runtime schema 3.0.0\n'
+  printf 'PASS: version coherence asserts active 3.1.2 package/governance with runtime schema 3.0.0\n'
   PASS_COUNT=$((PASS_COUNT + 1))
 }
 
