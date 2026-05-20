@@ -1,0 +1,18 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "agent-system-orchestrator"
+version = "3.1.2"
+description = "Filesystem-governed Agent System Orchestrator package with read-only ASO helper CLI."
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = []
+
+[project.scripts]
+aso = "agent_system_orchestrator_aso.cli:main"
+
+[tool.setuptools.packages.find]
+where = ["agent-system/tools/aso"]
+include = ["agent_system_orchestrator_aso*"]

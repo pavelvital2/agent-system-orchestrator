@@ -39,11 +39,102 @@ agent-system/09_validators/schemas/accepted_artifacts.schema.json
 agent-system/09_validators/schemas/orchestrator_event.schema.json
 ```
 
-These sidecars use JSON Schema Draft 2020-12 and mirror the Markdown runtime
-templates. The Markdown files remain human-readable runtime records; validators
-may validate an equivalent YAML or JSON object that preserves the same fields.
-Executable parsing or rendering support is future/optional unless separately
-implemented by an accepted package task.
+These sidecars use JSON Schema Draft 2020-12 and must validate the Stage 2
+sidecar envelope documented below. The Markdown files remain human-readable
+runtime records and the authoritative compatibility view for field meaning,
+canonical enum values, and owner/operator review. Executable parsing or
+rendering support is future/optional unless separately implemented by an
+accepted package task.
+
+## Stage 2 sidecar authority
+
+Stage 2 has exactly one documented JSON sidecar contract:
+
+```text
+{
+  "schema_version": "<stable package schema version>",
+  "sidecar_type": "<matching canonical sidecar type>",
+  "markdown_source": "<matching project-runtime/*.md path>",
+  "state_revision": <positive integer>,
+  "updated_at": "<RFC 3339 UTC timestamp>",
+  "updated_by": "orchestrator",
+  "content": {
+    "<lower_case_field_name>": "<governed value>"
+  }
+}
+```
+
+The sidecar root is an envelope object. Governed runtime values live under the
+lower-case `content` object. Direct top-level JSON objects that contain the
+Markdown uppercase field names are not the Stage 2 sidecar model and must not
+be accepted as valid sidecars.
+
+The Markdown runtime templates remain the authoritative human-readable
+compatibility view and continue to use uppercase field names. Field names map
+deterministically from Markdown uppercase names to JSON lower-case `content`
+names:
+
+```text
+PROJECT_STATE.CURRENT_PHASE -> PROJECT_STATE.content.current_phase
+PROJECT_STATE.PUSH_ALLOWED -> PROJECT_STATE.content.push_allowed
+CURRENT_GATE.STATUS -> CURRENT_GATE.content.status
+CURRENT_GATE.CHECKPOINT_ELIGIBILITY -> CURRENT_GATE.content.checkpoint_eligibility
+NEXT_ACTION.ACTION_TYPE -> NEXT_ACTION.content.action_type
+NEXT_ACTION.TARGET_ROLE -> NEXT_ACTION.content.target_role
+NEXT_ACTION.WORKSPACE_IDENTITY_REQUIRED -> NEXT_ACTION.content.workspace_identity_required
+NEXT_ACTION.CHECKPOINT_POLICY -> NEXT_ACTION.content.checkpoint_policy
+TASK_REGISTRY.STATUS -> TASK_REGISTRY.content.status
+ACCEPTED_ARTIFACTS.STATUS -> ACCEPTED_ARTIFACTS.content.status
+```
+
+The mapping rule is mechanical: strip the Markdown file prefix, convert the
+uppercase field name to lower snake case, and place the value under `content`.
+Markdown section fields that summarize lists or nested records map to governed
+lower-case content fields or arrays with the same canonical values documented
+by the matching template and schema section.
+
+JSON booleans mirror Markdown binary fields:
+
+```text
+Markdown yes -> JSON true
+Markdown no -> JSON false
+Markdown true -> JSON true
+Markdown false -> JSON false
+```
+
+Boolean sidecar fields must not widen the Markdown contract. A binary Markdown
+field that accepts only `yes | no` or `true | false` maps to a JSON boolean
+only; string spellings such as `"yes"`, `"no"`, `"true"`, or `"false"` are
+compatibility-view text, not governed JSON boolean values.
+
+JSON schemas, fixtures, and validators must validate this same envelope and
+lower-case `content` model. They must not permit values outside the canonical
+enum sets in the Markdown runtime templates and this schema. For Stage 2, the
+canonical enum authority is:
+
+```text
+PROJECT_STATE: PROJECT_STATE_TEMPLATE.md and the PROJECT_STATE.md schema below.
+CURRENT_GATE: CURRENT_GATE_TEMPLATE.md and the CURRENT_GATE.md schema below.
+NEXT_ACTION: NEXT_ACTION_TEMPLATE.md and the NEXT_ACTION.md schema below.
+TASK_REGISTRY: TASK_REGISTRY_TEMPLATE.md and the TASK_REGISTRY.md schema below.
+ACCEPTED_ARTIFACTS: ACCEPTED_ARTIFACTS_TEMPLATE.md and the ACCEPTED_ARTIFACTS.md schema below.
+```
+
+The following values are explicitly invalid Stage 2 runtime-state values and
+must not be made valid by JSON schemas, fixtures, or validators:
+
+```text
+NEXT_ACTION.content.target_role: runtime_architect
+NEXT_ACTION.content.action_semantic: dispatch
+NEXT_ACTION.content.checkpoint_policy: not_required
+CURRENT_GATE.content.status: active
+CURRENT_GATE.content.checkpoint_eligibility: not_required
+```
+
+`runtime_architect` is not a profile execution role or routing pseudo-role.
+`dispatch` is not an action semantic. `not_required` is valid for specific
+checkpoint status fields where documented, but it is not a valid
+`CHECKPOINT_POLICY` or `CURRENT_GATE.CHECKPOINT_ELIGIBILITY` value.
 
 Future canonical JSON runtime state is specified in:
 

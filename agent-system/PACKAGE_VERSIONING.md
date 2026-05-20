@@ -19,8 +19,8 @@ RUNTIME_SCHEMA_VERSION:
 ## Active version constants
 
 ```text
-CURRENT_PACKAGE_VERSION: 3.0.1
-CURRENT_GOVERNANCE_RULESET_VERSION: 3.0.1
+CURRENT_PACKAGE_VERSION: 3.1.2
+CURRENT_GOVERNANCE_RULESET_VERSION: 3.1.2
 CURRENT_RUNTIME_SCHEMA_VERSION: 3.0.0
 ```
 
@@ -140,6 +140,102 @@ This patch updates package documentation, current examples, release evidence,
 governance changelog enum usage, lifecycle wording, smoke checks, and secret
 ignore patterns after the accepted v3.0.0 release. It does not change runtime
 schema sidecars, ASO v0 command scope, or the read-only ASO helper boundary.
+
+The Stage 1 executable-controls documentation and changelog cleanup records the
+current local command surface without changing active version constants:
+
+```text
+CURRENT_PACKAGE_VERSION: 3.0.1
+CURRENT_GOVERNANCE_RULESET_VERSION: 3.0.1
+CURRENT_RUNTIME_SCHEMA_VERSION: 3.0.0
+```
+
+This bounded cleanup documents local installation, root Make targets, package
+and workspace doctor usage, design validation, context-pack validation,
+CI/smoke expectations, publication boundaries, and final validation report
+handoff. It preserves the active tuple because this task is limited to package
+documentation/release paths and cannot update `pyproject.toml` or the wrapper
+package `__version__`. Keeping the tuple unchanged preserves doctor alignment
+with the installed package metadata and does not change runtime schema
+authority. Any future package version bump must update
+`CURRENT_PACKAGE_VERSION`, `pyproject.toml`, and
+`agent_system_orchestrator_aso.__version__` in one audited package update.
+
+The Stage 2 state-contract correction installs:
+
+```text
+CURRENT_PACKAGE_VERSION: 3.0.2
+CURRENT_GOVERNANCE_RULESET_VERSION: 3.0.2
+CURRENT_RUNTIME_SCHEMA_VERSION: 3.0.0
+```
+
+This patch resolves Stage 2 drift among runtime state sidecar templates,
+schemas, fixtures, validator expectations, command examples, and release
+evidence. It keeps the runtime schema version at `3.0.0` because the correction
+reconciles the accepted Stage 2 state contract rather than introducing a new
+runtime state meaning. It also preserves the read-only ASO helper boundary:
+ASO does not dispatch agents, mutate package or workspace state, perform
+checkpoints, commit, or push.
+
+The Stage 3 safe automation diagnostics package installs:
+
+```text
+CURRENT_PACKAGE_VERSION: 3.1.0
+CURRENT_GOVERNANCE_RULESET_VERSION: 3.1.0
+CURRENT_RUNTIME_SCHEMA_VERSION: 3.0.0
+```
+
+This minor update adds package synchronization diagnostics and release cleanup
+documentation while preserving the runtime schema version at `3.0.0`.
+Stage 3 command surfaces are read-only, dry-run, or proposal-only. They may
+inspect package metadata, command readiness, generated reports, and cleanup
+eligibility, but they do not dispatch agents, mutate package or workspace
+state, perform governed checkpoints, approve owner decisions, commit, push, or
+publish local input/runtime/archive roots.
+
+The Stage 3 DAG checkpoint correction package installs:
+
+```text
+CURRENT_PACKAGE_VERSION: 3.1.1
+CURRENT_GOVERNANCE_RULESET_VERSION: 3.1.1
+CURRENT_RUNTIME_SCHEMA_VERSION: 3.0.0
+```
+
+This patch resolves `ASO-STAGE3-AUDIT-BLOCKER-001` by recording the accepted
+Stage 3 governance state through the DAG checkpoint correction branch and its
+Task 005 validation report. It keeps the runtime schema at `3.0.0` because the
+correction clarifies checkpoint dependency semantics and documentation
+authority rather than changing runtime state meaning.
+
+Stage 3 remains read-only, dry-run, or proposal-only. `audit_passed` is not a
+satisfied dependency for downstream readiness; dependency completion requires
+`checkpoint_done` with checkpoint evidence, or another explicitly completed
+terminal state allowed by the governance rules. This documentation/version
+correction does not claim the final correction pass before Task 005 supplies
+command evidence.
+
+The Stage 3 pre-main package layout cleanup installs:
+
+```text
+CURRENT_PACKAGE_VERSION: 3.1.2
+CURRENT_GOVERNANCE_RULESET_VERSION: 3.1.2
+CURRENT_RUNTIME_SCHEMA_VERSION: 3.0.0
+```
+
+This patch makes the installable ASO package canonical under
+`agent-system/tools/aso/agent_system_orchestrator_aso/` and removes the former
+root duplicate package path from the governed package layout. It keeps the
+runtime schema at `3.0.0` because the cleanup changes repository package
+layout, installation ergonomics, and verification evidence rather than accepted
+runtime state meaning.
+
+Package discovery in `pyproject.toml` points to `agent-system/tools/aso`.
+Package-layout verification replaces duplicate copy synchronization as the
+current package-source coherence check. Final validation evidence for this
+cleanup must record command evidence without claiming an unknowable final
+commit before the orchestrator-owned checkpoint and push. Merge readiness must
+follow `09_MAIN_MERGE_READINESS_PROCEDURE.md` or accepted package
+merge-readiness docs after audit, checkpoint, push, and remote CI evidence.
 
 ## Version semantics
 

@@ -1132,4 +1132,157 @@ MIGRATION_NOTE: Existing v3.0.0 target workspaces do not require runtime schema 
 AUTHORIZED_BY: project_owner
 AUDIT_REQUIRED: yes
 STATUS: accepted
+
+CHANGE_ID: GOV-2026-05-18-003
+CHANGE_TITLE: ASO_STAGE1_EXECUTABLE_CONTROLS_DOCS_CHANGELOG_CLEANUP
+DATE: 2026-05-18
+PACKAGE_VERSION_BEFORE: 3.0.1
+PACKAGE_VERSION_AFTER: 3.0.1
+GOVERNANCE_RULESET_BEFORE: 3.0.1
+GOVERNANCE_RULESET_AFTER: 3.0.1
+RUNTIME_SCHEMA_BEFORE: 3.0.0
+RUNTIME_SCHEMA_AFTER: 3.0.0
+CHANGE_TYPE: patch
+CHANGE_SUBTYPE: documentation_release_handoff
+AFFECTED_FILES:
+- README.md
+- agent-system/README.md
+- agent-system/PACKAGE_VERSIONING.md
+- agent-system/GOVERNANCE_CHANGELOG.md
+- agent-system/11_release/STAGE1_UPGRADE_VALIDATION_REPORT.md
+AFFECTED_INVARIANTS:
+- Stage 1 command documentation covers local editable install, direct script compatibility, Make targets, package/workspace doctor, design validation, context-pack validation, CI/smoke expectations, and cleanup/publication boundaries.
+- The ASO helper remains read-only and does not add mutation, dispatch, checkpoint, migration, repair, commit, push, or file deletion authority.
+- Working upgrade packages and generated runtime/audit artifacts remain outside accepted package publication paths.
+- The final validation report is created as a pending tester handoff only and must not claim pass/fail evidence until TASK 007/tester completes real validation.
+- Active package/governance/runtime tuple remains 3.0.1 / 3.0.1 / 3.0.0 to stay aligned with pyproject and wrapper metadata within this documentation-only task scope.
+AFFECTED_TRANSITIONS:
+- Stage 1 documentation cleanup -> independent audit -> orchestrator-owned checkpoint if accepted.
+- Stage 1 final validation handoff -> tester completes real command evidence before final acceptance claims.
+- local cleanup -> verify no tracked project-input, project-runtime, or project-archive files before publication.
+SCHEMA_TEMPLATE_IMPACT: none
+MIGRATION_REQUIRED: no
+MIGRATION_NOTE: No runtime schema migration is introduced. The active tuple remains unchanged because this bounded task cannot update pyproject.toml or agent_system_orchestrator_aso.__version__; a future package version bump must update all package metadata in one audited change.
+AUTHORIZED_BY: project_owner
+AUDIT_REQUIRED: yes
+STATUS: accepted
+
+CHANGE_ID: GOV-2026-05-19-001
+CHANGE_TITLE: ASO_STAGE3_SAFE_AUTOMATION_DIAGNOSTICS_VERSION_RELEASE_CLEANUP
+DATE: 2026-05-19
+PACKAGE_VERSION_BEFORE: 3.0.2
+PACKAGE_VERSION_AFTER: 3.1.0
+GOVERNANCE_RULESET_BEFORE: 3.0.2
+GOVERNANCE_RULESET_AFTER: 3.1.0
+RUNTIME_SCHEMA_BEFORE: 3.0.0
+RUNTIME_SCHEMA_AFTER: 3.0.0
+CHANGE_TYPE: minor
+CHANGE_SUBTYPE: docs_version_release_cleanup
+AFFECTED_FILES:
+- README.md
+- pyproject.toml
+- Makefile
+- agent-system/README.md
+- agent-system/PACKAGE_VERSIONING.md
+- agent-system/GOVERNANCE_CHANGELOG.md
+- agent-system/10_examples/STAGE3_SAFE_AUTOMATION_DIAGNOSTICS_COMMANDS.md
+- agent-system/11_release/STAGE3_SAFE_AUTOMATION_DIAGNOSTICS_RELEASE_NOTES.md
+- agent_system_orchestrator_aso/__init__.py
+AFFECTED_INVARIANTS:
+- Active package/governance/runtime tuple is 3.1.0 / 3.1.0 / 3.0.0.
+- Stage 3 command surfaces are read-only, dry-run, or proposal-only.
+- ASO package-sync verification is a guard for metadata and command surface coherence, not a repair or publishing command.
+- Direct script execution remains the compatibility baseline; installed `aso` console-script use is additive after local editable install.
+- Root project-input, project-runtime, and project-archive remain local generated or owner-input roots and must not be published as accepted package documentation.
+- Stage 1 and Stage 2 release reports remain historical package evidence.
+- Stage 3 Task 007 release notes do not claim final validation pass before Task 008 supplies command evidence.
+AFFECTED_TRANSITIONS:
+- package metadata update -> independent audit -> orchestrator-owned checkpoint only after audit pass.
+- package-sync verify -> read-only diagnostic result; no mutation, repair, checkpoint, commit, push, or publication.
+- Stage 3 cleanup -> Task 008 final validation evidence before final acceptance can be claimed.
+SCHEMA_TEMPLATE_IMPACT: none
+MIGRATION_REQUIRED: no
+MIGRATION_NOTE: No runtime schema migration is introduced. Existing v3.0.x workspaces should update the package and governance docs to v3.1.0 before relying on Stage 3 package-sync guard documentation. Runtime schema remains 3.0.0.
+AUTHORIZED_BY: project_owner
+AUDIT_REQUIRED: yes
+STATUS: proposed
+
+CHANGE_ID: GOV-2026-05-19-002
+CHANGE_TITLE: ASO_STAGE3_DAG_CHECKPOINT_CORRECTION_DOCS_VERSION_WORKFLOW
+DATE: 2026-05-19
+PACKAGE_VERSION_BEFORE: 3.1.0
+PACKAGE_VERSION_AFTER: 3.1.1
+GOVERNANCE_RULESET_BEFORE: 3.1.0
+GOVERNANCE_RULESET_AFTER: 3.1.1
+RUNTIME_SCHEMA_BEFORE: 3.0.0
+RUNTIME_SCHEMA_AFTER: 3.0.0
+CHANGE_TYPE: patch
+CHANGE_SUBTYPE: docs_version_workflow_correction
+AFFECTED_FILES:
+- README.md
+- agent-system/README.md
+- agent-system/PACKAGE_VERSIONING.md
+- agent-system/GOVERNANCE_CHANGELOG.md
+- .github/workflows/stage1-governance.yml
+- pyproject.toml
+- agent_system_orchestrator_aso/__init__.py
+AFFECTED_INVARIANTS:
+- Active package/governance/runtime tuple is 3.1.1 / 3.1.1 / 3.0.0.
+- Stage 3 acceptance is recorded through the DAG checkpoint correction branch and Task 005 validation report, not the earlier proposed v3.1.0 release cleanup entry alone.
+- `ASO-STAGE3-AUDIT-BLOCKER-001` is addressed by documenting that `audit_passed` is not a satisfied dependency for downstream readiness.
+- Downstream readiness requires `checkpoint_done` with complete checkpoint evidence, or another explicitly completed terminal state allowed by governance.
+- Stage 3 command surfaces remain read-only, dry-run, or proposal-only.
+- ASO package-sync verification remains a read-only guard for metadata and command surface coherence, not repair, checkpoint, commit, push, or publication authority.
+- The workflow display name is package-neutral and no longer labels current governance checks as Stage 1.
+- Root project-input, project-runtime, and project-archive remain local generated or owner-input roots and must not be published as accepted package documentation.
+- This Task 004 documentation/version update does not claim the final correction pass before Task 005 supplies validation command evidence.
+- This changelog entry has exactly one status field, its value is accepted, and adjacent entry status fields are outside this entry boundary.
+AFFECTED_TRANSITIONS:
+- package metadata correction -> independent audit -> orchestrator-owned checkpoint only after audit pass.
+- DAG dependency evaluation -> downstream readiness only after dependency checkpoint completion evidence, not merely `audit_passed`.
+- package-sync verify -> read-only diagnostic result; no mutation, repair, checkpoint, commit, push, or publication.
+SCHEMA_TEMPLATE_IMPACT: none
+MIGRATION_REQUIRED: no
+MIGRATION_NOTE: No runtime schema migration is introduced. Existing v3.1.0 workspaces should update package and governance docs to v3.1.1 before relying on Stage 3 DAG checkpoint dependency documentation. Runtime schema remains 3.0.0.
+AUTHORIZED_BY: project_owner
+AUDIT_REQUIRED: yes
+STATUS: accepted
+
+CHANGE_ID: GOV-2026-05-20-001
+CHANGE_TITLE: ASO_STAGE3_PRE_MAIN_PACKAGE_LAYOUT_CLEANUP_DOCS_VERSION_CHANGELOG
+DATE: 2026-05-20
+PACKAGE_VERSION_BEFORE: 3.1.1
+PACKAGE_VERSION_AFTER: 3.1.2
+GOVERNANCE_RULESET_BEFORE: 3.1.1
+GOVERNANCE_RULESET_AFTER: 3.1.2
+RUNTIME_SCHEMA_BEFORE: 3.0.0
+RUNTIME_SCHEMA_AFTER: 3.0.0
+CHANGE_TYPE: patch
+CHANGE_SUBTYPE: pre_main_package_layout_cleanup_docs_version_changelog
+AFFECTED_FILES:
+- README.md
+- pyproject.toml
+- agent-system/README.md
+- agent-system/PACKAGE_VERSIONING.md
+- agent-system/GOVERNANCE_CHANGELOG.md
+- agent-system/11_release/STAGE3_PRE_MAIN_PACKAGE_LAYOUT_CLEANUP_VALIDATION_REPORT.md
+- agent-system/tools/aso/agent_system_orchestrator_aso/__init__.py
+AFFECTED_INVARIANTS:
+- Active package/governance/runtime tuple is 3.1.2 / 3.1.2 / 3.0.0.
+- Canonical installable ASO package source is agent-system/tools/aso/agent_system_orchestrator_aso/.
+- Root duplicate package path agent_system_orchestrator_aso/ is absent from tracked package files.
+- pyproject.toml package discovery points to agent-system/tools/aso.
+- Package-layout verification replaces duplicate copy synchronization for package-source coherence.
+- Final validation evidence records VALIDATION_COMMAND_HEAD separately from post-push remote HEAD verification.
+- Merge readiness points to 09_MAIN_MERGE_READINESS_PROCEDURE.md or accepted package merge-readiness docs and does not claim a main merge.
+AFFECTED_TRANSITIONS:
+- pre-main package layout cleanup -> independent audit -> orchestrator-owned checkpoint only after audit pass.
+- package-layout verify -> read-only diagnostic result for package-source layout and hygiene.
+- validation report -> records command evidence with FINAL_COMMIT_PENDING: yes and REMOTE_HEAD_VERIFICATION_REQUIRED_AFTER_PUSH: yes.
+SCHEMA_TEMPLATE_IMPACT: none
+MIGRATION_REQUIRED: no
+MIGRATION_NOTE: No runtime schema migration is introduced. Existing v3.1.1 workspaces should update package and governance docs to v3.1.2 before relying on pre-main package-layout verification and merge-readiness evidence. Runtime schema remains 3.0.0.
+AUTHORIZED_BY: project_owner
+AUDIT_REQUIRED: yes
+STATUS: accepted
 ```

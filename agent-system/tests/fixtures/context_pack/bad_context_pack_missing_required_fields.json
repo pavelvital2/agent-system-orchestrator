@@ -1,0 +1,14 @@
+{
+  "required_docs": [
+    {
+      "path": "agent-system/README.md",
+      "sections": []
+    }
+  ],
+  "forbidden_docs": "project-archive/",
+  "source_of_truth": [],
+  "context_budget": {
+    "max_docs": 3,
+    "max_chars_total": 5000
+  }
+}

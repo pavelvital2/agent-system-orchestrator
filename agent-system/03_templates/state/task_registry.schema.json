@@ -1,0 +1,145 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://aso.local/state/task_registry.schema.json",
+  "title": "TASK_REGISTRY sidecar",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "sidecar_type",
+    "markdown_source",
+    "state_revision",
+    "updated_at",
+    "updated_by",
+    "content"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": "2.0.0"
+    },
+    "sidecar_type": {
+      "const": "TASK_REGISTRY"
+    },
+    "markdown_source": {
+      "const": "project-runtime/TASK_REGISTRY.md"
+    },
+    "state_revision": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "updated_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "updated_by": {
+      "type": "string",
+      "minLength": 1
+    },
+    "content": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "registry_revision",
+        "tasks"
+      ],
+      "properties": {
+        "registry_revision": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "tasks": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "task_id",
+              "task_packet",
+              "role",
+              "status",
+              "audit_required",
+              "checkpoint_required",
+              "requester_return_metadata",
+              "blocked_by",
+              "result_refs",
+              "audit_refs"
+            ],
+            "properties": {
+              "task_id": {
+                "type": "string",
+                "minLength": 1
+              },
+              "task_packet": {
+                "type": "string",
+                "minLength": 1
+              },
+              "role": {
+                "type": "string",
+                "minLength": 1
+              },
+              "status": {
+                "type": "string",
+                "enum": [
+                  "pending",
+                  "active",
+                  "blocked",
+                  "completed",
+                  "audit_pending",
+                  "audit_passed",
+                  "audit_failed",
+                  "checkpoint_pending",
+                  "checkpoint_done",
+                  "superseded"
+                ]
+              },
+              "audit_required": {
+                "type": "boolean"
+              },
+              "checkpoint_required": {
+                "type": "boolean"
+              },
+              "requester_return_metadata": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "required",
+                  "return_to_role_after_audit_pass",
+                  "return_task_after_audit_pass"
+                ],
+                "properties": {
+                  "required": {
+                    "type": "boolean"
+                  },
+                  "return_to_role_after_audit_pass": {
+                    "type": "string"
+                  },
+                  "return_task_after_audit_pass": {
+                    "type": "string"
+                  }
+                }
+              },
+              "blocked_by": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              },
+              "result_refs": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              },
+              "audit_refs": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

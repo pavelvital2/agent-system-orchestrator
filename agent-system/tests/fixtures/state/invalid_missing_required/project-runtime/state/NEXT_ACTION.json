@@ -1,0 +1,31 @@
+{
+  "schema_version": "2.0.0",
+  "sidecar_type": "NEXT_ACTION",
+  "markdown_source": "project-runtime/NEXT_ACTION.md",
+  "state_revision": 1,
+  "updated_at": "2026-01-01T00:00:00Z",
+  "updated_by": "orchestrator",
+  "content": {
+    "action_id": "ACTION-FIXTURE-MISSING-001",
+    "action_type": "create_agent",
+    "task_id": "TASK_FIXTURE_MISSING_001",
+    "task_packet": "project-runtime/tasks/active/TASK_FIXTURE_MISSING_001.md",
+    "dependency_status": "ready",
+    "blocked_by": [],
+    "action_semantic": "normal",
+    "workspace_identity_required": true,
+    "repository_lock_required": true,
+    "checkpoint_policy": "no_checkpoint",
+    "checkpoint_preflight_required": false,
+    "checkpoint_receipt_required": false,
+    "checkpoint_receipt_ref": "NONE",
+    "requester_return_context": "NONE",
+    "blocking_or_resume_context": "NONE",
+    "required_universal_docs": [],
+    "required_project_docs": [],
+    "expected_result": [
+      "agent-system/03_templates/AGENT_RESULT_TEMPLATE.md"
+    ],
+    "instruction_for_orchestrator": "This fixture intentionally omits target_role."
+  }
+}

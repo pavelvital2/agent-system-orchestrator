@@ -1,0 +1,261 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://aso.local/state/project_state.schema.json",
+  "title": "PROJECT_STATE sidecar",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "sidecar_type",
+    "markdown_source",
+    "state_revision",
+    "updated_at",
+    "updated_by",
+    "content"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": "2.0.0"
+    },
+    "sidecar_type": {
+      "const": "PROJECT_STATE"
+    },
+    "markdown_source": {
+      "const": "project-runtime/PROJECT_STATE.md"
+    },
+    "state_revision": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "updated_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "updated_by": {
+      "type": "string",
+      "minLength": 1
+    },
+    "content": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "project_slug",
+        "workspace_type",
+        "current_phase",
+        "project_status",
+        "active_doc_root",
+        "package_version",
+        "governance_ruleset_version",
+        "runtime_schema_version",
+        "workspace_identity_ref",
+        "repository_lock_ref",
+        "expected_git_remote",
+        "actual_git_remote",
+        "expected_branch",
+        "actual_branch",
+        "push_allowed",
+        "identity_validation_status",
+        "identity_validation_error",
+        "repository_lock_status",
+        "checkpoint_eligibility",
+        "checkpoint_blocked_by",
+        "active_blockers",
+        "active_branches"
+      ],
+      "properties": {
+        "project_slug": {
+          "type": "string",
+          "minLength": 1
+        },
+        "workspace_type": {
+          "type": "string",
+          "enum": [
+            "package_repository",
+            "project_workspace",
+            "test_fixture"
+          ]
+        },
+        "current_phase": {
+          "type": "string",
+          "minLength": 1
+        },
+        "project_status": {
+          "type": "string",
+          "enum": [
+            "ready",
+            "active",
+            "blocked",
+            "correction",
+            "completed"
+          ]
+        },
+        "active_doc_root": {
+          "type": "string",
+          "minLength": 1
+        },
+        "package_version": {
+          "type": "string",
+          "minLength": 1
+        },
+        "governance_ruleset_version": {
+          "type": "string",
+          "minLength": 1
+        },
+        "runtime_schema_version": {
+          "type": "string",
+          "minLength": 1
+        },
+        "workspace_identity_ref": {
+          "type": "string",
+          "minLength": 1
+        },
+        "repository_lock_ref": {
+          "type": "string",
+          "minLength": 1
+        },
+        "expected_git_remote": {
+          "type": "string"
+        },
+        "actual_git_remote": {
+          "type": "string"
+        },
+        "expected_branch": {
+          "type": "string",
+          "minLength": 1
+        },
+        "actual_branch": {
+          "type": "string",
+          "minLength": 1
+        },
+        "push_allowed": {
+          "type": "boolean"
+        },
+        "identity_validation_status": {
+          "type": "string",
+          "enum": [
+            "passed",
+            "failed",
+            "pending"
+          ]
+        },
+        "identity_validation_error": {
+          "type": "string"
+        },
+        "repository_lock_status": {
+          "type": "string",
+          "enum": [
+            "passed",
+            "failed",
+            "pending"
+          ]
+        },
+        "checkpoint_eligibility": {
+          "type": "string",
+          "enum": [
+            "eligible",
+            "blocked",
+            "not_required",
+            "pending"
+          ]
+        },
+        "checkpoint_blocked_by": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "active_blockers": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "blocker_id",
+              "blocker_type",
+              "blocks",
+              "blocked_by",
+              "resolution_path"
+            ],
+            "properties": {
+              "blocker_id": {
+                "type": "string",
+                "minLength": 1
+              },
+              "blocker_type": {
+                "type": "string",
+                "enum": [
+                  "owner_decision",
+                  "pause",
+                  "audit_fail",
+                  "gap",
+                  "runtime",
+                  "dependency",
+                  "governance",
+                  "other"
+                ]
+              },
+              "blocks": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              },
+              "blocked_by": {
+                "type": "string"
+              },
+              "resolution_path": {
+                "type": "string",
+                "minLength": 1
+              }
+            }
+          }
+        },
+        "active_branches": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "branch_id",
+              "status",
+              "current_task",
+              "current_agent_role",
+              "dependencies",
+              "blocked_by"
+            ],
+            "properties": {
+              "branch_id": {
+                "type": "string",
+                "minLength": 1
+              },
+              "status": {
+                "type": "string",
+                "enum": [
+                  "ready",
+                  "active",
+                  "blocked",
+                  "completed"
+                ]
+              },
+              "current_task": {
+                "type": "string"
+              },
+              "current_agent_role": {
+                "type": "string"
+              },
+              "dependencies": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              },
+              "blocked_by": {
+                "type": "string"
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

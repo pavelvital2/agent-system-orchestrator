@@ -1,0 +1,34 @@
+name: ASO Package Governance
+
+on:
+  push:
+    branches:
+      - main
+      - upgrade/**
+      - merge/**
+  pull_request:
+    branches:
+      - main
+
+permissions:
+  contents: read
+
+jobs:
+  package-governance:
+    name: Package governance checks
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      PYTHONDONTWRITEBYTECODE: "1"
+      PYTHONUNBUFFERED: "1"
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v5
+        with:
+          persist-credentials: false
+
+      - name: Show Python version
+        run: python3 --version
+
+      - name: CI governance checks
+        run: make ci

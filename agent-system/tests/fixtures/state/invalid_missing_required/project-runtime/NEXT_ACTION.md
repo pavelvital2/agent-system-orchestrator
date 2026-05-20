@@ -1,0 +1,34 @@
+# NEXT_ACTION
+
+ACTION_ID: ACTION-FIXTURE-MISSING-001
+ACTION_TYPE: create_agent
+TARGET_ROLE: developer
+TASK_ID: TASK_FIXTURE_MISSING_001
+TASK_PACKET: project-runtime/tasks/active/TASK_FIXTURE_MISSING_001.md
+DEPENDENCY_STATUS: ready
+BLOCKED_BY: NONE
+ACTION_SEMANTIC: normal
+WORKSPACE_IDENTITY_REQUIRED: yes
+REPOSITORY_LOCK_REQUIRED: yes
+CHECKPOINT_POLICY: no_checkpoint
+CHECKPOINT_PREFLIGHT_REQUIRED: no
+CHECKPOINT_RECEIPT_REQUIRED: no
+CHECKPOINT_RECEIPT_REF: NONE
+
+## Requester return context
+NONE
+
+## Blocking or resume context
+NONE
+
+REQUIRED_UNIVERSAL_DOCS:
+- NONE
+
+REQUIRED_PROJECT_DOCS:
+- NONE
+
+EXPECTED_RESULT:
+- agent-system/03_templates/AGENT_RESULT_TEMPLATE.md
+
+## Instruction for orchestrator
+This fixture pairs Markdown with JSON that intentionally omits target_role.
