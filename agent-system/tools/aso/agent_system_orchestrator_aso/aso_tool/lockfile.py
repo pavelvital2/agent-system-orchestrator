@@ -1,4 +1,4 @@
-"""Project Factory P0 aso.lock generation and validation helpers."""
+"""Project Factory aso.lock generation and validation helpers."""
 
 from __future__ import annotations
 
@@ -10,10 +10,11 @@ from pathlib import Path
 LOCKFILE_NAME = "aso.lock"
 LOCKFILE_VERSION = "1.0"
 PACKAGE_NAME = "agent-system-orchestrator"
-PACKAGE_VERSION = "3.2.0"
+PACKAGE_VERSION = "3.3.0"
+COMPATIBLE_PACKAGE_VERSIONS = (PACKAGE_VERSION, "3.2.0")
 RUNTIME_SCHEMA_VERSION = "3.0.0"
 PACKAGE_SOURCE = "https://github.com/pavelvital2/agent-system-orchestrator"
-SUPPORTED_ENGINE_MODES = ("vendored",)
+SUPPORTED_ENGINE_MODES = ("vendored", "reference")
 DEFAULT_ENGINE_MODE = "vendored"
 DEFAULT_PROFILE = "generic"
 DEFAULT_BRANCH = "main"
@@ -96,7 +97,7 @@ def generate_lockfile(
     ignored_roots: tuple[str, ...] = REQUIRED_PUBLICATION_ROOTS,
     forbidden_tracked_roots: tuple[str, ...] = REQUIRED_PUBLICATION_ROOTS,
 ) -> dict[str, object]:
-    """Build the canonical Project Factory P0 lockfile dictionary."""
+    """Build the canonical Project Factory lockfile dictionary."""
 
     return {
         "lockfile_version": LOCKFILE_VERSION,
@@ -175,7 +176,7 @@ def validate_lockfile_path(path: Path) -> LockfileValidationResult:
 
 
 def validate_lockfile(lockfile: object) -> LockfileValidationResult:
-    """Validate a decoded aso.lock object against the P0 contract."""
+    """Validate a decoded aso.lock object against the Project Factory contract."""
 
     findings: list[LockfileFinding] = []
 
@@ -303,12 +304,12 @@ def _validate_aso_engine(aso_engine: dict[str, object], findings: list[LockfileF
                 package_name,
             )
         )
-    if version is not None and version != PACKAGE_VERSION:
+    if version is not None and version not in COMPATIBLE_PACKAGE_VERSIONS:
         findings.append(
             _finding(
                 RULE_UNSUPPORTED_PACKAGE_VERSION,
                 "$.aso_engine.version",
-                f"aso_engine.version must be {PACKAGE_VERSION}.",
+                f"aso_engine.version must be one of {', '.join(COMPATIBLE_PACKAGE_VERSIONS)}.",
                 version,
             )
         )
@@ -335,7 +336,7 @@ def _validate_aso_engine(aso_engine: dict[str, object], findings: list[LockfileF
             _finding(
                 RULE_UNSUPPORTED_ENGINE_MODE,
                 "$.aso_engine.engine_mode",
-                "aso_engine.engine_mode must be vendored.",
+                f"aso_engine.engine_mode must be one of {', '.join(SUPPORTED_ENGINE_MODES)}.",
                 engine_mode,
             )
         )

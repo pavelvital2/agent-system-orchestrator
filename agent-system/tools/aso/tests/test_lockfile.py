@@ -19,7 +19,7 @@ from agent_system_orchestrator_aso.aso_tool import lockfile  # noqa: E402
 
 
 class LockfileHelperTests(unittest.TestCase):
-    def test_generate_lockfile_uses_p0_contract_defaults(self) -> None:
+    def test_generate_lockfile_uses_project_factory_defaults(self) -> None:
         generated = lockfile.generate_lockfile(
             project_name="Demo Project",
             project_slug="demo-project",
@@ -31,20 +31,48 @@ class LockfileHelperTests(unittest.TestCase):
         publication_boundary = generated["publication_boundary"]
 
         self.assertTrue(result.ok, result.to_json())
-        self.assertEqual(aso_engine["version"], "3.2.0")
+        self.assertEqual(aso_engine["version"], "3.3.0")
         self.assertEqual(aso_engine["runtime_schema"], "3.0.0")
         self.assertEqual(aso_engine["engine_mode"], "vendored")
+        self.assertEqual(lockfile.SUPPORTED_ENGINE_MODES, ("vendored", "reference"))
         self.assertEqual(publication_boundary["ignored_roots"], list(lockfile.REQUIRED_PUBLICATION_ROOTS))
         self.assertEqual(
             publication_boundary["forbidden_tracked_roots"],
             list(lockfile.REQUIRED_PUBLICATION_ROOTS),
         )
 
+    def test_generate_lockfile_accepts_reference_engine_mode(self) -> None:
+        generated = lockfile.generate_lockfile(
+            project_name="Reference Project",
+            project_slug="reference-project",
+            repo_url=None,
+            engine_mode="reference",
+        )
+
+        result = lockfile.validate_lockfile(generated)
+
+        self.assertTrue(result.ok, result.to_json())
+        self.assertEqual(generated["aso_engine"]["version"], "3.3.0")
+        self.assertEqual(generated["aso_engine"]["runtime_schema"], "3.0.0")
+        self.assertEqual(generated["aso_engine"]["engine_mode"], "reference")
+
     def test_valid_fixture_passes_validation(self) -> None:
         result = lockfile.validate_lockfile_path(FIXTURE_ROOT / "valid_aso.lock")
 
         self.assertTrue(result.ok, result.to_json())
         self.assertEqual(result.findings, ())
+
+    def test_compatible_p0_package_version_passes_validation(self) -> None:
+        generated = lockfile.generate_lockfile(
+            project_name="Demo Project",
+            project_slug="demo-project",
+            repo_url=None,
+            package_version="3.2.0",
+        )
+
+        result = lockfile.validate_lockfile(generated)
+
+        self.assertTrue(result.ok, result.to_json())
 
     def test_invalid_fixture_fails_with_deterministic_errors(self) -> None:
         result = lockfile.validate_lockfile_path(FIXTURE_ROOT / "invalid_aso.lock")
@@ -122,16 +150,21 @@ class LockfileHelperTests(unittest.TestCase):
         self.assertTrue(result.ok, result.to_json())
         self.assertIsNone(decoded["project"]["repo_url"])
 
-    def test_machine_readable_schema_pins_runtime_schema_3(self) -> None:
+    def test_machine_readable_schema_matches_lockfile_contract(self) -> None:
         schema = json.loads(SCHEMA_PATH.read_text(encoding="utf-8"))
+        aso_engine_properties = schema["$defs"]["aso_engine"]["properties"]
 
         self.assertEqual(
-            schema["$defs"]["aso_engine"]["properties"]["runtime_schema"]["const"],
+            aso_engine_properties["version"]["enum"],
+            list(lockfile.COMPATIBLE_PACKAGE_VERSIONS),
+        )
+        self.assertEqual(
+            aso_engine_properties["runtime_schema"]["const"],
             "3.0.0",
         )
         self.assertEqual(
-            schema["$defs"]["aso_engine"]["properties"]["engine_mode"]["enum"],
-            ["vendored"],
+            aso_engine_properties["engine_mode"]["enum"],
+            list(lockfile.SUPPORTED_ENGINE_MODES),
         )
 
 

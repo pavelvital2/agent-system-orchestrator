@@ -550,14 +550,14 @@ def build_parser() -> argparse.ArgumentParser:
     project_parser = subparsers.add_parser(
         "project",
         help="Project Factory workspace commands.",
-        description="Project Factory P0 local workspace creation commands.",
+        description="Project Factory local workspace creation commands.",
     )
     project_subparsers = project_parser.add_subparsers(dest="project_command", metavar="COMMAND")
     project_create_parser = project_subparsers.add_parser(
         "create",
         help="Create a local Project Factory workspace.",
         description=(
-            "Create a clean local Project Factory P0 workspace. Local mode does not "
+            "Create a clean local Project Factory workspace. Local mode does not "
             "create GitHub repositories, use credentials, commit, push, dispatch agents, "
             "or mutate runtime schema."
         ),
@@ -606,7 +606,7 @@ def build_parser() -> argparse.ArgumentParser:
     )
     project_create_parser.add_argument(
         "--engine-mode",
-        choices=("vendored",),
+        choices=project.lockfile.SUPPORTED_ENGINE_MODES,
         default="vendored",
         help="ASO engine mode for the generated project (default: vendored).",
     )
@@ -616,7 +616,7 @@ def build_parser() -> argparse.ArgumentParser:
         "verify-clean",
         help="Verify a generated project publication boundary.",
         description=(
-            "Read-only verification for Project Factory P0 generated project cleanliness, "
+            "Read-only verification for Project Factory generated project cleanliness, "
             "including aso.lock, .gitignore, tracked forbidden artifacts, nested vendored "
             "Git metadata, and repository metadata when available."
         ),

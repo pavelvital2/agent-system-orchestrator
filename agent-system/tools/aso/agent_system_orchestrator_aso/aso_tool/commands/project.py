@@ -1,4 +1,4 @@
-"""Project Factory P0 project creation and verification commands."""
+"""Project Factory project creation and verification commands."""
 
 from __future__ import annotations
 
@@ -57,6 +57,7 @@ FORBIDDEN_TRACKED_ROOTS = (
     "secrets",
     "private",
 )
+REFERENCE_ENGINE_MODE = "reference"
 VENDORED_DIR_NAMES_EXCLUDED = {
     ".git",
     ".mypy_cache",
@@ -163,7 +164,13 @@ def run_create(args: object) -> int:
         print(f"- {entry}")
     print(f"Vendored files: {summary.copied_files}")
     print("Next step:")
-    print(f"PYTHONDONTWRITEBYTECODE=1 python3 {summary.target / 'agent-system/tools/aso/aso.py'} status --root {summary.target} --mode package")
+    if args.engine_mode == lockfile.DEFAULT_ENGINE_MODE:
+        print(
+            "PYTHONDONTWRITEBYTECODE=1 python3 "
+            f"{summary.target / 'agent-system/tools/aso/aso.py'} status --root {summary.target} --mode package"
+        )
+    else:
+        print(f"PYTHONDONTWRITEBYTECODE=1 aso project verify-clean --root {summary.target} --strict")
     return EXIT_OK
 
 
@@ -222,6 +229,8 @@ def verify_clean(root: Path) -> dict[str, object]:
         "nested_git_paths": nested_git_paths,
         "repo_metadata_status": repo_report["repo_metadata_status"],
         "package_version": lock_report["package_version"],
+        "package_version_status": lock_report["package_version_status"],
+        "package_version_drift": lock_report["package_version_drift"],
         "runtime_schema": lock_report["runtime_schema"],
         "engine_mode": lock_report["engine_mode"],
         "missing_gitignore_entries": missing_gitignore_entries,
@@ -241,7 +250,7 @@ def create_project(
     engine_mode: str = lockfile.DEFAULT_ENGINE_MODE,
     source_agent_system: Path | None = None,
 ) -> CreateSummary:
-    """Create a clean local Project Factory P0 workspace."""
+    """Create a clean local Project Factory workspace."""
 
     target = target.expanduser()
     _validate_create_inputs(
@@ -270,7 +279,7 @@ def create_project(
     lockfile.write_lockfile(target / lockfile.LOCKFILE_NAME, lock)
     (target / ".gitignore").write_text(_gitignore_text(), encoding="utf-8")
     (target / "README.md").write_text(
-        _readme_text(project_name=project_name, project_slug=project_slug),
+        _readme_text(project_name=project_name, project_slug=project_slug, engine_mode=engine_mode),
         encoding="utf-8",
     )
     for root_name in LOCAL_ROOTS:
@@ -278,21 +287,22 @@ def create_project(
 
     copied_files = 0
     skipped_paths: tuple[str, ...] = ()
+    created_entries = [
+        ".gitignore",
+        "README.md",
+        "aso.lock",
+        "project-archive/",
+        "project-input/",
+        "project-runtime/",
+    ]
     if engine_mode == lockfile.DEFAULT_ENGINE_MODE:
         source = source_agent_system or _default_source_agent_system()
         copied_files, skipped_paths = _copy_vendored_agent_system(source, target / "agent-system")
+        created_entries.insert(2, "agent-system/")
 
     return CreateSummary(
         target=target,
-        created_entries=(
-            ".gitignore",
-            "README.md",
-            "agent-system/",
-            "aso.lock",
-            "project-archive/",
-            "project-input/",
-            "project-runtime/",
-        ),
+        created_entries=tuple(created_entries),
         copied_files=copied_files,
         skipped_paths=skipped_paths,
     )
@@ -323,10 +333,24 @@ def _verify_lockfile(root: Path, violations: list[dict[str, object]]) -> dict[st
     if not isinstance(aso_engine, dict):
         aso_engine = {}
 
+    package_version = aso_engine.get("version")
+    package_version_drift: str | None = None
+    package_version_status = "unknown"
+    if isinstance(package_version, str):
+        if package_version == lockfile.PACKAGE_VERSION:
+            package_version_status = "current"
+        elif package_version in lockfile.COMPATIBLE_PACKAGE_VERSIONS:
+            package_version_status = "compatible_drift"
+            package_version_drift = f"{package_version} is compatible with current package {lockfile.PACKAGE_VERSION}"
+        else:
+            package_version_status = "unsupported"
+
     return {
         "status": "pass" if validation.ok else "fail",
         "lockfile": decoded if isinstance(decoded, dict) else None,
-        "package_version": aso_engine.get("version"),
+        "package_version": package_version,
+        "package_version_status": package_version_status,
+        "package_version_drift": package_version_drift,
         "runtime_schema": aso_engine.get("runtime_schema"),
         "engine_mode": aso_engine.get("engine_mode"),
     }
@@ -409,7 +433,16 @@ def _verify_git_repository_metadata(
 
     git["is_root_git_repo"] = True
     tracked_paths = _git_ls_files(root, violations)
-    tracked_forbidden_paths = sorted(path for path in tracked_paths if _is_forbidden_tracked_path(path))
+    engine_mode = None
+    aso_engine = lock.get("aso_engine") if isinstance(lock, dict) else None
+    if isinstance(aso_engine, dict):
+        mode = aso_engine.get("engine_mode")
+        if isinstance(mode, str):
+            engine_mode = mode
+
+    tracked_forbidden_paths = sorted(
+        path for path in tracked_paths if _is_forbidden_tracked_path(path, engine_mode=engine_mode)
+    )
     branch = _git_value(root, ["branch", "--show-current"])
     origin = _git_value(root, ["remote", "get-url", "origin"])
     git["branch"] = branch or None
@@ -529,10 +562,12 @@ def _git_value(root: Path, args: list[str]) -> str:
     return result.stdout.strip()
 
 
-def _is_forbidden_tracked_path(relpath: str) -> bool:
+def _is_forbidden_tracked_path(relpath: str, *, engine_mode: str | None = None) -> bool:
     parts = tuple(part for part in relpath.split("/") if part)
     if not parts:
         return False
+    if engine_mode == REFERENCE_ENGINE_MODE and parts[0] == "agent-system":
+        return True
     if parts[0] in FORBIDDEN_TRACKED_ROOTS:
         return True
     if parts[0] == ".git":
@@ -602,6 +637,8 @@ def _print_verify_clean_text(report: dict[str, object]) -> None:
     print(f"Gitignore: {report['gitignore_status']}")
     print(f"Repository metadata: {report['repo_metadata_status']}")
     print(f"Package version: {report['package_version']}")
+    if report.get("package_version_drift"):
+        print(f"Package drift: {report['package_version_drift']}")
     print(f"Runtime schema: {report['runtime_schema']}")
     print(f"Engine mode: {report['engine_mode']}")
     print(f"Tracked forbidden paths: {len(report['tracked_forbidden_paths'])}")
@@ -645,8 +682,8 @@ def _validate_create_inputs(
         raise ValueError("profile is required")
     if not default_branch.strip():
         raise ValueError("branch is required")
-    if engine_mode != lockfile.DEFAULT_ENGINE_MODE:
-        raise ValueError("engine-mode must be vendored")
+    if engine_mode not in lockfile.SUPPORTED_ENGINE_MODES:
+        raise ValueError(f"engine-mode must be one of {', '.join(lockfile.SUPPORTED_ENGINE_MODES)}")
 
 
 def _normalize_repo_url(value: object) -> str | None:
@@ -671,13 +708,24 @@ def _gitignore_text() -> str:
     return "\n".join(lines)
 
 
-def _readme_text(*, project_name: str, project_slug: str) -> str:
+def _readme_text(*, project_name: str, project_slug: str, engine_mode: str) -> str:
+    command = (
+        "PYTHONDONTWRITEBYTECODE=1 python3 agent-system/tools/aso/aso.py status --root . --mode package"
+        if engine_mode == lockfile.DEFAULT_ENGINE_MODE
+        else "PYTHONDONTWRITEBYTECODE=1 aso project verify-clean --root . --strict"
+    )
+    engine_note = (
+        "This project vendors ASO engine files under `agent-system/`."
+        if engine_mode == lockfile.DEFAULT_ENGINE_MODE
+        else "This project references an external ASO engine recorded in `aso.lock`."
+    )
     return (
         f"# {project_name}\n\n"
-        "Generated by ASO Project Factory P0.\n\n"
+        "Generated by ASO Project Factory.\n\n"
+        f"{engine_note}\n\n"
         "## Local ASO commands\n\n"
         "```bash\n"
-        "PYTHONDONTWRITEBYTECODE=1 python3 agent-system/tools/aso/aso.py status --root . --mode package\n"
+        f"{command}\n"
         "```\n\n"
         "## Publication boundary\n\n"
         "The local ASO working roots `project-input/`, `project-runtime/`, and "
