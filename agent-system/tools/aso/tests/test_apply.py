@@ -13,8 +13,9 @@ from pathlib import Path
 ASO_DIR = Path(__file__).resolve().parents[1]
 REPO_ROOT = Path(__file__).resolve().parents[4]
 CLI = ASO_DIR / "aso.py"
-FIXTURE_ROOT = REPO_ROOT / "agent-system" / "tests" / "fixtures" / "state"
-P2_VALID_WORKSPACE = FIXTURE_ROOT / "p2_valid_workspace"
+FIXTURE_ROOT = REPO_ROOT / "agent-system" / "tests" / "fixtures" / "proposal_apply_p3"
+P2_VALID_WORKSPACE = FIXTURE_ROOT / "valid_workspace"
+NEGATIVE_FIXTURES = FIXTURE_ROOT / "negative"
 
 if str(ASO_DIR) not in sys.path:
     sys.path.insert(0, str(ASO_DIR))
@@ -217,14 +218,183 @@ class ApplyDryRunCommandTests(unittest.TestCase):
     def test_malformed_proposal_is_rejected_with_json_plan(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             root = copy_p2_workspace(tmp)
-            proposal_path = Path(tmp) / "malformed.json"
-            proposal_path.write_text("{not-json\n", encoding="utf-8")
+            proposal_path = NEGATIVE_FIXTURES / "malformed_json.json"
 
             result, plan = self._apply_plan(root, proposal_path, tmp)
 
             self.assertEqual(result.returncode, 1, result.stdout + result.stderr)
             self.assertFalse(plan["would_apply"])
             self.assertIn("malformed_json", "\n".join(plan["blocked_reasons"]))
+
+    def test_non_object_proposal_is_rejected_with_json_plan(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = copy_p2_workspace(tmp)
+            proposal_path = NEGATIVE_FIXTURES / "non_object_json.json"
+
+            result, plan = self._apply_plan(root, proposal_path, tmp)
+
+            self.assertEqual(result.returncode, 1, result.stdout + result.stderr)
+            self.assertFalse(plan["would_apply"])
+            self.assertIn("malformed_json", "\n".join(plan["blocked_reasons"]))
+
+    def test_missing_required_proposal_fields_are_rejected(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = copy_p2_workspace(tmp)
+            proposal_path = self._proposal(root, tmp)
+            proposal = json.loads(proposal_path.read_text(encoding="utf-8"))
+            del proposal["proposal_id"]
+            del proposal["base_state_hashes"]
+            write_json(proposal_path, proposal)
+
+            result, plan = self._apply_plan(root, proposal_path, tmp)
+
+            self.assertEqual(result.returncode, 1, result.stdout + result.stderr)
+            self.assertFalse(plan["would_apply"])
+            reasons = "\n".join(plan["blocked_reasons"])
+            self.assertIn("proposal_schema: proposal_id is required", reasons)
+            self.assertIn("proposal_schema: base_state_hashes is required", reasons)
+
+    def test_missing_proposal_type_is_rejected_fail_closed(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = copy_p2_workspace(tmp)
+            proposal_path = self._proposal(root, tmp)
+            proposal = json.loads(proposal_path.read_text(encoding="utf-8"))
+            del proposal["proposal_type"]
+            write_json(proposal_path, proposal)
+
+            result, plan = self._apply_plan(root, proposal_path, tmp)
+
+            self.assertEqual(result.returncode, 1, result.stdout + result.stderr)
+            self.assertFalse(plan["would_apply"])
+            reasons = "\n".join(plan["blocked_reasons"])
+            self.assertIn("proposal_schema: proposal_type is required", reasons)
+            self.assertIn("unsupported_proposal_type", reasons)
+
+    def test_missing_target_root_is_rejected_fail_closed(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = copy_p2_workspace(tmp)
+            proposal_path = self._proposal(root, tmp)
+            proposal = json.loads(proposal_path.read_text(encoding="utf-8"))
+            del proposal["target_root"]
+            write_json(proposal_path, proposal)
+
+            result, plan = self._apply_plan(root, proposal_path, tmp)
+
+            self.assertEqual(result.returncode, 1, result.stdout + result.stderr)
+            self.assertFalse(plan["would_apply"])
+            reasons = "\n".join(plan["blocked_reasons"])
+            self.assertIn("proposal_schema: target_root is required", reasons)
+            self.assertIn("wrong_root", reasons)
+
+    def test_invalid_general_safety_class_is_rejected_fail_closed(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = copy_p2_workspace(tmp)
+            proposal_path = self._proposal(root, tmp)
+            proposal = json.loads(proposal_path.read_text(encoding="utf-8"))
+            proposal["safety_class"] = "executes_workspace_changes"
+            write_json(proposal_path, proposal)
+
+            result, plan = self._apply_plan(root, proposal_path, tmp)
+
+            self.assertEqual(result.returncode, 1, result.stdout + result.stderr)
+            self.assertFalse(plan["would_apply"])
+            self.assertIn("proposal_schema: safety_class must be one of", "\n".join(plan["blocked_reasons"]))
+
+    def test_workspace_identity_mismatch_is_rejected(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = copy_p2_workspace(tmp)
+            proposal_path = self._proposal(root, tmp)
+            proposal = json.loads(proposal_path.read_text(encoding="utf-8"))
+            proposal["target_workspace_identity"]["workspace_id"] = "WORKSPACE-DIFFERENT"
+            write_json(proposal_path, proposal)
+
+            result, plan = self._apply_plan(root, proposal_path, tmp)
+
+            self.assertEqual(result.returncode, 1, result.stdout + result.stderr)
+            self.assertFalse(plan["would_apply"])
+            self.assertIn("workspace_identity_mismatch: workspace_id", "\n".join(plan["blocked_reasons"]))
+
+    def test_repository_lock_mismatch_when_present_is_rejected(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = copy_p2_workspace(tmp)
+            proposal_path = self._proposal(root, tmp)
+            proposal = json.loads(proposal_path.read_text(encoding="utf-8"))
+            proposal["target_workspace_identity"]["expected_branch"] = "release"
+            write_json(proposal_path, proposal)
+
+            result, plan = self._apply_plan(root, proposal_path, tmp)
+
+            self.assertEqual(result.returncode, 1, result.stdout + result.stderr)
+            self.assertFalse(plan["would_apply"])
+            self.assertIn("repository_lock_mismatch: expected_branch != branch", "\n".join(plan["blocked_reasons"]))
+
+    def test_missing_required_sidecar_is_rejected_without_mutation(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = copy_p2_workspace(tmp)
+            proposal_path = self._proposal(root, tmp)
+            (root / "project-runtime" / "state" / "NEXT_ACTION.json").unlink()
+            before = workspace_snapshot(root)
+
+            result, plan = self._apply_plan(root, proposal_path, tmp)
+
+            self.assertEqual(result.returncode, 1, result.stdout + result.stderr)
+            self.assertFalse(plan["would_apply"])
+            reasons = "\n".join(plan["blocked_reasons"])
+            self.assertIn("state_verify_before_apply_failed", reasons)
+            self.assertIn("base_hash_stale", reasons)
+            self.assertEqual(before, workspace_snapshot(root))
+
+    def test_malformed_current_sidecar_is_rejected_without_mutation(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = copy_p2_workspace(tmp)
+            proposal_path = self._proposal(root, tmp)
+            sidecar_path = root / "project-runtime" / "state" / "NEXT_ACTION.json"
+            sidecar_path.write_text("{not-json\n", encoding="utf-8")
+            before = workspace_snapshot(root)
+
+            result, plan = self._apply_plan(root, proposal_path, tmp)
+
+            self.assertEqual(result.returncode, 1, result.stdout + result.stderr)
+            self.assertFalse(plan["would_apply"])
+            reasons = "\n".join(plan["blocked_reasons"])
+            self.assertIn("state_verify_before_apply_failed", reasons)
+            self.assertIn("base_hash_stale", reasons)
+            self.assertEqual(before, workspace_snapshot(root))
+
+    def test_forbidden_source_and_owner_roots_are_rejected(self) -> None:
+        forbidden_targets = (
+            "agent-system/tools/aso/aso.py",
+            "project-input/owner-note.json",
+            "project-archive/old-state.json",
+            "../outside.json",
+        )
+        for target in forbidden_targets:
+            with self.subTest(target=target), tempfile.TemporaryDirectory() as tmp:
+                root = copy_p2_workspace(tmp)
+                proposal_path = self._proposal(root, tmp)
+                proposal = json.loads(proposal_path.read_text(encoding="utf-8"))
+                proposal["operations"][0]["target"] = target
+                write_json(proposal_path, proposal)
+
+                result, plan = self._apply_plan(root, proposal_path, tmp)
+
+                self.assertEqual(result.returncode, 1, result.stdout + result.stderr)
+                self.assertFalse(plan["would_apply"])
+                self.assertIn("operation_path_guard", "\n".join(plan["blocked_reasons"]))
+
+    def test_git_commit_push_execution_request_is_rejected(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = copy_p2_workspace(tmp)
+            proposal_path = self._proposal(root, tmp)
+            proposal = json.loads(proposal_path.read_text(encoding="utf-8"))
+            proposal["operations"][0]["description"] = "execute git commit and git push before apply"
+            write_json(proposal_path, proposal)
+
+            result, plan = self._apply_plan(root, proposal_path, tmp)
+
+            self.assertEqual(result.returncode, 1, result.stdout + result.stderr)
+            self.assertFalse(plan["would_apply"])
+            self.assertIn("forbidden_execution_guard", "\n".join(plan["blocked_reasons"]))
 
     def test_confirm_apply_succeeds_for_valid_report_write_proposal_and_writes_receipt(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
@@ -290,6 +460,33 @@ class ApplyDryRunCommandTests(unittest.TestCase):
             self.assertFalse((root / "project-runtime" / "reports" / "next-task-proposal.json").exists())
             self.assertFalse((root / "project-runtime" / "reports" / "second-report.json").exists())
             self.assertFalse((root / "project-runtime" / "receipts").exists())
+
+    def test_confirm_apply_after_verify_failure_rolls_back_outputs(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = copy_p2_workspace(tmp)
+            proposal_path = self._proposal(root, tmp)
+            state_before = workspace_snapshot(root / "project-runtime" / "state")
+            verify_before_report, verify_before_exit = apply_command.state_verify._report(root, True)
+            self.assertEqual(verify_before_exit, 0)
+
+            failed_verify_report = {
+                "status": "failed",
+                "summary": {"errors": 1},
+                "findings": [{"severity": "error", "rule_id": "forced_after_apply_failure"}],
+            }
+            with mock.patch.object(
+                apply_command.state_verify,
+                "_report",
+                side_effect=[(verify_before_report, 0), (failed_verify_report, 1)],
+            ):
+                result, exit_code = apply_command._run_confirmed_apply(root, proposal_path)
+
+            self.assertEqual(exit_code, apply_command.EXIT_BLOCKED)
+            self.assertFalse(result["would_apply"])
+            self.assertIn("state_verify_after_apply_failed", "\n".join(result["blocked_reasons"]))
+            self.assertFalse((root / "project-runtime" / "reports" / "next-task-proposal.json").exists())
+            self.assertFalse((root / "project-runtime" / "receipts").exists())
+            self.assertEqual(state_before, workspace_snapshot(root / "project-runtime" / "state"))
 
     def test_missing_confirm_apply_prevents_workspace_mutation(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:

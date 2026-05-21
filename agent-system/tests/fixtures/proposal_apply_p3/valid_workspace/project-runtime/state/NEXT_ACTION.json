@@ -1,0 +1,31 @@
+{
+  "content": {
+    "action_id": "ACTION-STATE-INIT-001",
+    "action_semantic": "stop_terminal",
+    "action_type": "stop",
+    "blocked_by": [],
+    "blocking_or_resume_context": "NONE",
+    "checkpoint_policy": "no_checkpoint",
+    "checkpoint_preflight_required": false,
+    "checkpoint_receipt_ref": "NONE",
+    "checkpoint_receipt_required": false,
+    "dependency_status": "not_applicable",
+    "expected_result": [],
+    "instruction_for_orchestrator": "Runtime state is initialized; no agent dispatch is implied.",
+    "repository_lock_required": false,
+    "requester_return_context": "NONE",
+    "required_project_docs": [],
+    "required_universal_docs": [],
+    "target_role": "orchestrator",
+    "task_id": "NONE",
+    "task_packet": "NONE",
+    "workspace_identity_required": false
+  },
+  "markdown_source": "project-runtime/NEXT_ACTION.md",
+  "runtime_schema_version": "3.1.0",
+  "schema_version": "3.1.0",
+  "sidecar_type": "NEXT_ACTION",
+  "state_revision": 1,
+  "updated_at": "2026-05-21T00:00:00Z",
+  "updated_by": "orchestrator"
+}

@@ -236,6 +236,16 @@ def _validate_json_out(root: Path, path_text: str) -> tuple[Path | None, str | N
     return path, None
 
 
+def _is_workspace_proposal_output(root: Path, path: Path) -> bool:
+    workspace = root.expanduser().resolve(strict=False)
+    target = path.resolve(strict=False)
+    try:
+        target.relative_to((workspace / "project-runtime" / "proposals").resolve(strict=False))
+    except ValueError:
+        return False
+    return True
+
+
 def _confirm_write_path(root: Path, proposal_id: str) -> tuple[Path | None, str | None]:
     proposals_dir = (root / "project-runtime" / "proposals").resolve(strict=False)
     path = proposals_dir / f"{proposal_id}.json"
@@ -285,6 +295,12 @@ def run_next_task(args: argparse.Namespace) -> int:
         if error is not None or path is None:
             print(f"aso propose next-task: {error}", file=sys.stderr)
             return EXIT_IO_ERROR
+        if _is_workspace_proposal_output(root, path) and not args.confirm_write:
+            print(
+                "aso propose next-task: --confirm-write is required for project-runtime/proposals writes",
+                file=sys.stderr,
+            )
+            return EXIT_BLOCKED
         ok, write_error = _write_json(path, proposal)
         if not ok:
             print(f"aso propose next-task: failed to write json-out: {write_error}", file=sys.stderr)

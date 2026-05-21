@@ -213,6 +213,21 @@ class ProposeCheckpointCommandTests(unittest.TestCase):
             self.assertEqual(proposal["safety_class"], "checkpoint_proposal_only")
             self.assertFalse(proposal["checkpoint_receipt_created"])
 
+    def test_project_runtime_proposal_json_out_requires_confirm_write(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = copy_p2_workspace(tmp)
+            before = workspace_files(root)
+            proposals_dir = root / "project-runtime" / "proposals"
+            proposals_dir.mkdir(parents=True)
+            json_out = proposals_dir / "manual-checkpoint-proposal.json"
+
+            result = run_aso("propose", "checkpoint", "--root", str(root), "--json-out", str(json_out))
+
+            self.assertEqual(result.returncode, 1, result.stdout + result.stderr)
+            self.assertIn("--confirm-write is required", result.stderr)
+            self.assertFalse(json_out.exists())
+            self.assertEqual(before, workspace_files(root))
+
 
 if __name__ == "__main__":
     unittest.main()

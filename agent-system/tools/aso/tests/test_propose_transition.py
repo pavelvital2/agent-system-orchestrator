@@ -128,6 +128,31 @@ class ProposeTransitionCommandTests(unittest.TestCase):
             proposal = json.loads((root / written).read_text(encoding="utf-8"))
             self.assertEqual(proposal["proposal_type"], "transition")
 
+    def test_project_runtime_proposal_json_out_requires_confirm_write(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = copy_p2_workspace(tmp)
+            mark_bootstrap_gate_passed(root)
+            before = workspace_files(root)
+            proposals_dir = root / "project-runtime" / "proposals"
+            proposals_dir.mkdir(parents=True)
+            json_out = proposals_dir / "manual-transition-proposal.json"
+
+            result = run_aso(
+                "propose",
+                "transition",
+                "--root",
+                str(root),
+                "--to",
+                "implementation",
+                "--json-out",
+                str(json_out),
+            )
+
+            self.assertEqual(result.returncode, 1, result.stdout + result.stderr)
+            self.assertIn("--confirm-write is required", result.stderr)
+            self.assertFalse(json_out.exists())
+            self.assertEqual(before, workspace_files(root))
+
     def test_unknown_lifecycle_target_returns_blocked_proposal(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             root = copy_p2_workspace(tmp)

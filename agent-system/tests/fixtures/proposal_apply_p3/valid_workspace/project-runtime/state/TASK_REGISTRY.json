@@ -1,0 +1,13 @@
+{
+  "content": {
+    "registry_revision": 1,
+    "tasks": []
+  },
+  "markdown_source": "project-runtime/TASK_REGISTRY.md",
+  "runtime_schema_version": "3.1.0",
+  "schema_version": "3.1.0",
+  "sidecar_type": "TASK_REGISTRY",
+  "state_revision": 1,
+  "updated_at": "2026-05-21T00:00:00Z",
+  "updated_by": "orchestrator"
+}
