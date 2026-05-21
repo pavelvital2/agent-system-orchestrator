@@ -3,8 +3,8 @@
 ## Purpose
 
 Project Factory P1 defines the bounded contract for creating clean generated
-projects in local vendored mode, local reference mode, and GitHub reference
-mode.
+projects in local vendored mode, local reference mode, and GitHub publish mode
+using the selected engine mode.
 
 The target package tuple is:
 
@@ -24,7 +24,7 @@ Project Factory P1 supports three generated-project flows:
 ```text
 local vendored mode
 local reference mode
-GitHub reference mode
+GitHub publish mode
 ```
 
 `local vendored mode` preserves the Project Factory P0 behavior: it creates a
@@ -36,10 +36,11 @@ vendoring `agent-system/`. The generated project records the external ASO
 engine reference in `aso.lock` and relies on an installed ASO CLI or other
 external ASO engine source.
 
-`GitHub reference mode` creates a clean local generated project in reference
-mode, initializes a separate Git repository for that generated project, creates
-a GitHub repository through the GitHub CLI, and pushes only files that satisfy
-the generated-project publication boundary.
+`GitHub publish mode` creates a clean local generated project using the
+selected `vendored` or `reference` engine mode, initializes a separate Git
+repository for that generated project, creates a GitHub repository through the
+GitHub CLI, and pushes only files that satisfy the generated-project
+publication boundary.
 
 ## CLI Boundary
 
@@ -77,8 +78,8 @@ aso project verify-clean
 Required GitHub planning and publish commands:
 
 ```text
-aso project create --github --dry-run --engine-mode reference
-aso project create --github --confirm-publish --engine-mode reference
+aso project create --github --dry-run --engine-mode vendored|reference
+aso project create --github --confirm-publish --engine-mode vendored|reference
 ```
 
 Required wizard commands:
@@ -111,8 +112,10 @@ vendored
 reference
 ```
 
-GitHub publish mode must use `reference` unless a later bounded contract
-explicitly permits publishing vendored engine content.
+GitHub publish mode uses the selected engine mode. Reference mode records the
+external ASO engine in `aso.lock` and must not publish vendored
+`agent-system/` content. Vendored mode may publish only safe generated-project
+`agent-system/` content that passes the generated-project clean boundary.
 
 ## Safe Mutation Boundary
 
@@ -181,11 +184,16 @@ The detailed reference engine contract is defined in:
 agent-system/12_project_factory/REFERENCE_ENGINE_MODE_CONTRACT.md
 ```
 
-## GitHub Reference Mode
+## GitHub Publish Mode
 
-GitHub reference mode is a publish workflow for clean generated projects. A
-real publish requires explicit confirmation and must pass the GitHub publish
-preflight before any network action.
+GitHub publish mode is a publish workflow for clean generated projects using
+the selected `vendored` or `reference` engine mode. A real publish requires
+explicit confirmation and must pass the GitHub publish preflight before any
+network action.
+
+Reference mode must not track or publish `agent-system/`. Vendored mode may
+publish only safe generated-project `agent-system/` content that passes the
+generated-project clean boundary.
 
 No real GitHub action may occur without:
 
@@ -236,8 +244,9 @@ caches
 logs
 ```
 
-Reference-mode generated repositories must not track `agent-system/` unless a
-later bounded contract explicitly changes the GitHub publication model.
+Reference-mode generated repositories must not track `agent-system/`.
+Vendored-mode generated repositories may track only safe generated-project
+`agent-system/` content that passes the publication boundary.
 
 ## Wizard Contract
 
@@ -270,4 +279,3 @@ runtime schema: 3.0.0
 Implementation tasks must stop and request a governance decision if they
 discover that runtime-state semantics need to change. Such a change is outside
 this P1 contract and must not be handled by silently bumping runtime schema.
-

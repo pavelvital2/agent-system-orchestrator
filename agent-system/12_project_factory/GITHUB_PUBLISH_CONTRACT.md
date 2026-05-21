@@ -14,12 +14,12 @@ artifacts, owner-input files, local archives, or secrets.
 Project Factory P1 GitHub publish uses:
 
 ```text
-engine mode: reference
+engine mode: selected vendored or reference mode
 runtime schema: 3.0.0
 ```
 
 GitHub publish mode creates or uses a clean generated-project target, records
-the external ASO engine reference in `aso.lock`, initializes a separate Git
+the selected ASO engine mode in `aso.lock`, initializes a separate Git
 repository inside the generated project, creates a GitHub repository through
 the GitHub CLI, and pushes only generated-project files that satisfy this
 contract.
@@ -97,8 +97,11 @@ logs
 ```
 
 Reference-mode GitHub repositories must not track vendored `agent-system/`
-content. The generated project may reference the ASO engine through `aso.lock`
-and user documentation, but the publishable repository remains clean and small.
+content. Vendored-mode GitHub repositories may track only safe generated-project
+`agent-system/` content that passes the generated-project clean boundary. The
+generated project records the selected ASO engine mode through `aso.lock` and
+user documentation, while the publishable repository remains bounded to clean
+generated-project files.
 
 The root `.git/` directory of the generated project is allowed only as the
 generated project's own repository metadata. It must not be copied from the ASO
@@ -106,12 +109,13 @@ engine checkout.
 
 ## Allowed Published Files
 
-A reference-mode generated project may track:
+A generated project may track:
 
 ```text
 .gitignore
 README.md
 aso.lock
+agent-system/** only for vendored mode after clean-boundary verification
 .github/workflows/**
 .devcontainer/**
 ```
@@ -180,4 +184,3 @@ Evidence must not include secret values or full credential output.
 
 This contract does not change runtime-state semantics. Project Factory P1
 GitHub publish uses runtime schema `3.0.0`.
-

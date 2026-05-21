@@ -324,6 +324,67 @@ does not dispatch agents, mutate package/runtime state, perform checkpoints,
 commit, or push. For package lint compatibility, this scoped boundary is also
 stated as: ASO diagnostic surfaces do not provide general mutation, dispatch, or checkpoint authority.
 
+## Project Factory P1
+
+Project Factory P1 supports local vendored creation, local reference creation,
+GitHub dry-run planning, confirmed GitHub publish, and a guided
+wizard. It uses package version `3.3.0` and runtime schema `3.0.0`.
+
+Local vendored mode preserves the P0 behavior of copying safe `agent-system/`
+package content into the generated project:
+
+```text
+python3 agent-system/tools/aso/aso.py project create --local --engine-mode vendored --target /tmp/demo-vendored --name "Demo Vendored" --slug demo-vendored --profile generic --repo-url none --branch main
+python3 agent-system/tools/aso/aso.py project verify-clean --root /tmp/demo-vendored --strict
+```
+
+Local reference mode records the external ASO engine in `aso.lock` and does not
+vendor `agent-system/`:
+
+```text
+python3 agent-system/tools/aso/aso.py project create --local --engine-mode reference --target /tmp/demo-reference --name "Demo Reference" --slug demo-reference --profile generic --repo-url https://github.com/OWNER/demo-reference.git --branch main
+python3 agent-system/tools/aso/aso.py project verify-clean --root /tmp/demo-reference --strict
+```
+
+GitHub dry-run and confirmed publish use the selected `vendored` or
+`reference` engine mode. In reference mode, the generated repository must not
+track `agent-system/`; in vendored mode, it may publish only safe
+generated-project `agent-system/` content that passes the clean boundary.
+
+GitHub dry-run mode emits a deterministic publication plan only. It performs no
+generated-project target writes, Git commands, GitHub CLI calls, network
+actions, repository creation, commits, or pushes:
+
+```text
+python3 agent-system/tools/aso/aso.py project create --github --dry-run --engine-mode reference --target /tmp/demo-github --name "Demo GitHub" --slug demo-github --profile generic --branch main --owner OWNER --repo demo-github --private --json-out /tmp/demo-github-plan.json
+```
+
+Confirmed GitHub publish requires explicit `--confirm-publish`, exactly one
+visibility flag, Git, GitHub CLI (`gh`), and authenticated GitHub access. It is
+target-scoped to the generated project and publishes only files that pass the
+generated-project clean boundary:
+
+```text
+python3 agent-system/tools/aso/aso.py project create --github --confirm-publish --engine-mode reference --target /tmp/demo-github --name "Demo GitHub" --slug demo-github --profile generic --branch main --owner OWNER --repo demo-github --private
+```
+
+The wizard exposes the same bounded flows:
+
+```text
+python3 agent-system/tools/aso/aso.py wizard
+python3 agent-system/tools/aso/aso.py wizard --answers path/to/answers.json --dry-run --json-out /tmp/aso-wizard-plan.json
+```
+
+Generated projects must not track or publish `project-input/`,
+`project-runtime/`, `project-archive/`, virtual environments, caches, logs,
+secret-like files, local upgrade packages, or ASO engine `.git` metadata.
+Reference-mode generated repositories must not track `agent-system/`.
+Vendored-mode generated repositories may track only safe generated-project
+`agent-system/` content that passes the publication boundary.
+
+Project Factory P1 does not implement a runtime daemon, dashboard control
+plane, distributed workers, live agent dispatch, or checkpoint executor.
+
 ## Publication and cleanup boundary
 
 Stage 1, Stage 2, and Stage 3 working upgrade packages and generated execution

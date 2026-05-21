@@ -1285,4 +1285,50 @@ MIGRATION_NOTE: No runtime schema migration is introduced. Existing v3.1.1 works
 AUTHORIZED_BY: project_owner
 AUDIT_REQUIRED: yes
 STATUS: accepted
+
+CHANGE_ID: GOV-2026-05-21-001
+CHANGE_TITLE: ASO_PROJECT_FACTORY_P1_GITHUB_WIZARD_DOCS_RELEASE
+DATE: 2026-05-21
+PACKAGE_VERSION_BEFORE: 3.2.0
+PACKAGE_VERSION_AFTER: 3.3.0
+GOVERNANCE_RULESET_BEFORE: 3.2.0
+GOVERNANCE_RULESET_AFTER: 3.3.0
+RUNTIME_SCHEMA_BEFORE: 3.0.0
+RUNTIME_SCHEMA_AFTER: 3.0.0
+CHANGE_TYPE: minor
+CHANGE_SUBTYPE: project_factory_p1_docs_install_release
+AFFECTED_FILES:
+- README.md
+- README_INSTALL.md
+- pyproject.toml
+- agent-system/README.md
+- agent-system/PACKAGE_VERSIONING.md
+- agent-system/GOVERNANCE_CHANGELOG.md
+- agent-system/11_release/ASO_PROJECT_FACTORY_P1_V3_3_0_RELEASE_NOTES.md
+- agent-system/12_project_factory/PROJECT_FACTORY_P1_SPEC.md
+- agent-system/12_project_factory/REFERENCE_ENGINE_MODE_CONTRACT.md
+- agent-system/12_project_factory/GITHUB_PUBLISH_CONTRACT.md
+- agent-system/tools/aso/agent_system_orchestrator_aso/__init__.py
+- agent-system/tools/aso/agent_system_orchestrator_aso/aso_tool/lockfile.py
+AFFECTED_INVARIANTS:
+- Active package/governance/runtime tuple is 3.3.0 / 3.3.0 / 3.0.0.
+- Local vendored mode preserves the P0 generated-project behavior and remains bounded to explicit generated-project target paths.
+- Local reference mode records the external ASO engine in aso.lock and does not vendor agent-system/.
+- GitHub dry-run planning performs no generated-project target writes, Git commands, GitHub CLI calls, network actions, repository creation, commits, or pushes, except for explicit plan output such as --json-out.
+- Confirmed GitHub publish requires explicit confirmation, GitHub CLI authentication, exact visibility selection, selected engine mode, clean generated-project verification, and target-scoped Git operations.
+- GitHub CLI is optional for install, local creation, local verification, wizard dry-run, and GitHub dry-run planning; it is required only for confirmed publish.
+- The wizard exposes the same bounded Project Factory creation and publish planning surface.
+- Generated-project publication must not track owner-input roots, runtime roots, archives, caches, logs, virtual environments, local upgrade packages, secret-like files, or ASO engine .git metadata.
+- Project Factory P1 does not install a daemon, distributed workers, live agent dispatch, or checkpoint executor.
+AFFECTED_TRANSITIONS:
+- project factory local creation -> explicit generated-project target path mutation only.
+- project factory GitHub dry-run -> deterministic plan only, with no GitHub or Git publish operation.
+- project factory confirmed publish -> generated-project clean verification and preflight before target-scoped GitHub publication.
+- wizard dry-run -> deterministic plan only; wizard confirmed flow -> same Project Factory safety boundary as the selected command.
+SCHEMA_TEMPLATE_IMPACT: none
+MIGRATION_REQUIRED: no
+MIGRATION_NOTE: No runtime schema migration is introduced. Existing v3.2.0 generated projects remain compatible where their lockfiles satisfy the accepted compatibility rules. New P1 generated projects record package version 3.3.0 and runtime schema 3.0.0.
+AUTHORIZED_BY: project_owner
+AUDIT_REQUIRED: yes
+STATUS: accepted
 ```

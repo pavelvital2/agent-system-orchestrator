@@ -107,26 +107,72 @@ entrypoint, hygiene, and canonical package-source coherence:
 python3 agent-system/tools/aso/aso.py package-layout verify --root . --strict
 ```
 
-Project Factory P0 creates local generated project workspaces and verifies that
-they are clean for publication. Local mode does not require secrets, GitHub
-credentials, remote repository access, commit authority, push authority, or live
-automation authority:
+Project Factory P1 creates local generated project workspaces, plans GitHub
+publication, and can publish a clean generated project using the selected
+engine mode only after explicit confirmation. Local modes do not require secrets, GitHub
+credentials, remote repository access, commit authority, push authority, or
+live automation authority:
 
 ```text
 python3 agent-system/tools/aso/aso.py project create --help
 python3 agent-system/tools/aso/aso.py project verify-clean --help
-python3 agent-system/tools/aso/aso.py project create --local --target /tmp/demo-project --name "Demo Project" --slug demo-project --profile generic --repo-url none --branch main
-python3 agent-system/tools/aso/aso.py project verify-clean --root /tmp/demo-project --strict
 ```
 
-Generated projects contain `aso.lock`, `.gitignore`, a minimal README, local
-ignored ASO working roots when needed, and optional vendored safe
-`agent-system/` content. They must not publish `project-input/`,
-`project-runtime/`, `project-archive/`, virtual environments, caches, logs,
-secret-like files, local upgrade packages, or ASO engine `.git` metadata.
-Project Factory P0 does not create GitHub repositories and does not implement a
-runtime daemon, dashboard control plane, distributed workers, agent dispatch, or
-checkpoint execution.
+Create a local vendored generated project, preserving the P0 behavior of
+copying safe `agent-system/` package content:
+
+```text
+python3 agent-system/tools/aso/aso.py project create --local --engine-mode vendored --target /tmp/demo-vendored --name "Demo Vendored" --slug demo-vendored --profile generic --repo-url none --branch main
+python3 agent-system/tools/aso/aso.py project verify-clean --root /tmp/demo-vendored --strict
+```
+
+Create a local reference-mode generated project without vendoring
+`agent-system/`:
+
+```text
+python3 agent-system/tools/aso/aso.py project create --local --engine-mode reference --target /tmp/demo-reference --name "Demo Reference" --slug demo-reference --profile generic --repo-url https://github.com/OWNER/demo-reference.git --branch main
+python3 agent-system/tools/aso/aso.py project verify-clean --root /tmp/demo-reference --strict
+```
+
+GitHub dry-run and confirmed publish use the selected `vendored` or
+`reference` engine mode. In reference mode, the generated repository must not
+track `agent-system/`; in vendored mode, it may publish only safe
+generated-project `agent-system/` content that passes the clean boundary.
+
+Plan GitHub publication without generated-project target writes, Git commands,
+GitHub CLI, network access, credentials, repository creation, commits, or
+pushes:
+
+```text
+python3 agent-system/tools/aso/aso.py project create --github --dry-run --engine-mode reference --target /tmp/demo-github --name "Demo GitHub" --slug demo-github --profile generic --branch main --owner OWNER --repo demo-github --private --json-out /tmp/demo-github-plan.json
+```
+
+Confirmed GitHub publish is the only Project Factory path that requires Git,
+GitHub CLI (`gh`), and authenticated GitHub access. It is limited to the
+generated project target path and requires `--confirm-publish` plus an explicit
+visibility flag:
+
+```text
+python3 agent-system/tools/aso/aso.py project create --github --confirm-publish --engine-mode reference --target /tmp/demo-github --name "Demo GitHub" --slug demo-github --profile generic --branch main --owner OWNER --repo demo-github --private
+```
+
+The guided wizard exposes the same bounded Project Factory flows:
+
+```text
+python3 agent-system/tools/aso/aso.py wizard
+python3 agent-system/tools/aso/aso.py wizard --answers path/to/answers.json --dry-run --json-out /tmp/aso-wizard-plan.json
+```
+
+Generated projects contain `aso.lock`, `.gitignore`, a minimal README, and
+local ignored ASO working roots when needed. Vendored mode may copy safe
+`agent-system/` content. Reference mode records the external ASO engine in
+`aso.lock` and must not track `agent-system/`. Generated projects must not
+publish `project-input/`, `project-runtime/`, `project-archive/`, virtual
+environments, caches, logs, secret-like files, local upgrade packages, or ASO
+engine `.git` metadata.
+
+Project Factory P1 does not implement a runtime daemon, dashboard control
+plane, distributed workers, live agent dispatch, or checkpoint executor.
 
 For DAG readiness, `audit_passed` is not a completed dependency. Downstream
 work that depends on accepted task output requires `checkpoint_done` with
