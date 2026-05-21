@@ -19,6 +19,7 @@ from .commands import (
     package_layout,
     package_sync,
     plan_next,
+    project,
     record_result,
     state_verify,
     status,
@@ -545,6 +546,71 @@ def build_parser() -> argparse.ArgumentParser:
         help="Write the state verification report JSON to this explicit path.",
     )
     state_verify_parser.set_defaults(handler=state_verify.run)
+
+    project_parser = subparsers.add_parser(
+        "project",
+        help="Project Factory workspace commands.",
+        description="Project Factory P0 local workspace creation commands.",
+    )
+    project_subparsers = project_parser.add_subparsers(dest="project_command", metavar="COMMAND")
+    project_create_parser = project_subparsers.add_parser(
+        "create",
+        help="Create a local Project Factory workspace.",
+        description=(
+            "Create a clean local Project Factory P0 workspace. Local mode does not "
+            "create GitHub repositories, use credentials, commit, push, dispatch agents, "
+            "or mutate runtime schema."
+        ),
+    )
+    project_create_parser.add_argument(
+        "--local",
+        required=True,
+        action="store_true",
+        help="Create a local workspace only; no network or GitHub operations are performed.",
+    )
+    project_create_parser.add_argument(
+        "--target",
+        required=True,
+        metavar="PATH",
+        help="Empty target directory to create, or a path whose final directory does not yet exist.",
+    )
+    project_create_parser.add_argument(
+        "--name",
+        required=True,
+        metavar="TEXT",
+        help="Generated project display name.",
+    )
+    project_create_parser.add_argument(
+        "--slug",
+        required=True,
+        metavar="TEXT",
+        help="Filesystem and repository safe project slug.",
+    )
+    project_create_parser.add_argument(
+        "--profile",
+        default="generic",
+        metavar="TEXT",
+        help="Project profile metadata to record in aso.lock (default: generic).",
+    )
+    project_create_parser.add_argument(
+        "--repo-url",
+        default=None,
+        metavar="URL_OR_NONE",
+        help="Repository URL metadata to record in aso.lock; use none when unknown.",
+    )
+    project_create_parser.add_argument(
+        "--branch",
+        default="main",
+        metavar="TEXT",
+        help="Default branch metadata to record in aso.lock (default: main).",
+    )
+    project_create_parser.add_argument(
+        "--engine-mode",
+        choices=("vendored",),
+        default="vendored",
+        help="ASO engine mode for the generated project (default: vendored).",
+    )
+    project_create_parser.set_defaults(handler=project.run_create)
 
     return parser
 
