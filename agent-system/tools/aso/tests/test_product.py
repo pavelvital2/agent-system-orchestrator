@@ -398,6 +398,166 @@ class ProductCommandTests(unittest.TestCase):
                 artifact["created_at"] = "<generated>"
             self.assertEqual(first, second)
 
+    def test_spec_from_intake_and_answers_generates_linked_artifacts_and_gaps(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp) / "workspace"
+            root.mkdir()
+            intake_out = Path(tmp) / "intake.json"
+            answers_path = Path(tmp) / "answers.json"
+            spec_out = Path(tmp) / "product-spec.json"
+            answers_path.write_text(
+                json.dumps(
+                    {
+                        "product_name": "Marketplace Support Bot",
+                        "required_secrets": ["TELEGRAM_BOT_TOKEN", {"name": "MARKETPLACE_API_KEY"}],
+                    }
+                ),
+                encoding="utf-8",
+            )
+
+            intake_result = run_aso(
+                "product",
+                "intake",
+                "--root",
+                str(root),
+                "--tz",
+                str(FIXTURE_DIR / "telegram_marketplace_tz.md"),
+                "--dry-run",
+                "--json-out",
+                str(intake_out),
+            )
+            self.assertEqual(intake_result.returncode, 0, intake_result.stdout + intake_result.stderr)
+
+            result = run_aso(
+                "product",
+                "spec",
+                "--root",
+                str(root),
+                "--from-intake",
+                str(intake_out),
+                "--answers",
+                str(answers_path),
+                "--dry-run",
+                "--json-out",
+                str(spec_out),
+            )
+
+            self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+            self.assertEqual(result.stdout, "")
+            artifact = json.loads(spec_out.read_text(encoding="utf-8"))
+            self.assertEqual(artifact["artifact_type"], "PRODUCT_SPEC")
+            self.assertEqual(artifact["product_name"], "Marketplace Support Bot")
+            self.assertEqual(artifact["status"], "needs_clarification")
+            self.assertTrue(artifact["blocks_implementation_start"])
+            self.assertIn("This artifact does not claim implementation readiness", artifact["readiness_summary"])
+            self.assertEqual(artifact["user_stories_artifact"]["artifact_type"], "USER_STORIES")
+            self.assertEqual(artifact["acceptance_criteria_artifact"]["artifact_type"], "ACCEPTANCE_CRITERIA")
+            self.assertEqual(
+                artifact["user_stories_artifact"]["source_refs"][0]["artifact_id"],
+                artifact["artifact_id"],
+            )
+            self.assertEqual(
+                artifact["acceptance_criteria_artifact"]["criteria"][0]["user_story_id"],
+                artifact["user_stories_artifact"]["stories"][0]["user_story_id"],
+            )
+            gaps = " ".join(gap["text"] for gap in artifact["open_gaps"])
+            self.assertIn("Critical answer missing: target users.", gaps)
+            self.assertIn("Critical answer missing: data model notes.", gaps)
+            self.assertIn("Critical answer missing: acceptance summary.", gaps)
+            secret_names = {secret["name"] for secret in artifact["required_secrets"]}
+            self.assertIn("TELEGRAM_BOT_TOKEN", secret_names)
+            self.assertIn("MARKETPLACE_API_KEY", secret_names)
+            raw_artifact = json.dumps(artifact, sort_keys=True)
+            self.assertNotIn("secret_value", raw_artifact)
+
+    def test_spec_malformed_answers_fail_closed_without_writes(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp) / "workspace"
+            root.mkdir()
+            intake_out = Path(tmp) / "intake.json"
+            answers_path = Path(tmp) / "answers.json"
+            spec_out = Path(tmp) / "should-not-exist.json"
+            answers_path.write_text(
+                json.dumps({"product_name": "Demo", "target_users": "owner"}),
+                encoding="utf-8",
+            )
+
+            intake_result = run_aso(
+                "product",
+                "intake",
+                "--root",
+                str(root),
+                "--tz",
+                str(FIXTURE_DIR / "telegram_marketplace_tz.md"),
+                "--dry-run",
+                "--json-out",
+                str(intake_out),
+            )
+            self.assertEqual(intake_result.returncode, 0, intake_result.stdout + intake_result.stderr)
+
+            result = run_aso(
+                "product",
+                "spec",
+                "--root",
+                str(root),
+                "--from-intake",
+                str(intake_out),
+                "--answers",
+                str(answers_path),
+                "--dry-run",
+                "--json-out",
+                str(spec_out),
+            )
+
+            self.assertEqual(result.returncode, 1, result.stdout + result.stderr)
+            self.assertIn("target_users must be a list of non-empty strings", result.stderr)
+            self.assertFalse(spec_out.exists())
+
+    def test_spec_rejects_secret_values_in_answers(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp) / "workspace"
+            root.mkdir()
+            intake_out = Path(tmp) / "intake.json"
+            answers_path = Path(tmp) / "answers.json"
+            spec_out = Path(tmp) / "should-not-exist.json"
+            token_value = "123456789:ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghi"
+            answers_path.write_text(
+                json.dumps({"product_name": "Demo", "product_summary": f"Telegram token is {token_value}"}),
+                encoding="utf-8",
+            )
+
+            intake_result = run_aso(
+                "product",
+                "intake",
+                "--root",
+                str(root),
+                "--tz",
+                str(FIXTURE_DIR / "telegram_marketplace_tz.md"),
+                "--dry-run",
+                "--json-out",
+                str(intake_out),
+            )
+            self.assertEqual(intake_result.returncode, 0, intake_result.stdout + intake_result.stderr)
+
+            result = run_aso(
+                "product",
+                "spec",
+                "--root",
+                str(root),
+                "--from-intake",
+                str(intake_out),
+                "--answers",
+                str(answers_path),
+                "--dry-run",
+                "--json-out",
+                str(spec_out),
+            )
+
+            self.assertEqual(result.returncode, 1, result.stdout + result.stderr)
+            self.assertIn("appears to contain secret values", result.stderr)
+            self.assertNotIn(token_value, result.stderr)
+            self.assertFalse(spec_out.exists())
+
 
 if __name__ == "__main__":
     unittest.main()

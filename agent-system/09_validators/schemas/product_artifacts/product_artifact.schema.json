@@ -432,16 +432,29 @@
       "allOf": [{ "$ref": "#/$defs/commonEnvelope" }],
       "required": [
         "product_name",
+        "product_summary",
         "problem_statement",
         "target_users",
         "outcomes",
         "requirements",
         "scope_in",
-        "scope_out"
+        "scope_out",
+        "assumptions",
+        "dependencies",
+        "external_integrations",
+        "required_secrets",
+        "data_model_notes",
+        "readiness_summary",
+        "acceptance_summary",
+        "open_gaps",
+        "blocks_implementation_start",
+        "user_stories_artifact",
+        "acceptance_criteria_artifact"
       ],
       "properties": {
         "artifact_type": { "type": "string", "const": "PRODUCT_SPEC" },
         "product_name": { "$ref": "#/$defs/nonEmptyString" },
+        "product_summary": { "$ref": "#/$defs/nonEmptyString" },
         "problem_statement": { "$ref": "#/$defs/nonEmptyString" },
         "target_users": { "$ref": "#/$defs/stringList" },
         "outcomes": { "$ref": "#/$defs/stringList" },
@@ -450,7 +463,33 @@
           "items": { "$ref": "#/$defs/requirement" }
         },
         "scope_in": { "$ref": "#/$defs/stringList" },
-        "scope_out": { "$ref": "#/$defs/stringList" }
+        "scope_out": { "$ref": "#/$defs/stringList" },
+        "assumptions": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/traceNote" }
+        },
+        "dependencies": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/traceNote" }
+        },
+        "external_integrations": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/traceNote" }
+        },
+        "required_secrets": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/requiredSecret" }
+        },
+        "data_model_notes": { "$ref": "#/$defs/stringList" },
+        "readiness_summary": { "$ref": "#/$defs/nonEmptyString" },
+        "acceptance_summary": { "$ref": "#/$defs/nonEmptyString" },
+        "open_gaps": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/traceNote" }
+        },
+        "blocks_implementation_start": { "type": "boolean" },
+        "user_stories_artifact": { "$ref": "#/$defs/userStoriesArtifact" },
+        "acceptance_criteria_artifact": { "$ref": "#/$defs/acceptanceCriteriaArtifact" }
       },
       "unevaluatedProperties": false
     },

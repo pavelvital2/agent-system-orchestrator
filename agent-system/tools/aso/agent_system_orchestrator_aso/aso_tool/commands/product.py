@@ -27,6 +27,8 @@ ARTIFACT_FILENAMES = {
     "PRODUCT_INTAKE": "product-intake",
     "OPEN_QUESTIONS": "open-questions",
     "PRODUCT_SPEC": "product-spec",
+    "USER_STORIES": "user-stories",
+    "ACCEPTANCE_CRITERIA": "acceptance-criteria",
     "CAPABILITY_MATRIX": "capability-matrix",
     "PRODUCT_PLAN": "product-plan",
 }
@@ -169,6 +171,43 @@ HIGH_RISK_HINTS = (
         "Sensitive personal, financial, medical, or legal data handling",
         ("personal data", "passport", "medical", "diagnosis", "legal", "finance", "bank card", "pii"),
     ),
+)
+
+SPEC_ANSWER_FIELDS = {
+    "product_name",
+    "product_summary",
+    "target_users",
+    "scope_in",
+    "scope_out",
+    "assumptions",
+    "dependencies",
+    "external_integrations",
+    "required_secrets",
+    "data_model_notes",
+    "acceptance_summary",
+    "acceptance_criteria",
+    "open_gaps",
+}
+
+SPEC_REQUIRED_LIST_FIELDS = {
+    "target_users",
+    "scope_in",
+    "scope_out",
+    "assumptions",
+    "dependencies",
+    "external_integrations",
+    "data_model_notes",
+    "acceptance_criteria",
+    "open_gaps",
+}
+
+CRITICAL_SPEC_FIELDS = (
+    "product_name",
+    "product_summary",
+    "target_users",
+    "scope_in",
+    "data_model_notes",
+    "acceptance_summary",
 )
 
 
@@ -506,6 +545,17 @@ def _trace_texts(source: dict[str, Any], field: str) -> list[str]:
     return texts
 
 
+def _trace_notes_from_texts(prefix: str, texts: list[str], source_ref_ids: list[str]) -> list[dict[str, object]]:
+    return [
+        {
+            "id": f"{prefix}-{index:03d}",
+            "text": text,
+            "source_ref_ids": source_ref_ids,
+        }
+        for index, text in enumerate(texts, start=1)
+    ]
+
+
 def _secret_names(source: dict[str, Any]) -> list[str]:
     values = source.get("required_secrets")
     if not isinstance(values, list):
@@ -518,6 +568,273 @@ def _secret_names(source: dict[str, Any]) -> list[str]:
         and re.fullmatch(r"[A-Z][A-Z0-9_]*", str(item.get("name")))
     }
     return sorted(names)
+
+
+def _answer_body(payload: dict[str, Any]) -> tuple[dict[str, Any] | None, str | None]:
+    if "answers" not in payload:
+        return payload, None
+    answers = payload.get("answers")
+    if not isinstance(answers, dict):
+        return None, "answers field must contain a JSON object"
+    return answers, None
+
+
+def _validate_spec_answers(raw_answers: dict[str, Any]) -> tuple[dict[str, Any] | None, str | None]:
+    answers, error = _answer_body(raw_answers)
+    if error is not None or answers is None:
+        return None, error
+
+    unknown = sorted(set(answers) - SPEC_ANSWER_FIELDS)
+    if unknown:
+        return None, f"answers file contains unsupported fields: {', '.join(unknown)}"
+
+    for field in ("product_name", "product_summary", "acceptance_summary"):
+        if field in answers and (not isinstance(answers[field], str) or not answers[field].strip()):
+            return None, f"answers field {field} must be a non-empty string when provided"
+
+    for field in SPEC_REQUIRED_LIST_FIELDS:
+        if field in answers:
+            value = answers[field]
+            if not isinstance(value, list) or any(not isinstance(item, str) or not item.strip() for item in value):
+                return None, f"answers field {field} must be a list of non-empty strings when provided"
+
+    if "required_secrets" in answers:
+        value = answers["required_secrets"]
+        if not isinstance(value, list):
+            return None, "answers field required_secrets must be a list when provided"
+        for index, item in enumerate(value, start=1):
+            if isinstance(item, str):
+                name = item
+            elif isinstance(item, dict):
+                extra_secret_fields = sorted(set(item) - {"name", "purpose"})
+                if extra_secret_fields:
+                    return None, (
+                        "answers field required_secrets must contain secret names only; "
+                        f"entry {index} has unsupported fields: {', '.join(extra_secret_fields)}"
+                    )
+                name = item.get("name")
+                purpose = item.get("purpose")
+                if purpose is not None and (not isinstance(purpose, str) or not purpose.strip()):
+                    return None, f"answers field required_secrets entry {index} purpose must be a non-empty string"
+            else:
+                return None, f"answers field required_secrets entry {index} must be a string or object"
+            if not isinstance(name, str) or not re.fullmatch(r"[A-Z][A-Z0-9_]*", name):
+                return None, f"answers field required_secrets entry {index} must provide an uppercase secret name only"
+
+    if _contains_secret_values(answers):
+        return None, "answers file appears to contain secret values; provide secret names only"
+    return answers, None
+
+
+def _contains_secret_values(value: Any) -> bool:
+    if isinstance(value, str):
+        if re.fullmatch(r"[A-Z][A-Z0-9_]*", value):
+            return False
+        _, redacted = _redact_secret_values(value)
+        return redacted
+    if isinstance(value, list):
+        return any(_contains_secret_values(item) for item in value)
+    if isinstance(value, dict):
+        return any(key != "name" and _contains_secret_values(item) for key, item in value.items())
+    return False
+
+
+def _answer_string(answers: dict[str, Any], field: str) -> str | None:
+    value = answers.get(field)
+    if isinstance(value, str) and value.strip():
+        return _normalize_ws(value)
+    return None
+
+
+def _answer_list(answers: dict[str, Any], field: str) -> list[str]:
+    value = answers.get(field)
+    if not isinstance(value, list):
+        return []
+    return [_normalize_ws(item) for item in value if isinstance(item, str) and item.strip()]
+
+
+def _answer_secret_names(answers: dict[str, Any]) -> list[dict[str, str]]:
+    values = answers.get("required_secrets")
+    if not isinstance(values, list):
+        return []
+    secrets: list[dict[str, str]] = []
+    seen: set[str] = set()
+    for item in values:
+        if isinstance(item, str):
+            name = item
+            purpose = "Secret name supplied by owner answers; value was not collected or stored."
+        elif isinstance(item, dict) and isinstance(item.get("name"), str):
+            name = item["name"]
+            purpose = str(item.get("purpose") or "Secret name supplied by owner answers; value was not collected or stored.")
+        else:
+            continue
+        if name not in seen:
+            seen.add(name)
+            secrets.append({"name": name, "purpose": purpose})
+    return secrets
+
+
+def _spec_required_secrets(intake: dict[str, Any], answers: dict[str, Any]) -> list[dict[str, object]]:
+    secret_by_name: dict[str, str] = {
+        name: "Secret name detected from intake; value was not collected or stored."
+        for name in _secret_names(intake)
+    }
+    for secret in _answer_secret_names(answers):
+        secret_by_name[secret["name"]] = secret["purpose"]
+    return [
+        {
+            "secret_id": f"SECRET-{index:03d}",
+            "name": name,
+            "value_status": "not_collected",
+            "purpose": secret_by_name[name],
+        }
+        for index, name in enumerate(sorted(secret_by_name), start=1)
+    ]
+
+
+def _spec_external_integrations(intake: dict[str, Any], answers: dict[str, Any]) -> list[str]:
+    answer_integrations = _answer_list(answers, "external_integrations")
+    if answer_integrations:
+        return answer_integrations
+    integrations: list[str] = []
+    for text in _trace_texts(intake, "external_integrations"):
+        name = text.split(" integration", 1)[0].strip()
+        integrations.append(name or text)
+    return integrations
+
+
+def _spec_scope_out(answers: dict[str, Any]) -> list[str]:
+    scope_out = _answer_list(answers, "scope_out")
+    mandatory_boundaries = [
+        "Application source generation",
+        "Deployment execution",
+        "Live external API calls",
+        "Secret collection or storage of secret values",
+    ]
+    for item in mandatory_boundaries:
+        if item not in scope_out:
+            scope_out.append(item)
+    return scope_out
+
+
+def _spec_open_gaps(intake: dict[str, Any], answers: dict[str, Any]) -> list[str]:
+    gaps: list[str] = []
+    for field in CRITICAL_SPEC_FIELDS:
+        value = answers.get(field)
+        if isinstance(value, str):
+            missing = not value.strip()
+        elif isinstance(value, list):
+            missing = not any(isinstance(item, str) and item.strip() for item in value)
+        else:
+            missing = True
+        if missing:
+            gaps.append(f"Critical answer missing: {field.replace('_', ' ')}.")
+
+    for text in _trace_texts(intake, "missing_information"):
+        if text not in gaps:
+            gaps.append(text)
+    for text in _answer_list(answers, "open_gaps"):
+        if text not in gaps:
+            gaps.append(text)
+    return gaps
+
+
+def _requirement_from_scope(index: int, description: str, source_ref_ids: list[str]) -> dict[str, object]:
+    return {
+        "requirement_id": f"REQ-{index:03d}",
+        "description": description,
+        "priority": "must",
+        "source_ref_ids": source_ref_ids,
+        "capability_ids": [f"CAP-{index:03d}"],
+    }
+
+
+def _build_user_stories_artifact(
+    args: argparse.Namespace,
+    now: datetime,
+    *,
+    product_spec_id: str,
+    requirements: list[dict[str, object]],
+    target_users: list[str],
+) -> dict[str, object]:
+    artifact = _common(
+        args,
+        artifact_type="USER_STORIES",
+        status="proposed",
+        source_refs=[
+            _source_ref(
+                "SRC-product-spec",
+                "artifact",
+                "Product spec artifact",
+                artifact_id=product_spec_id,
+            )
+        ],
+        human_summary="User stories derived from PRODUCT_SPEC requirements for owner review; not implementation evidence.",
+        now=now,
+    )
+    persona = target_users[0] if target_users else "Primary user pending owner confirmation"
+    artifact["stories"] = [
+        {
+            "user_story_id": f"US-{index:03d}",
+            "requirement_id": str(requirement["requirement_id"]),
+            "persona": persona,
+            "story": f"As {persona}, I want {str(requirement['description']).rstrip('.')} so that the product delivers the confirmed scope.",
+            "value": "Makes the requirement reviewable before future governed implementation work.",
+            "priority": str(requirement["priority"]),
+            "capability_ids": list(requirement.get("capability_ids", [])),
+        }
+        for index, requirement in enumerate(requirements, start=1)
+    ]
+    return artifact
+
+
+def _build_acceptance_criteria_artifact(
+    args: argparse.Namespace,
+    now: datetime,
+    *,
+    user_stories_id: str,
+    stories: list[dict[str, object]],
+    acceptance_criteria: list[str],
+) -> dict[str, object]:
+    artifact = _common(
+        args,
+        artifact_type="ACCEPTANCE_CRITERIA",
+        status="proposed",
+        source_refs=[
+            _source_ref(
+                "SRC-user-stories",
+                "artifact",
+                "User stories artifact",
+                artifact_id=user_stories_id,
+            )
+        ],
+        human_summary="Future acceptance criteria linked to user stories; no implementation readiness is claimed.",
+        now=now,
+    )
+    criteria: list[dict[str, object]] = []
+    for index, story in enumerate(stories, start=1):
+        statement = (
+            acceptance_criteria[index - 1]
+            if index <= len(acceptance_criteria)
+            else f"Owner can review {story['user_story_id']} against the linked requirement and recorded open gaps."
+        )
+        capability_ids = story.get("capability_ids")
+        capability_id = "CAP-001"
+        if isinstance(capability_ids, list) and capability_ids:
+            capability_id = str(capability_ids[0])
+        criteria.append(
+            {
+                "acceptance_criterion_id": f"AC-{index:03d}",
+                "user_story_id": str(story["user_story_id"]),
+                "capability_id": capability_id,
+                "statement": statement,
+                "verification_method": "owner_review",
+                "expected_evidence": "Future governed implementation evidence plus owner review notes.",
+                "status": "proposed",
+            }
+        )
+    artifact["criteria"] = criteria
+    return artifact
 
 
 def _question_options(question_id: str, options: list[tuple[str, str, str]]) -> list[dict[str, str]]:
@@ -882,14 +1199,43 @@ def _build_spec(args: argparse.Namespace, now: datetime) -> tuple[dict[str, obje
     intake, error = _read_json_object(str(args.from_intake))
     if error is not None or intake is None:
         return None, error
-    answers, error = _read_json_object(str(args.answers))
+    raw_answers, error = _read_json_object(str(args.answers))
+    if error is not None or raw_answers is None:
+        return None, error
+    answers, error = _validate_spec_answers(raw_answers)
     if error is not None or answers is None:
         return None, error
     _artifact_profile(args, intake)
+    goal = str(intake.get("goal") or intake.get("product_goal") or "Product goal remains an explicit gap.")
+    product_name = _answer_string(answers, "product_name") or "Product name pending owner confirmation"
+    product_summary = _answer_string(answers, "product_summary") or goal
+    target_users = _answer_list(answers, "target_users") or ["Primary users pending owner confirmation"]
+    scope_in = _answer_list(answers, "scope_in") or ["First-version scope pending owner confirmation"]
+    scope_out = _spec_scope_out(answers)
+    assumptions = _answer_list(answers, "assumptions") or [
+        "Unanswered critical decisions remain explicit gaps and must not be treated as implementation approval."
+    ]
+    dependencies = _answer_list(answers, "dependencies") or [
+        "Owner clarification is required before implementation planning can start."
+    ]
+    data_model_notes = _answer_list(answers, "data_model_notes") or [
+        "Data model, storage, retention, and export expectations remain an explicit gap."
+    ]
+    acceptance_summary = _answer_string(answers, "acceptance_summary") or (
+        "Acceptance evidence remains an explicit gap until the owner confirms must-pass checks."
+    )
+    acceptance_statements = _answer_list(answers, "acceptance_criteria")
+    open_gaps = _spec_open_gaps(intake, answers)
+    status = "needs_clarification" if open_gaps else "ready_for_review"
+    source_ref_ids = ["SRC-product-intake", "SRC-owner-answers"]
+    requirements = [
+        _requirement_from_scope(index, description, source_ref_ids)
+        for index, description in enumerate(scope_in, start=1)
+    ]
     artifact = _common(
         args,
         artifact_type="PRODUCT_SPEC",
-        status="needs_clarification",
+        status=status,
         source_refs=[
             _source_ref(
                 "SRC-product-intake",
@@ -899,27 +1245,57 @@ def _build_spec(args: argparse.Namespace, now: datetime) -> tuple[dict[str, obje
             ),
             _source_ref("SRC-owner-answers", "artifact", "Owner answers artifact"),
         ],
-        human_summary="Planning-only product specification scaffold; critical unknowns remain explicit gaps.",
+        human_summary=(
+            "Planning-only product specification generated from intake and owner answers; "
+            "open gaps block implementation start and this is not implementation evidence."
+        ),
         now=now,
     )
-    goal = str(intake.get("goal") or "Product goal remains an explicit gap.")
+    user_stories = _build_user_stories_artifact(
+        args,
+        now,
+        product_spec_id=str(artifact["artifact_id"]),
+        requirements=requirements,
+        target_users=target_users,
+    )
+    acceptance_criteria = _build_acceptance_criteria_artifact(
+        args,
+        now,
+        user_stories_id=str(user_stories["artifact_id"]),
+        stories=list(user_stories["stories"]),
+        acceptance_criteria=acceptance_statements,
+    )
     artifact.update(
         {
-            "product_name": str(answers.get("product_name") or "Product name pending owner confirmation"),
+            "product_name": product_name,
+            "product_summary": product_summary,
             "problem_statement": goal,
-            "target_users": ["Primary users pending owner confirmation"],
-            "outcomes": ["Owner-visible outcome pending owner confirmation"],
-            "requirements": [
-                {
-                    "requirement_id": "REQ-001",
-                    "description": "Plan the first owner-approved workflow after clarification.",
-                    "priority": "must",
-                    "source_ref_ids": ["SRC-product-intake", "SRC-owner-answers"],
-                    "capability_ids": ["CAP-001"],
-                }
-            ],
-            "scope_in": ["Planning-only product specification review"],
-            "scope_out": ["Application source generation", "Deployment execution", "Live external API calls"],
+            "target_users": target_users,
+            "outcomes": [product_summary],
+            "requirements": requirements,
+            "scope_in": scope_in,
+            "scope_out": scope_out,
+            "assumptions": _trace_notes_from_texts("ASSUMPTION", assumptions, source_ref_ids),
+            "dependencies": _trace_notes_from_texts("DEPENDENCY", dependencies, source_ref_ids),
+            "external_integrations": _trace_notes_from_texts(
+                "INTEGRATION",
+                [
+                    f"{name} integration scope is planning-only; no external call was made."
+                    for name in _spec_external_integrations(intake, answers)
+                ],
+                source_ref_ids,
+            ),
+            "required_secrets": _spec_required_secrets(intake, answers),
+            "data_model_notes": data_model_notes,
+            "readiness_summary": (
+                f"Requested readiness mode is '{args.readiness}'. "
+                "This artifact does not claim implementation readiness."
+            ),
+            "acceptance_summary": acceptance_summary,
+            "open_gaps": _trace_notes_from_texts("GAP", open_gaps, source_ref_ids),
+            "blocks_implementation_start": bool(open_gaps),
+            "user_stories_artifact": user_stories,
+            "acceptance_criteria_artifact": acceptance_criteria,
         }
     )
     return artifact, None

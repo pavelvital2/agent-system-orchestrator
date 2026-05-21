@@ -20,6 +20,7 @@
   ],
   "human_summary": "Define the product scope and requirements for review; this is not implementation or completion evidence.",
   "product_name": "Example Product",
+  "product_summary": "Summarize the owner-visible product outcome.",
   "problem_statement": "Describe the problem the product should solve.",
   "target_users": ["Primary user segment"],
   "outcomes": ["Owner-visible outcome expected from the product."],
@@ -33,5 +34,111 @@
     }
   ],
   "scope_in": ["Approved MVP workflow"],
-  "scope_out": ["Deployment execution", "Live external API calls", "Secret collection"]
+  "scope_out": ["Deployment execution", "Live external API calls", "Secret collection"],
+  "assumptions": [
+    {
+      "id": "ASSUMPTION-001",
+      "text": "Owner review is still required before implementation planning.",
+      "source_ref_ids": ["SRC-owner-decision"]
+    }
+  ],
+  "dependencies": [
+    {
+      "id": "DEPENDENCY-001",
+      "text": "Owner-provided environment and access decisions are required later.",
+      "source_ref_ids": ["SRC-owner-decision"]
+    }
+  ],
+  "external_integrations": [
+    {
+      "id": "INTEGRATION-001",
+      "text": "External integration scope is planning-only; no external call is made by this artifact.",
+      "source_ref_ids": ["SRC-owner-decision"]
+    }
+  ],
+  "required_secrets": [
+    {
+      "secret_id": "SECRET-001",
+      "name": "EXAMPLE_API_KEY",
+      "value_status": "not_collected",
+      "purpose": "Secret name only; value must be supplied outside product artifacts."
+    }
+  ],
+  "data_model_notes": ["Data entities, retention, and export needs require owner review."],
+  "readiness_summary": "Requested readiness mode is mvp. This artifact does not claim implementation readiness.",
+  "acceptance_summary": "Owner acceptance will be checked against linked criteria after future governed implementation.",
+  "open_gaps": [
+    {
+      "id": "GAP-001",
+      "text": "Implementation start remains blocked until owner gaps are resolved.",
+      "source_ref_ids": ["SRC-owner-decision"]
+    }
+  ],
+  "blocks_implementation_start": true,
+  "user_stories_artifact": {
+    "artifact_id": "USER_STORIES-YYYYMMDDTHHMMSSZ-example",
+    "artifact_type": "USER_STORIES",
+    "schema_version": "1.0.0",
+    "package_version": "3.6.0",
+    "runtime_schema_version": "3.1.0",
+    "created_at": "2026-05-21T00:00:00Z",
+    "created_by": "aso",
+    "target_root": "project-runtime/product/",
+    "profile": "telegram_bot",
+    "readiness_mode": "mvp",
+    "status": "proposed",
+    "source_refs": [
+      {
+        "source_ref_id": "SRC-product-spec",
+        "source_type": "artifact",
+        "title": "Product spec artifact",
+        "artifact_id": "PRODUCT_SPEC-YYYYMMDDTHHMMSSZ-example"
+      }
+    ],
+    "human_summary": "Translate approved requirements into owner-reviewable user stories with stable trace IDs.",
+    "stories": [
+      {
+        "user_story_id": "US-001",
+        "requirement_id": "REQ-001",
+        "persona": "Primary user",
+        "story": "As a primary user, I want to complete the first approved workflow so that I receive the expected product outcome.",
+        "value": "Makes the MVP workflow testable and reviewable.",
+        "priority": "must",
+        "capability_ids": ["CAP-001"]
+      }
+    ]
+  },
+  "acceptance_criteria_artifact": {
+    "artifact_id": "ACCEPTANCE_CRITERIA-YYYYMMDDTHHMMSSZ-example",
+    "artifact_type": "ACCEPTANCE_CRITERIA",
+    "schema_version": "1.0.0",
+    "package_version": "3.6.0",
+    "runtime_schema_version": "3.1.0",
+    "created_at": "2026-05-21T00:00:00Z",
+    "created_by": "aso",
+    "target_root": "project-runtime/product/",
+    "profile": "telegram_bot",
+    "readiness_mode": "mvp",
+    "status": "proposed",
+    "source_refs": [
+      {
+        "source_ref_id": "SRC-user-stories",
+        "source_type": "artifact",
+        "title": "User stories artifact",
+        "artifact_id": "USER_STORIES-YYYYMMDDTHHMMSSZ-example"
+      }
+    ],
+    "human_summary": "Define future verification criteria without claiming implementation, product readiness, or final acceptance.",
+    "criteria": [
+      {
+        "acceptance_criterion_id": "AC-001",
+        "user_story_id": "US-001",
+        "capability_id": "CAP-001",
+        "statement": "A reviewer can verify the first approved workflow against the owner-approved scope.",
+        "verification_method": "owner_review",
+        "expected_evidence": "Future governed implementation evidence and owner review notes.",
+        "status": "proposed"
+      }
+    ]
+  }
 }
