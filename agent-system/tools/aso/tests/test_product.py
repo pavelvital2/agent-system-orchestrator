@@ -558,6 +558,138 @@ class ProductCommandTests(unittest.TestCase):
             self.assertNotIn(token_value, result.stderr)
             self.assertFalse(spec_out.exists())
 
+    def test_capabilities_from_spec_generates_traceable_contract_without_completion_claims(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp) / "workspace"
+            root.mkdir()
+            spec_path = Path(tmp) / "product-spec.json"
+            matrix_out = Path(tmp) / "capability-matrix.json"
+            spec_path.write_text(
+                json.dumps(
+                    {
+                        "artifact_id": "PRODUCT_SPEC-test",
+                        "artifact_type": "PRODUCT_SPEC",
+                        "schema_version": "1.0.0",
+                        "package_version": "3.6.0",
+                        "runtime_schema_version": "3.1.0",
+                        "created_at": "2026-05-21T00:00:00Z",
+                        "created_by": "aso",
+                        "target_root": "project-runtime/product/",
+                        "profile": "telegram_bot",
+                        "readiness_mode": "mvp",
+                        "status": "proposed",
+                        "source_refs": [
+                            {
+                                "source_ref_id": "SRC-owner-decision",
+                                "source_type": "artifact",
+                                "title": "Owner decision cards artifact",
+                                "artifact_id": "OWNER_DECISION_CARDS-test",
+                            }
+                        ],
+                        "human_summary": "Planning-only product spec.",
+                        "problem_statement": "Shop operators need Telegram order review and catalog updates.",
+                        "requirements": [
+                            {
+                                "requirement_id": "REQ-001",
+                                "description": "The product must support Telegram order review.",
+                                "priority": "must",
+                                "source_ref_ids": ["SRC-owner-decision"],
+                                "capability_ids": ["CAP-001"],
+                            },
+                            {
+                                "requirement_id": "REQ-002",
+                                "description": "The product must update marketplace catalog stock after approval.",
+                                "priority": "must",
+                                "source_ref_ids": ["SRC-owner-decision"],
+                                "capability_ids": ["CAP-002"],
+                            },
+                        ],
+                        "external_integrations": [
+                            {
+                                "id": "INTEGRATION-001",
+                                "text": "Telegram integration scope is planning-only; no external call was made.",
+                                "source_ref_ids": ["SRC-owner-decision"],
+                            }
+                        ],
+                        "required_secrets": [
+                            {
+                                "secret_id": "SECRET-001",
+                                "name": "TELEGRAM_BOT_TOKEN",
+                                "value_status": "not_collected",
+                                "purpose": "Telegram bot access token name only.",
+                            }
+                        ],
+                        "dependencies": [],
+                        "open_gaps": [],
+                        "blocks_implementation_start": False,
+                        "user_stories_artifact": {
+                            "stories": [
+                                {
+                                    "user_story_id": "US-001",
+                                    "requirement_id": "REQ-001",
+                                    "persona": "Shop operator",
+                                    "story": "As a shop operator, I want to review Telegram orders.",
+                                    "value": "Orders can be reviewed before future fulfillment work.",
+                                    "priority": "must",
+                                    "capability_ids": ["CAP-001"],
+                                }
+                            ]
+                        },
+                        "acceptance_criteria_artifact": {
+                            "criteria": [
+                                {
+                                    "acceptance_criterion_id": "AC-001",
+                                    "user_story_id": "US-001",
+                                    "capability_id": "CAP-001",
+                                    "statement": "Owner can review Telegram order flow evidence.",
+                                    "verification_method": "owner_review",
+                                    "expected_evidence": "Future governed implementation evidence.",
+                                    "status": "proposed",
+                                }
+                            ]
+                        },
+                    }
+                ),
+                encoding="utf-8",
+            )
+
+            result = run_aso(
+                "product",
+                "capabilities",
+                "--root",
+                str(root),
+                "--from-spec",
+                str(spec_path),
+                "--dry-run",
+                "--json-out",
+                str(matrix_out),
+            )
+
+            self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+            self.assertEqual(result.stdout, "")
+            artifact = json.loads(matrix_out.read_text(encoding="utf-8"))
+            self.assertEqual(artifact["artifact_type"], "CAPABILITY_MATRIX")
+            self.assertIn("planning contract", artifact["proof_boundary"])
+            self.assertEqual(len(artifact["capabilities"]), 2)
+            first = artifact["capabilities"][0]
+            self.assertEqual(first["capability_id"], "CAP-001")
+            self.assertEqual(first["name"], "Support Telegram order review")
+            self.assertEqual(first["source_requirement_refs"], ["REQ-001"])
+            self.assertEqual(first["requirement_ids"], ["REQ-001"])
+            self.assertEqual(first["user_story_ids"], ["US-001"])
+            self.assertEqual(first["source_user_story_refs"], ["US-001"])
+            self.assertEqual(first["acceptance_criteria_refs"], ["AC-001"])
+            self.assertEqual(first["verification_method"], "owner_review")
+            self.assertIn("FUTURE-EVIDENCE-CAP-001", first["expected_evidence_refs"])
+            self.assertEqual(first["required_integrations"], ["Telegram"])
+            self.assertEqual(first["required_secrets"], ["TELEGRAM_BOT_TOKEN"])
+            self.assertEqual(first["owner_decision_refs"], ["SRC-owner-decision"])
+            self.assertIn("mvp", first["readiness_relevance"])
+            allowed_statuses = {"proposed", "needs_clarification", "out_of_scope", "blocked", "ready_for_review"}
+            for capability in artifact["capabilities"]:
+                self.assertIn(capability["status"], allowed_statuses)
+                self.assertNotIn(capability["status"], {"implemented", "mvp_ready", "product_pass", "final_acceptance", "checkpoint_done"})
+
 
 if __name__ == "__main__":
     unittest.main()

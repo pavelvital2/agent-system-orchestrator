@@ -22,17 +22,30 @@
   "user_wants": "Describe the owner-requested product outcome.",
   "planned_delivery": "Describe the planned governed product scope.",
   "verification_later": "Describe how future governed implementation will be verified.",
+  "proof_boundary": "This matrix is a planning contract only; it records no delivered behavior evidence.",
   "not_included": ["Application source generation", "Deployment execution", "Live external integration execution"],
   "capabilities": [
     {
       "capability_id": "CAP-001",
+      "name": "Approved workflow",
+      "description": "The product must support the first approved workflow.",
+      "source_requirement_refs": ["REQ-001"],
       "user_wants": "The owner wants the first approved workflow.",
       "planned_delivery": "Plan a future governed implementation task for the workflow.",
       "verification_later": "Verify against acceptance criterion AC-001 after implementation evidence exists.",
+      "verification_method": "owner_review",
+      "expected_evidence_refs": ["AC-001", "FUTURE-EVIDENCE-CAP-001"],
       "not_included": ["Secret collection", "Live dispatch", "Deployment"],
+      "risks": ["Owner review is still required before implementation planning."],
+      "required_integrations": ["Example integration"],
+      "required_secrets": ["EXAMPLE_API_KEY"],
+      "owner_decision_refs": ["SRC-owner-decision"],
+      "readiness_relevance": "Required for the requested mvp readiness scope, but this row is not readiness evidence.",
       "requirement_ids": ["REQ-001"],
       "user_story_ids": ["US-001"],
+      "source_user_story_refs": ["US-001"],
       "acceptance_criterion_ids": ["AC-001"],
+      "acceptance_criteria_refs": ["AC-001"],
       "status": "proposed"
     }
   ]

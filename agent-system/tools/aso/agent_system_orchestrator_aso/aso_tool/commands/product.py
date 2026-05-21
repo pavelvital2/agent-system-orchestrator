@@ -837,6 +837,194 @@ def _build_acceptance_criteria_artifact(
     return artifact
 
 
+def _string_items(value: Any) -> list[str]:
+    if not isinstance(value, list):
+        return []
+    return [_normalize_ws(item) for item in value if isinstance(item, str) and item.strip()]
+
+
+def _dict_items(value: Any) -> list[dict[str, Any]]:
+    if not isinstance(value, list):
+        return []
+    return [item for item in value if isinstance(item, dict)]
+
+
+def _capability_name(description: str, capability_id: str) -> str:
+    clean = _normalize_ws(description).strip(".")
+    clean = re.sub(r"(?i)^the product must\s+", "", clean).strip()
+    clean = re.sub(r"(?i)^must\s+", "", clean).strip()
+    if not clean:
+        clean = capability_id.replace("-", " ")
+    return clean[:1].upper() + clean[1:120]
+
+
+def _capability_status(spec: dict[str, Any], requirements: list[dict[str, Any]]) -> str:
+    if any(str(requirement.get("priority")) == "wont" for requirement in requirements):
+        return "out_of_scope"
+    if str(spec.get("status")) == "blocked":
+        return "blocked"
+    if bool(spec.get("blocks_implementation_start")) or _dict_items(spec.get("open_gaps")):
+        return "needs_clarification"
+    if str(spec.get("status")) == "ready_for_review":
+        return "ready_for_review"
+    return "proposed"
+
+
+def _capability_requirement_map(spec: dict[str, Any]) -> dict[str, list[dict[str, Any]]]:
+    mapped: dict[str, list[dict[str, Any]]] = {}
+    for requirement in _dict_items(spec.get("requirements")):
+        capability_ids = _string_items(requirement.get("capability_ids"))
+        if not capability_ids:
+            capability_ids = [f"CAP-{len(mapped) + 1:03d}"]
+        for capability_id in capability_ids:
+            mapped.setdefault(capability_id, []).append(requirement)
+    if not mapped:
+        mapped["CAP-001"] = [
+            {
+                "requirement_id": "REQ-001",
+                "description": "Owner-requested behavior from PRODUCT_SPEC requires clarification.",
+                "priority": "must",
+                "source_ref_ids": ["SRC-product-spec"],
+            }
+        ]
+    return mapped
+
+
+def _capability_story_map(spec: dict[str, Any]) -> dict[str, list[dict[str, Any]]]:
+    artifact = spec.get("user_stories_artifact")
+    stories = _dict_items(artifact.get("stories") if isinstance(artifact, dict) else None)
+    mapped: dict[str, list[dict[str, Any]]] = {}
+    for story in stories:
+        capability_ids = _string_items(story.get("capability_ids"))
+        if not capability_ids and isinstance(story.get("requirement_id"), str):
+            capability_ids = []
+        for capability_id in capability_ids:
+            mapped.setdefault(capability_id, []).append(story)
+    return mapped
+
+
+def _capability_acceptance_map(spec: dict[str, Any]) -> dict[str, list[dict[str, Any]]]:
+    artifact = spec.get("acceptance_criteria_artifact")
+    criteria = _dict_items(artifact.get("criteria") if isinstance(artifact, dict) else None)
+    mapped: dict[str, list[dict[str, Any]]] = {}
+    for criterion in criteria:
+        capability_id = criterion.get("capability_id")
+        if isinstance(capability_id, str) and capability_id.strip():
+            mapped.setdefault(capability_id, []).append(criterion)
+    return mapped
+
+
+def _source_refs_matching(spec: dict[str, Any], pattern: str) -> list[str]:
+    refs: list[str] = []
+    matcher = re.compile(pattern, re.IGNORECASE)
+    for ref in _dict_items(spec.get("source_refs")):
+        ref_id = ref.get("source_ref_id")
+        searchable = " ".join(str(ref.get(field, "")) for field in ("source_ref_id", "title", "description"))
+        if isinstance(ref_id, str) and matcher.search(searchable) and ref_id not in refs:
+            refs.append(ref_id)
+    return refs
+
+
+def _capability_risks(spec: dict[str, Any], required_integrations: list[str], required_secrets: list[str]) -> list[str]:
+    risks: list[str] = []
+    for gap in _trace_texts(spec, "open_gaps"):
+        if gap not in risks:
+            risks.append(gap)
+    for dependency in _trace_texts(spec, "dependencies"):
+        if dependency not in risks:
+            risks.append(dependency)
+    if required_integrations:
+        risks.append("External integration scope, sandbox mode, credentials, and approval policy require later verification.")
+    if required_secrets:
+        risks.append("Required secrets are named only; no secret values were collected by this artifact.")
+    if not risks:
+        risks.append("Future implementation evidence and owner review are still required.")
+    return risks
+
+
+def _capability_contracts(spec: dict[str, Any], readiness: str) -> list[dict[str, object]]:
+    requirement_map = _capability_requirement_map(spec)
+    story_map = _capability_story_map(spec)
+    acceptance_map = _capability_acceptance_map(spec)
+    integration_names = [
+        text.split(" integration", 1)[0].strip() or text
+        for text in _trace_texts(spec, "external_integrations")
+    ]
+    secret_names = _secret_names(spec)
+    owner_decision_refs = _source_refs_matching(spec, r"owner|answer|decision") or ["SRC-product-spec"]
+
+    capabilities: list[dict[str, object]] = []
+    for capability_id in sorted(requirement_map):
+        requirements = requirement_map[capability_id]
+        stories = story_map.get(capability_id, [])
+        criteria = acceptance_map.get(capability_id, [])
+        requirement_ids = [
+            str(requirement.get("requirement_id"))
+            for requirement in requirements
+            if isinstance(requirement.get("requirement_id"), str)
+        ]
+        story_ids = [
+            str(story.get("user_story_id"))
+            for story in stories
+            if isinstance(story.get("user_story_id"), str)
+        ]
+        criterion_ids = [
+            str(criterion.get("acceptance_criterion_id"))
+            for criterion in criteria
+            if isinstance(criterion.get("acceptance_criterion_id"), str)
+        ]
+        descriptions = [
+            str(requirement.get("description"))
+            for requirement in requirements
+            if isinstance(requirement.get("description"), str) and str(requirement.get("description")).strip()
+        ]
+        description = " ".join(descriptions) or "Owner-requested behavior from the product specification."
+        verification_methods = [
+            str(criterion.get("verification_method"))
+            for criterion in criteria
+            if isinstance(criterion.get("verification_method"), str)
+        ]
+        verification_method = ", ".join(dict.fromkeys(verification_methods)) or "owner_review"
+        expected_evidence_refs = criterion_ids + [f"FUTURE-EVIDENCE-{capability_id}"]
+        capabilities.append(
+            {
+                "capability_id": capability_id,
+                "name": _capability_name(description, capability_id),
+                "description": description,
+                "source_requirement_refs": requirement_ids or [capability_id],
+                "user_wants": description,
+                "planned_delivery": "Plan future governed implementation work for this capability after owner review.",
+                "verification_later": (
+                    "Future evidence must show the capability satisfies linked acceptance criteria; "
+                    "this matrix does not record delivered behavior."
+                ),
+                "verification_method": verification_method,
+                "expected_evidence_refs": expected_evidence_refs,
+                "not_included": [
+                    "Application source generation",
+                    "Secret value collection",
+                    "Live dispatch",
+                    "Deployment execution",
+                    "External API execution",
+                ],
+                "risks": _capability_risks(spec, integration_names, secret_names),
+                "required_integrations": integration_names,
+                "required_secrets": secret_names,
+                "owner_decision_refs": owner_decision_refs,
+                "readiness_relevance": (
+                    f"Relevant to requested {readiness} readiness planning; this row is not readiness evidence."
+                ),
+                "requirement_ids": requirement_ids,
+                "user_story_ids": story_ids,
+                "source_user_story_refs": story_ids,
+                "acceptance_criterion_ids": criterion_ids,
+                "acceptance_criteria_refs": criterion_ids,
+                "status": _capability_status(spec, requirements),
+            }
+        )
+    return capabilities
+
+
 def _question_options(question_id: str, options: list[tuple[str, str, str]]) -> list[dict[str, str]]:
     return [
         {
@@ -1318,28 +1506,23 @@ def _build_capabilities(args: argparse.Namespace, now: datetime) -> tuple[dict[s
                 artifact_id=str(spec.get("artifact_id", "PRODUCT_SPEC-unknown")),
             )
         ],
-        human_summary="Planning-only capability matrix scaffold; verification expectations are future-facing.",
+        human_summary=(
+            "Planning-only capability matrix contract; it maps requested product behavior "
+            "to future verification expectations and records no delivered behavior evidence."
+        ),
         now=now,
     )
     artifact.update(
         {
             "user_wants": str(spec.get("problem_statement") or "Owner-desired behavior remains under review."),
             "planned_delivery": "Future governed implementation work may be planned after owner review.",
-            "verification_later": "Future evidence must map each accepted capability to acceptance criteria.",
+            "verification_later": (
+                "Future evidence must map each capability to its requirements, user stories, "
+                "and acceptance criteria before any readiness claim is possible."
+            ),
+            "proof_boundary": "This matrix is a planning contract only; it records no delivered behavior evidence.",
             "not_included": ["Application source generation", "Deployment execution", "Live external integration execution"],
-            "capabilities": [
-                {
-                    "capability_id": "CAP-001",
-                    "user_wants": "Owner-requested behavior from the product specification.",
-                    "planned_delivery": "Plan future governed implementation work for the accepted capability.",
-                    "verification_later": "Verify with acceptance evidence after implementation exists.",
-                    "not_included": ["Secret collection", "Live dispatch", "Deployment"],
-                    "requirement_ids": ["REQ-001"],
-                    "user_story_ids": ["US-001"],
-                    "acceptance_criterion_ids": ["AC-001"],
-                    "status": "proposed",
-                }
-            ],
+            "capabilities": _capability_contracts(spec, str(args.readiness)),
         }
     )
     return artifact, None

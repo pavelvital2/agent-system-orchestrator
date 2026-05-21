@@ -53,6 +53,10 @@
         "out_of_scope"
       ]
     },
+    "capabilityPlanningStatus": {
+      "type": "string",
+      "enum": ["proposed", "needs_clarification", "blocked", "ready_for_review", "out_of_scope"]
+    },
     "sourceRef": {
       "type": "object",
       "additionalProperties": false,
@@ -294,25 +298,49 @@
       "additionalProperties": false,
       "required": [
         "capability_id",
+        "name",
+        "description",
+        "source_requirement_refs",
         "user_wants",
         "planned_delivery",
         "verification_later",
+        "verification_method",
+        "expected_evidence_refs",
         "not_included",
+        "risks",
+        "required_integrations",
+        "required_secrets",
+        "owner_decision_refs",
+        "readiness_relevance",
         "requirement_ids",
         "user_story_ids",
+        "source_user_story_refs",
         "acceptance_criterion_ids",
+        "acceptance_criteria_refs",
         "status"
       ],
       "properties": {
         "capability_id": { "$ref": "#/$defs/externalId" },
+        "name": { "$ref": "#/$defs/nonEmptyString" },
+        "description": { "$ref": "#/$defs/nonEmptyString" },
+        "source_requirement_refs": { "$ref": "#/$defs/stringList" },
         "user_wants": { "$ref": "#/$defs/nonEmptyString" },
         "planned_delivery": { "$ref": "#/$defs/nonEmptyString" },
         "verification_later": { "$ref": "#/$defs/nonEmptyString" },
+        "verification_method": { "$ref": "#/$defs/nonEmptyString" },
+        "expected_evidence_refs": { "$ref": "#/$defs/stringList" },
         "not_included": { "$ref": "#/$defs/stringList" },
+        "risks": { "$ref": "#/$defs/stringList" },
+        "required_integrations": { "$ref": "#/$defs/stringList" },
+        "required_secrets": { "$ref": "#/$defs/stringList" },
+        "owner_decision_refs": { "$ref": "#/$defs/stringList" },
+        "readiness_relevance": { "$ref": "#/$defs/nonEmptyString" },
         "requirement_ids": { "$ref": "#/$defs/stringList" },
         "user_story_ids": { "$ref": "#/$defs/stringList" },
+        "source_user_story_refs": { "$ref": "#/$defs/stringList" },
         "acceptance_criterion_ids": { "$ref": "#/$defs/stringList" },
-        "status": { "$ref": "#/$defs/artifactStatus" }
+        "acceptance_criteria_refs": { "$ref": "#/$defs/stringList" },
+        "status": { "$ref": "#/$defs/capabilityPlanningStatus" }
       }
     },
     "plannedWorkstream": {
@@ -526,6 +554,7 @@
         "user_wants",
         "planned_delivery",
         "verification_later",
+        "proof_boundary",
         "not_included",
         "capabilities"
       ],
@@ -534,6 +563,7 @@
         "user_wants": { "$ref": "#/$defs/nonEmptyString" },
         "planned_delivery": { "$ref": "#/$defs/nonEmptyString" },
         "verification_later": { "$ref": "#/$defs/nonEmptyString" },
+        "proof_boundary": { "$ref": "#/$defs/nonEmptyString" },
         "not_included": { "$ref": "#/$defs/stringList" },
         "capabilities": {
           "type": "array",
