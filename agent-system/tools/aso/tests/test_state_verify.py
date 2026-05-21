@@ -13,6 +13,7 @@ CLI = Path(__file__).resolve().parents[1] / "aso.py"
 REPO_ROOT = Path(__file__).resolve().parents[4]
 FIXTURE_ROOT = REPO_ROOT / "agent-system" / "tests" / "fixtures" / "state"
 VALID_WORKSPACE = FIXTURE_ROOT / "valid_workspace"
+P2_VALID_WORKSPACE = FIXTURE_ROOT / "p2_valid_workspace"
 
 
 def run_state_verify(root: Path, *extra: str) -> subprocess.CompletedProcess[str]:
@@ -31,6 +32,12 @@ def copy_valid_workspace(tmp: str) -> Path:
     return root
 
 
+def copy_p2_valid_workspace(tmp: str) -> Path:
+    root = Path(tmp) / "p2-workspace"
+    shutil.copytree(P2_VALID_WORKSPACE, root)
+    return root
+
+
 def load_sidecar(root: Path, name: str) -> dict[str, object]:
     return json.loads((root / "project-runtime" / "state" / name).read_text(encoding="utf-8"))
 
@@ -42,7 +49,50 @@ def write_sidecar(root: Path, name: str, payload: dict[str, object]) -> None:
     )
 
 
+def fixture_task(task_id: str) -> dict[str, object]:
+    return {
+        "accepted_files": [],
+        "audit_refs": [],
+        "branch": "NONE",
+        "checkpoint_ref": "NONE",
+        "commit_hash": "NONE",
+        "correction_links": [],
+        "created_at": "2026-05-21T00:00:00Z",
+        "dependencies": [],
+        "owner_role": "developer",
+        "push_status": "not_required",
+        "requested_by_role": "NONE",
+        "requested_by_task": "NONE",
+        "research_question_id": "NONE",
+        "result_refs": [],
+        "return_task_after_audit_pass": "NONE",
+        "return_to_requester_after_audit_pass": False,
+        "return_to_role_after_audit_pass": "none",
+        "status": "ready",
+        "task_id": task_id,
+        "task_kind": "normal",
+        "task_packet": f"project-runtime/tasks/active/{task_id}.md",
+        "task_title": "Fixture task",
+        "task_type": "developer",
+        "updated_at": "2026-05-21T00:00:00Z",
+    }
+
+
 class StateVerifyCommandTests(unittest.TestCase):
+    def test_state_cli_help_declares_runtime_state_commands(self) -> None:
+        result = subprocess.run(
+            [sys.executable, str(CLI), "state", "--help"],
+            check=False,
+            text=True,
+            capture_output=True,
+            cwd=REPO_ROOT,
+        )
+
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        for command in ("init", "verify", "migrate", "render"):
+            with self.subTest(command=command):
+                self.assertIn(command, result.stdout)
+
     def test_valid_workspace_passes_strict_and_writes_json_report(self) -> None:
         tracked = [path for path in VALID_WORKSPACE.rglob("*") if path.is_file()]
         mtimes_before = {path: path.stat().st_mtime_ns for path in tracked}
@@ -60,6 +110,20 @@ class StateVerifyCommandTests(unittest.TestCase):
             self.assertEqual(report["state"]["sidecars_missing"], [])
             self.assertTrue(report["read_only"])
         self.assertEqual(mtimes_before, {path: path.stat().st_mtime_ns for path in tracked})
+
+    def test_current_p2_fixture_passes_strict_with_all_expected_sidecars(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            json_out = Path(tmp) / "p2-state-verify.json"
+
+            result = run_state_verify(P2_VALID_WORKSPACE, "--strict", "--json-out", str(json_out))
+
+            self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+            self.assertIn("ASO state verify: PASSED", result.stdout)
+            report = json.loads(json_out.read_text(encoding="utf-8"))
+            self.assertTrue(report["state"]["runtime_schema_current_p2"])
+            self.assertEqual(report["state"]["required_sidecars_missing"], [])
+            self.assertEqual(report["state"]["optional_sidecars_missing"], [])
+            self.assertEqual(report["runtime_schema_contract"]["runtime_schema_version"], "3.1.0")
 
     def test_existing_negative_fixtures_fail_with_stable_rule_ids(self) -> None:
         cases = {
@@ -103,6 +167,55 @@ class StateVerifyCommandTests(unittest.TestCase):
             self.assertIn("SIDECAR_MISSING_MARKDOWN_FALLBACK_USED", non_strict.stdout)
             self.assertEqual(strict.returncode, 1, strict.stdout + strict.stderr)
             self.assertIn("ASO state verify: FAILED", strict.stdout)
+
+    def test_current_p2_missing_required_sidecar_fails_strict(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = copy_p2_valid_workspace(tmp)
+            (root / "project-runtime" / "state" / "SCHEMA_MANIFEST.json").unlink()
+
+            result = run_state_verify(root, "--strict")
+
+            self.assertEqual(result.returncode, 1, result.stdout + result.stderr)
+            self.assertIn("SIDECAR_REQUIRED_SIDECAR_MISSING", result.stdout)
+
+    def test_current_p2_mismatched_schema_versions_fail(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = copy_p2_valid_workspace(tmp)
+            payload = load_sidecar(root, "PROJECT_STATE.json")
+            payload["runtime_schema_version"] = "3.0.0"
+            write_sidecar(root, "PROJECT_STATE.json", payload)
+
+            result = run_state_verify(root, "--strict")
+
+            self.assertEqual(result.returncode, 1, result.stdout + result.stderr)
+            self.assertIn("SIDECAR_RUNTIME_SCHEMA_VERSION_INVALID", result.stdout)
+
+    def test_current_p2_next_action_unknown_task_reference_fails(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = copy_p2_valid_workspace(tmp)
+            registry = load_sidecar(root, "TASK_REGISTRY.json")
+            registry_content = registry["content"]
+            self.assertIsInstance(registry_content, dict)
+            registry_content["tasks"] = [fixture_task("TASK_FIXTURE_EXISTS")]
+            write_sidecar(root, "TASK_REGISTRY.json", registry)
+
+            next_action = load_sidecar(root, "NEXT_ACTION.json")
+            next_content = next_action["content"]
+            self.assertIsInstance(next_content, dict)
+            next_content["action_type"] = "create_agent"
+            next_content["target_role"] = "developer"
+            next_content["task_id"] = "TASK_FIXTURE_MISSING"
+            next_content["task_packet"] = "project-runtime/tasks/active/TASK_FIXTURE_MISSING.md"
+            next_content["dependency_status"] = "ready"
+            next_content["action_semantic"] = "normal"
+            next_content["workspace_identity_required"] = True
+            next_content["repository_lock_required"] = True
+            write_sidecar(root, "NEXT_ACTION.json", next_action)
+
+            result = run_state_verify(root, "--strict")
+
+            self.assertEqual(result.returncode, 1, result.stdout + result.stderr)
+            self.assertIn("SIDECAR_TASK_REFERENCE_UNKNOWN", result.stdout)
 
     def test_invalid_status_value_fails(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:

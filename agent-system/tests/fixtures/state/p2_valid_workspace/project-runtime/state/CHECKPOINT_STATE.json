@@ -1,0 +1,14 @@
+{
+  "content": {
+    "checkpoint_receipts": [],
+    "checkpoint_status": "not_required",
+    "last_checkpoint_ref": "NONE"
+  },
+  "markdown_source": "project-runtime/CHECKPOINT_STATE.md",
+  "runtime_schema_version": "3.1.0",
+  "schema_version": "3.1.0",
+  "sidecar_type": "CHECKPOINT_STATE",
+  "state_revision": 1,
+  "updated_at": "2026-05-21T00:00:00Z",
+  "updated_by": "orchestrator"
+}

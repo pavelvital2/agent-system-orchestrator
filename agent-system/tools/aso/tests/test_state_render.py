@@ -10,6 +10,7 @@ from pathlib import Path
 
 CLI = Path(__file__).resolve().parents[1] / "aso.py"
 REPO_ROOT = Path(__file__).resolve().parents[4]
+P2_VALID_WORKSPACE = REPO_ROOT / "agent-system" / "tests" / "fixtures" / "state" / "p2_valid_workspace"
 
 
 def run_aso(*args: str) -> subprocess.CompletedProcess[str]:
@@ -76,6 +77,30 @@ class StateRenderCommandTests(unittest.TestCase):
         self.assertEqual(report["runtime_schema"]["active_version"], "3.1.0")
         self.assertEqual(report["runtime_schema"]["required_sidecars_missing"], [])
         self.assertIn("SCHEMA_MANIFEST", report["sidecars"])
+
+    def test_p2_fixture_render_reports_current_schema_without_mutating_state(self) -> None:
+        tracked = [path for path in P2_VALID_WORKSPACE.rglob("*") if path.is_file()]
+        mtimes_before = {path: path.stat().st_mtime_ns for path in tracked}
+        with tempfile.TemporaryDirectory(dir="/tmp") as tmp:
+            out = Path(tmp) / "p2-state-report.json"
+
+            result = run_aso(
+                "state",
+                "render",
+                "--root",
+                str(P2_VALID_WORKSPACE),
+                "--format",
+                "json",
+                "--out",
+                str(out),
+            )
+            report = json.loads(out.read_text(encoding="utf-8"))
+
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        self.assertTrue(report["runtime_schema"]["current_p2_state"])
+        self.assertEqual(report["runtime_schema"]["migration_available_sidecars"], [])
+        self.assertEqual(report["runtime_schema"]["unsupported_sidecars"], [])
+        self.assertEqual(mtimes_before, {path: path.stat().st_mtime_ns for path in tracked})
 
     def test_forbidden_output_path_is_rejected(self) -> None:
         with tempfile.TemporaryDirectory(dir="/tmp") as tmp:

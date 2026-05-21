@@ -13,6 +13,7 @@ CLI = Path(__file__).resolve().parents[1] / "aso.py"
 REPO_ROOT = Path(__file__).resolve().parents[4]
 FIXTURE_ROOT = REPO_ROOT / "agent-system" / "tests" / "fixtures" / "state"
 VALID_WORKSPACE = FIXTURE_ROOT / "valid_workspace"
+LEGACY_MIGRATION_SOURCE = VALID_WORKSPACE
 
 
 def run_aso(*args: str) -> subprocess.CompletedProcess[str]:
@@ -34,7 +35,8 @@ def copy_fixture(tmp: str, fixture_name: str) -> Path:
 class StateMigrateCommandTests(unittest.TestCase):
     def test_dry_run_prints_deterministic_plan_and_writes_no_files(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
-            root = copy_fixture(tmp, "valid_workspace")
+            root = Path(tmp) / "legacy-migration-source"
+            shutil.copytree(LEGACY_MIGRATION_SOURCE, root)
             tracked = [path for path in root.rglob("*") if path.is_file()]
             mtimes_before = {path: path.stat().st_mtime_ns for path in tracked}
 

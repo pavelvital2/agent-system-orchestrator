@@ -35,6 +35,8 @@ REQUIRED_MAKEFILE_COMMANDS = (
     "validate-context-pack agent-system/tests/fixtures/context_pack/valid_context_pack.json --root . --strict",
     "validate-rules --root . --strict",
     "state verify --root agent-system/tests/fixtures/state/valid_workspace --strict",
+    "state verify --root agent-system/tests/fixtures/state/p2_valid_workspace --strict",
+    "state render --root agent-system/tests/fixtures/state/p2_valid_workspace --format json --out /tmp/aso-p2-state-render-smoke.json",
     "plan-next --root agent-system/tests/fixtures/state/valid_workspace --strict",
     "dashboard --root agent-system/tests/fixtures/state/valid_workspace --out /tmp/aso-stage2-dashboard-smoke.html",
     "checkpoint-preflight --root . --mode package --strict",

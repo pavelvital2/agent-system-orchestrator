@@ -13,6 +13,7 @@ CLI = Path(__file__).resolve().parents[1] / "aso.py"
 REPO_ROOT = Path(__file__).resolve().parents[4]
 FIXTURE_ROOT = REPO_ROOT / "agent-system" / "tests" / "fixtures" / "state"
 VALID_WORKSPACE = FIXTURE_ROOT / "valid_workspace"
+P2_VALID_WORKSPACE = FIXTURE_ROOT / "p2_valid_workspace"
 DAG_AUDIT_ONLY_DEP = FIXTURE_ROOT / "dag_invalid_audit_passed_dependency_ready"
 
 
@@ -172,6 +173,15 @@ class DashboardCommandTests(unittest.TestCase):
         self.assertIn("<span>Runtime Schema</span><strong>3.1.0</strong>", result.stdout)
         self.assertIn("<th scope=\"row\">Current P2 state</th><td>true</td>", result.stdout)
         self.assertIn("<th scope=\"row\">Verify status</th><td>passed</td>", result.stdout)
+
+    def test_dashboard_reports_packaged_p2_fixture_as_current_state(self) -> None:
+        result = run_dashboard(P2_VALID_WORKSPACE)
+
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        self.assertIn("<span>Runtime Schema</span><strong>3.1.0</strong>", result.stdout)
+        self.assertIn("<th scope=\"row\">Current P2 state</th><td>true</td>", result.stdout)
+        self.assertIn("<th scope=\"row\">Verify status</th><td>passed</td>", result.stdout)
+        self.assertIn("<th scope=\"row\">Migration available</th><td>0</td>", result.stdout)
 
     def test_uncheckpointed_audit_dependency_blocks_dashboard_readiness(self) -> None:
         result = run_dashboard(DAG_AUDIT_ONLY_DEP)

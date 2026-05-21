@@ -1,0 +1,31 @@
+{
+  "content": {
+    "action_semantic": "normal",
+    "baseline_tracking_status": "not_checked",
+    "blocking_status": "NONE",
+    "checkpoint_eligibility": "local_only",
+    "checkpoint_eligibility_status": "not_checked",
+    "entry_criteria": [],
+    "exit_criteria": [],
+    "gate_evidence": [],
+    "gate_id": "GATE-STATE-INIT-001",
+    "gate_name": "Initial runtime state",
+    "gate_type": "bootstrap",
+    "notes": [],
+    "owner_role": "orchestrator",
+    "project_checkpoint_status": "not_required",
+    "repository_lock_status": "draft",
+    "required_next_role": "orchestrator",
+    "status": "open",
+    "task_id": "NONE",
+    "task_packet": "NONE",
+    "workspace_identity_status": "not_checked"
+  },
+  "markdown_source": "project-runtime/CURRENT_GATE.md",
+  "runtime_schema_version": "3.1.0",
+  "schema_version": "3.1.0",
+  "sidecar_type": "CURRENT_GATE",
+  "state_revision": 1,
+  "updated_at": "2026-05-21T00:00:00Z",
+  "updated_by": "orchestrator"
+}
