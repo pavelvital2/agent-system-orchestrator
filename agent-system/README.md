@@ -150,8 +150,10 @@ accepted repository lock explicitly allows it.
 
 ## ASO helper CLI
 
-The package includes an experimental read-only ASO helper CLI at
-`agent-system/tools/aso/aso.py`.
+The package includes a filesystem-governed ASO helper CLI at
+`agent-system/tools/aso/aso.py`. Most commands are read-only diagnostics or
+dry-run proposals, while Project Factory commands may create generated
+projects only within explicit target paths.
 
 This Project Factory P0 package records the active package metadata as the
 governed `3.2.0` package/governance tuple with runtime schema `3.0.0`.
@@ -309,14 +311,18 @@ permissions, live service access, or live automation authority.
 uses the installed `.venv/bin/aso` command for package status, strict lint,
 strict doctor, and strict package-layout verification.
 
-The helper supports read-only status, lint, doctor, package-layout verification,
-design validation, context pack validation, rule validation, state
-verification, dry-run next-action planning, static dashboard rendering,
-checkpoint eligibility preflight, and archive verify inspection. Its read-only
-behavior is part of the ASO boundary. It does not dispatch agents, mutate
-package or workspace state, perform checkpoints, commit, or push. For package
-lint compatibility, this boundary is also stated as: ASO does not provide
-mutation, dispatch, or checkpoint commands.
+The helper supports status, lint, doctor, package-layout verification, design
+validation, context pack validation, rule validation, state verification,
+dry-run next-action planning, static dashboard rendering, checkpoint
+eligibility preflight, archive verify inspection, and Project Factory scoped
+generated-project helpers. Diagnostic, validator, planning, dashboard,
+archive, and checkpoint-preflight surfaces remain read-only, dry-run, or
+proposal-only. Project Factory commands may create generated projects and,
+when a later publish flow is explicitly confirmed, publish only clean
+generated-project files from explicit target paths. Outside that boundary, ASO
+does not dispatch agents, mutate package/runtime state, perform checkpoints,
+commit, or push. For package lint compatibility, this scoped boundary is also
+stated as: ASO diagnostic surfaces do not provide general mutation, dispatch, or checkpoint authority.
 
 ## Publication and cleanup boundary
 
