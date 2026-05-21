@@ -19,26 +19,64 @@
     }
   ],
   "human_summary": "List owner questions that must be answered or explicitly deferred before governed implementation planning.",
+  "question_groups": [
+    {
+      "category": "product",
+      "question_ids": ["Q-001"]
+    }
+  ],
   "questions": [
     {
       "question_id": "Q-001",
-      "question": "Which user workflow should be delivered first?",
-      "category": "scope",
+      "question": "What should the first useful version of this product do for the owner?",
+      "category": "product",
+      "priority": "must",
+      "severity": "high",
       "why_it_matters": "The first workflow determines the initial capability and acceptance criteria.",
       "options": [
         {
-          "option_id": "OPT-001",
-          "label": "Workflow A",
-          "description": "Prioritize the first owner-described workflow."
+          "option_id": "OPT-001-001",
+          "label": "Narrow first version",
+          "description": "Deliver one complete owner-approved workflow first.",
+          "tradeoff": "Faster review, fewer features."
         },
         {
-          "option_id": "OPT-002",
-          "label": "Workflow B",
-          "description": "Prioritize the second owner-described workflow."
+          "option_id": "OPT-001-002",
+          "label": "Owner-defined scope",
+          "description": "Owner lists exactly what is in and out.",
+          "tradeoff": "Best fit, requires more owner input."
         }
       ],
       "default_recommendation": "Use the workflow with the clearest acceptance criteria.",
       "blocks_implementation": true,
+      "source_ref_ids": ["SRC-product-intake"]
+    }
+  ],
+  "owner_decision_cards": [
+    {
+      "decision_id": "DECISION-001",
+      "problem": "Choose the initial product scope.",
+      "options": [
+        {
+          "option_id": "OPT-D001-001",
+          "label": "Narrow MVP",
+          "description": "Deliver the smallest coherent workflow first.",
+          "tradeoff": "Faster review, fewer advanced capabilities.",
+          "risk": "May defer some owner expectations."
+        },
+        {
+          "option_id": "OPT-D001-002",
+          "label": "Broader MVP",
+          "description": "Include more workflow coverage in the initial plan.",
+          "tradeoff": "More complete scope, slower review.",
+          "risk": "More unresolved assumptions."
+        }
+      ],
+      "recommendation": "Prefer the narrow MVP unless the owner confirms broader scope.",
+      "impact": "This decision controls which capabilities can move into specification and future planning.",
+      "tradeoffs": ["Speed versus breadth", "Review clarity versus feature coverage"],
+      "risk": "Unclear scope can produce invalid downstream task packets.",
+      "required_owner_action": "Select one option or provide revised scope.",
       "source_ref_ids": ["SRC-product-intake"]
     }
   ]

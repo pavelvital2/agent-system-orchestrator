@@ -493,11 +493,123 @@ def _artifact_profile(args: argparse.Namespace, source: dict[str, Any]) -> None:
         args.readiness = source["readiness_mode"]
 
 
+def _trace_texts(source: dict[str, Any], field: str) -> list[str]:
+    values = source.get(field)
+    if not isinstance(values, list):
+        return []
+    texts: list[str] = []
+    for item in values:
+        if isinstance(item, dict) and isinstance(item.get("text"), str):
+            texts.append(item["text"])
+        elif isinstance(item, str):
+            texts.append(item)
+    return texts
+
+
+def _secret_names(source: dict[str, Any]) -> list[str]:
+    values = source.get("required_secrets")
+    if not isinstance(values, list):
+        return []
+    names = {
+        str(item.get("name"))
+        for item in values
+        if isinstance(item, dict)
+        and isinstance(item.get("name"), str)
+        and re.fullmatch(r"[A-Z][A-Z0-9_]*", str(item.get("name")))
+    }
+    return sorted(names)
+
+
+def _question_options(question_id: str, options: list[tuple[str, str, str]]) -> list[dict[str, str]]:
+    return [
+        {
+            "option_id": f"OPT-{question_id.removeprefix('Q-')}-{index:03d}",
+            "label": label,
+            "description": description,
+            "tradeoff": tradeoff,
+        }
+        for index, (label, description, tradeoff) in enumerate(options, start=1)
+    ]
+
+
+def _question(
+    *,
+    index: int,
+    category: str,
+    text: str,
+    why: str,
+    priority: str,
+    severity: str,
+    options: list[tuple[str, str, str]],
+    recommendation: str,
+    blocks: bool,
+) -> dict[str, object]:
+    question_id = f"Q-{index:03d}"
+    return {
+        "question_id": question_id,
+        "question": text,
+        "category": category,
+        "priority": priority,
+        "severity": severity,
+        "why_it_matters": why,
+        "options": _question_options(question_id, options),
+        "default_recommendation": recommendation,
+        "blocks_implementation": blocks,
+        "source_ref_ids": ["SRC-product-intake"],
+    }
+
+
+def _decision_options(decision_number: int, options: list[tuple[str, str, str, str]]) -> list[dict[str, str]]:
+    return [
+        {
+            "option_id": f"OPT-D{decision_number:03d}-{index:03d}",
+            "label": label,
+            "description": description,
+            "tradeoff": tradeoff,
+            "risk": risk,
+        }
+        for index, (label, description, tradeoff, risk) in enumerate(options, start=1)
+    ]
+
+
+def _decision_card(
+    *,
+    index: int,
+    problem: str,
+    options: list[tuple[str, str, str, str]],
+    recommendation: str,
+    impact: str,
+    tradeoffs: list[str],
+    risk: str,
+    required_owner_action: str,
+) -> dict[str, object]:
+    return {
+        "decision_id": f"DECISION-{index:03d}",
+        "problem": problem,
+        "options": _decision_options(index, options),
+        "recommendation": recommendation,
+        "impact": impact,
+        "tradeoffs": tradeoffs,
+        "risk": risk,
+        "required_owner_action": required_owner_action,
+        "source_ref_ids": ["SRC-product-intake"],
+    }
+
+
 def _build_clarify(args: argparse.Namespace, now: datetime) -> tuple[dict[str, object] | None, str | None]:
     intake, error = _read_json_object(str(args.from_intake))
     if error is not None or intake is None:
         return None, error
     _artifact_profile(args, intake)
+    integrations = _trace_texts(intake, "external_integrations")
+    secret_names = _secret_names(intake)
+    high_risk_actions = _trace_texts(intake, "high_risk_business_actions")
+    has_integrations = bool(integrations)
+    has_secrets = bool(secret_names)
+    has_high_risk_actions = bool(high_risk_actions)
+    integration_hint = "the listed external systems" if has_integrations else "any external systems"
+    secret_hint = ", ".join(secret_names) if secret_names else "the secret names needed later"
+    risk_hint = "the listed high-risk actions" if has_high_risk_actions else "any action that changes money, access, messages, or customer data"
     artifact = _common(
         args,
         artifact_type="OPEN_QUESTIONS",
@@ -513,40 +625,256 @@ def _build_clarify(args: argparse.Namespace, now: datetime) -> tuple[dict[str, o
         human_summary="Planning-only owner clarification questions; no owner answers are inferred.",
         now=now,
     )
-    categories = (
-        "users and roles",
-        "workflows",
-        "data and storage",
-        "integrations",
-        "security/secrets",
-        "deployment/operations",
-        "business risks",
-        "acceptance",
-    )
-    artifact["questions"] = [
-        {
-            "question_id": f"Q-{index:03d}",
-            "question": f"What owner decision is required for {category}?",
-            "category": category,
-            "why_it_matters": "The product planning layer must keep unknowns explicit before implementation planning.",
-            "options": [
-                {
-                    "option_id": "OPT-001",
-                    "label": "Owner will answer",
-                    "description": "Capture an explicit owner decision before downstream planning.",
-                },
-                {
-                    "option_id": "OPT-002",
-                    "label": "Defer",
-                    "description": "Mark this area as a documented gap instead of silently filling it.",
-                },
+    questions = [
+        _question(
+            index=1,
+            category="product",
+            text="What should the first useful version of this product do for the owner?",
+            why="A clear first version keeps the plan focused and prevents hidden scope from entering implementation.",
+            priority="must",
+            severity="high",
+            options=[
+                ("Narrow first version", "Deliver one complete owner-approved workflow first.", "Faster review, fewer features."),
+                ("Broader first version", "Include several related workflows in the first plan.", "More complete, slower to validate."),
+                ("Owner-defined scope", "Owner lists exactly what is in and out.", "Best fit, requires more owner input."),
             ],
-            "default_recommendation": "Owner should answer or explicitly defer.",
-            "blocks_implementation": True,
-            "source_ref_ids": ["SRC-product-intake"],
-        }
-        for index, category in enumerate(categories, start=1)
+            recommendation="Use a narrow first version unless the owner confirms a broader scope.",
+            blocks=True,
+        ),
+        _question(
+            index=2,
+            category="users",
+            text="Who will use this product, and should different people have different permissions?",
+            why="User roles affect screens, approvals, data access, and what evidence is needed later.",
+            priority="must",
+            severity="high",
+            options=[
+                ("Same access for everyone", "All approved users can do the same things.", "Simpler, but less control."),
+                ("Separate owner, admin, and user roles", "Different people get different permissions.", "Safer, but more setup."),
+                ("Owner-defined roles", "Owner names each role and what it may do.", "Most accurate, requires a role list."),
+            ],
+            recommendation="Use separate roles only when more than one person type will use the product.",
+            blocks=True,
+        ),
+        _question(
+            index=3,
+            category="data",
+            text="What information should the product store, how long should it keep it, and what exports are needed?",
+            why="Storage and retention choices affect privacy, recovery, reporting, and future acceptance checks.",
+            priority="must",
+            severity="high",
+            options=[
+                ("Minimal storage", "Keep only the data needed for the first workflow.", "Lower risk, fewer reports."),
+                ("Operational history", "Keep records needed for review, support, and audit.", "More useful, more retention responsibility."),
+                ("Owner-defined data list", "Owner lists fields, retention time, and export needs.", "Best fit, requires detailed input."),
+            ],
+            recommendation="Start with minimal storage and add fields only when the owner names a clear use.",
+            blocks=True,
+        ),
+        _question(
+            index=4,
+            category="integrations",
+            text=f"Which external systems should be connected first, and should {integration_hint} start in sandbox or read-only mode?",
+            why="External integrations can change real data or money, so scope and rollout mode must be explicit.",
+            priority="must" if has_integrations else "should",
+            severity="high" if has_integrations else "medium",
+            options=[
+                ("No external connection first", "Plan the first version without live external systems.", "Safest, may limit usefulness."),
+                ("Sandbox or read-only first", "Connect without making real-world changes.", "Good validation, may need extra setup."),
+                ("Owner-approved live connection later", "Use live access only after owner approves the policy.", "More useful, higher risk."),
+            ],
+            recommendation="Use sandbox or read-only mode first when an integration is needed.",
+            blocks=has_integrations,
+        ),
+        _question(
+            index=5,
+            category="deployment",
+            text="Where should the product run first: local machine, test server, or production-like server?",
+            why="The first runtime target changes setup, monitoring, access, and release expectations.",
+            priority="should",
+            severity="medium",
+            options=[
+                ("Local first", "Run only for review on a local machine.", "Fastest, not suitable for real users."),
+                ("Test server first", "Run in a shared review environment.", "Better review, needs environment setup."),
+                ("Production-like later", "Plan production-style hosting after acceptance is clearer.", "More realistic, more operations work."),
+            ],
+            recommendation="Use local or test server first; defer production-like hosting until acceptance is clear.",
+            blocks=False,
+        ),
+        _question(
+            index=6,
+            category="security",
+            text=f"How should access, approvals, and secrets be handled? For secrets such as {secret_hint}, provide names, owner, and setup procedure only; do not paste secret values.",
+            why="Security decisions protect users and keep ASO from storing real credentials.",
+            priority="must",
+            severity="critical" if has_secrets else "high",
+            options=[
+                ("Names and procedure only", "Record secret names, who owns them, and how they will be added later.", "Safe for planning, needs owner follow-through."),
+                ("Approval before sensitive actions", "Require owner approval before the product changes sensitive data.", "Safer, adds review steps."),
+                ("Owner-defined security policy", "Owner provides access, approval, and credential handling rules.", "Most complete, requires policy input."),
+            ],
+            recommendation="Record secret names, owner, and procedure only; never store secret values in product artifacts.",
+            blocks=has_secrets,
+        ),
+        _question(
+            index=7,
+            category="operations",
+            text="Who will monitor the product, handle errors, and decide what happens when something fails?",
+            why="Operations ownership keeps failures from becoming undefined owner decisions during implementation.",
+            priority="should",
+            severity="medium",
+            options=[
+                ("Owner monitors manually", "Owner checks results and handles failures during early review.", "Simple, more owner effort."),
+                ("Operator role monitors", "A named operator watches alerts and handles routine issues.", "More reliable, needs role assignment."),
+                ("Defer operations", "Document operations as a gap for later planning.", "Faster now, riskier later."),
+            ],
+            recommendation="Name an owner or operator for early review before planning live use.",
+            blocks=False,
+        ),
+        _question(
+            index=8,
+            category="business risks",
+            text=f"Which actions need explicit owner approval before the product performs them, especially {risk_hint}?",
+            why="Approval rules prevent accidental financial, customer, access, or data-impacting actions.",
+            priority="must" if has_high_risk_actions else "should",
+            severity="critical" if has_high_risk_actions else "medium",
+            options=[
+                ("Dry-run only", "Show what would happen without performing the action.", "Safest, no live automation."),
+                ("Approval required", "Ask the owner before each sensitive action.", "Balanced, adds owner review."),
+                ("Not in first version", "Keep risky actions outside the first scope.", "Lower risk, less automation."),
+            ],
+            recommendation="Use dry-run or owner approval for any action that changes money, access, messages, or customer data.",
+            blocks=has_high_risk_actions,
+        ),
+        _question(
+            index=9,
+            category="acceptance",
+            text="What evidence will prove the first version is done and acceptable to the owner?",
+            why="Acceptance evidence prevents the plan from treating guesses as completed product behavior.",
+            priority="must",
+            severity="high",
+            options=[
+                ("Owner demo review", "Owner confirms the workflow from a demo or walkthrough.", "Clear for early versions, manual evidence."),
+                ("Checklist evidence", "Each accepted behavior has a documented pass/fail check.", "More structured, takes more setup."),
+                ("Owner-defined acceptance", "Owner writes the exact success criteria.", "Most accurate, requires owner input."),
+            ],
+            recommendation="Use owner demo review plus a short checklist for the first version.",
+            blocks=True,
+        ),
     ]
+    owner_decision_cards = [
+        _decision_card(
+            index=1,
+            problem="Choose the first product scope.",
+            options=[
+                ("Narrow first version", "Plan one complete workflow.", "Fastest path to review.", "May defer desired features."),
+                ("Broader first version", "Plan several workflows together.", "More complete first plan.", "More assumptions and slower review."),
+                ("Owner-defined scope", "Owner lists exact in-scope and out-of-scope items.", "Best alignment.", "Requires more owner input now."),
+            ],
+            recommendation="Choose a narrow first version unless the owner confirms broader scope.",
+            impact="This decision controls which capabilities can move into specification and future planning.",
+            tradeoffs=["Speed versus breadth", "Clear acceptance versus larger feature coverage"],
+            risk="Unclear scope can create downstream plans that do not match the owner need.",
+            required_owner_action="Select the first-version scope or provide a revised in-scope/out-of-scope list.",
+        ),
+        _decision_card(
+            index=2,
+            problem="Choose user roles and permissions.",
+            options=[
+                ("Same access", "Every approved user can do the same things.", "Simpler setup.", "Too much access for some users."),
+                ("Separate roles", "Owner, admin, operator, and user permissions are separate.", "Better control.", "Requires role decisions."),
+                ("Owner-defined roles", "Owner provides the exact role list.", "Most accurate.", "Blocks planning until supplied."),
+            ],
+            recommendation="Use separate roles when the product has more than one type of user.",
+            impact="This decision affects access checks, screens, approvals, and acceptance evidence.",
+            tradeoffs=["Simple setup versus controlled access", "Fewer decisions now versus safer operations later"],
+            risk="Missing role decisions can expose data or actions to the wrong users.",
+            required_owner_action="Confirm whether all users share access or provide the role and permission list.",
+        ),
+        _decision_card(
+            index=3,
+            problem="Choose data storage, retention, and export rules.",
+            options=[
+                ("Minimal storage", "Store only fields needed for the first workflow.", "Lower privacy and maintenance burden.", "Limited reporting."),
+                ("Operational history", "Keep useful history for support and review.", "Better traceability.", "More retention responsibility."),
+                ("Owner-defined data policy", "Owner names fields, retention, and exports.", "Best fit.", "Requires detailed policy input."),
+            ],
+            recommendation="Start with minimal storage unless the owner needs audit, support, or reporting history.",
+            impact="This decision affects privacy, reporting, recovery, and future migration work.",
+            tradeoffs=["Lower data risk versus richer reporting", "Fast setup versus longer-term audit needs"],
+            risk="Unclear data rules can lead to storing too much, too little, or the wrong information.",
+            required_owner_action="Confirm the fields to store, retention period, and any export format needed.",
+        ),
+        _decision_card(
+            index=4,
+            problem="Choose integration rollout and secret handling.",
+            options=[
+                ("No live integration first", "Plan without connecting external systems.", "Safest first review.", "May not prove end-to-end behavior."),
+                ("Sandbox or read-only first", "Connect without making real changes.", "Good validation with limited risk.", "May need test credentials."),
+                ("Live later with approval", "Use live access only after explicit owner approval.", "Most realistic.", "Highest operational risk."),
+            ],
+            recommendation="Use sandbox or read-only mode first when integration is required.",
+            impact="This decision affects external system setup, credentials, testing, and rollback expectations.",
+            tradeoffs=["Safety versus realism", "Planning speed versus integration confidence"],
+            risk="Live integration without explicit approval can change external systems unintentionally.",
+            required_owner_action="Name each integration, its first rollout mode, secret owner, and setup procedure; do not provide secret values.",
+        ),
+        _decision_card(
+            index=5,
+            problem="Choose deployment target and operations owner.",
+            options=[
+                ("Local review", "Run locally for owner review.", "Fast and contained.", "Not suitable for real users."),
+                ("Test server", "Run in a shared review environment.", "Better stakeholder access.", "Requires environment ownership."),
+                ("Production-like later", "Defer production-style hosting until acceptance is clearer.", "Avoids premature operations work.", "Hosting decisions remain open."),
+            ],
+            recommendation="Use local or test server first, then revisit production-like hosting after acceptance.",
+            impact="This decision affects monitoring, access, release steps, and support ownership.",
+            tradeoffs=["Fast review versus realistic operations", "Low setup versus shared access"],
+            risk="No operations owner means failures and alerts have no clear response path.",
+            required_owner_action="Choose the first runtime target and name who owns monitoring and failure response.",
+        ),
+        _decision_card(
+            index=6,
+            problem="Choose approval rules for high-risk business actions.",
+            options=[
+                ("Dry-run only", "Show planned actions without performing them.", "Lowest risk.", "No live automation."),
+                ("Owner approval required", "Require approval before each sensitive action.", "Controlled automation.", "Adds review steps."),
+                ("Exclude from first version", "Leave risky actions out of scope.", "Simpler first plan.", "Defers important automation."),
+            ],
+            recommendation="Use dry-run or owner approval for sensitive actions in the first version.",
+            impact="This decision controls how the product may affect money, customers, access, messages, or stored data.",
+            tradeoffs=["Automation speed versus owner control", "Lower risk versus less hands-off operation"],
+            risk="Unapproved sensitive actions can cause customer, financial, legal, or trust damage.",
+            required_owner_action="Identify sensitive actions and choose dry-run, approval-required, or out-of-scope for each.",
+        ),
+        _decision_card(
+            index=7,
+            problem="Choose acceptance evidence for the first version.",
+            options=[
+                ("Owner demo review", "Owner confirms behavior from a demo.", "Easy to understand.", "Manual evidence only."),
+                ("Checklist evidence", "Each behavior has pass/fail evidence.", "Clearer review trail.", "More preparation."),
+                ("Owner-defined criteria", "Owner writes exact success criteria.", "Most precise.", "Requires owner time."),
+            ],
+            recommendation="Use owner demo review with a short checklist for the first version.",
+            impact="This decision defines what later work must prove before it can be considered acceptable.",
+            tradeoffs=["Lightweight review versus stronger evidence", "Owner speed versus future auditability"],
+            risk="Without acceptance evidence, downstream work can claim progress without proving product value.",
+            required_owner_action="Choose the acceptance method and provide any must-pass examples or edge cases.",
+        ),
+    ]
+    artifact.update(
+        {
+            "question_groups": [
+                {
+                    "category": str(question["category"]),
+                    "question_ids": [str(question["question_id"])],
+                }
+                for question in questions
+            ],
+            "questions": questions,
+            "owner_decision_cards": owner_decision_cards,
+        }
+    )
     return artifact, None
 
 

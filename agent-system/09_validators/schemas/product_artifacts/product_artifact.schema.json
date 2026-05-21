@@ -30,6 +30,14 @@
       "type": "array",
       "items": { "$ref": "#/$defs/nonEmptyString" }
     },
+    "questionPriority": {
+      "type": "string",
+      "enum": ["must", "should", "could"]
+    },
+    "questionSeverity": {
+      "type": "string",
+      "enum": ["critical", "high", "medium", "low"]
+    },
     "readinessMode": {
       "type": "string",
       "enum": ["mvp", "business_ready", "production_ready", "enterprise_like"]
@@ -158,6 +166,8 @@
         "question_id",
         "question",
         "category",
+        "priority",
+        "severity",
         "why_it_matters",
         "options",
         "default_recommendation",
@@ -167,6 +177,8 @@
         "question_id": { "$ref": "#/$defs/externalId" },
         "question": { "$ref": "#/$defs/nonEmptyString" },
         "category": { "$ref": "#/$defs/nonEmptyString" },
+        "priority": { "$ref": "#/$defs/questionPriority" },
+        "severity": { "$ref": "#/$defs/questionSeverity" },
         "why_it_matters": { "$ref": "#/$defs/nonEmptyString" },
         "options": {
           "type": "array",
@@ -175,6 +187,15 @@
         "default_recommendation": { "type": "string" },
         "blocks_implementation": { "type": "boolean" },
         "source_ref_ids": { "$ref": "#/$defs/stringList" }
+      }
+    },
+    "questionGroup": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["category", "question_ids"],
+      "properties": {
+        "category": { "$ref": "#/$defs/nonEmptyString" },
+        "question_ids": { "$ref": "#/$defs/stringList" }
       }
     },
     "decisionOption": {
@@ -197,6 +218,7 @@
         "problem",
         "options",
         "recommendation",
+        "impact",
         "tradeoffs",
         "risk",
         "required_owner_action"
@@ -209,6 +231,7 @@
           "items": { "$ref": "#/$defs/decisionOption" }
         },
         "recommendation": { "$ref": "#/$defs/nonEmptyString" },
+        "impact": { "$ref": "#/$defs/nonEmptyString" },
         "tradeoffs": { "$ref": "#/$defs/stringList" },
         "risk": { "$ref": "#/$defs/nonEmptyString" },
         "required_owner_action": { "$ref": "#/$defs/nonEmptyString" },
@@ -373,12 +396,20 @@
     "openQuestionsArtifact": {
       "type": "object",
       "allOf": [{ "$ref": "#/$defs/commonEnvelope" }],
-      "required": ["questions"],
+      "required": ["question_groups", "questions", "owner_decision_cards"],
       "properties": {
         "artifact_type": { "type": "string", "const": "OPEN_QUESTIONS" },
+        "question_groups": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/questionGroup" }
+        },
         "questions": {
           "type": "array",
           "items": { "$ref": "#/$defs/question" }
+        },
+        "owner_decision_cards": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/decisionCard" }
         }
       },
       "unevaluatedProperties": false

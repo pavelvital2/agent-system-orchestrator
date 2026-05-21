@@ -40,6 +40,7 @@
         }
       ],
       "recommendation": "Prefer the narrow MVP unless the owner confirms broader scope.",
+      "impact": "This decision controls which capabilities can move into specification and future planning.",
       "tradeoffs": ["Speed versus breadth", "Review clarity versus feature coverage"],
       "risk": "Unclear scope can produce invalid downstream task packets.",
       "required_owner_action": "Select one option or provide revised scope.",

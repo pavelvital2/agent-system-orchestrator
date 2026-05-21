@@ -279,6 +279,125 @@ class ProductCommandTests(unittest.TestCase):
             artifact = json.loads((root / written).read_text(encoding="utf-8"))
             self.assertEqual(artifact["artifact_type"], "PRODUCT_INTAKE")
 
+    def test_clarify_from_intake_generates_grouped_questions_and_owner_decision_cards(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp) / "workspace"
+            root.mkdir()
+            intake_out = Path(tmp) / "intake.json"
+            questions_out = Path(tmp) / "open-questions.json"
+
+            intake_result = run_aso(
+                "product",
+                "intake",
+                "--root",
+                str(root),
+                "--tz",
+                str(FIXTURE_DIR / "telegram_marketplace_tz.md"),
+                "--readiness",
+                "mvp",
+                "--dry-run",
+                "--json-out",
+                str(intake_out),
+            )
+            self.assertEqual(intake_result.returncode, 0, intake_result.stdout + intake_result.stderr)
+
+            clarify_result = run_aso(
+                "product",
+                "clarify",
+                "--root",
+                str(root),
+                "--from-intake",
+                str(intake_out),
+                "--dry-run",
+                "--json-out",
+                str(questions_out),
+            )
+
+            self.assertEqual(clarify_result.returncode, 0, clarify_result.stdout + clarify_result.stderr)
+            self.assertEqual(clarify_result.stdout, "")
+            artifact = json.loads(questions_out.read_text(encoding="utf-8"))
+            self.assertEqual(artifact["artifact_type"], "OPEN_QUESTIONS")
+            self.assertIn("owner_decision_cards", artifact)
+            expected_categories = {
+                "product",
+                "users",
+                "data",
+                "integrations",
+                "deployment",
+                "security",
+                "operations",
+                "business risks",
+                "acceptance",
+            }
+            self.assertEqual({group["category"] for group in artifact["question_groups"]}, expected_categories)
+            self.assertEqual({question["category"] for question in artifact["questions"]}, expected_categories)
+
+            for question in artifact["questions"]:
+                self.assertIn(question["priority"], {"must", "should", "could"})
+                self.assertIn(question["severity"], {"critical", "high", "medium", "low"})
+                self.assertTrue(question["why_it_matters"])
+                self.assertTrue(question["options"])
+                self.assertIn("blocks_implementation", question)
+                self.assertNotIn("RBAC", question["question"])
+
+            cards = artifact["owner_decision_cards"]
+            self.assertGreaterEqual(len(cards), 1)
+            for card in cards:
+                self.assertTrue(card["options"])
+                self.assertTrue(card["recommendation"])
+                self.assertTrue(card["impact"])
+                self.assertTrue(card["tradeoffs"])
+                self.assertTrue(card["risk"])
+                self.assertTrue(card["required_owner_action"])
+
+            raw_artifact = json.dumps(artifact, sort_keys=True)
+            self.assertIn("do not paste secret values", raw_artifact)
+            self.assertIn("secret owner", raw_artifact)
+            self.assertNotIn("secret_value", raw_artifact)
+            self.assertNotIn("api key value", raw_artifact.casefold())
+
+    def test_clarify_output_content_is_deterministic_for_same_intake(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp) / "workspace"
+            root.mkdir()
+            intake_out = Path(tmp) / "intake.json"
+            first_out = Path(tmp) / "first-open-questions.json"
+            second_out = Path(tmp) / "second-open-questions.json"
+
+            intake_result = run_aso(
+                "product",
+                "intake",
+                "--root",
+                str(root),
+                "--tz",
+                str(FIXTURE_DIR / "telegram_marketplace_tz.md"),
+                "--dry-run",
+                "--json-out",
+                str(intake_out),
+            )
+            self.assertEqual(intake_result.returncode, 0, intake_result.stdout + intake_result.stderr)
+
+            for output in (first_out, second_out):
+                result = run_aso(
+                    "product",
+                    "clarify",
+                    "--root",
+                    str(root),
+                    "--from-intake",
+                    str(intake_out),
+                    "--dry-run",
+                    "--json-out",
+                    str(output),
+                )
+                self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+
+            first = json.loads(first_out.read_text(encoding="utf-8"))
+            second = json.loads(second_out.read_text(encoding="utf-8"))
+            for artifact in (first, second):
+                artifact["artifact_id"] = "<generated>"
+                artifact["created_at"] = "<generated>"
+            self.assertEqual(first, second)
+
 
 if __name__ == "__main__":
     unittest.main()
