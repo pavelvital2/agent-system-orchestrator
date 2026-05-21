@@ -267,6 +267,11 @@ The wizard must support deterministic non-interactive tests through an answers
 file or equivalent flags. Wizard dry-run mode must produce a plan without
 creating a GitHub repository or requiring GitHub credentials.
 
+P4-compatible wizard dry-run plans may include an optional recommendation to
+run `aso product intake` after project creation. This recommendation must not
+make product intake mandatory, perform product artifact writes, or change
+GitHub dry-run and publish semantics.
+
 ## Version And Schema Policy
 
 Project Factory P1 uses:

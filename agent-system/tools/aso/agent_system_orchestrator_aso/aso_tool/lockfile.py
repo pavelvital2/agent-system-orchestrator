@@ -12,6 +12,9 @@ LOCKFILE_VERSION = "1.0"
 PACKAGE_NAME = "agent-system-orchestrator"
 PACKAGE_VERSION = "3.6.0"
 RUNTIME_SCHEMA_VERSION = "3.1.0"
+PRODUCT_ARTIFACT_SCHEMA_VERSION = "1.0.0"
+PRODUCT_ARTIFACT_SCHEMA_REF = "agent-system/09_validators/schemas/product_artifacts/product_artifact.schema.json"
+PRODUCT_ARTIFACT_TARGET_ROOT = "project-runtime/product/"
 COMPATIBLE_ENGINE_VERSION_TUPLES = (
     (PACKAGE_VERSION, RUNTIME_SCHEMA_VERSION),
     ("3.5.0", "3.1.0"),
@@ -49,6 +52,7 @@ RULE_UNSUPPORTED_ENGINE_MODE = "ASO_LOCK_009"
 RULE_PUBLICATION_ROOT_MISSING = "ASO_LOCK_010"
 RULE_UNSUPPORTED_PACKAGE_NAME = "ASO_LOCK_011"
 RULE_UNSUPPORTED_PACKAGE_VERSION = "ASO_LOCK_012"
+RULE_INVALID_PRODUCT_ARTIFACTS = "ASO_LOCK_013"
 
 
 @dataclass(frozen=True)
@@ -111,7 +115,7 @@ def generate_lockfile(
 ) -> dict[str, object]:
     """Build the canonical Project Factory lockfile dictionary."""
 
-    return {
+    generated: dict[str, object] = {
         "lockfile_version": LOCKFILE_VERSION,
         "aso_engine": {
             "package_name": PACKAGE_NAME,
@@ -132,6 +136,15 @@ def generate_lockfile(
             "forbidden_tracked_roots": list(forbidden_tracked_roots),
         },
     }
+    if package_version == PACKAGE_VERSION and runtime_schema == RUNTIME_SCHEMA_VERSION:
+        generated["product_artifacts"] = {
+            "schema_version": PRODUCT_ARTIFACT_SCHEMA_VERSION,
+            "runtime_schema_version": runtime_schema,
+            "aggregate_schema_ref": PRODUCT_ARTIFACT_SCHEMA_REF,
+            "target_root": PRODUCT_ARTIFACT_TARGET_ROOT,
+            "planning_only": True,
+        }
+    return generated
 
 
 def lockfile_json(lockfile: dict[str, object]) -> str:
@@ -230,6 +243,9 @@ def validate_lockfile(lockfile: object) -> LockfileValidationResult:
         _validate_project(project, findings)
     if publication_boundary is not None:
         _validate_publication_boundary(publication_boundary, findings)
+    product_artifacts = lockfile.get("product_artifacts")
+    if product_artifacts is not None:
+        _validate_product_artifacts(product_artifacts, findings)
 
     return LockfileValidationResult(not findings, tuple(findings))
 
@@ -434,3 +450,35 @@ def _validate_publication_boundary(
                         required_root,
                     )
                 )
+
+
+def _validate_product_artifacts(value: object, findings: list[LockfileFinding]) -> None:
+    if not isinstance(value, dict):
+        findings.append(
+            _finding(
+                RULE_INVALID_PRODUCT_ARTIFACTS,
+                "$.product_artifacts",
+                "Optional product_artifacts must be a JSON object when present.",
+                type(value).__name__,
+            )
+        )
+        return
+
+    expected = {
+        "schema_version": PRODUCT_ARTIFACT_SCHEMA_VERSION,
+        "runtime_schema_version": RUNTIME_SCHEMA_VERSION,
+        "aggregate_schema_ref": PRODUCT_ARTIFACT_SCHEMA_REF,
+        "target_root": PRODUCT_ARTIFACT_TARGET_ROOT,
+        "planning_only": True,
+    }
+    for key, expected_value in expected.items():
+        actual = value.get(key)
+        if actual != expected_value:
+            findings.append(
+                _finding(
+                    RULE_INVALID_PRODUCT_ARTIFACTS,
+                    f"$.product_artifacts.{key}",
+                    f"product_artifacts.{key} must be {expected_value!r}.",
+                    actual if key in value else "missing",
+                )
+            )

@@ -148,6 +148,14 @@ project-archive/
 Implementations may include additional ignored or forbidden roots when those
 roots strengthen the clean generated-project boundary.
 
+### `product_artifacts`
+
+This optional P4 metadata records compatibility with planning-only product
+artifact schemas. It does not require product intake during project creation,
+and it does not create product artifacts. Confirmed product artifact writes are
+owned by `aso product ... --confirm-write` commands and stay under the ignored
+`project-runtime/product/` root.
+
 ## Engine Mode Contract
 
 Project Factory P0 requires support for:

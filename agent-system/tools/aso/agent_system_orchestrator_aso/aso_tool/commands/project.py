@@ -454,7 +454,12 @@ def create_project(
     lockfile.write_lockfile(target / lockfile.LOCKFILE_NAME, lock)
     (target / ".gitignore").write_text(_gitignore_text(), encoding="utf-8")
     (target / "README.md").write_text(
-        _readme_text(project_name=project_name, project_slug=project_slug, engine_mode=engine_mode),
+        _readme_text(
+            project_name=project_name,
+            project_slug=project_slug,
+            profile=profile,
+            engine_mode=engine_mode,
+        ),
         encoding="utf-8",
     )
     for root_name in LOCAL_ROOTS:
@@ -545,6 +550,11 @@ def build_github_dry_run_plan(
             profile=profile,
             repo_url=None,
             default_branch=default_branch,
+        ),
+        "optional_product_intake": _product_intake_recommendation(
+            root=target,
+            profile=profile,
+            engine_mode=engine_mode,
         ),
         "planned_git_commands": [
             f"git -C {target_text} init -b {default_branch}",
@@ -1115,6 +1125,29 @@ def _planned_state_init(
     }
 
 
+def _product_intake_command(*, root: Path | str, profile: str, engine_mode: str) -> str:
+    command = (
+        "PYTHONDONTWRITEBYTECODE=1 python3 agent-system/tools/aso/aso.py product intake"
+        if engine_mode == lockfile.DEFAULT_ENGINE_MODE
+        else "PYTHONDONTWRITEBYTECODE=1 aso product intake"
+    )
+    return (
+        f"{command} --root {root} --tz project-input/owner-tz.md "
+        f"--profile {profile} --readiness mvp --dry-run"
+    )
+
+
+def _product_intake_recommendation(*, root: Path | str, profile: str, engine_mode: str) -> dict[str, object]:
+    return {
+        "optional": True,
+        "command": _product_intake_command(root=root, profile=profile, engine_mode=engine_mode),
+        "input_placeholder": "project-input/owner-tz.md",
+        "confirmed_write_root": "project-runtime/product/",
+        "writes_without_confirm_write": False,
+        "publication_boundary": "product runtime artifacts stay under ignored project-runtime/product/ and are not generated-project publication artifacts",
+    }
+
+
 def _validate_create_inputs(
     *,
     target: Path,
@@ -1160,7 +1193,7 @@ def _gitignore_text() -> str:
     return "\n".join(lines)
 
 
-def _readme_text(*, project_name: str, project_slug: str, engine_mode: str) -> str:
+def _readme_text(*, project_name: str, project_slug: str, profile: str, engine_mode: str) -> str:
     command = (
         "PYTHONDONTWRITEBYTECODE=1 python3 agent-system/tools/aso/aso.py status --root . --mode package"
         if engine_mode == lockfile.DEFAULT_ENGINE_MODE
@@ -1179,6 +1212,14 @@ def _readme_text(*, project_name: str, project_slug: str, engine_mode: str) -> s
         "```bash\n"
         f"{command}\n"
         "```\n\n"
+        "## Optional product intake\n\n"
+        "When you have owner TZ or a raw product idea, create a planning-only "
+        "PRODUCT_INTAKE draft. Dry-run mode writes no files:\n\n"
+        "```bash\n"
+        f"{_product_intake_command(root='.', profile=profile, engine_mode=engine_mode)}\n"
+        "```\n\n"
+        "Confirmed product artifact writes require `--confirm-write` and stay "
+        "under the ignored `project-runtime/product/` root.\n\n"
         "## Publication boundary\n\n"
         "The local ASO working roots `project-input/`, `project-runtime/`, and "
         "`project-archive/` are intentionally ignored and should not be tracked.\n\n"

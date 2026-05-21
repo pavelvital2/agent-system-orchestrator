@@ -15,7 +15,8 @@
     "lockfile_version": { "type": "string", "const": "1.0" },
     "aso_engine": { "$ref": "#/$defs/aso_engine" },
     "project": { "$ref": "#/$defs/project" },
-    "publication_boundary": { "$ref": "#/$defs/publication_boundary" }
+    "publication_boundary": { "$ref": "#/$defs/publication_boundary" },
+    "product_artifacts": { "$ref": "#/$defs/product_artifacts" }
   },
   "$defs": {
     "aso_engine": {
@@ -136,6 +137,27 @@
           }
         }
       ]
+    },
+    "product_artifacts": {
+      "type": "object",
+      "additionalProperties": true,
+      "required": [
+        "schema_version",
+        "runtime_schema_version",
+        "aggregate_schema_ref",
+        "target_root",
+        "planning_only"
+      ],
+      "properties": {
+        "schema_version": { "type": "string", "const": "1.0.0" },
+        "runtime_schema_version": { "type": "string", "const": "3.1.0" },
+        "aggregate_schema_ref": {
+          "type": "string",
+          "const": "agent-system/09_validators/schemas/product_artifacts/product_artifact.schema.json"
+        },
+        "target_root": { "type": "string", "const": "project-runtime/product/" },
+        "planning_only": { "type": "boolean", "const": true }
+      }
     }
   }
 }

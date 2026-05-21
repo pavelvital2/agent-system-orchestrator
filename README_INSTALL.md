@@ -147,6 +147,12 @@ aso wizard
 aso wizard --answers path/to/answers.json --dry-run --json-out /tmp/aso-wizard-plan.json
 ```
 
+Wizard dry-run plans can point to an optional product-intake next command.
+Generated project READMEs include a planning-only `aso product intake
+--dry-run` example. Product intake is not required for project creation or
+publish, and confirmed product artifact writes stay under ignored
+`project-runtime/product/`.
+
 GitHub dry-run planning and confirmed publish use the selected `vendored` or
 `reference` engine mode. Reference-mode GitHub repositories must not track
 `agent-system/`; vendored-mode GitHub repositories may publish only safe

@@ -125,6 +125,11 @@ def build_dry_run_plan(config: dict[str, Any]) -> dict[str, Any]:
             project._planned_local_files(engine_mode=str(config["engine_mode"]))
         ),
         "planned_operations": ["create local Project Factory workspace"],
+        "optional_product_intake": project._product_intake_recommendation(
+            root=target,
+            profile=str(config["profile"]),
+            engine_mode=str(config["engine_mode"]),
+        ),
         "confirmation_required_for_real_create": True,
     }
 

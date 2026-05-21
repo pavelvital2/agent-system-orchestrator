@@ -217,6 +217,12 @@ python3 agent-system/tools/aso/aso.py wizard
 python3 agent-system/tools/aso/aso.py wizard --answers path/to/answers.json --dry-run --json-out /tmp/aso-wizard-plan.json
 ```
 
+Wizard and GitHub dry-run plans include an optional product-intake next step.
+After project creation, the generated project README shows the matching
+planning-only `aso product intake --dry-run` command. Product intake remains
+optional; confirmed product artifact writes require `--confirm-write` and stay
+under the ignored `project-runtime/product/` root.
+
 Generated projects contain `aso.lock`, `.gitignore`, a minimal README, and
 local ignored ASO working roots when needed. Local Project Factory creation may
 initialize Runtime Schema `3.1.0` sidecars under the generated project's

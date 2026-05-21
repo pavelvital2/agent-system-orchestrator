@@ -191,8 +191,10 @@ class ProjectCommandTests(unittest.TestCase):
             self.assertTrue((target / "project-input").is_dir())
             self.assertTrue((target / "project-runtime").is_dir())
             self.assertEqual(len(list((target / "project-runtime" / "state").glob("*.json"))), 9)
+            self.assertFalse((target / "project-runtime" / "product").exists())
             self.assertTrue((target / "project-archive").is_dir())
             self.assertFalse((target / "agent-system" / ".git").exists())
+            readme = (target / "README.md").read_text(encoding="utf-8")
 
         self.assertEqual(create_result.returncode, 0, create_result.stderr)
         self.assertIn("Engine mode: vendored", create_result.stdout)
@@ -200,7 +202,12 @@ class ProjectCommandTests(unittest.TestCase):
         self.assertIn("Runtime state: initialized", create_result.stdout)
         self.assertEqual(lock["aso_engine"]["version"], "3.6.0")
         self.assertEqual(lock["aso_engine"]["runtime_schema"], "3.1.0")
+        self.assertEqual(lock["product_artifacts"]["schema_version"], "1.0.0")
+        self.assertEqual(lock["product_artifacts"]["target_root"], "project-runtime/product/")
         self.assertEqual(lock["project"]["repo_url"], "https://github.com/example/demo-project.git")
+        self.assertIn("Optional product intake", readme)
+        self.assertIn("python3 agent-system/tools/aso/aso.py product intake --root .", readme)
+        self.assertIn("project-runtime/product/", readme)
 
     def test_create_local_reference_smoke(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
@@ -236,8 +243,10 @@ class ProjectCommandTests(unittest.TestCase):
             self.assertTrue((target / "project-input").is_dir())
             self.assertTrue((target / "project-runtime").is_dir())
             self.assertEqual(len(list((target / "project-runtime" / "state").glob("*.json"))), 9)
+            self.assertFalse((target / "project-runtime" / "product").exists())
             self.assertTrue((target / "project-archive").is_dir())
             self.assertFalse((target / "agent-system").exists())
+            readme = (target / "README.md").read_text(encoding="utf-8")
 
         self.assertEqual(create_result.returncode, 0, create_result.stderr)
         self.assertEqual(verify_result.returncode, 0, verify_result.stderr)
@@ -250,7 +259,10 @@ class ProjectCommandTests(unittest.TestCase):
         self.assertEqual(lock["aso_engine"]["version"], "3.6.0")
         self.assertEqual(lock["aso_engine"]["runtime_schema"], "3.1.0")
         self.assertEqual(lock["aso_engine"]["engine_mode"], "reference")
+        self.assertEqual(lock["product_artifacts"]["aggregate_schema_ref"], "agent-system/09_validators/schemas/product_artifacts/product_artifact.schema.json")
         self.assertIsNone(lock["project"]["repo_url"])
+        self.assertIn("aso product intake --root .", readme)
+        self.assertNotIn("agent-system/tools/aso/aso.py product intake", readme)
 
     def test_create_github_dry_run_writes_deterministic_plan_without_target_mutation(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
@@ -311,6 +323,12 @@ class ProjectCommandTests(unittest.TestCase):
         self.assertEqual(len(plan["planned_state_init"]["planned_writes"]), 9)
         self.assertFalse(plan["planned_state_init"]["publication_boundary"]["tracked"])
         self.assertFalse(plan["planned_state_init"]["publication_boundary"]["pushed"])
+        self.assertEqual(
+            plan["optional_product_intake"]["command"],
+            f"PYTHONDONTWRITEBYTECODE=1 aso product intake --root {target} --tz project-input/owner-tz.md --profile generic --readiness mvp --dry-run",
+        )
+        self.assertFalse(plan["optional_product_intake"]["writes_without_confirm_write"])
+        self.assertEqual(plan["optional_product_intake"]["confirmed_write_root"], "project-runtime/product/")
         self.assertEqual(
             plan["planned_git_commands"],
             [

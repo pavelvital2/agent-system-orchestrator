@@ -92,6 +92,10 @@ class WizardCommandTests(unittest.TestCase):
             plan["planned_gh_command"],
             f"gh repo create example/demo-project --private --source {target} --remote origin --push",
         )
+        self.assertEqual(
+            plan["optional_product_intake"]["command"],
+            f"PYTHONDONTWRITEBYTECODE=1 aso product intake --root {target} --tz project-input/owner-tz.md --profile generic --readiness mvp --dry-run",
+        )
         self.assertTrue(plan["confirmation_required_for_real_publish"])
 
     def test_reference_github_answers_fixture_parses_and_builds_dry_run_plan(self) -> None:
@@ -148,6 +152,11 @@ class WizardCommandTests(unittest.TestCase):
         self.assertEqual(plan["publish_mode"], "local")
         self.assertEqual(plan["planned_operations"], ["create local Project Factory workspace"])
         self.assertIn("agent-system/", plan["planned_local_files"])
+        self.assertEqual(
+            plan["optional_product_intake"]["command"],
+            f"PYTHONDONTWRITEBYTECODE=1 python3 agent-system/tools/aso/aso.py product intake --root {target} --tz project-input/owner-tz.md --profile generic --readiness mvp --dry-run",
+        )
+        self.assertFalse(plan["optional_product_intake"]["writes_without_confirm_write"])
         self.assertTrue(plan["confirmation_required_for_real_create"])
 
     def test_local_create_requires_explicit_confirmation(self) -> None:
@@ -200,6 +209,7 @@ class WizardCommandTests(unittest.TestCase):
             self.assertTrue((target / ".gitignore").is_file())
             self.assertTrue((target / "README.md").is_file())
             self.assertTrue((target / "aso.lock").is_file())
+            self.assertFalse((target / "project-runtime" / "product").exists())
             self.assertFalse((target / "agent-system").exists())
 
         self.assertEqual(result.returncode, 0, result.stderr)

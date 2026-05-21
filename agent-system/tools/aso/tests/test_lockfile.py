@@ -34,11 +34,16 @@ class LockfileHelperTests(unittest.TestCase):
         result = lockfile.validate_lockfile(generated)
         aso_engine = generated["aso_engine"]
         publication_boundary = generated["publication_boundary"]
+        product_artifacts = generated["product_artifacts"]
 
         self.assertTrue(result.ok, result.to_json())
         self.assertEqual(aso_engine["version"], "3.6.0")
         self.assertEqual(aso_engine["runtime_schema"], "3.1.0")
         self.assertEqual(aso_engine["engine_mode"], "vendored")
+        self.assertEqual(product_artifacts["schema_version"], "1.0.0")
+        self.assertEqual(product_artifacts["runtime_schema_version"], "3.1.0")
+        self.assertEqual(product_artifacts["target_root"], "project-runtime/product/")
+        self.assertTrue(product_artifacts["planning_only"])
         self.assertEqual(lockfile.SUPPORTED_ENGINE_MODES, ("vendored", "reference"))
         self.assertEqual(publication_boundary["ignored_roots"], list(lockfile.REQUIRED_PUBLICATION_ROOTS))
         self.assertEqual(
@@ -60,12 +65,28 @@ class LockfileHelperTests(unittest.TestCase):
         self.assertEqual(generated["aso_engine"]["version"], "3.6.0")
         self.assertEqual(generated["aso_engine"]["runtime_schema"], "3.1.0")
         self.assertEqual(generated["aso_engine"]["engine_mode"], "reference")
+        self.assertEqual(generated["product_artifacts"]["schema_version"], "1.0.0")
 
     def test_valid_fixture_passes_validation(self) -> None:
         result = lockfile.validate_lockfile_path(FIXTURE_ROOT / "valid_aso.lock")
 
         self.assertTrue(result.ok, result.to_json())
         self.assertEqual(result.findings, ())
+
+    def test_optional_product_artifact_metadata_is_validated_when_present(self) -> None:
+        generated = lockfile.generate_lockfile(
+            project_name="Demo Project",
+            project_slug="demo-project",
+            repo_url=None,
+        )
+        mutated = copy.deepcopy(generated)
+        mutated["product_artifacts"]["target_root"] = "project-input/product/"
+
+        result = lockfile.validate_lockfile(mutated)
+
+        self.assertFalse(result.ok)
+        self.assertEqual(result.findings[0].rule_id, "ASO_LOCK_013")
+        self.assertEqual(result.findings[0].path, "$.product_artifacts.target_root")
 
     def test_compatible_p0_package_version_passes_validation(self) -> None:
         generated = lockfile.generate_lockfile(
@@ -79,6 +100,7 @@ class LockfileHelperTests(unittest.TestCase):
         result = lockfile.validate_lockfile(generated)
 
         self.assertTrue(result.ok, result.to_json())
+        self.assertNotIn("product_artifacts", generated)
 
     def test_mixed_compatible_version_tuples_fail_validation(self) -> None:
         cases = (
@@ -205,6 +227,23 @@ class LockfileHelperTests(unittest.TestCase):
                 for constraint in aso_engine_tuple_constraints
             ],
             list(lockfile.COMPATIBLE_ENGINE_VERSION_TUPLES),
+        )
+        product_artifacts_properties = schema["$defs"]["product_artifacts"]["properties"]
+        self.assertEqual(
+            product_artifacts_properties["schema_version"]["const"],
+            lockfile.PRODUCT_ARTIFACT_SCHEMA_VERSION,
+        )
+        self.assertEqual(
+            product_artifacts_properties["runtime_schema_version"]["const"],
+            lockfile.RUNTIME_SCHEMA_VERSION,
+        )
+        self.assertEqual(
+            product_artifacts_properties["aggregate_schema_ref"]["const"],
+            lockfile.PRODUCT_ARTIFACT_SCHEMA_REF,
+        )
+        self.assertEqual(
+            product_artifacts_properties["target_root"]["const"],
+            lockfile.PRODUCT_ARTIFACT_TARGET_ROOT,
         )
 
     @unittest.skipIf(Draft202012Validator is None, "jsonschema is not installed")
