@@ -19,6 +19,7 @@ from .commands import (
     package_layout,
     package_sync,
     plan_next,
+    propose_next_task,
     project,
     record_result,
     state_init,
@@ -283,6 +284,50 @@ def build_parser() -> argparse.ArgumentParser:
         help="Write the dry-run/read-only plan report JSON to this explicit path.",
     )
     plan_next_parser.set_defaults(handler=plan_next.run)
+
+    propose_parser = subparsers.add_parser(
+        "propose",
+        help="Build guarded proposal artifacts without dispatching agents.",
+        description=(
+            "Build P3 proposal artifacts from existing runtime state. Proposal "
+            "commands never dispatch agents or mutate canonical state sidecars."
+        ),
+    )
+    propose_subparsers = propose_parser.add_subparsers(dest="propose_command", metavar="COMMAND")
+    propose_next_task_parser = propose_subparsers.add_parser(
+        "next-task",
+        help="Propose the next task from current P2 state sidecars.",
+        description=(
+            "Verify runtime state, inspect TASK_REGISTRY, NEXT_ACTION, and CURRENT_GATE, "
+            "then emit a schema-compatible next_task proposal with base state hashes. "
+            "Dry-run is the default and writes no workspace files unless --json-out is "
+            "explicitly supplied. --confirm-write writes only under project-runtime/proposals."
+        ),
+    )
+    _add_root_argument(propose_next_task_parser, validate=False)
+    propose_write_group = propose_next_task_parser.add_mutually_exclusive_group()
+    propose_write_group.add_argument(
+        "--dry-run",
+        action="store_true",
+        help="Default behavior; write no workspace files except an explicit allowed --json-out.",
+    )
+    propose_write_group.add_argument(
+        "--confirm-write",
+        action="store_true",
+        help="Write the proposal artifact under project-runtime/proposals/.",
+    )
+    propose_next_task_parser.add_argument(
+        "--json-out",
+        metavar="PATH",
+        help="Write proposal JSON to /tmp/... or an allowed project-runtime proposals/reports path.",
+    )
+    propose_next_task_parser.add_argument(
+        "--format",
+        choices=("json", "text"),
+        default="text",
+        help="Output format for stdout when --json-out is not used (default: text).",
+    )
+    propose_next_task_parser.set_defaults(handler=propose_next_task.run_next_task)
 
     checkpoint_preflight_parser = subparsers.add_parser(
         "checkpoint-preflight",
