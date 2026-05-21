@@ -20,6 +20,7 @@ from .commands import (
     package_layout,
     package_sync,
     plan_next,
+    product,
     propose_checkpoint,
     propose_next_task,
     propose_transition,
@@ -70,6 +71,38 @@ def _add_mode_argument(parser: argparse.ArgumentParser) -> None:
             "package validates the packaged agent-system tree without requiring root "
             "project-runtime (default: workspace)."
         ),
+    )
+
+
+def _add_product_common_arguments(parser: argparse.ArgumentParser) -> None:
+    _add_root_argument(parser, validate=False)
+    parser.add_argument(
+        "--profile",
+        default="generic",
+        metavar="PROFILE",
+        help="Product profile metadata to record in planning artifacts (default: generic).",
+    )
+    parser.add_argument(
+        "--readiness",
+        choices=product.READINESS_MODES,
+        default="mvp",
+        help="Target product readiness mode for planning artifacts (default: mvp).",
+    )
+    write_group = parser.add_mutually_exclusive_group()
+    write_group.add_argument(
+        "--dry-run",
+        action="store_true",
+        help="Default behavior; write no workspace artifacts except an explicit allowed --json-out.",
+    )
+    write_group.add_argument(
+        "--confirm-write",
+        action="store_true",
+        help="Confirm workspace artifact writes under allowed project-runtime product/report/render paths.",
+    )
+    parser.add_argument(
+        "--json-out",
+        metavar="PATH",
+        help="Write JSON output to /tmp/... or an allowed project-runtime product/report/render path.",
     )
 
 
@@ -847,6 +880,116 @@ def build_parser() -> argparse.ArgumentParser:
         help="Write the state verification report JSON to this explicit path.",
     )
     state_verify_parser.set_defaults(handler=state_verify.run)
+
+    product_parser = subparsers.add_parser(
+        "product",
+        help="Planning-only product intake commands.",
+        description=(
+            "Build bounded P4 product planning artifact scaffolds. Product commands "
+            "do not dispatch agents, generate application code, collect secrets, "
+            "call external APIs, deploy, commit, push, or execute checkpoints."
+        ),
+    )
+    product_subparsers = product_parser.add_subparsers(dest="product_command", metavar="COMMAND")
+
+    product_intake_parser = product_subparsers.add_parser(
+        "intake",
+        help="Create a planning-only PRODUCT_INTAKE scaffold from owner TZ input.",
+        description=(
+            "Convert owner TZ/source text into a bounded PRODUCT_INTAKE scaffold. "
+            "This command is deterministic and local; it records secret names only "
+            "and leaves unknowns as explicit gaps."
+        ),
+    )
+    _add_product_common_arguments(product_intake_parser)
+    product_intake_parser.add_argument(
+        "--tz",
+        required=True,
+        metavar="TZ_FILE",
+        help="Owner TZ or raw product idea file to read locally.",
+    )
+    product_intake_parser.set_defaults(handler=product.run_intake)
+
+    product_clarify_parser = product_subparsers.add_parser(
+        "clarify",
+        help="Create planning-only open questions from PRODUCT_INTAKE.",
+        description=(
+            "Generate bounded owner clarification question scaffolds from an intake "
+            "artifact. It does not answer for the owner or silently fill critical unknowns."
+        ),
+    )
+    _add_product_common_arguments(product_clarify_parser)
+    product_clarify_parser.add_argument(
+        "--from-intake",
+        required=True,
+        metavar="INTAKE.json",
+        help="PRODUCT_INTAKE JSON artifact to read locally.",
+    )
+    product_clarify_parser.set_defaults(handler=product.run_clarify)
+
+    product_spec_parser = product_subparsers.add_parser(
+        "spec",
+        help="Create a planning-only PRODUCT_SPEC scaffold.",
+        description=(
+            "Create a PRODUCT_SPEC scaffold from intake and owner answers. Critical "
+            "unknowns remain explicit gaps; this command does not generate application code."
+        ),
+    )
+    _add_product_common_arguments(product_spec_parser)
+    product_spec_parser.add_argument(
+        "--from-intake",
+        required=True,
+        metavar="INTAKE.json",
+        help="PRODUCT_INTAKE JSON artifact to read locally.",
+    )
+    product_spec_parser.add_argument(
+        "--answers",
+        required=True,
+        metavar="ANSWERS.json",
+        help="Owner answers JSON artifact to read locally.",
+    )
+    product_spec_parser.set_defaults(handler=product.run_spec)
+
+    product_capabilities_parser = product_subparsers.add_parser(
+        "capabilities",
+        help="Create a planning-only CAPABILITY_MATRIX scaffold.",
+        description=(
+            "Create a capability matrix scaffold that connects desired behavior to "
+            "future verification expectations. It is not implementation evidence."
+        ),
+    )
+    _add_product_common_arguments(product_capabilities_parser)
+    product_capabilities_parser.add_argument(
+        "--from-spec",
+        required=True,
+        metavar="PRODUCT_SPEC.json",
+        help="PRODUCT_SPEC JSON artifact to read locally.",
+    )
+    product_capabilities_parser.set_defaults(handler=product.run_capabilities)
+
+    product_plan_parser = product_subparsers.add_parser(
+        "plan",
+        help="Create a non-executable PRODUCT_PLAN scaffold.",
+        description=(
+            "Create a non-executable product plan scaffold. It may recommend future "
+            "workstreams, but it does not create task packets, queue entries, "
+            "dispatches, checkpoint proposals, commits, deployments, or external calls."
+        ),
+    )
+    _add_product_common_arguments(product_plan_parser)
+    product_plan_parser.add_argument(
+        "--from-spec",
+        required=True,
+        metavar="PRODUCT_SPEC.json",
+        help="PRODUCT_SPEC JSON artifact to read locally.",
+    )
+    product_plan_parser.add_argument(
+        "--from-capabilities",
+        required=True,
+        metavar="CAPABILITY_MATRIX.json",
+        help="CAPABILITY_MATRIX JSON artifact to read locally.",
+    )
+    product_plan_parser.set_defaults(handler=product.run_plan)
 
     project_parser = subparsers.add_parser(
         "project",
