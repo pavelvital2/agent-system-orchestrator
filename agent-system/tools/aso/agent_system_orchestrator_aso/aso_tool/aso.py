@@ -26,6 +26,7 @@ from .commands import (
     validate_context_pack,
     validate_design,
     validate_rules,
+    wizard,
 )
 
 
@@ -695,6 +696,32 @@ def build_parser() -> argparse.ArgumentParser:
         help="Write the verify-clean report JSON to this explicit path.",
     )
     project_verify_clean_parser.set_defaults(handler=project.run_verify_clean)
+
+    wizard_parser = subparsers.add_parser(
+        "wizard",
+        help="Guided Project Factory workspace creation.",
+        description=(
+            "Guide users through Project Factory workspace creation. Dry-run emits a "
+            "deterministic plan without git, gh, network, or filesystem writes. Real "
+            "creation or publication requires explicit confirmation."
+        ),
+    )
+    wizard_parser.add_argument(
+        "--answers",
+        metavar="PATH",
+        help="Read non-interactive wizard answers from a JSON file.",
+    )
+    wizard_parser.add_argument(
+        "--dry-run",
+        action="store_true",
+        help="Emit a deterministic plan and perform no local creation, git, gh, or publish operations.",
+    )
+    wizard_parser.add_argument(
+        "--json-out",
+        metavar="PATH",
+        help="Write the wizard dry-run plan JSON to this explicit path.",
+    )
+    wizard_parser.set_defaults(handler=wizard.run)
 
     return parser
 
