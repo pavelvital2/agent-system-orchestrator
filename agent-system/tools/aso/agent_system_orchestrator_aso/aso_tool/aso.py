@@ -22,6 +22,7 @@ from .commands import (
     project,
     record_result,
     state_init,
+    state_migrate,
     state_verify,
     status,
     validate_context_pack,
@@ -601,6 +602,38 @@ def build_parser() -> argparse.ArgumentParser:
         help="Write the dry-run plan or confirmed write receipt JSON to PATH.",
     )
     state_init_parser.set_defaults(handler=state_init.run)
+
+    state_migrate_parser = state_subparsers.add_parser(
+        "migrate",
+        help="Migrate compatible legacy JSON state sidecars to Runtime Schema 3.1.0.",
+        description=(
+            "Plan or perform a deterministic migration from compatible Runtime Schema "
+            "2.0.0 sidecars to Runtime Schema 3.1.0 envelopes. Dry-run writes nothing; "
+            "writes require --confirm-write and produce a governed migration receipt."
+        ),
+    )
+    _add_root_argument(state_migrate_parser, validate=False)
+    state_migrate_parser.add_argument(
+        "--to",
+        default="3.1.0",
+        help="Target runtime schema version (default: 3.1.0).",
+    )
+    state_migrate_parser.add_argument(
+        "--dry-run",
+        action="store_true",
+        help="Print a deterministic JSON migration plan and write no files.",
+    )
+    state_migrate_parser.add_argument(
+        "--confirm-write",
+        action="store_true",
+        help="Explicitly allow writes under project-runtime/state and project-runtime/reports.",
+    )
+    state_migrate_parser.add_argument(
+        "--json-out",
+        metavar="PATH",
+        help="Write the migration plan or receipt JSON under /tmp or project-runtime reports/receipts.",
+    )
+    state_migrate_parser.set_defaults(handler=state_migrate.run)
 
     state_verify_parser = state_subparsers.add_parser(
         "verify",
