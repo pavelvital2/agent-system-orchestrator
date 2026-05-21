@@ -1,0 +1,77 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://agent-system.local/schemas/schema_manifest.schema.json",
+  "title": "SCHEMA_MANIFEST",
+  "description": "Runtime Schema 3.1.0 envelope sidecar for discovering active runtime state contracts.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "sidecar_type",
+    "runtime_schema_version",
+    "state_revision",
+    "updated_at",
+    "updated_by",
+    "content"
+  ],
+  "properties": {
+    "schema_version": { "type": "string", "const": "3.1.0" },
+    "sidecar_type": { "type": "string", "const": "SCHEMA_MANIFEST" },
+    "runtime_schema_version": { "type": "string", "const": "3.1.0" },
+    "state_revision": { "type": "integer", "minimum": 1 },
+    "updated_at": { "type": "string", "format": "date-time" },
+    "updated_by": { "type": "string" },
+    "markdown_source": { "type": "string" },
+    "source_hash": { "type": "string" },
+    "previous_revision_hash": { "type": "string" },
+    "migration_source_schema": { "type": "string" },
+    "content": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "runtime_schema_version",
+        "package_version",
+        "governance_ruleset_version",
+        "state_root",
+        "contract_ref",
+        "required_sidecars",
+        "optional_sidecars",
+        "compatibility_status",
+        "fixture_expectations"
+      ],
+      "properties": {
+        "runtime_schema_version": { "type": "string", "const": "3.1.0" },
+        "package_version": { "type": "string", "const": "3.4.0" },
+        "governance_ruleset_version": { "type": "string", "const": "3.4.0" },
+        "state_root": { "type": "string", "const": "project-runtime/state" },
+        "contract_ref": {
+          "type": "string",
+          "const": "agent-system/09_validators/schemas/runtime_state_3_1_0.contract.json"
+        },
+        "required_sidecars": {
+          "type": "array",
+          "items": { "type": "string" },
+          "contains": { "const": "SCHEMA_MANIFEST" }
+        },
+        "optional_sidecars": {
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "compatibility_status": {
+          "type": "string",
+          "enum": [
+            "current",
+            "compatible_migration_available",
+            "compatible_legacy_read_only",
+            "unsupported",
+            "malformed"
+          ]
+        },
+        "fixture_expectations": {
+          "type": "array",
+          "items": { "type": "string" }
+        }
+      }
+    }
+  }
+}

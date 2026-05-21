@@ -27,6 +27,14 @@ state automation while preserving the Project Factory P1 command boundary.
 It does not implement a runtime daemon, proposal/apply mutation layer, live
 agent dispatch, or checkpoint executor.
 
+The Runtime Schema `3.1.0` sidecar contract is documented in
+`agent-system/02_runtime/RUNTIME_STATE_P2_CONTRACT.md` and packaged as
+`agent-system/09_validators/schemas/runtime_state_3_1_0.contract.json`.
+It defines required and optional sidecars, the P2 envelope, allowed
+lifecycle/checkpoint/action/compatibility statuses, legacy `2.0.0` and
+`3.0.0` migration compatibility behavior, and fixture expectations. The
+validator contract checks use Python stdlib JSON/data validation only.
+
 The canonical ASO Python package is:
 
 ```text

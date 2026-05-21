@@ -160,6 +160,15 @@ governed `3.4.0` package/governance tuple with runtime schema `3.1.0`.
 It preserves the Project Factory P1 command boundary and defines the
 JSON-first runtime state foundation for later governed automation.
 
+The Runtime Schema `3.1.0` contract is documented in
+`agent-system/02_runtime/RUNTIME_STATE_P2_CONTRACT.md` and packaged as
+`agent-system/09_validators/schemas/runtime_state_3_1_0.contract.json`.
+It defines the sidecar envelope, required and optional sidecars, allowed
+lifecycle/checkpoint/action/compatibility statuses, migration compatibility
+for legacy `2.0.0` and `3.0.0` sidecars, and fixture expectations. Contract
+validation is Python stdlib only and does not add a runtime `jsonschema`
+dependency.
+
 The canonical installable ASO package source is:
 
 ```text

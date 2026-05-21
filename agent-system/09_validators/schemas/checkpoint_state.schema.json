@@ -1,0 +1,78 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://agent-system.local/schemas/checkpoint_state.schema.json",
+  "title": "CHECKPOINT_STATE",
+  "description": "Runtime Schema 3.1.0 envelope sidecar for checkpoint readiness and evidence references.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "sidecar_type",
+    "runtime_schema_version",
+    "state_revision",
+    "updated_at",
+    "updated_by",
+    "content"
+  ],
+  "properties": {
+    "schema_version": { "type": "string", "const": "3.1.0" },
+    "sidecar_type": { "type": "string", "const": "CHECKPOINT_STATE" },
+    "runtime_schema_version": { "type": "string", "const": "3.1.0" },
+    "state_revision": { "type": "integer", "minimum": 1 },
+    "updated_at": { "type": "string", "format": "date-time" },
+    "updated_by": { "type": "string" },
+    "markdown_source": { "type": "string" },
+    "source_hash": { "type": "string" },
+    "previous_revision_hash": { "type": "string" },
+    "migration_source_schema": { "type": "string" },
+    "content": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "checkpoint_readiness",
+        "checkpoint_preflight_status",
+        "checkpoint_receipt_ref",
+        "commit_status",
+        "last_commit_hash",
+        "last_commit_branch",
+        "push_status",
+        "last_push_remote",
+        "last_push_branch",
+        "blocked_by",
+        "last_failure_reason",
+        "updated_for_task"
+      ],
+      "properties": {
+        "checkpoint_readiness": {
+          "type": "string",
+          "enum": ["not_required", "not_run", "pending", "eligible", "ineligible", "passed", "failed", "blocked"]
+        },
+        "checkpoint_preflight_status": {
+          "type": "string",
+          "enum": ["not_required", "not_run", "pending", "eligible", "ineligible", "passed", "failed", "blocked"]
+        },
+        "checkpoint_receipt_ref": { "type": "string" },
+        "commit_status": {
+          "type": "string",
+          "enum": ["not_required", "not_attempted", "committed", "failed", "blocked"]
+        },
+        "last_commit_hash": { "type": "string" },
+        "last_commit_branch": { "type": "string" },
+        "push_status": {
+          "type": "string",
+          "enum": ["not_required", "not_attempted", "pushed", "failed", "blocked"]
+        },
+        "last_push_remote": { "type": "string" },
+        "last_push_branch": { "type": "string" },
+        "blocked_by": {
+          "oneOf": [
+            { "const": "NONE" },
+            { "type": "array", "items": { "type": "string" } }
+          ]
+        },
+        "last_failure_reason": { "type": "string" },
+        "updated_for_task": { "type": "string" }
+      }
+    }
+  }
+}

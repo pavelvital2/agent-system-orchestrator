@@ -10,6 +10,8 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Iterable
 
+from .. import runtime_schema_contracts
+
 
 EXIT_OK = 0
 EXIT_FINDINGS = 1
@@ -1231,6 +1233,7 @@ def _build_report(
             "sidecars_missing": sorted(missing),
             "task_registry_count": len(_task_registry(sidecars)),
         },
+        "runtime_schema_contract": runtime_schema_contracts.contract_summary(),
         "read_only": True,
     }
 

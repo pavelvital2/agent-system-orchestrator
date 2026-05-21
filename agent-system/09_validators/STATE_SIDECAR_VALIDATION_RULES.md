@@ -18,6 +18,18 @@ agent-system/02_runtime/STATE_TRANSITION_RULES.md
 
 ## Sidecars in scope
 
+Runtime State P2 adds a JSON-first Runtime Schema `3.1.0` contract at:
+
+```text
+agent-system/09_validators/schemas/runtime_state_3_1_0.contract.json
+```
+
+That contract defines the current envelope, required and optional sidecars,
+allowed lifecycle/checkpoint/action/compatibility statuses, migration
+compatibility rules, and fixture expectations. It is validated through Python
+stdlib data checks and does not add an external `jsonschema` runtime
+dependency.
+
 Stage 2 sidecar validation covers these optional workspace files:
 
 ```text
@@ -38,6 +50,33 @@ agent-system/03_templates/state/next_action.schema.json
 agent-system/03_templates/state/task_registry.schema.json
 agent-system/03_templates/state/accepted_artifacts.schema.json
 agent-system/03_templates/state/workspace_identity.schema.json
+```
+
+Runtime Schema `3.1.0` additionally formalizes these package schema files:
+
+```text
+agent-system/09_validators/schemas/repository_lock.schema.json
+agent-system/09_validators/schemas/checkpoint_state.schema.json
+agent-system/09_validators/schemas/schema_manifest.schema.json
+```
+
+Required current P2 sidecars are:
+
+```text
+PROJECT_STATE
+TASK_REGISTRY
+NEXT_ACTION
+CURRENT_GATE
+WORKSPACE_IDENTITY
+SCHEMA_MANIFEST
+```
+
+Optional current P2 sidecars are:
+
+```text
+REPOSITORY_LOCK
+ACCEPTED_ARTIFACTS
+CHECKPOINT_STATE
 ```
 
 ## Authoritative Stage 2 sidecar contract
@@ -264,3 +303,9 @@ Validators should apply checks in this order:
 These validation rules do not authorize writes to `project-runtime/`, do not
 stage files, do not commit, do not push, and do not change ASO command
 behavior. They define expected behavior for a later validator implementation.
+
+Runtime Schema `3.1.0` keeps that boundary. Legacy `2.0.0` and `3.0.0`
+sidecars are compatibility inputs for diagnostics and migration planning, not
+current P2 state. Validators must report `compatible_migration_available`,
+`unsupported`, or `malformed` rather than silently upgrading or rewriting
+workspace state.
