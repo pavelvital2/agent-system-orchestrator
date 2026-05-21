@@ -135,12 +135,43 @@ class DashboardCommandTests(unittest.TestCase):
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
         self.assertIn("Package Sync Status", result.stdout)
         self.assertIn("DAG Summary", result.stdout)
+        self.assertIn("Runtime Schema Health", result.stdout)
         self.assertIn("Result Routing Summary", result.stdout)
         self.assertIn("Incident Health", result.stdout)
         self.assertIn("Checkpoint-Preflight Readiness", result.stdout)
         self.assertIn("<span>Package Sync</span><strong>not_available</strong>", result.stdout)
         self.assertIn("<th scope=\"row\">Status</th><td>not_available</td>", result.stdout)
         self.assertNotIn("<span>Package Sync</span><strong>passed</strong>", result.stdout)
+
+    def test_dashboard_reports_runtime_schema_health_for_current_state(self) -> None:
+        with tempfile.TemporaryDirectory(dir="/tmp") as tmp:
+            root = Path(tmp) / "workspace"
+            root.mkdir()
+            init = subprocess.run(
+                [
+                    sys.executable,
+                    str(CLI),
+                    "state",
+                    "init",
+                    "--root",
+                    str(root),
+                    "--project-slug",
+                    "dashboard-schema",
+                    "--confirm-write",
+                ],
+                check=False,
+                text=True,
+                capture_output=True,
+                cwd=REPO_ROOT,
+            )
+
+            result = run_dashboard(root)
+
+        self.assertEqual(init.returncode, 0, init.stdout + init.stderr)
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        self.assertIn("<span>Runtime Schema</span><strong>3.1.0</strong>", result.stdout)
+        self.assertIn("<th scope=\"row\">Current P2 state</th><td>true</td>", result.stdout)
+        self.assertIn("<th scope=\"row\">Verify status</th><td>passed</td>", result.stdout)
 
     def test_uncheckpointed_audit_dependency_blocks_dashboard_readiness(self) -> None:
         result = run_dashboard(DAG_AUDIT_ONLY_DEP)

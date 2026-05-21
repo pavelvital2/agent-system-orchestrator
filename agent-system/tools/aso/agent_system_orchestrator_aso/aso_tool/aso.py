@@ -23,6 +23,7 @@ from .commands import (
     record_result,
     state_init,
     state_migrate,
+    state_render,
     state_verify,
     status,
     validate_context_pack,
@@ -634,6 +635,30 @@ def build_parser() -> argparse.ArgumentParser:
         help="Write the migration plan or receipt JSON under /tmp or project-runtime reports/receipts.",
     )
     state_migrate_parser.set_defaults(handler=state_migrate.run)
+
+    state_render_parser = state_subparsers.add_parser(
+        "render",
+        help="Render read-only Runtime Schema compatibility reports.",
+        description=(
+            "Render deterministic Markdown or JSON reports from project-runtime/state "
+            "JSON sidecars. The command is read-only except for explicit --out writes "
+            "to /tmp, <workspace>/project-runtime/reports, or "
+            "<workspace>/project-runtime/rendered."
+        ),
+    )
+    _add_root_argument(state_render_parser, validate=False)
+    state_render_parser.add_argument(
+        "--format",
+        choices=("markdown", "json"),
+        default="markdown",
+        help="Report output format (default: markdown).",
+    )
+    state_render_parser.add_argument(
+        "--out",
+        metavar="PATH",
+        help="Write report to /tmp/... or <workspace>/project-runtime/reports|rendered/...",
+    )
+    state_render_parser.set_defaults(handler=state_render.run)
 
     state_verify_parser = state_subparsers.add_parser(
         "verify",

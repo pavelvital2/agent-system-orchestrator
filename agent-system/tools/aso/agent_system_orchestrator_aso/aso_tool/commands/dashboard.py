@@ -10,6 +10,7 @@ from collections import Counter
 from pathlib import Path
 from typing import Iterable
 
+from .. import runtime_schema_contracts
 from . import checkpoint_preflight, dag, output_policy, package_sync, plan_next, state_verify
 
 
@@ -76,6 +77,20 @@ def _tasks(sidecars: dict[str, dict[str, object]]) -> list[dict[str, object]]:
     if not isinstance(raw_tasks, list):
         return []
     return [task for task in raw_tasks if isinstance(task, dict)]
+
+
+def _load_dashboard_sidecars(root: Path) -> dict[str, dict[str, object]]:
+    sidecars: dict[str, dict[str, object]] = {}
+    state_root = root / runtime_schema_contracts.STATE_ROOT
+    for sidecar_type in runtime_schema_contracts.ALL_SIDECARS:
+        path = state_root / f"{sidecar_type}.json"
+        try:
+            payload = json.loads(path.read_text(encoding="utf-8"))
+        except (OSError, json.JSONDecodeError):
+            continue
+        if isinstance(payload, dict):
+            sidecars[sidecar_type] = payload
+    return dict(sorted(sidecars.items()))
 
 
 def _task_counts(tasks: list[dict[str, object]]) -> dict[str, object]:
@@ -493,9 +508,53 @@ def _checkpoint_preflight_readiness(root: Path, sidecars: dict[str, dict[str, ob
     }
 
 
+def _runtime_schema_health(
+    verify_report: dict[str, object],
+    verify_exit_code: int,
+    sidecars: dict[str, dict[str, object]],
+) -> dict[str, object]:
+    state = verify_report.get("state") if isinstance(verify_report.get("state"), dict) else {}
+    summary = verify_report.get("summary") if isinstance(verify_report.get("summary"), dict) else {}
+    compatibility: dict[str, str] = {}
+    schema_versions: dict[str, str] = {}
+    for sidecar_type, payload in sorted(sidecars.items()):
+        schema_version = payload.get("schema_version")
+        content = payload.get("content") if isinstance(payload.get("content"), dict) else {}
+        runtime_version = payload.get("runtime_schema_version") or content.get("runtime_schema_version")
+        compatibility[sidecar_type] = runtime_schema_contracts.compatibility_status(schema_version)
+        if schema_version == runtime_version or not runtime_version:
+            schema_versions[sidecar_type] = _as_text(schema_version) or "missing"
+        else:
+            schema_versions[sidecar_type] = f"{_as_text(schema_version) or 'missing'}/{_as_text(runtime_version)}"
+
+    migration_available = sorted(
+        sidecar_type for sidecar_type, status in compatibility.items() if status == "compatible_migration_available"
+    )
+    unsupported = sorted(sidecar_type for sidecar_type, status in compatibility.items() if status in {"unsupported", "malformed"})
+    required_missing = state.get("required_sidecars_missing") if isinstance(state.get("required_sidecars_missing"), list) else []
+    optional_missing = state.get("optional_sidecars_missing") if isinstance(state.get("optional_sidecars_missing"), list) else []
+    return {
+        "active_runtime_schema_version": runtime_schema_contracts.ACTIVE_RUNTIME_SCHEMA_VERSION,
+        "contract_path": runtime_schema_contracts.CONTRACT_RELATIVE_PATH,
+        "state_root": runtime_schema_contracts.STATE_ROOT,
+        "current_p2_state": state.get("runtime_schema_current_p2", False),
+        "verification_status": verify_report.get("status", ""),
+        "verification_exit_code": verify_exit_code,
+        "errors": summary.get("errors", 0),
+        "warnings": summary.get("warnings", 0),
+        "info": summary.get("info", 0),
+        "required_sidecars_missing": required_missing,
+        "optional_sidecars_missing": optional_missing,
+        "schema_versions": schema_versions,
+        "compatibility_status": compatibility,
+        "migration_available_sidecars": migration_available,
+        "unsupported_sidecars": unsupported,
+    }
+
+
 def build_report(root: Path) -> dict[str, object]:
     verify_report, verify_exit_code = state_verify._report(root, False)
-    sidecars = plan_next._load_sidecars(root)
+    sidecars = _load_dashboard_sidecars(root)
     rules, rules_evidence = plan_next._load_governance_rules(root)
     planner = plan_next._plan(root, False, verify_report, verify_exit_code, sidecars, rules, rules_evidence)
 
@@ -554,6 +613,7 @@ def build_report(root: Path) -> dict[str, object]:
         "open_blockers": blockers,
         "package_sync": _package_sync_status(root),
         "dag_summary": dag_report,
+        "runtime_schema_health": _runtime_schema_health(verify_report, verify_exit_code, sidecars),
         "audit_signals": _audit_signals(sidecars, current_gate, task_items, planner),
         "checkpoint_signals": _checkpoint_signals(project_state, current_gate, next_action, task_items),
         "context_budget": _context_budget(sidecars),
@@ -618,6 +678,7 @@ def render_html(report: dict[str, object]) -> str:
     task_counts = report["task_counts"] if isinstance(report.get("task_counts"), dict) else {}
     package_sync_report = report["package_sync"] if isinstance(report.get("package_sync"), dict) else {}
     dag_report = report["dag_summary"] if isinstance(report.get("dag_summary"), dict) else {}
+    runtime_schema = report["runtime_schema_health"] if isinstance(report.get("runtime_schema_health"), dict) else {}
     audit = report["audit_signals"] if isinstance(report.get("audit_signals"), dict) else {}
     checkpoint = report["checkpoint_signals"] if isinstance(report.get("checkpoint_signals"), dict) else {}
     context_budget = report["context_budget"] if isinstance(report.get("context_budget"), dict) else {}
@@ -669,6 +730,7 @@ def render_html(report: dict[str, object]) -> str:
     <div class="metric"><span>Next Action</span><strong>{_h(next_action.get("recommended_next_action", ""))}</strong></div>
     <div class="metric"><span>Open Blockers</span><strong>{_h(len(report.get("open_blockers", [])) if isinstance(report.get("open_blockers"), list) else 0)}</strong></div>
     <div class="metric"><span>Package Sync</span><strong>{_h(package_sync_report.get("status", NOT_AVAILABLE))}</strong></div>
+    <div class="metric"><span>Runtime Schema</span><strong>{_h(runtime_schema.get("active_runtime_schema_version", NOT_AVAILABLE))}</strong></div>
     <div class="metric"><span>Checkpoint Preflight</span><strong>{_h(checkpoint_preflight.get("status", NOT_AVAILABLE))}</strong></div>
   </div>
 
@@ -755,6 +817,21 @@ def render_html(report: dict[str, object]) -> str:
         ("Uncheckpointed dependency findings", dag_report.get("uncheckpointed_dependency_findings", NOT_AVAILABLE)),
       ))}</table>
       <ul>{_optional_list_items(dag_report.get("task_ids", []) if isinstance(dag_report.get("task_ids"), list) else [])}</ul>
+    </section>
+
+    <section>
+      <h2>Runtime Schema Health</h2>
+      <table>{_pairs((
+        ("Active schema", runtime_schema.get("active_runtime_schema_version", NOT_AVAILABLE)),
+        ("Current P2 state", runtime_schema.get("current_p2_state", NOT_AVAILABLE)),
+        ("State root", runtime_schema.get("state_root", NOT_AVAILABLE)),
+        ("Verify status", runtime_schema.get("verification_status", NOT_AVAILABLE)),
+        ("Errors", runtime_schema.get("errors", NOT_AVAILABLE)),
+        ("Warnings", runtime_schema.get("warnings", NOT_AVAILABLE)),
+        ("Migration available", len(runtime_schema.get("migration_available_sidecars", [])) if isinstance(runtime_schema.get("migration_available_sidecars"), list) else NOT_AVAILABLE),
+        ("Unsupported sidecars", len(runtime_schema.get("unsupported_sidecars", [])) if isinstance(runtime_schema.get("unsupported_sidecars"), list) else NOT_AVAILABLE),
+      ))}</table>
+      <ul>{_optional_list_items(runtime_schema.get("required_sidecars_missing", []) if isinstance(runtime_schema.get("required_sidecars_missing"), list) else [])}</ul>
     </section>
 
     <section>
