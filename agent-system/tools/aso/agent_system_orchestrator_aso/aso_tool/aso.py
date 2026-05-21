@@ -8,6 +8,7 @@ import sys
 from pathlib import Path
 
 from .commands import (
+    apply,
     archive_verify,
     checkpoint_preflight,
     context_pack_build,
@@ -408,6 +409,46 @@ def build_parser() -> argparse.ArgumentParser:
         help="Output format for stdout when --json-out is not used (default: text).",
     )
     propose_checkpoint_parser.set_defaults(handler=propose_checkpoint.run_checkpoint)
+
+    apply_parser = subparsers.add_parser(
+        "apply",
+        help="Dry-run guarded proposal apply planning.",
+        description=(
+            "Validate a P3 proposal against the current workspace and emit a read-only "
+            "apply plan. --dry-run writes no runtime sidecars or state. --confirm-apply "
+            "is accepted only as a fail-closed guard in this P3 dry-run task."
+        ),
+    )
+    _add_root_argument(apply_parser, validate=False)
+    apply_parser.add_argument(
+        "--proposal",
+        required=True,
+        metavar="PATH",
+        help="JSON proposal artifact to validate.",
+    )
+    apply_mode_group = apply_parser.add_mutually_exclusive_group()
+    apply_mode_group.add_argument(
+        "--dry-run",
+        action="store_true",
+        help="Default behavior; validate and plan without mutating runtime state.",
+    )
+    apply_mode_group.add_argument(
+        "--confirm-apply",
+        action="store_true",
+        help="Fail-closed placeholder for a later confirmed apply implementation.",
+    )
+    apply_parser.add_argument(
+        "--json-out",
+        metavar="PATH",
+        help="Write the dry-run apply plan JSON to /tmp/... or project-runtime/reports/...",
+    )
+    apply_parser.add_argument(
+        "--format",
+        choices=("json", "text"),
+        default="text",
+        help="Output format for stdout when --json-out is not used (default: text).",
+    )
+    apply_parser.set_defaults(handler=apply.run)
 
     checkpoint_preflight_parser = subparsers.add_parser(
         "checkpoint-preflight",
