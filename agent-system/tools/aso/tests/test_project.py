@@ -951,6 +951,8 @@ class ProjectCommandTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp) / "boundary-negative"
             shutil.copytree(P1_FIXTURES / "publication_boundary_negative" / "tracked_project_input", root)
+            forbidden_path = root / "project-input" / "aso_upgrade_project_factory_p1_github_wizard" / "TASK.md"
+            _write(forbidden_path, "# Should Not Be Published\n")
             _init_git(root)
             subprocess.run(
                 ["git", "-C", str(root), "add", ".gitignore", "README.md", "aso.lock"],
