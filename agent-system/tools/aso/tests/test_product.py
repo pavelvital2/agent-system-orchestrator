@@ -27,6 +27,26 @@ def workspace_files(root: Path) -> set[str]:
     return {path.relative_to(root).as_posix() for path in root.rglob("*") if path.is_file()}
 
 
+def write_complete_answers(path: Path) -> None:
+    path.write_text(
+        json.dumps(
+            {
+                "product_name": "Support Analytics Workbench",
+                "product_summary": "A local parser and analytics review tool for support exports.",
+                "target_users": ["Support analyst", "Operations owner"],
+                "scope_in": ["Parse CSV logs", "Review dashboard metrics", "Export weekly reports"],
+                "scope_out": ["Live external API calls", "Deployment execution"],
+                "data_model_notes": ["Store normalized events from local sample files only."],
+                "acceptance_summary": "Owner reviews parser output and dashboard metrics against sample files.",
+                "acceptance_criteria": [
+                    "Given a sample CSV, the parser produces normalized event rows for owner review."
+                ],
+            }
+        ),
+        encoding="utf-8",
+    )
+
+
 class ProductCommandTests(unittest.TestCase):
     def test_help_declares_product_group_and_subcommands(self) -> None:
         group_help = run_aso("product", "--help")
@@ -123,6 +143,39 @@ class ProductCommandTests(unittest.TestCase):
             self.assertIn("owner approval policy", artifact["recommended_next_action"])
             self.assertTrue(artifact["constraints"])
             self.assertTrue(artifact["missing_information"])
+
+    def test_intake_accepts_parser_analytics_tz_without_external_calls_or_secrets(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp) / "workspace"
+            root.mkdir()
+            json_out = Path(tmp) / "analytics-intake.json"
+
+            result = run_aso(
+                "product",
+                "intake",
+                "--root",
+                str(root),
+                "--tz",
+                str(FIXTURE_DIR / "analytics_parser_tz.md"),
+                "--readiness",
+                "business_ready",
+                "--dry-run",
+                "--json-out",
+                str(json_out),
+            )
+
+            self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+            artifact = json.loads(json_out.read_text(encoding="utf-8"))
+            self.assertEqual(artifact["artifact_type"], "PRODUCT_INTAKE")
+            self.assertEqual(artifact["profile"], "analytics_tool")
+            self.assertEqual(artifact["readiness_mode"], "business_ready")
+            self.assertEqual(artifact["required_secrets"], [])
+            self.assertEqual(artifact["external_integrations"], [])
+            capability_names = {item["name"] for item in artifact["candidate_capabilities"]}
+            self.assertIn("Reports and analytics", capability_names)
+            self.assertIn("Data capture and storage", capability_names)
+            constraints = " ".join(item["text"] for item in artifact["constraints"])
+            self.assertIn("No network, LLM, or external API calls", constraints)
 
     def test_intake_empty_tz_fails_closed_without_writes(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
@@ -260,6 +313,34 @@ class ProductCommandTests(unittest.TestCase):
             self.assertFalse(json_out.exists())
             self.assertEqual(before, workspace_files(root))
 
+    def test_confirm_write_rejects_disallowed_json_out_without_partial_workspace_write(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp) / "workspace"
+            root.mkdir()
+            tz = root / "owner_tz.md"
+            tz.write_text("Build a deterministic planning helper.\n", encoding="utf-8")
+            blocked_dir = root / "project-runtime" / "state"
+            blocked_dir.mkdir(parents=True)
+            json_out = blocked_dir / "product-intake.json"
+            before = workspace_files(root)
+
+            result = run_aso(
+                "product",
+                "intake",
+                "--root",
+                str(root),
+                "--tz",
+                str(tz),
+                "--confirm-write",
+                "--json-out",
+                str(json_out),
+            )
+
+            self.assertEqual(result.returncode, 1, result.stdout + result.stderr)
+            self.assertIn("ASO_OUTPUT_PATH_FORBIDDEN", result.stderr)
+            self.assertFalse(json_out.exists())
+            self.assertEqual(before, workspace_files(root))
+
     def test_confirm_write_writes_only_under_project_runtime_product(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp) / "workspace"
@@ -278,6 +359,90 @@ class ProductCommandTests(unittest.TestCase):
             self.assertTrue(written.endswith(".json"), written)
             artifact = json.loads((root / written).read_text(encoding="utf-8"))
             self.assertEqual(artifact["artifact_type"], "PRODUCT_INTAKE")
+
+    def test_confirm_write_pipeline_writes_only_product_runtime_artifacts(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp) / "workspace"
+            root.mkdir()
+            answers_path = Path(tmp) / "answers.json"
+            write_complete_answers(answers_path)
+            before = workspace_files(root)
+
+            intake_result = run_aso(
+                "product",
+                "intake",
+                "--root",
+                str(root),
+                "--tz",
+                str(FIXTURE_DIR / "analytics_parser_tz.md"),
+                "--confirm-write",
+            )
+            self.assertEqual(intake_result.returncode, 0, intake_result.stdout + intake_result.stderr)
+            intake_added = workspace_files(root) - before
+            self.assertEqual(len(intake_added), 1, intake_added)
+            intake_path = root / next(iter(intake_added))
+
+            clarify_result = run_aso(
+                "product",
+                "clarify",
+                "--root",
+                str(root),
+                "--from-intake",
+                str(intake_path),
+                "--confirm-write",
+            )
+            self.assertEqual(clarify_result.returncode, 0, clarify_result.stdout + clarify_result.stderr)
+
+            before_spec = workspace_files(root)
+            spec_result = run_aso(
+                "product",
+                "spec",
+                "--root",
+                str(root),
+                "--from-intake",
+                str(intake_path),
+                "--answers",
+                str(answers_path),
+                "--confirm-write",
+            )
+            self.assertEqual(spec_result.returncode, 0, spec_result.stdout + spec_result.stderr)
+            spec_added = workspace_files(root) - before_spec
+            self.assertEqual(len(spec_added), 1, spec_added)
+            spec_path = root / next(iter(spec_added))
+
+            before_matrix = workspace_files(root)
+            matrix_result = run_aso(
+                "product",
+                "capabilities",
+                "--root",
+                str(root),
+                "--from-spec",
+                str(spec_path),
+                "--confirm-write",
+            )
+            self.assertEqual(matrix_result.returncode, 0, matrix_result.stdout + matrix_result.stderr)
+            matrix_added = workspace_files(root) - before_matrix
+            self.assertEqual(len(matrix_added), 1, matrix_added)
+            matrix_path = root / next(iter(matrix_added))
+
+            plan_result = run_aso(
+                "product",
+                "plan",
+                "--root",
+                str(root),
+                "--from-spec",
+                str(spec_path),
+                "--from-capabilities",
+                str(matrix_path),
+                "--confirm-write",
+            )
+            self.assertEqual(plan_result.returncode, 0, plan_result.stdout + plan_result.stderr)
+
+            added = workspace_files(root) - before
+            self.assertEqual(len(added), 5, added)
+            for written in added:
+                self.assertTrue(written.startswith("project-runtime/product/"), written)
+                self.assertTrue(written.endswith(".json"), written)
 
     def test_clarify_from_intake_generates_grouped_questions_and_owner_decision_cards(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
@@ -355,6 +520,59 @@ class ProductCommandTests(unittest.TestCase):
             self.assertIn("secret owner", raw_artifact)
             self.assertNotIn("secret_value", raw_artifact)
             self.assertNotIn("api key value", raw_artifact.casefold())
+
+    def test_incomplete_tz_produces_open_questions_without_product_readiness_claim(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp) / "workspace"
+            root.mkdir()
+            intake_out = Path(tmp) / "incomplete-intake.json"
+            questions_out = Path(tmp) / "incomplete-open-questions.json"
+
+            intake_result = run_aso(
+                "product",
+                "intake",
+                "--root",
+                str(root),
+                "--tz",
+                str(FIXTURE_DIR / "incomplete_tz.md"),
+                "--dry-run",
+                "--json-out",
+                str(intake_out),
+            )
+            self.assertEqual(intake_result.returncode, 0, intake_result.stdout + intake_result.stderr)
+            intake = json.loads(intake_out.read_text(encoding="utf-8"))
+            self.assertEqual(intake["status"], "needs_clarification")
+            missing = " ".join(item["text"] for item in intake["missing_information"])
+            self.assertIn("Target users", missing)
+            self.assertIn("Acceptance criteria", missing)
+
+            clarify_result = run_aso(
+                "product",
+                "clarify",
+                "--root",
+                str(root),
+                "--from-intake",
+                str(intake_out),
+                "--dry-run",
+                "--json-out",
+                str(questions_out),
+            )
+
+            self.assertEqual(clarify_result.returncode, 0, clarify_result.stdout + clarify_result.stderr)
+            questions = json.loads(questions_out.read_text(encoding="utf-8"))
+            self.assertEqual(questions["artifact_type"], "OPEN_QUESTIONS")
+            self.assertEqual(questions["status"], "needs_clarification")
+            blocking_categories = {
+                question["category"]
+                for question in questions["questions"]
+                if question["blocks_implementation"]
+            }
+            self.assertIn("product", blocking_categories)
+            self.assertIn("users", blocking_categories)
+            self.assertIn("acceptance", blocking_categories)
+            raw_questions = json.dumps(questions, sort_keys=True)
+            self.assertNotIn("ready_to_build", raw_questions)
+            self.assertNotIn("mvp_ready", raw_questions)
 
     def test_clarify_output_content_is_deterministic_for_same_intake(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
@@ -512,6 +730,72 @@ class ProductCommandTests(unittest.TestCase):
             self.assertEqual(result.returncode, 1, result.stdout + result.stderr)
             self.assertIn("target_users must be a list of non-empty strings", result.stderr)
             self.assertFalse(spec_out.exists())
+
+    def test_spec_malformed_answer_shapes_fail_closed_without_writes(self) -> None:
+        malformed_cases = [
+            (
+                "non_object_root",
+                ["not", "an", "object"],
+                "expected JSON object",
+            ),
+            (
+                "answers_not_object",
+                {"answers": []},
+                "answers field must contain a JSON object",
+            ),
+            (
+                "unsupported_field",
+                {"product_name": "Demo", "launch_now": True},
+                "unsupported fields: launch_now",
+            ),
+            (
+                "secret_value_field",
+                {"required_secrets": [{"name": "OPENAI_API_KEY", "value": "sk-testsecretvalue"}]},
+                "secret names only",
+            ),
+        ]
+        for name, payload, expected_error in malformed_cases:
+            with self.subTest(name=name), tempfile.TemporaryDirectory() as tmp:
+                root = Path(tmp) / "workspace"
+                root.mkdir()
+                intake_out = Path(tmp) / "intake.json"
+                answers_path = Path(tmp) / f"{name}-answers.json"
+                spec_out = Path(tmp) / "should-not-exist.json"
+                answers_path.write_text(json.dumps(payload), encoding="utf-8")
+
+                intake_result = run_aso(
+                    "product",
+                    "intake",
+                    "--root",
+                    str(root),
+                    "--tz",
+                    str(FIXTURE_DIR / "telegram_marketplace_tz.md"),
+                    "--dry-run",
+                    "--json-out",
+                    str(intake_out),
+                )
+                self.assertEqual(intake_result.returncode, 0, intake_result.stdout + intake_result.stderr)
+                before = workspace_files(root)
+
+                result = run_aso(
+                    "product",
+                    "spec",
+                    "--root",
+                    str(root),
+                    "--from-intake",
+                    str(intake_out),
+                    "--answers",
+                    str(answers_path),
+                    "--dry-run",
+                    "--json-out",
+                    str(spec_out),
+                )
+
+                self.assertEqual(result.returncode, 1, result.stdout + result.stderr)
+                self.assertIn(expected_error, result.stderr)
+                self.assertEqual(result.stdout, "")
+                self.assertFalse(spec_out.exists())
+                self.assertEqual(before, workspace_files(root))
 
     def test_spec_rejects_secret_values_in_answers(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
@@ -886,6 +1170,122 @@ class ProductCommandTests(unittest.TestCase):
                 ["CAP-001", "CAP-002"],
             )
             self.assertEqual(first["suggested_domain_pack_profile"]["profile"], "backend_api")
+
+    def test_product_dry_run_pipeline_writes_no_workspace_artifacts(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp) / "workspace"
+            root.mkdir()
+            tz = root / "owner_tz.md"
+            tz.write_text((FIXTURE_DIR / "analytics_parser_tz.md").read_text(encoding="utf-8"), encoding="utf-8")
+            answers_path = Path(tmp) / "answers.json"
+            write_complete_answers(answers_path)
+            intake_out = Path(tmp) / "intake.json"
+            questions_out = Path(tmp) / "open-questions.json"
+            spec_out = Path(tmp) / "product-spec.json"
+            matrix_out = Path(tmp) / "capability-matrix.json"
+            plan_out = Path(tmp) / "product-plan.json"
+            before = workspace_files(root)
+
+            commands = [
+                (
+                    "intake",
+                    [
+                        "product",
+                        "intake",
+                        "--root",
+                        str(root),
+                        "--tz",
+                        str(tz),
+                        "--dry-run",
+                        "--json-out",
+                        str(intake_out),
+                    ],
+                ),
+                (
+                    "clarify",
+                    [
+                        "product",
+                        "clarify",
+                        "--root",
+                        str(root),
+                        "--from-intake",
+                        str(intake_out),
+                        "--dry-run",
+                        "--json-out",
+                        str(questions_out),
+                    ],
+                ),
+                (
+                    "spec",
+                    [
+                        "product",
+                        "spec",
+                        "--root",
+                        str(root),
+                        "--from-intake",
+                        str(intake_out),
+                        "--answers",
+                        str(answers_path),
+                        "--dry-run",
+                        "--json-out",
+                        str(spec_out),
+                    ],
+                ),
+                (
+                    "capabilities",
+                    [
+                        "product",
+                        "capabilities",
+                        "--root",
+                        str(root),
+                        "--from-spec",
+                        str(spec_out),
+                        "--dry-run",
+                        "--json-out",
+                        str(matrix_out),
+                    ],
+                ),
+                (
+                    "plan",
+                    [
+                        "product",
+                        "plan",
+                        "--root",
+                        str(root),
+                        "--from-spec",
+                        str(spec_out),
+                        "--from-capabilities",
+                        str(matrix_out),
+                        "--dry-run",
+                        "--json-out",
+                        str(plan_out),
+                    ],
+                ),
+            ]
+
+            for command_name, args in commands:
+                with self.subTest(command=command_name):
+                    result = run_aso(*args)
+                    self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+                    self.assertEqual(before, workspace_files(root))
+
+            self.assertEqual(json.loads(intake_out.read_text(encoding="utf-8"))["artifact_type"], "PRODUCT_INTAKE")
+            self.assertEqual(json.loads(questions_out.read_text(encoding="utf-8"))["artifact_type"], "OPEN_QUESTIONS")
+            self.assertEqual(json.loads(spec_out.read_text(encoding="utf-8"))["artifact_type"], "PRODUCT_SPEC")
+            self.assertEqual(json.loads(matrix_out.read_text(encoding="utf-8"))["artifact_type"], "CAPABILITY_MATRIX")
+            self.assertEqual(json.loads(plan_out.read_text(encoding="utf-8"))["artifact_type"], "PRODUCT_PLAN")
+
+    def test_owner_runtime_roots_are_not_tracked(self) -> None:
+        result = subprocess.run(
+            ["git", "ls-files", "project-input", "project-runtime", "project-archive", ".venv"],
+            check=False,
+            text=True,
+            capture_output=True,
+            cwd=REPO_ROOT,
+        )
+
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        self.assertEqual(result.stdout, "")
 
 
 if __name__ == "__main__":

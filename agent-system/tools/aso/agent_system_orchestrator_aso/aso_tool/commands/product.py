@@ -2011,6 +2011,13 @@ def _run_product(args: argparse.Namespace, builder: Any, command_name: str) -> i
         print(f"aso product {command_name}: {error}", file=sys.stderr)
         return EXIT_BLOCKED
 
+    json_out_path: Path | None = None
+    if args.json_out:
+        json_out_path, error = _validate_json_out(root, str(args.json_out), confirm_write=bool(args.confirm_write))
+        if error is not None or json_out_path is None:
+            print(f"aso product {command_name}: {error}", file=sys.stderr)
+            return EXIT_BLOCKED
+
     files_written: list[Path] = []
     if args.confirm_write:
         path, error = _confirm_write_path(root, artifact)
@@ -2023,17 +2030,13 @@ def _run_product(args: argparse.Namespace, builder: Any, command_name: str) -> i
             return EXIT_IO_ERROR
         files_written.append(path)
 
-    if args.json_out:
-        path, error = _validate_json_out(root, str(args.json_out), confirm_write=bool(args.confirm_write))
-        if error is not None or path is None:
-            print(f"aso product {command_name}: {error}", file=sys.stderr)
-            return EXIT_BLOCKED
-        if path not in files_written:
-            ok, write_error = _write_json(path, artifact)
+    if json_out_path is not None:
+        if json_out_path not in files_written:
+            ok, write_error = _write_json(json_out_path, artifact)
             if not ok:
                 print(f"aso product {command_name}: failed to write json-out: {write_error}", file=sys.stderr)
                 return EXIT_IO_ERROR
-            files_written.append(path)
+            files_written.append(json_out_path)
 
     if not files_written:
         print(json.dumps(artifact, indent=2, sort_keys=True))
