@@ -26,7 +26,9 @@ P3 defines proposal/apply as a bounded local runtime-state automation layer
 over the JSON-first P2 state foundation while preserving the Project Factory
 P1 command boundary. It does not implement a runtime daemon, live agent
 dispatch, checkpoint executor, commit/push automation, distributed workers,
-web control panel, or multi-project registry.
+web control panel, or multi-project registry. P4 dashboard/control-plane
+work, P5 queue/dispatcher work, P6 checkpoint executor work, daemon mode, and
+distributed workers are deferred.
 
 The Runtime Schema `3.1.0` sidecar contract is documented in
 `agent-system/02_runtime/RUNTIME_STATE_P2_CONTRACT.md` and packaged as
@@ -127,6 +129,28 @@ plan for compatible legacy sidecars; confirmed migration requires
 migration receipts under allowed `project-runtime/` report paths. `aso state
 render` is read-only except for explicit output to `/tmp` or workspace
 `project-runtime/reports` or `project-runtime/rendered` paths.
+
+Safe Proposal / Apply P3 adds local guarded proposal and apply commands for
+Runtime Schema `3.1.0` state. Proposal commands do not dispatch agents, do not
+write canonical state sidecars, and do not commit or push. Checkpoint proposal
+is checkpoint eligibility evidence only; it is not checkpoint execution.
+Confirmed apply requires `--confirm-apply`, re-runs guards, and may write only
+supported runtime-state changes plus receipts under ignored workspace runtime
+roots.
+
+```text
+python3 agent-system/tools/aso/aso.py propose --help
+python3 agent-system/tools/aso/aso.py propose next-task --root agent-system/tests/fixtures/state/valid_workspace --dry-run --json-out /tmp/aso-p3-next-task-proposal.json
+python3 agent-system/tools/aso/aso.py propose transition --root agent-system/tests/fixtures/state/valid_workspace --to TESTING --dry-run --json-out /tmp/aso-p3-transition-proposal.json
+python3 agent-system/tools/aso/aso.py propose checkpoint --root agent-system/tests/fixtures/state/valid_workspace --dry-run --json-out /tmp/aso-p3-checkpoint-proposal.json
+python3 agent-system/tools/aso/aso.py apply --root agent-system/tests/fixtures/state/valid_workspace --proposal /tmp/aso-p3-next-task-proposal.json --dry-run --json-out /tmp/aso-p3-apply-plan.json
+python3 -m json.tool /tmp/aso-p3-apply-plan.json >/dev/null
+```
+
+Use `--confirm-write` only to persist proposal artifacts under
+`project-runtime/proposals/`. Use `--confirm-apply` only after reviewing a
+fresh proposal for the same workspace; it does not grant dispatch,
+checkpoint, commit, push, or publication authority.
 
 Stage 3 package-layout diagnostics are read-only and verify package metadata,
 entrypoint, hygiene, and canonical package-source coherence:
@@ -269,8 +293,8 @@ flow completes and the orchestrator-owned checkpoint is complete, remove local
 upgrade packages and verify:
 
 ```text
-git status --short project-input project-runtime project-archive
-git ls-files project-input project-runtime project-archive
+git status --short project-input project-runtime project-archive .venv
+git ls-files project-input project-runtime project-archive .venv
 ```
 
 The expected tracked-file result is empty. Stable release or validation

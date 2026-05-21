@@ -294,6 +294,25 @@ The corrected state examples use
 uses the canonical next action value `CREATE_AGENT` without dispatching an
 agent.
 
+Safe Proposal / Apply P3 command surfaces are local and guarded. They use the
+package/governance `3.5.0` tuple with Runtime Schema `3.1.0`; they do not
+dispatch agents, do not commit or push, and do not publish runtime artifacts.
+Proposal commands default to dry-run. `--confirm-write` may write only proposal
+artifacts under `project-runtime/proposals/`. `aso apply --dry-run` validates
+a proposal and writes no state. `aso apply --confirm-apply` is required before
+any supported runtime-state mutation and must emit a receipt under
+`project-runtime/receipts/`. Checkpoint proposal is not checkpoint execution.
+
+```text
+python3 agent-system/tools/aso/aso.py propose --help
+python3 agent-system/tools/aso/aso.py propose next-task --root agent-system/tests/fixtures/state/valid_workspace --dry-run --json-out /tmp/aso-p3-next-task-proposal.json
+python3 agent-system/tools/aso/aso.py propose transition --root agent-system/tests/fixtures/state/valid_workspace --to TESTING --dry-run --json-out /tmp/aso-p3-transition-proposal.json
+python3 agent-system/tools/aso/aso.py propose checkpoint --root agent-system/tests/fixtures/state/valid_workspace --dry-run --json-out /tmp/aso-p3-checkpoint-proposal.json
+python3 agent-system/tools/aso/aso.py apply --root agent-system/tests/fixtures/state/valid_workspace --proposal /tmp/aso-p3-next-task-proposal.json --dry-run --json-out /tmp/aso-p3-apply-plan.json
+python3 -m json.tool /tmp/aso-p3-next-task-proposal.json >/dev/null
+python3 -m json.tool /tmp/aso-p3-apply-plan.json >/dev/null
+```
+
 Stage 3 command surfaces are local, read-only, dry-run, or proposal-only. The
 package-layout guard checks active package metadata, command surface coherence,
 canonical package placement, entrypoint configuration, and repository hygiene:
@@ -422,7 +441,10 @@ boundary.
 
 Safe Proposal / Apply P3 and Project Factory P1 do not implement a runtime
 daemon, dashboard control plane, distributed workers, live agent dispatch,
-checkpoint executor, commit/push automation, or multi-project registry.
+checkpoint executor, commit/push automation, or multi-project registry. P4
+dashboard/control-plane work, P5 queue/dispatcher work, P6 checkpoint executor
+work, daemon mode, and distributed workers are deferred to later bounded
+package upgrades.
 
 ## Publication and cleanup boundary
 
@@ -479,8 +501,8 @@ cleanup is local:
 
 ```text
 rm -rf project-input/<stage-upgrade-package>
-git status --short project-input project-runtime project-archive
-git ls-files project-input project-runtime project-archive
+git status --short project-input project-runtime project-archive .venv
+git ls-files project-input project-runtime project-archive .venv
 ```
 
 Expected tracked output for those roots is empty. If any file from those roots

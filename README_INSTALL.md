@@ -92,6 +92,33 @@ receipts under allowed `project-runtime/` report paths. `aso state render` is
 read-only except for explicit output to `/tmp`, `project-runtime/reports`, or
 `project-runtime/rendered`.
 
+Safe Proposal / Apply P3 command help should also be available after install:
+
+```text
+aso propose --help
+aso propose next-task --help
+aso propose transition --help
+aso propose checkpoint --help
+aso apply --help
+```
+
+Runnable dry-run examples:
+
+```text
+aso propose next-task --root agent-system/tests/fixtures/state/valid_workspace --dry-run --json-out /tmp/aso-p3-next-task-proposal.json
+aso propose transition --root agent-system/tests/fixtures/state/valid_workspace --to TESTING --dry-run --json-out /tmp/aso-p3-transition-proposal.json
+aso propose checkpoint --root agent-system/tests/fixtures/state/valid_workspace --dry-run --json-out /tmp/aso-p3-checkpoint-proposal.json
+aso apply --root agent-system/tests/fixtures/state/valid_workspace --proposal /tmp/aso-p3-next-task-proposal.json --dry-run --json-out /tmp/aso-p3-apply-plan.json
+python3 -m json.tool /tmp/aso-p3-apply-plan.json >/dev/null
+```
+
+These commands are local and guarded. Proposal dry-runs write no workspace
+state except an explicit allowed `--json-out`; `--confirm-write` may persist a
+proposal only under `project-runtime/proposals/`. Apply writes nothing unless
+`--confirm-apply` is supplied, the proposal is fresh for the same workspace,
+and every guard passes. Checkpoint proposal records eligibility evidence only;
+it does not stage, commit, push, tag, or execute a checkpoint.
+
 Create and verify a local vendored generated project without secrets or remote
 access:
 
@@ -145,7 +172,9 @@ Safe Proposal / Apply P3 does not add a runtime daemon, live dispatch,
 checkpoint executor, commit/push automation, distributed workers, web control
 panel, or multi-project registry. The install and verification commands do not
 grant commit, push, tag, merge, checkpoint, or publication authority for the
-package repository or owner roots.
+package repository or owner roots. P4 dashboard/control-plane work, P5
+queue/dispatcher work, P6 checkpoint executor work, daemon mode, and
+distributed workers are deferred.
 
 ## Dev Container
 

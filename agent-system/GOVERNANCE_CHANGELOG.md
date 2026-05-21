@@ -1404,6 +1404,7 @@ AFFECTED_INVARIANTS:
 - Proposal/apply is bounded local runtime-state automation through proposal, review, dry-run, confirmed apply, receipt, and post-apply verification.
 - Allowed local runtime artifact roots for P3 are project-runtime/proposals/, project-runtime/receipts/, and project-runtime/reports/.
 - P3 does not install a runtime daemon, live agent dispatch, checkpoint executor, commit/push automation, distributed workers, web control panel, or multi-project registry.
+- P4 dashboard/control-plane work, P5 queue/dispatcher work, P6 checkpoint executor work, daemon mode, and distributed workers remain deferred.
 AFFECTED_TRANSITIONS:
 - state verification -> remains the required before/after guard for confirmed apply.
 - proposal creation -> may write only proposal artifacts under project-runtime/proposals/.

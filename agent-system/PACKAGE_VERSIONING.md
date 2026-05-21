@@ -296,7 +296,9 @@ proposal, receipt, and report artifacts under `project-runtime/proposals/`,
 local runtime artifacts and must not be published from the package repository
 or generated-project publication flows. P3 does not install a runtime daemon,
 live agent dispatch, checkpoint executor, commit/push automation, distributed
-workers, web control panel, or multi-project registry.
+workers, web control panel, or multi-project registry. P4 dashboard/control
+plane work, P5 queue/dispatcher work, P6 checkpoint executor work, daemon mode,
+and distributed workers are deferred to later bounded package upgrades.
 
 ## Version semantics
 

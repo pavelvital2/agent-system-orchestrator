@@ -158,8 +158,10 @@ web control panel
 multi-project registry
 ```
 
-Those capabilities require later bounded package upgrades with their own
-contracts, validators, audits, and publication-boundary evidence.
+P4 dashboard/control-plane work, P5 queue/dispatcher work, P6 checkpoint
+executor work, daemon mode, and distributed workers are deferred. Those
+capabilities require later bounded package upgrades with their own contracts,
+validators, audits, and publication-boundary evidence.
 
 ## Compatibility
 
