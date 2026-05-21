@@ -119,6 +119,53 @@ proposal only under `project-runtime/proposals/`. Apply writes nothing unless
 and every guard passes. Checkpoint proposal records eligibility evidence only;
 it does not stage, commit, push, tag, or execute a checkpoint.
 
+Product Intake P4 commands should also be available after install:
+
+```text
+aso product --help
+aso product intake --help
+aso product clarify --help
+aso product spec --help
+aso product capabilities --help
+aso product plan --help
+```
+
+Runnable dry-run chain:
+
+```text
+TMPDIR=$(mktemp -d)
+cat > "$TMPDIR/tz.md" <<'EOF'
+Need a Telegram bot for customer requests. Users should submit requests and an admin should receive notifications.
+EOF
+cat > "$TMPDIR/answers.json" <<'EOF'
+{
+  "answers": {
+    "product_name": "Customer Request Bot",
+    "product_summary": "Telegram bot for customer request submission and admin notifications.",
+    "target_users": ["Customers submitting requests", "Admins reviewing requests"],
+    "scope_in": ["Request submission", "Admin notification", "Request status tracking"],
+    "scope_out": ["Payment processing", "Public web dashboard"],
+    "external_integrations": ["Telegram Bot API"],
+    "required_secrets": [{"name": "TELEGRAM_BOT_TOKEN", "purpose": "Telegram bot authentication token name only."}],
+    "acceptance_summary": "Customers can submit requests and admins receive actionable notifications.",
+    "acceptance_criteria": ["Customer request is captured", "Admin notification includes request details"]
+  }
+}
+EOF
+aso product intake --root "$TMPDIR/workspace" --tz "$TMPDIR/tz.md" --profile telegram_bot --readiness mvp --dry-run --json-out "$TMPDIR/intake.json"
+aso product clarify --root "$TMPDIR/workspace" --from-intake "$TMPDIR/intake.json" --dry-run --json-out "$TMPDIR/questions.json"
+aso product spec --root "$TMPDIR/workspace" --from-intake "$TMPDIR/intake.json" --answers "$TMPDIR/answers.json" --dry-run --json-out "$TMPDIR/spec.json"
+aso product capabilities --root "$TMPDIR/workspace" --from-spec "$TMPDIR/spec.json" --dry-run --json-out "$TMPDIR/capabilities.json"
+aso product plan --root "$TMPDIR/workspace" --from-spec "$TMPDIR/spec.json" --from-capabilities "$TMPDIR/capabilities.json" --dry-run --json-out "$TMPDIR/product_plan.json"
+python3 -m json.tool "$TMPDIR/product_plan.json" >/dev/null
+```
+
+Product dry-runs write no workspace artifacts except an explicit allowed
+`--json-out`. Confirmed product artifact writes require `--confirm-write` and
+are limited to ignored runtime planning roots such as
+`project-runtime/product/`, `project-runtime/reports/`, and permitted render
+paths.
+
 Create and verify a local vendored generated project without secrets or remote
 access:
 

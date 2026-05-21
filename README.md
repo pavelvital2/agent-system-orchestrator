@@ -154,6 +154,54 @@ Use `--confirm-write` only to persist proposal artifacts under
 fresh proposal for the same workspace; it does not grant dispatch,
 checkpoint, commit, push, or publication authority.
 
+Product Intake P4 adds planning-only product commands. They convert owner
+input into reviewable product artifacts, preserve unknowns as explicit gaps,
+and do not dispatch agents, generate application code, collect secrets, call
+external APIs, deploy, commit, push, or execute checkpoints.
+
+```text
+python3 agent-system/tools/aso/aso.py product --help
+python3 agent-system/tools/aso/aso.py product intake --help
+python3 agent-system/tools/aso/aso.py product clarify --help
+python3 agent-system/tools/aso/aso.py product spec --help
+python3 agent-system/tools/aso/aso.py product capabilities --help
+python3 agent-system/tools/aso/aso.py product plan --help
+```
+
+Runnable dry-run example:
+
+```text
+TMPDIR=$(mktemp -d)
+cat > "$TMPDIR/tz.md" <<'EOF'
+Need a Telegram bot for customer requests. Users should submit requests and an admin should receive notifications.
+EOF
+cat > "$TMPDIR/answers.json" <<'EOF'
+{
+  "answers": {
+    "product_name": "Customer Request Bot",
+    "product_summary": "Telegram bot for customer request submission and admin notifications.",
+    "target_users": ["Customers submitting requests", "Admins reviewing requests"],
+    "scope_in": ["Request submission", "Admin notification", "Request status tracking"],
+    "scope_out": ["Payment processing", "Public web dashboard"],
+    "external_integrations": ["Telegram Bot API"],
+    "required_secrets": [{"name": "TELEGRAM_BOT_TOKEN", "purpose": "Telegram bot authentication token name only."}],
+    "acceptance_summary": "Customers can submit requests and admins receive actionable notifications.",
+    "acceptance_criteria": ["Customer request is captured", "Admin notification includes request details"]
+  }
+}
+EOF
+python3 agent-system/tools/aso/aso.py product intake --root "$TMPDIR/workspace" --tz "$TMPDIR/tz.md" --profile telegram_bot --readiness mvp --dry-run --json-out "$TMPDIR/intake.json"
+python3 agent-system/tools/aso/aso.py product clarify --root "$TMPDIR/workspace" --from-intake "$TMPDIR/intake.json" --dry-run --json-out "$TMPDIR/questions.json"
+python3 agent-system/tools/aso/aso.py product spec --root "$TMPDIR/workspace" --from-intake "$TMPDIR/intake.json" --answers "$TMPDIR/answers.json" --dry-run --json-out "$TMPDIR/spec.json"
+python3 agent-system/tools/aso/aso.py product capabilities --root "$TMPDIR/workspace" --from-spec "$TMPDIR/spec.json" --dry-run --json-out "$TMPDIR/capabilities.json"
+python3 agent-system/tools/aso/aso.py product plan --root "$TMPDIR/workspace" --from-spec "$TMPDIR/spec.json" --from-capabilities "$TMPDIR/capabilities.json" --dry-run --json-out "$TMPDIR/product_plan.json"
+```
+
+`--dry-run` is the default write boundary. Confirmed product artifact writes
+require `--confirm-write` and are limited to allowed ignored runtime roots,
+including `project-runtime/product/`, `project-runtime/reports/`, and
+permitted render paths.
+
 Stage 3 package-layout diagnostics are read-only and verify package metadata,
 entrypoint, hygiene, and canonical package-source coherence:
 
@@ -278,18 +326,20 @@ The helper supports status, lint, doctor, package-layout verification, design
 validation, context pack validation, rule validation, Runtime Schema `3.1.0`
 state init/migrate/render/verify, dry-run next-action planning, static
 dashboard rendering, checkpoint eligibility preflight, archive verify
-inspection, and Project Factory scoped generated-project helpers. Diagnostic,
-validator, planning, dashboard, archive, and checkpoint-preflight surfaces
-remain read-only, dry-run, or proposal-only. State writes are limited to
-explicit `state init --confirm-write`, `state migrate --confirm-write`, and
-generated-project local initialization under ignored workspace roots. Project
-Factory commands may create generated projects and, when a later publish flow
-is explicitly confirmed, publish only clean generated-project files from
-explicit target paths. Outside the P3 local runtime-state proposal/apply
+inspection, Product Intake P4 planning helpers, and Project Factory scoped
+generated-project helpers. Diagnostic, validator, planning, dashboard,
+archive, and checkpoint-preflight surfaces remain read-only, dry-run, or
+proposal-only. State writes are limited to explicit `state init
+--confirm-write`, `state migrate --confirm-write`, P4 product artifact
+`--confirm-write`, and generated-project local initialization under ignored
+workspace roots. Project Factory commands may create generated projects and,
+when a later publish flow is explicitly confirmed, publish only clean
+generated-project files from explicit target paths. Outside the P3 local
+runtime-state proposal/apply boundary and P4 product planning artifact
 boundary, ASO does not provide a runtime daemon, live agent dispatch,
-checkpoint execution, general package/runtime mutation, commit, or push authority. For
-package lint compatibility, this scoped boundary is also stated as: ASO
-diagnostic surfaces do not provide general mutation, dispatch, or checkpoint authority.
+checkpoint execution, general package/runtime mutation, commit, or push
+authority.
+ASO diagnostic surfaces do not provide general mutation, dispatch, or checkpoint authority.
 
 ## Publication boundary
 
