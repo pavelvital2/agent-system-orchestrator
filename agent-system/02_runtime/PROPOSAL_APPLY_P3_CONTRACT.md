@@ -10,6 +10,15 @@ P3 does not redefine the Runtime Schema `3.1.0` sidecar envelope. It adds a
 governed proposal and receipt boundary around local runtime-state changes so
 operators can review deterministic plans before any confirmed mutation.
 
+Machine-readable package contracts are published at:
+
+```text
+agent-system/09_validators/schemas/proposal_artifact.schema.json
+agent-system/09_validators/schemas/apply_receipt.schema.json
+agent-system/03_templates/proposal_artifact.template.json
+agent-system/03_templates/apply_receipt.template.json
+```
+
 ## Authority Boundary
 
 Proposal/apply is local runtime-state automation only. The governed flow is:

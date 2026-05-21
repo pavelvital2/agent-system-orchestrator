@@ -1,0 +1,107 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://agent-system.local/schemas/apply_receipt.schema.json",
+  "title": "APPLY_RECEIPT",
+  "description": "P3 apply receipt contract for confirmed proposal application. This is separate from checkpoint execution receipts and does not prove a commit, push, or checkpoint execution occurred.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "receipt_id",
+    "proposal_id",
+    "proposal_type",
+    "schema_version",
+    "package_version",
+    "runtime_schema_version",
+    "applied_at",
+    "applied_by",
+    "target_root",
+    "validators_passed",
+    "base_state_hashes",
+    "result_state_hashes",
+    "applied_operations",
+    "outcome"
+  ],
+  "properties": {
+    "receipt_id": {
+      "type": "string",
+      "pattern": "^RECEIPT-[A-Za-z0-9_.:-]+$"
+    },
+    "proposal_id": {
+      "type": "string",
+      "pattern": "^PROPOSAL-[A-Za-z0-9_.:-]+$"
+    },
+    "proposal_type": {
+      "type": "string",
+      "enum": ["next_task", "transition", "checkpoint"]
+    },
+    "schema_version": {
+      "type": "string",
+      "const": "1.0.0"
+    },
+    "package_version": {
+      "type": "string",
+      "const": "3.5.0"
+    },
+    "runtime_schema_version": {
+      "type": "string",
+      "const": "3.1.0"
+    },
+    "applied_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "applied_by": {
+      "type": "string",
+      "minLength": 1
+    },
+    "target_root": {
+      "type": "string",
+      "minLength": 1
+    },
+    "validators_passed": {
+      "type": "array",
+      "items": { "type": "string", "minLength": 1 }
+    },
+    "base_state_hashes": {
+      "$ref": "#/$defs/stateHashes"
+    },
+    "result_state_hashes": {
+      "$ref": "#/$defs/stateHashes"
+    },
+    "applied_operations": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/appliedOperation" }
+    },
+    "outcome": {
+      "type": "string",
+      "enum": ["applied", "blocked", "failed"]
+    }
+  },
+  "$defs": {
+    "stateHashes": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "string",
+        "pattern": "^sha256:[a-f0-9]{64}$"
+      }
+    },
+    "appliedOperation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["operation_id", "operation_type", "target", "status"],
+      "properties": {
+        "operation_id": { "type": "string", "minLength": 1 },
+        "operation_type": {
+          "type": "string",
+          "enum": ["sidecar_replace", "sidecar_patch", "receipt_write", "report_write"]
+        },
+        "target": { "type": "string", "minLength": 1 },
+        "status": {
+          "type": "string",
+          "enum": ["applied", "skipped", "blocked", "failed"]
+        },
+        "description": { "type": "string" }
+      }
+    }
+  }
+}

@@ -22,6 +22,7 @@ REQUIRED_RULE_FIELDS = {
 ALLOWED_SEVERITIES = {"info", "warning", "error", "critical"}
 ALLOWED_ACTIONS = {
     "block",
+    "block_unbounded_mutation",
     "warn",
     "record_gap",
     "redact",
@@ -30,8 +31,11 @@ ALLOWED_ACTIONS = {
     "require_checkpoint_preflight",
     "require_correction",
     "require_identity_pass",
+    "require_local_runtime_artifact_roots",
     "require_owner_input",
     "require_repository_lock",
+    "require_receipt",
+    "require_state_verify",
     "route_to_auditor",
     "stop",
     "validate_schema",

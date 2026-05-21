@@ -1,0 +1,32 @@
+{
+  "proposal_id": "PROPOSAL-YYYYMMDDTHHMMSSZ-example",
+  "proposal_type": "transition",
+  "schema_version": "1.0.0",
+  "package_version": "3.5.0",
+  "runtime_schema_version": "3.1.0",
+  "created_at": "2026-05-21T00:00:00Z",
+  "created_by": "aso",
+  "target_root": "/absolute/path/to/workspace",
+  "target_workspace_identity": {},
+  "base_state_hashes": {
+    "project-runtime/state/PROJECT_STATE.json": "sha256:0000000000000000000000000000000000000000000000000000000000000000"
+  },
+  "required_validators": [
+    "proposal_schema",
+    "state_verify_before_apply",
+    "workspace_identity",
+    "base_hash_staleness"
+  ],
+  "operations": [
+    {
+      "operation_id": "op-001",
+      "operation_type": "sidecar_patch",
+      "target": "project-runtime/state/NEXT_ACTION.json",
+      "description": "Patch a guarded runtime state field.",
+      "fields": ["content.action_status"]
+    }
+  ],
+  "safety_class": "runtime_state_only",
+  "status": "proposed",
+  "human_summary": "Describe the proposed guarded runtime state change."
+}
