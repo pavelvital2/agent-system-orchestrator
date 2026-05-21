@@ -93,6 +93,8 @@ VENDORED_SUFFIXES_EXCLUDED = (
     ".pyo",
 )
 SLUG_RE = re.compile(r"[A-Za-z0-9][A-Za-z0-9._-]*\Z")
+GITHUB_OWNER_RE = re.compile(r"[A-Za-z0-9](?:[A-Za-z0-9-]{0,37}[A-Za-z0-9])?\Z")
+GITHUB_REPO_RE = re.compile(r"[A-Za-z0-9][A-Za-z0-9._-]{0,99}\Z")
 SECRET_LIKE_FILENAMES = {
     ".coverage",
     ".DS_Store",
@@ -182,14 +184,47 @@ def run_create(args: object) -> int:
 
 
 def run_create_github(args: object) -> int:
-    """Run `aso project create --github --dry-run`."""
+    """Run `aso project create --github`."""
 
-    if getattr(args, "confirm_publish", False):
-        print("error: real GitHub publish is not implemented by this dry-run planner", file=sys.stderr)
-        return EXIT_FAIL
-    if not getattr(args, "dry_run", False):
+    if getattr(args, "dry_run", False):
+        return run_create_github_dry_run(args)
+    if not getattr(args, "confirm_publish", False):
         print("error: --github requires --dry-run for planning or --confirm-publish for real publish", file=sys.stderr)
         return EXIT_FAIL
+    if not getattr(args, "branch_explicit", False):
+        print("error: real GitHub publish requires explicit --branch", file=sys.stderr)
+        return EXIT_FAIL
+
+    try:
+        receipt = publish_github_project(
+            target=Path(str(args.target)).expanduser(),
+            project_name=str(args.name),
+            project_slug=str(args.slug),
+            profile=str(args.profile),
+            owner=getattr(args, "owner", None),
+            repo=getattr(args, "repo", None),
+            visibility=_required_visibility_from_args(args),
+            default_branch=str(args.branch),
+            engine_mode=str(args.engine_mode),
+        )
+    except PublishError as exc:
+        print(f"error: {exc}", file=sys.stderr)
+        return EXIT_FAIL
+
+    if getattr(args, "json_out", None):
+        if not _write_json(str(args.json_out), receipt):
+            return EXIT_IO_ERROR
+    print("ASO project GitHub publish: PASS")
+    print(f"Target: {receipt['target']}")
+    print(f"Repository: {receipt['repository']}")
+    print(f"Visibility: {receipt['visibility']}")
+    print(f"Branch: {receipt['branch']}")
+    print(f"Commit: {receipt['commit']}")
+    return EXIT_OK
+
+
+def run_create_github_dry_run(args: object) -> int:
+    """Run `aso project create --github --dry-run`."""
 
     try:
         plan = build_github_dry_run_plan(
@@ -213,6 +248,99 @@ def run_create_github(args: object) -> int:
     else:
         print(json.dumps(plan, indent=2, sort_keys=True))
     return EXIT_OK
+
+
+class PublishError(ValueError):
+    """Raised for guarded GitHub publication failures."""
+
+
+def publish_github_project(
+    *,
+    target: Path,
+    project_name: str,
+    project_slug: str,
+    profile: str,
+    owner: object,
+    repo: object,
+    visibility: str,
+    default_branch: str,
+    engine_mode: str,
+) -> dict[str, object]:
+    """Create, verify, commit, and publish a generated project with GitHub CLI."""
+
+    target = target.expanduser()
+    _validate_create_inputs(
+        target=target,
+        project_name=project_name,
+        project_slug=project_slug,
+        profile=profile,
+        default_branch=default_branch,
+        engine_mode=engine_mode,
+    )
+    owner_text = _validate_github_owner(owner)
+    repo_text = _validate_github_repo(repo)
+    if visibility not in {"public", "private", "internal"}:
+        raise PublishError("visibility must be one of public, private, or internal")
+
+    git_exe = _required_executable("git")
+    gh_exe = _required_executable("gh")
+    _run_checked([gh_exe, "auth", "status"], label="gh auth status")
+    _verify_publish_target_safety(target)
+
+    summary = create_project(
+        target=target,
+        project_name=project_name,
+        project_slug=project_slug,
+        profile=profile,
+        repo_url=None,
+        default_branch=default_branch,
+        engine_mode=engine_mode,
+    )
+    pre_report = verify_clean(target)
+    _raise_for_verify_clean_failure(pre_report, phase="pre-publish")
+
+    trackable_paths = _trackable_generated_paths(engine_mode=engine_mode)
+    _run_git_checked(git_exe, target, ["init", "-b", default_branch], label="git init")
+    _run_git_checked(git_exe, target, ["add", *trackable_paths], label="git add")
+    _run_git_checked(git_exe, target, ["commit", "-m", "Initial ASO project"], label="git commit")
+    _verify_tracked_publication_boundary(target, engine_mode=engine_mode, phase="pre-push")
+    commit = _run_git_checked(git_exe, target, ["rev-parse", "HEAD"], label="git rev-parse").stdout.strip()
+    _run_checked(
+        [
+            gh_exe,
+            "repo",
+            "create",
+            f"{owner_text}/{repo_text}",
+            f"--{visibility}",
+            "--source",
+            str(target),
+            "--remote",
+            "origin",
+            "--push",
+        ],
+        label="gh repo create",
+    )
+
+    post_report = verify_clean(target)
+    _raise_for_verify_clean_failure(post_report, phase="post-publish")
+
+    return {
+        "status": "published",
+        "target": str(summary.target),
+        "project_name": project_name,
+        "slug": project_slug,
+        "profile": profile,
+        "engine_mode": engine_mode,
+        "repository": f"{owner_text}/{repo_text}",
+        "repo_owner": owner_text,
+        "repo_name": repo_text,
+        "visibility": visibility,
+        "branch": default_branch,
+        "commit": commit,
+        "tracked_paths": trackable_paths,
+        "pre_publish_verify_clean": pre_report["status"],
+        "post_publish_verify_clean": post_report["status"],
+    }
 
 
 def verify_clean(root: Path) -> dict[str, object]:
@@ -402,6 +530,108 @@ def build_github_dry_run_plan(
         "planned_gh_command": f"gh repo create {owner_text}/{repo_text} {visibility_flag} --source {target_text} --remote origin --push",
         "confirmation_required_for_real_publish": True,
     }
+
+
+def _required_executable(name: str) -> str:
+    executable = shutil.which(name)
+    if not executable:
+        raise PublishError(f"{name} executable is unavailable")
+    return executable
+
+
+def _run_checked(command: list[str], *, label: str) -> subprocess.CompletedProcess[str]:
+    try:
+        result = subprocess.run(
+            command,
+            check=False,
+            text=True,
+            capture_output=True,
+            timeout=120,
+        )
+    except FileNotFoundError as exc:
+        raise PublishError(f"{label} failed because executable is unavailable") from exc
+    except subprocess.TimeoutExpired as exc:
+        raise PublishError(f"{label} timed out") from exc
+    except OSError as exc:
+        raise PublishError(f"{label} failed: {exc}") from exc
+    if result.returncode != 0:
+        raise PublishError(f"{label} returned non-zero exit status {result.returncode}")
+    return result
+
+
+def _run_git_checked(
+    git_exe: str,
+    target: Path,
+    args: list[str],
+    *,
+    label: str,
+) -> subprocess.CompletedProcess[str]:
+    return _run_checked([git_exe, "-C", str(target), *args], label=label)
+
+
+def _validate_github_owner(value: object) -> str:
+    owner = _required_text(value, "owner")
+    if not GITHUB_OWNER_RE.fullmatch(owner):
+        raise PublishError("repo owner contains unsafe characters")
+    return owner
+
+
+def _validate_github_repo(value: object) -> str:
+    repo = _required_text(value, "repo")
+    if repo in {".", ".."} or repo.endswith(".git") or not GITHUB_REPO_RE.fullmatch(repo):
+        raise PublishError("repo name contains unsafe characters")
+    return repo
+
+
+def _verify_publish_target_safety(target: Path) -> None:
+    resolved_target = target.resolve(strict=False)
+    if _is_aso_engine_repo_target(resolved_target):
+        raise PublishError("target must not be the ASO engine repository")
+
+    existing_parent = _nearest_existing_parent(resolved_target)
+    parent_worktree = _git_toplevel(existing_parent)
+    if parent_worktree is not None and parent_worktree != resolved_target:
+        raise PublishError("target must not be nested inside an existing parent Git worktree")
+
+
+def _nearest_existing_parent(path: Path) -> Path:
+    current = path
+    while not current.exists() and current.parent != current:
+        current = current.parent
+    return current
+
+
+def _is_aso_engine_repo_target(target: Path) -> bool:
+    tool_repo = Path(__file__).resolve().parents[6].resolve(strict=False)
+    agent_system_root = _default_source_agent_system().resolve(strict=False)
+    return target in {tool_repo, agent_system_root}
+
+
+def _trackable_generated_paths(*, engine_mode: str) -> list[str]:
+    return [
+        path.rstrip("/")
+        for path in _planned_local_files(engine_mode=engine_mode)
+        if path not in {"project-archive/", "project-input/", "project-runtime/"}
+    ]
+
+
+def _raise_for_verify_clean_failure(report: dict[str, object], *, phase: str) -> None:
+    if report.get("violations"):
+        raise PublishError(f"verify-clean --strict failed during {phase}")
+
+
+def _verify_tracked_publication_boundary(root: Path, *, engine_mode: str, phase: str) -> None:
+    violations: list[dict[str, object]] = []
+    tracked_paths = _git_ls_files(root, violations)
+    if violations:
+        raise PublishError(f"tracked publication-boundary validation failed during {phase}")
+
+    forbidden_paths = sorted(
+        path for path in tracked_paths if _is_forbidden_tracked_path(path, engine_mode=engine_mode)
+    )
+    if forbidden_paths:
+        sample = ", ".join(forbidden_paths[:10])
+        raise PublishError(f"tracked publication-boundary validation failed during {phase}: {sample}")
 
 
 def _verify_lockfile(root: Path, violations: list[dict[str, object]]) -> dict[str, object]:
@@ -666,6 +896,8 @@ def _is_forbidden_tracked_path(relpath: str, *, engine_mode: str | None = None) 
         return True
     if parts[0] in FORBIDDEN_TRACKED_ROOTS:
         return True
+    if any(part in LOCAL_ROOTS for part in parts[1:]):
+        return True
     if parts[0] == ".git":
         return True
     if parts[0] == "agent-system" and ".git" in parts[1:]:
@@ -765,6 +997,13 @@ def _visibility_from_args(args: object) -> str:
     if getattr(args, "internal", False):
         return "internal"
     return "private"
+
+
+def _required_visibility_from_args(args: object) -> str:
+    selected = [name for name in ("public", "private", "internal") if getattr(args, name, False)]
+    if len(selected) != 1:
+        raise PublishError("real GitHub publish requires exactly one of --private, --public, or --internal")
+    return selected[0]
 
 
 def _required_text(value: object, name: str) -> str:

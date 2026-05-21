@@ -256,6 +256,372 @@ class ProjectCommandTests(unittest.TestCase):
             f"gh repo create example/demo --private --source {target} --remote origin --push",
         )
 
+    def test_create_github_real_publish_requires_confirm_publish(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            target = Path(tmp) / "github-demo"
+            result = _run_cli(
+                [
+                    "project",
+                    "create",
+                    "--github",
+                    "--target",
+                    str(target),
+                    "--name",
+                    "Demo",
+                    "--slug",
+                    "demo",
+                    "--owner",
+                    "example",
+                    "--repo",
+                    "demo",
+                    "--private",
+                    "--branch",
+                    "main",
+                    "--engine-mode",
+                    "reference",
+                ]
+            )
+
+        self.assertEqual(result.returncode, 1)
+        self.assertIn("--confirm-publish", result.stderr)
+        self.assertFalse(target.exists())
+
+    def test_create_github_real_publish_requires_explicit_branch_before_tools(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            target = Path(tmp) / "github-demo"
+            result = _run_cli(
+                [
+                    "project",
+                    "create",
+                    "--github",
+                    "--confirm-publish",
+                    "--target",
+                    str(target),
+                    "--name",
+                    "Demo",
+                    "--slug",
+                    "demo",
+                    "--owner",
+                    "example",
+                    "--repo",
+                    "demo",
+                    "--private",
+                    "--engine-mode",
+                    "reference",
+                ]
+            )
+
+        self.assertEqual(result.returncode, 1)
+        self.assertIn("explicit --branch", result.stderr)
+        self.assertFalse(target.exists())
+
+    def test_create_github_real_publish_requires_explicit_visibility_before_tools(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            target = Path(tmp) / "github-demo"
+            args = argparse.Namespace(
+                github=True,
+                dry_run=False,
+                confirm_publish=True,
+                target=str(target),
+                name="Demo",
+                slug="demo",
+                profile="generic",
+                owner="example",
+                repo="demo",
+                public=False,
+                private=False,
+                internal=False,
+                branch="main",
+                branch_explicit=True,
+                engine_mode="reference",
+                json_out=None,
+            )
+
+            with (
+                mock.patch.object(project.shutil, "which", side_effect=AssertionError("tools must not be checked")),
+                contextlib.redirect_stderr(io.StringIO()),
+            ):
+                result = project.run_create(args)
+
+        self.assertEqual(result, 1)
+        self.assertFalse(target.exists())
+
+    def test_create_github_real_publish_fails_when_git_or_gh_unavailable(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            target = Path(tmp) / "github-demo"
+            args = argparse.Namespace(
+                github=True,
+                dry_run=False,
+                confirm_publish=True,
+                target=str(target),
+                name="Demo",
+                slug="demo",
+                profile="generic",
+                owner="example",
+                repo="demo",
+                public=False,
+                private=True,
+                internal=False,
+                branch="main",
+                branch_explicit=True,
+                engine_mode="reference",
+                json_out=None,
+            )
+
+            stderr = io.StringIO()
+            with (
+                mock.patch.object(project.shutil, "which", return_value=None),
+                contextlib.redirect_stderr(stderr),
+            ):
+                result = project.run_create(args)
+
+        self.assertEqual(result, 1)
+        self.assertIn("git executable is unavailable", stderr.getvalue())
+        self.assertFalse(target.exists())
+
+    def test_create_github_real_publish_rejects_unsafe_owner_before_tools(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            target = Path(tmp) / "github-demo"
+            args = argparse.Namespace(
+                github=True,
+                dry_run=False,
+                confirm_publish=True,
+                target=str(target),
+                name="Demo",
+                slug="demo",
+                profile="generic",
+                owner="../example",
+                repo="demo",
+                public=False,
+                private=True,
+                internal=False,
+                branch="main",
+                branch_explicit=True,
+                engine_mode="reference",
+                json_out=None,
+            )
+
+            with (
+                mock.patch.object(project.shutil, "which", side_effect=AssertionError("tools must not be checked")),
+                contextlib.redirect_stderr(io.StringIO()),
+            ):
+                result = project.run_create(args)
+
+        self.assertEqual(result, 1)
+        self.assertFalse(target.exists())
+
+    def test_create_github_real_publish_rejects_engine_repo_target(self) -> None:
+        with (
+            mock.patch.object(project.shutil, "which", side_effect=lambda name: f"/fake/bin/{name}"),
+            mock.patch.object(project, "_run_checked", return_value=subprocess.CompletedProcess([], 0, "", "")),
+        ):
+            with self.assertRaisesRegex(project.PublishError, "ASO engine repository"):
+                project.publish_github_project(
+                    target=REPO_ROOT,
+                    project_name="Demo",
+                    project_slug="demo",
+                    profile="generic",
+                    owner="example",
+                    repo="demo",
+                    visibility="private",
+                    default_branch="main",
+                    engine_mode="reference",
+                )
+
+    def test_create_github_real_publish_rejects_parent_git_worktree(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            tmp_root = Path(tmp)
+            target = tmp_root / "nested" / "github-demo"
+
+            def fake_git_toplevel(path: Path) -> Path | None:
+                return tmp_root if path == tmp_root else None
+
+            with (
+                mock.patch.object(project.shutil, "which", side_effect=lambda name: f"/fake/bin/{name}"),
+                mock.patch.object(project, "_run_checked", return_value=subprocess.CompletedProcess([], 0, "", "")),
+                mock.patch.object(project, "_git_toplevel", side_effect=fake_git_toplevel),
+            ):
+                with self.assertRaisesRegex(project.PublishError, "parent Git worktree"):
+                    project.publish_github_project(
+                        target=target,
+                        project_name="Demo",
+                        project_slug="demo",
+                        profile="generic",
+                        owner="example",
+                        repo="demo",
+                        visibility="private",
+                        default_branch="main",
+                        engine_mode="reference",
+                    )
+
+            self.assertFalse(target.exists())
+
+    def test_create_github_real_publish_uses_target_scoped_git_and_gh(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            target = Path(tmp) / "github-demo"
+            receipt_path = Path(tmp) / "receipt.json"
+            calls: list[list[str]] = []
+            git_initialized = False
+
+            def fake_which(name: str) -> str | None:
+                if name in {"git", "gh"}:
+                    return f"/fake/bin/{name}"
+                return None
+
+            def fake_run(command: list[str], **kwargs: object) -> subprocess.CompletedProcess[str]:
+                nonlocal git_initialized
+                calls.append(command)
+                if command[:3] == ["/fake/bin/gh", "auth", "status"]:
+                    return subprocess.CompletedProcess(command, 0, "", "")
+                if command[:4] == ["/fake/bin/git", "-C", str(target), "init"]:
+                    git_initialized = True
+                    return subprocess.CompletedProcess(command, 0, "", "")
+                if command[:4] == ["/fake/bin/git", "-C", str(target), "add"]:
+                    self.assertEqual(command[4:], [".gitignore", "README.md", "aso.lock"])
+                    return subprocess.CompletedProcess(command, 0, "", "")
+                if command[:4] == ["/fake/bin/git", "-C", str(target), "commit"]:
+                    return subprocess.CompletedProcess(command, 0, "", "")
+                if command[:5] == ["/fake/bin/git", "-C", str(target), "rev-parse", "HEAD"]:
+                    return subprocess.CompletedProcess(command, 0, "abc123\n", "")
+                if command[:4] == ["/fake/bin/gh", "repo", "create", "example/demo"]:
+                    return subprocess.CompletedProcess(command, 0, "", "")
+                if command[0] in {"git", "/fake/bin/git"} and command[3:] == ["rev-parse", "--show-toplevel"]:
+                    if git_initialized and command[2] == str(target):
+                        return subprocess.CompletedProcess(command, 0, f"{target}\n", "")
+                    return subprocess.CompletedProcess(command, 1, "", "not a git repository")
+                if command[0] in {"git", "/fake/bin/git"} and command[3:] == ["ls-files"]:
+                    return subprocess.CompletedProcess(command, 0, ".gitignore\nREADME.md\naso.lock\n", "")
+                if command[0] in {"git", "/fake/bin/git"} and command[3:] == ["branch", "--show-current"]:
+                    return subprocess.CompletedProcess(command, 0, "main\n", "")
+                if command[0] in {"git", "/fake/bin/git"} and command[3:] == ["remote", "get-url", "origin"]:
+                    return subprocess.CompletedProcess(command, 1, "", "no remote")
+                raise AssertionError(f"unexpected command: {command}")
+
+            args = argparse.Namespace(
+                github=True,
+                dry_run=False,
+                confirm_publish=True,
+                target=str(target),
+                name="Demo",
+                slug="demo",
+                profile="generic",
+                owner="example",
+                repo="demo",
+                public=False,
+                private=True,
+                internal=False,
+                branch="main",
+                branch_explicit=True,
+                engine_mode="reference",
+                json_out=str(receipt_path),
+            )
+
+            stdout = io.StringIO()
+            with (
+                mock.patch.object(project.shutil, "which", side_effect=fake_which),
+                mock.patch.object(project.subprocess, "run", side_effect=fake_run),
+                contextlib.redirect_stdout(stdout),
+            ):
+                result = project.run_create(args)
+
+            receipt = json.loads(receipt_path.read_text(encoding="utf-8"))
+
+        self.assertEqual(result, 0)
+        self.assertIn("ASO project GitHub publish: PASS", stdout.getvalue())
+        self.assertEqual(receipt["repository"], "example/demo")
+        self.assertEqual(receipt["commit"], "abc123")
+        self.assertEqual(receipt["tracked_paths"], [".gitignore", "README.md", "aso.lock"])
+        self.assertEqual(receipt["pre_publish_verify_clean"], "pass")
+        self.assertEqual(receipt["post_publish_verify_clean"], "pass")
+        self.assertIn(
+            ["/fake/bin/gh", "repo", "create", "example/demo", "--private", "--source", str(target), "--remote", "origin", "--push"],
+            calls,
+        )
+        self.assertTrue(all(command[:3] != ["/fake/bin/git", "-C", str(REPO_ROOT)] for command in calls))
+        self.assertFalse((target / "project-input" / "aso_upgrade_project_factory_p0").exists())
+
+    def test_create_github_vendored_real_publish_checks_tracked_boundary_before_push(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            target = Path(tmp) / "github-demo"
+            calls: list[list[str]] = []
+            git_initialized = False
+            git_committed = False
+
+            def fake_which(name: str) -> str | None:
+                if name in {"git", "gh"}:
+                    return f"/fake/bin/{name}"
+                return None
+
+            def fake_run(command: list[str], **kwargs: object) -> subprocess.CompletedProcess[str]:
+                nonlocal git_initialized, git_committed
+                calls.append(command)
+                if command[:3] == ["/fake/bin/gh", "auth", "status"]:
+                    return subprocess.CompletedProcess(command, 0, "", "")
+                if command[:4] == ["/fake/bin/git", "-C", str(target), "init"]:
+                    git_initialized = True
+                    return subprocess.CompletedProcess(command, 0, "", "")
+                if command[:4] == ["/fake/bin/git", "-C", str(target), "add"]:
+                    self.assertIn("agent-system", command[4:])
+                    return subprocess.CompletedProcess(command, 0, "", "")
+                if command[:4] == ["/fake/bin/git", "-C", str(target), "commit"]:
+                    git_committed = True
+                    return subprocess.CompletedProcess(command, 0, "", "")
+                if command[:5] == ["/fake/bin/git", "-C", str(target), "rev-parse", "HEAD"]:
+                    raise AssertionError("rev-parse HEAD must not run before boundary passes")
+                if command[:4] == ["/fake/bin/gh", "repo", "create", "example/demo"]:
+                    raise AssertionError("gh repo create must not run before boundary passes")
+                if command[0] in {"git", "/fake/bin/git"} and command[3:] == ["rev-parse", "--show-toplevel"]:
+                    if git_initialized and command[2] == str(target):
+                        return subprocess.CompletedProcess(command, 0, f"{target}\n", "")
+                    return subprocess.CompletedProcess(command, 1, "", "not a git repository")
+                if command[0] in {"git", "/fake/bin/git"} and command[3:] == ["ls-files"]:
+                    if git_committed and command[2] == str(target):
+                        return subprocess.CompletedProcess(
+                            command,
+                            0,
+                            ".gitignore\nREADME.md\naso.lock\nagent-system/project-runtime/state.json\n",
+                            "",
+                        )
+                    return subprocess.CompletedProcess(command, 0, "", "")
+                if command[0] in {"git", "/fake/bin/git"} and command[3:] == ["branch", "--show-current"]:
+                    return subprocess.CompletedProcess(command, 0, "main\n", "")
+                if command[0] in {"git", "/fake/bin/git"} and command[3:] == ["remote", "get-url", "origin"]:
+                    return subprocess.CompletedProcess(command, 1, "", "no remote")
+                raise AssertionError(f"unexpected command: {command}")
+
+            args = argparse.Namespace(
+                github=True,
+                dry_run=False,
+                confirm_publish=True,
+                target=str(target),
+                name="Demo",
+                slug="demo",
+                profile="generic",
+                owner="example",
+                repo="demo",
+                public=False,
+                private=True,
+                internal=False,
+                branch="main",
+                branch_explicit=True,
+                engine_mode="vendored",
+                json_out=None,
+            )
+
+            stderr = io.StringIO()
+            with (
+                mock.patch.object(project.shutil, "which", side_effect=fake_which),
+                mock.patch.object(project.subprocess, "run", side_effect=fake_run),
+                contextlib.redirect_stderr(stderr),
+            ):
+                result = project.run_create(args)
+
+        self.assertEqual(result, 1)
+        self.assertIn("tracked publication-boundary validation failed during pre-push", stderr.getvalue())
+        self.assertIn("agent-system/project-runtime/state.json", stderr.getvalue())
+        self.assertTrue(any(command[:4] == ["/fake/bin/git", "-C", str(target), "commit"] for command in calls))
+        self.assertFalse(any(command[:4] == ["/fake/bin/gh", "repo", "create", "example/demo"] for command in calls))
+
     def test_create_github_requires_owner_and_repo(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             base_args = [

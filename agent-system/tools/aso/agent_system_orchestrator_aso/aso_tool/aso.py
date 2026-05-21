@@ -65,6 +65,18 @@ def _add_mode_argument(parser: argparse.ArgumentParser) -> None:
     )
 
 
+class _StoreExplicitBranch(argparse.Action):
+    def __call__(
+        self,
+        parser: argparse.ArgumentParser,
+        namespace: argparse.Namespace,
+        values: str | None,
+        option_string: str | None = None,
+    ) -> None:
+        setattr(namespace, self.dest, values)
+        setattr(namespace, "branch_explicit", True)
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog="aso",
@@ -606,6 +618,7 @@ def build_parser() -> argparse.ArgumentParser:
     project_create_parser.add_argument(
         "--branch",
         default="main",
+        action=_StoreExplicitBranch,
         metavar="TEXT",
         help="Default branch metadata to record in aso.lock (default: main).",
     )
@@ -652,12 +665,12 @@ def build_parser() -> argparse.ArgumentParser:
     publish_mode_group.add_argument(
         "--confirm-publish",
         action="store_true",
-        help="Confirm real GitHub publication. Not implemented by this dry-run planner.",
+        help="Confirm real GitHub publication; requires explicit visibility and GitHub CLI authentication.",
     )
     project_create_parser.add_argument(
         "--json-out",
         metavar="PATH",
-        help="Write a GitHub dry-run plan JSON to this explicit path.",
+        help="Write a GitHub dry-run plan or publish receipt JSON to this explicit path.",
     )
     project_create_parser.set_defaults(handler=project.run_create)
 
