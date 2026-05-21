@@ -17,8 +17,9 @@ and verifies the installed `aso` command. It uses local Python packaging only;
 it does not require secrets, GitHub credentials, remote repository access,
 dispatch authority, checkpoint execution, commit, push, or publication rights.
 
-This install document covers package version `3.3.0` with runtime schema
-`3.0.0`. The schema remains unchanged by Project Factory P1.
+This install document covers package version `3.4.0` with runtime schema
+`3.1.0`. Runtime State P2 defines the JSON-first runtime state contract while
+preserving the Project Factory P1 command boundary.
 
 Both installers accept a Python executable and virtual environment path:
 

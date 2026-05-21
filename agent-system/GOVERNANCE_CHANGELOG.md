@@ -1331,4 +1331,43 @@ MIGRATION_NOTE: No runtime schema migration is introduced. Existing v3.2.0 gener
 AUTHORIZED_BY: project_owner
 AUDIT_REQUIRED: yes
 STATUS: accepted
+
+CHANGE_ID: GOV-2026-05-21-002
+CHANGE_TITLE: ASO_RUNTIME_STATE_P2_CONTRACT_VERSION_BOUNDARY
+DATE: 2026-05-21
+PACKAGE_VERSION_BEFORE: 3.3.0
+PACKAGE_VERSION_AFTER: 3.4.0
+GOVERNANCE_RULESET_BEFORE: 3.3.0
+GOVERNANCE_RULESET_AFTER: 3.4.0
+RUNTIME_SCHEMA_BEFORE: 3.0.0
+RUNTIME_SCHEMA_AFTER: 3.1.0
+CHANGE_TYPE: minor
+CHANGE_SUBTYPE: runtime_state_p2_contract_version_boundary
+AFFECTED_FILES:
+- README.md
+- README_INSTALL.md
+- pyproject.toml
+- agent-system/README.md
+- agent-system/PACKAGE_VERSIONING.md
+- agent-system/GOVERNANCE_CHANGELOG.md
+- agent-system/02_runtime/CANONICAL_JSON_STATE.md
+- agent-system/02_runtime/RUNTIME_STATE_P2_CONTRACT.md
+- agent-system/09_validators/schemas/aso_lock.schema.json
+- agent-system/tools/aso/agent_system_orchestrator_aso/__init__.py
+- agent-system/tools/aso/agent_system_orchestrator_aso/aso_tool/lockfile.py
+AFFECTED_INVARIANTS:
+- Active package/governance/runtime tuple is 3.4.0 / 3.4.0 / 3.1.0.
+- Runtime State P2 sidecars are JSON-first canonical runtime state under project-runtime/state/.
+- Markdown runtime views are compatibility and human-readable render outputs for P2+ state.
+- P1 generated-project behavior remains compatible for accepted P1/P0 engine tuples: 3.3.0 / 3.0.0 and 3.2.0 / 3.0.0.
+- Runtime State P2 does not install daemon, proposal/apply, live dispatch, checkpoint executor, distributed worker, or external queue authority.
+AFFECTED_TRANSITIONS:
+- state verification -> recognizes runtime schema 3.1.0 as the current P2 target while preserving compatibility diagnostics for older state.
+- project factory lockfile validation -> accepts only the governed engine tuples 3.4.0 / 3.1.0, 3.3.0 / 3.0.0, and 3.2.0 / 3.0.0 without granting new publication authority.
+SCHEMA_TEMPLATE_IMPACT: schema_update_required
+MIGRATION_REQUIRED: yes
+MIGRATION_NOTE: Existing runtime schema 3.0.0 workspaces remain compatible but are not silently current P2 state. A later bounded migration task must deterministically convert compatible sidecars to the 3.1.0 envelope. This task defines the contract/version boundary only and does not write active project-runtime state.
+AUTHORIZED_BY: project_owner
+AUDIT_REQUIRED: yes
+STATUS: accepted
 ```

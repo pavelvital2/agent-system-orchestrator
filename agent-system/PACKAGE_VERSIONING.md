@@ -19,9 +19,9 @@ RUNTIME_SCHEMA_VERSION:
 ## Active version constants
 
 ```text
-CURRENT_PACKAGE_VERSION: 3.3.0
-CURRENT_GOVERNANCE_RULESET_VERSION: 3.3.0
-CURRENT_RUNTIME_SCHEMA_VERSION: 3.0.0
+CURRENT_PACKAGE_VERSION: 3.4.0
+CURRENT_GOVERNANCE_RULESET_VERSION: 3.4.0
+CURRENT_RUNTIME_SCHEMA_VERSION: 3.1.0
 ```
 
 These constants define the active package/governance/schema tuple for runtime validation. They are policy constants, not a release manifest.
@@ -263,6 +263,23 @@ This minor update adds Project Factory GitHub publication planning,
 reference-mode generated projects, and the package wizard capability surface.
 It keeps the runtime schema at `3.0.0` because it does not change the accepted
 meaning of runtime state.
+
+The ASO Runtime State P2 package installs:
+
+```text
+CURRENT_PACKAGE_VERSION: 3.4.0
+CURRENT_GOVERNANCE_RULESET_VERSION: 3.4.0
+CURRENT_RUNTIME_SCHEMA_VERSION: 3.1.0
+```
+
+This minor update defines the JSON-first runtime state foundation under
+`project-runtime/state/` while preserving the Project Factory P1 safety
+boundary. Runtime schema `3.1.0` is the target P2 schema for current sidecar
+envelopes and schema manifests. Existing P1 and P0 generated-project lockfiles
+remain compatible where their publication boundary and engine metadata satisfy
+the accepted compatibility rules. P2 does not install a runtime daemon, live
+agent dispatch, proposal/apply mutation layer, checkpoint executor,
+distributed workers, or external queue infrastructure.
 
 ## Version semantics
 

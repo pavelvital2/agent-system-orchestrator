@@ -2,22 +2,22 @@
 
 ## Purpose
 
-This document defines the Stage 2 canonical JSON state sidecar model.
+This document defines the Runtime State P2 canonical JSON state sidecar model.
 
-Stage 2 adds package-level JSON sidecar contracts so runtime state can be
-machine-verified without abandoning the existing Markdown runtime files.
-It does not activate state mutation commands, does not create active
-`project-runtime/` files, and does not give profile agents authority to write
-runtime state.
+Runtime State P2 adds the package-level JSON-first runtime state contract for
+runtime schema `3.1.0`. It does not activate daemon, proposal/apply, live
+dispatch, or checkpoint-executor commands, does not create active
+`project-runtime/` files in the package repository, and does not give profile
+agents authority to write runtime state.
 
-## Stage 2 authority model
+## Runtime State P2 authority model
 
-JSON sidecars are the preferred machine-verifiable representation of runtime
-state when they are present and valid. Markdown runtime files remain supported
-as the migration fallback and remain compatible with dispatch, audit, lint, and
-checkpoint workflows.
+JSON sidecars are the canonical machine-verifiable representation of P2+
+runtime state when they are present and valid. Markdown runtime files remain
+supported as compatibility and human-readable render views during migration
+windows.
 
-During the Stage 2 migration window:
+During the P2 migration window:
 
 ```text
 1. If a valid JSON sidecar and its Markdown source both exist, validators should
@@ -33,9 +33,8 @@ During the Stage 2 migration window:
    separate bounded task explicitly grants that runtime ownership.
 ```
 
-The later aggregate canonical model described in
-`CANONICAL_JSON_STATE_PREPARATION.md` remains a future migration target. Stage 2
-sidecars are a compatibility bridge for validation and parity checking.
+Older sidecars are compatibility inputs only. Validators must not silently
+treat older `2.0.0` or `3.0.0` sidecars as current P2 state.
 
 ## Sidecar locations
 
@@ -45,8 +44,7 @@ The package schemas live under:
 agent-system/03_templates/state/
 ```
 
-When a future orchestrator-owned migration creates workspace sidecars, the
-expected workspace paths are:
+The expected P2 workspace paths are:
 
 ```text
 project-runtime/state/PROJECT_STATE.json
@@ -55,6 +53,9 @@ project-runtime/state/NEXT_ACTION.json
 project-runtime/state/TASK_REGISTRY.json
 project-runtime/state/ACCEPTED_ARTIFACTS.json
 project-runtime/state/WORKSPACE_IDENTITY.json
+project-runtime/state/REPOSITORY_LOCK.json
+project-runtime/state/CHECKPOINT_STATE.json
+project-runtime/state/SCHEMA_MANIFEST.json
 ```
 
 The matching Markdown compatibility views are:
@@ -68,10 +69,10 @@ project-runtime/ACCEPTED_ARTIFACTS.md
 project-runtime/WORKSPACE_IDENTITY.md
 ```
 
-Missing workspace sidecars are not a hard error during Stage 2 if the Markdown
-fallback exists and validates. Missing Markdown compatibility views remain a
-validation blocker for current Markdown-compatible workspaces unless a later
-accepted migration explicitly changes that rule.
+Required minimum P2 sidecars are defined in
+`RUNTIME_STATE_P2_CONTRACT.md`. Optional sidecars may be absent before the
+matching governance stage, but validators must report readiness or migration
+status instead of inferring missing state.
 
 ## Common sidecar envelope
 
@@ -79,8 +80,9 @@ Each sidecar is one JSON object with a stable envelope:
 
 ```json
 {
-  "schema_version": "2.0.0",
+  "schema_version": "3.1.0",
   "sidecar_type": "PROJECT_STATE",
+  "runtime_schema_version": "3.1.0",
   "markdown_source": "project-runtime/PROJECT_STATE.md",
   "state_revision": 1,
   "updated_at": "2026-01-01T00:00:00Z",
@@ -92,7 +94,8 @@ Each sidecar is one JSON object with a stable envelope:
 Envelope rules:
 
 ```text
-- schema_version is required and must remain stable for this Stage 2 contract.
+- schema_version is required and must be `3.1.0` for current P2 sidecars.
+- runtime_schema_version is required and must be `3.1.0` for current P2 sidecars.
 - sidecar_type must match the sidecar file and Markdown source.
 - markdown_source must point to the compatible Markdown runtime view.
 - state_revision is a positive integer that increases when governed content changes.

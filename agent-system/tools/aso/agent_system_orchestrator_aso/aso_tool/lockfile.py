@@ -10,9 +10,19 @@ from pathlib import Path
 LOCKFILE_NAME = "aso.lock"
 LOCKFILE_VERSION = "1.0"
 PACKAGE_NAME = "agent-system-orchestrator"
-PACKAGE_VERSION = "3.3.0"
-COMPATIBLE_PACKAGE_VERSIONS = (PACKAGE_VERSION, "3.2.0")
-RUNTIME_SCHEMA_VERSION = "3.0.0"
+PACKAGE_VERSION = "3.4.0"
+RUNTIME_SCHEMA_VERSION = "3.1.0"
+COMPATIBLE_ENGINE_VERSION_TUPLES = (
+    (PACKAGE_VERSION, RUNTIME_SCHEMA_VERSION),
+    ("3.3.0", "3.0.0"),
+    ("3.2.0", "3.0.0"),
+)
+COMPATIBLE_PACKAGE_VERSIONS = tuple(
+    dict.fromkeys(package_version for package_version, _runtime_schema in COMPATIBLE_ENGINE_VERSION_TUPLES)
+)
+COMPATIBLE_RUNTIME_SCHEMA_VERSIONS = tuple(
+    dict.fromkeys(runtime_schema for _package_version, runtime_schema in COMPATIBLE_ENGINE_VERSION_TUPLES)
+)
 PACKAGE_SOURCE = "https://github.com/pavelvital2/agent-system-orchestrator"
 SUPPORTED_ENGINE_MODES = ("vendored", "reference")
 DEFAULT_ENGINE_MODE = "vendored"
@@ -313,13 +323,33 @@ def _validate_aso_engine(aso_engine: dict[str, object], findings: list[LockfileF
                 version,
             )
         )
-    if runtime_schema is not None and runtime_schema != RUNTIME_SCHEMA_VERSION:
+    if runtime_schema is not None and runtime_schema not in COMPATIBLE_RUNTIME_SCHEMA_VERSIONS:
         findings.append(
             _finding(
                 RULE_UNSUPPORTED_RUNTIME_SCHEMA,
                 "$.aso_engine.runtime_schema",
-                f"aso_engine.runtime_schema must be {RUNTIME_SCHEMA_VERSION}.",
+                "aso_engine.runtime_schema must be one of "
+                f"{', '.join(COMPATIBLE_RUNTIME_SCHEMA_VERSIONS)}.",
                 runtime_schema,
+            )
+        )
+    if (
+        version is not None
+        and runtime_schema is not None
+        and version in COMPATIBLE_PACKAGE_VERSIONS
+        and runtime_schema in COMPATIBLE_RUNTIME_SCHEMA_VERSIONS
+        and (version, runtime_schema) not in COMPATIBLE_ENGINE_VERSION_TUPLES
+    ):
+        accepted_tuples = ", ".join(
+            f"{package_version}/{runtime_schema_version}"
+            for package_version, runtime_schema_version in COMPATIBLE_ENGINE_VERSION_TUPLES
+        )
+        findings.append(
+            _finding(
+                RULE_UNSUPPORTED_PACKAGE_VERSION,
+                "$.aso_engine",
+                f"aso_engine version/runtime_schema tuple must be one of {accepted_tuples}.",
+                f"{version}/{runtime_schema}",
             )
         )
     if source is not None and not _is_non_empty_string(source):

@@ -155,10 +155,10 @@ The package includes a filesystem-governed ASO helper CLI at
 dry-run proposals, while Project Factory commands may create generated
 projects only within explicit target paths.
 
-This Project Factory P1 package records the active package metadata as the
-governed `3.3.0` package/governance tuple with runtime schema `3.0.0`.
-It preserves the read-only diagnostic command surfaces and adds GitHub
-publication planning plus reference-mode generated projects.
+This Runtime State P2 package records the active package metadata as the
+governed `3.4.0` package/governance tuple with runtime schema `3.1.0`.
+It preserves the Project Factory P1 command boundary and defines the
+JSON-first runtime state foundation for later governed automation.
 
 The canonical installable ASO package source is:
 
@@ -328,7 +328,9 @@ stated as: ASO diagnostic surfaces do not provide general mutation, dispatch, or
 
 Project Factory P1 supports local vendored creation, local reference creation,
 GitHub dry-run planning, confirmed GitHub publish, and a guided
-wizard. It uses package version `3.3.0` and runtime schema `3.0.0`.
+wizard. It remains available in package version `3.4.0`; existing P1/P0
+generated-project lockfiles remain compatible when they satisfy the accepted
+publication-boundary and engine-mode rules.
 
 Local vendored mode preserves the P0 behavior of copying safe `agent-system/`
 package content into the generated project:
@@ -553,13 +555,14 @@ Governance and package changes are recorded in:
 agent-system/GOVERNANCE_CHANGELOG.md
 ```
 
-Current active tuple and Project Factory marker:
+Current active tuple and package markers:
 
 ```text
-CURRENT_PACKAGE_VERSION: 3.3.0
-CURRENT_GOVERNANCE_RULESET_VERSION: 3.3.0
-CURRENT_RUNTIME_SCHEMA_VERSION: 3.0.0
+CURRENT_PACKAGE_VERSION: 3.4.0
+CURRENT_GOVERNANCE_RULESET_VERSION: 3.4.0
+CURRENT_RUNTIME_SCHEMA_VERSION: 3.1.0
 PROJECT_FACTORY_RELEASE_MARKER: project-factory-p1
+RUNTIME_STATE_RELEASE_MARKER: runtime-state-p2
 ```
 
 ## Examples

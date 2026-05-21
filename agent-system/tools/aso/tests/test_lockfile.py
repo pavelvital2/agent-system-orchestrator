@@ -7,6 +7,11 @@ import tempfile
 import unittest
 from pathlib import Path
 
+try:
+    from jsonschema import Draft202012Validator
+except ImportError:  # pragma: no cover - optional dependency in minimal runtimes.
+    Draft202012Validator = None
+
 
 REPO_ROOT = Path(__file__).resolve().parents[4]
 ASO_TOOL_ROOT = REPO_ROOT / "agent-system" / "tools" / "aso"
@@ -31,8 +36,8 @@ class LockfileHelperTests(unittest.TestCase):
         publication_boundary = generated["publication_boundary"]
 
         self.assertTrue(result.ok, result.to_json())
-        self.assertEqual(aso_engine["version"], "3.3.0")
-        self.assertEqual(aso_engine["runtime_schema"], "3.0.0")
+        self.assertEqual(aso_engine["version"], "3.4.0")
+        self.assertEqual(aso_engine["runtime_schema"], "3.1.0")
         self.assertEqual(aso_engine["engine_mode"], "vendored")
         self.assertEqual(lockfile.SUPPORTED_ENGINE_MODES, ("vendored", "reference"))
         self.assertEqual(publication_boundary["ignored_roots"], list(lockfile.REQUIRED_PUBLICATION_ROOTS))
@@ -52,8 +57,8 @@ class LockfileHelperTests(unittest.TestCase):
         result = lockfile.validate_lockfile(generated)
 
         self.assertTrue(result.ok, result.to_json())
-        self.assertEqual(generated["aso_engine"]["version"], "3.3.0")
-        self.assertEqual(generated["aso_engine"]["runtime_schema"], "3.0.0")
+        self.assertEqual(generated["aso_engine"]["version"], "3.4.0")
+        self.assertEqual(generated["aso_engine"]["runtime_schema"], "3.1.0")
         self.assertEqual(generated["aso_engine"]["engine_mode"], "reference")
 
     def test_valid_fixture_passes_validation(self) -> None:
@@ -68,11 +73,35 @@ class LockfileHelperTests(unittest.TestCase):
             project_slug="demo-project",
             repo_url=None,
             package_version="3.2.0",
+            runtime_schema="3.0.0",
         )
 
         result = lockfile.validate_lockfile(generated)
 
         self.assertTrue(result.ok, result.to_json())
+
+    def test_mixed_compatible_version_tuples_fail_validation(self) -> None:
+        cases = (
+            ("3.2.0", "3.1.0"),
+            ("3.3.0", "3.1.0"),
+        )
+
+        for package_version, runtime_schema in cases:
+            with self.subTest(package_version=package_version, runtime_schema=runtime_schema):
+                generated = lockfile.generate_lockfile(
+                    project_name="Demo Project",
+                    project_slug="demo-project",
+                    repo_url=None,
+                    package_version=package_version,
+                    runtime_schema=runtime_schema,
+                )
+
+                result = lockfile.validate_lockfile(generated)
+
+                self.assertFalse(result.ok)
+                self.assertEqual(result.findings[0].rule_id, "ASO_LOCK_012")
+                self.assertEqual(result.findings[0].path, "$.aso_engine")
+                self.assertEqual(result.findings[0].evidence, f"{package_version}/{runtime_schema}")
 
     def test_invalid_fixture_fails_with_deterministic_errors(self) -> None:
         result = lockfile.validate_lockfile_path(FIXTURE_ROOT / "invalid_aso.lock")
@@ -88,7 +117,7 @@ class LockfileHelperTests(unittest.TestCase):
             ],
         )
         self.assertEqual(result.findings[0].path, "$.aso_engine.runtime_schema")
-        self.assertIn("3.0.0", result.findings[0].message)
+        self.assertIn("3.1.0", result.findings[0].message)
 
     def test_required_non_null_fields_reject_json_null(self) -> None:
         cases = (
@@ -153,19 +182,53 @@ class LockfileHelperTests(unittest.TestCase):
     def test_machine_readable_schema_matches_lockfile_contract(self) -> None:
         schema = json.loads(SCHEMA_PATH.read_text(encoding="utf-8"))
         aso_engine_properties = schema["$defs"]["aso_engine"]["properties"]
+        aso_engine_tuple_constraints = schema["$defs"]["aso_engine"]["oneOf"]
 
         self.assertEqual(
             aso_engine_properties["version"]["enum"],
             list(lockfile.COMPATIBLE_PACKAGE_VERSIONS),
         )
         self.assertEqual(
-            aso_engine_properties["runtime_schema"]["const"],
-            "3.0.0",
+            aso_engine_properties["runtime_schema"]["enum"],
+            list(lockfile.COMPATIBLE_RUNTIME_SCHEMA_VERSIONS),
         )
         self.assertEqual(
             aso_engine_properties["engine_mode"]["enum"],
             list(lockfile.SUPPORTED_ENGINE_MODES),
         )
+        self.assertEqual(
+            [
+                (
+                    constraint["properties"]["version"]["const"],
+                    constraint["properties"]["runtime_schema"]["const"],
+                )
+                for constraint in aso_engine_tuple_constraints
+            ],
+            list(lockfile.COMPATIBLE_ENGINE_VERSION_TUPLES),
+        )
+
+    @unittest.skipIf(Draft202012Validator is None, "jsonschema is not installed")
+    def test_machine_readable_schema_rejects_mixed_version_tuples(self) -> None:
+        schema = json.loads(SCHEMA_PATH.read_text(encoding="utf-8"))
+        validator = Draft202012Validator(schema)
+        cases = (
+            ("3.2.0", "3.1.0"),
+            ("3.3.0", "3.1.0"),
+        )
+
+        for package_version, runtime_schema in cases:
+            with self.subTest(package_version=package_version, runtime_schema=runtime_schema):
+                generated = lockfile.generate_lockfile(
+                    project_name="Demo Project",
+                    project_slug="demo-project",
+                    repo_url=None,
+                    package_version=package_version,
+                    runtime_schema=runtime_schema,
+                )
+
+                errors = list(validator.iter_errors(generated))
+
+                self.assertTrue(errors)
 
 
 if __name__ == "__main__":
