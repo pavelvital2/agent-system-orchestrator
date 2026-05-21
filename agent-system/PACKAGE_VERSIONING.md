@@ -19,8 +19,8 @@ RUNTIME_SCHEMA_VERSION:
 ## Active version constants
 
 ```text
-CURRENT_PACKAGE_VERSION: 3.1.2
-CURRENT_GOVERNANCE_RULESET_VERSION: 3.1.2
+CURRENT_PACKAGE_VERSION: 3.2.0
+CURRENT_GOVERNANCE_RULESET_VERSION: 3.2.0
 CURRENT_RUNTIME_SCHEMA_VERSION: 3.0.0
 ```
 
@@ -236,6 +236,20 @@ cleanup must record command evidence without claiming an unknowable final
 commit before the orchestrator-owned checkpoint and push. Merge readiness must
 follow `09_MAIN_MERGE_READINESS_PROCEDURE.md` or accepted package
 merge-readiness docs after audit, checkpoint, push, and remote CI evidence.
+
+The ASO Project Factory P0 package installs:
+
+```text
+CURRENT_PACKAGE_VERSION: 3.2.0
+CURRENT_GOVERNANCE_RULESET_VERSION: 3.2.0
+CURRENT_RUNTIME_SCHEMA_VERSION: 3.0.0
+```
+
+This minor update adds local generated-project creation, `aso.lock`, generated
+project clean-repository verification, installation bootstrap improvements,
+and Project Factory release documentation. It keeps the runtime schema at
+`3.0.0` because it adds package CLI/product capability without changing the
+accepted meaning of runtime state.
 
 ## Version semantics
 

@@ -16,10 +16,11 @@ agent-system/README.md
 
 The package is a filesystem-governed instruction, template, lifecycle, and validation system for Codex CLI orchestration. It includes an experimental read-only ASO helper CLI at `agent-system/tools/aso/aso.py`.
 
-This pre-main package layout cleanup branch records the active package metadata
-as the governed `3.1.2` package/governance tuple with runtime schema `3.0.0`.
-The runtime schema remains unchanged because this package changes repository
-layout and installation ergonomics, not accepted runtime state meaning.
+This Project Factory P0 package records the active package metadata as the
+governed `3.2.0` package/governance tuple with runtime schema `3.0.0`.
+The runtime schema remains unchanged because this package adds local project
+workspace creation and clean-repository verification without changing accepted
+runtime state meaning.
 
 The canonical ASO Python package is:
 
@@ -101,6 +102,27 @@ entrypoint, hygiene, and canonical package-source coherence:
 ```text
 python3 agent-system/tools/aso/aso.py package-layout verify --root . --strict
 ```
+
+Project Factory P0 creates local generated project workspaces and verifies that
+they are clean for publication. Local mode does not require secrets, GitHub
+credentials, remote repository access, commit authority, push authority, or live
+automation authority:
+
+```text
+python3 agent-system/tools/aso/aso.py project create --help
+python3 agent-system/tools/aso/aso.py project verify-clean --help
+python3 agent-system/tools/aso/aso.py project create --local --target /tmp/demo-project --name "Demo Project" --slug demo-project --profile generic --repo-url none --branch main
+python3 agent-system/tools/aso/aso.py project verify-clean --root /tmp/demo-project --strict
+```
+
+Generated projects contain `aso.lock`, `.gitignore`, a minimal README, local
+ignored ASO working roots when needed, and optional vendored safe
+`agent-system/` content. They must not publish `project-input/`,
+`project-runtime/`, `project-archive/`, virtual environments, caches, logs,
+secret-like files, local upgrade packages, or ASO engine `.git` metadata.
+Project Factory P0 does not create GitHub repositories and does not implement a
+runtime daemon, dashboard control plane, distributed workers, agent dispatch, or
+checkpoint execution.
 
 For DAG readiness, `audit_passed` is not a completed dependency. Downstream
 work that depends on accepted task output requires `checkpoint_done` with

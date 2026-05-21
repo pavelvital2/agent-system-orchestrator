@@ -153,10 +153,10 @@ accepted repository lock explicitly allows it.
 The package includes an experimental read-only ASO helper CLI at
 `agent-system/tools/aso/aso.py`.
 
-This pre-main package layout cleanup branch records the active package metadata
-as the governed `3.1.2` package/governance tuple with runtime schema `3.0.0`.
-It preserves the read-only Stage 2 command surfaces and replaces duplicate
-package-copy synchronization diagnostics with package-layout verification.
+This Project Factory P0 package records the active package metadata as the
+governed `3.2.0` package/governance tuple with runtime schema `3.0.0`.
+It preserves the read-only diagnostic command surfaces and adds local generated
+project creation plus clean-repository verification.
 
 The canonical installable ASO package source is:
 
@@ -486,13 +486,13 @@ Governance and package changes are recorded in:
 agent-system/GOVERNANCE_CHANGELOG.md
 ```
 
-Current active tuple and Stage 3 marker:
+Current active tuple and Project Factory marker:
 
 ```text
-CURRENT_PACKAGE_VERSION: 3.1.2
-CURRENT_GOVERNANCE_RULESET_VERSION: 3.1.2
+CURRENT_PACKAGE_VERSION: 3.2.0
+CURRENT_GOVERNANCE_RULESET_VERSION: 3.2.0
 CURRENT_RUNTIME_SCHEMA_VERSION: 3.0.0
-STAGE3_RELEASE_MARKER: pre-main-package-layout-cleanup
+PROJECT_FACTORY_RELEASE_MARKER: project-factory-p0
 ```
 
 ## Examples
