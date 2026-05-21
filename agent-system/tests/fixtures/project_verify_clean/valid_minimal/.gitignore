@@ -1,0 +1,26 @@
+# ASO Project Factory local workspace boundary
+/project-input/
+/project-runtime/
+/project-archive/
+/.tmp/
+/tmp/
+/.venv/
+.env
+.env.*
+*.pem
+*.key
+*.crt
+*.p12
+*.pfx
+*.cookie
+cookies.json
+secrets/
+private/
+**/__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+.DS_Store

@@ -612,6 +612,28 @@ def build_parser() -> argparse.ArgumentParser:
     )
     project_create_parser.set_defaults(handler=project.run_create)
 
+    project_verify_clean_parser = project_subparsers.add_parser(
+        "verify-clean",
+        help="Verify a generated project publication boundary.",
+        description=(
+            "Read-only verification for Project Factory P0 generated project cleanliness, "
+            "including aso.lock, .gitignore, tracked forbidden artifacts, nested vendored "
+            "Git metadata, and repository metadata when available."
+        ),
+    )
+    _add_root_argument(project_verify_clean_parser, validate=False)
+    project_verify_clean_parser.add_argument(
+        "--strict",
+        action="store_true",
+        help="Return non-zero when generated project cleanliness violations are found.",
+    )
+    project_verify_clean_parser.add_argument(
+        "--json-out",
+        metavar="PATH",
+        help="Write the verify-clean report JSON to this explicit path.",
+    )
+    project_verify_clean_parser.set_defaults(handler=project.run_verify_clean)
+
     return parser
 
 

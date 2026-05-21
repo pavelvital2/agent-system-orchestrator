@@ -1,0 +1,31 @@
+{
+  "lockfile_version": "1.0",
+  "aso_engine": {
+    "package_name": "agent-system-orchestrator",
+    "version": "3.2.0",
+    "runtime_schema": "3.0.0",
+    "source": "https://github.com/pavelvital2/agent-system-orchestrator",
+    "engine_mode": "vendored"
+  },
+  "project": {
+    "name": "Missing Gitignore Fixture",
+    "slug": "missing-gitignore-fixture",
+    "profile": "generic",
+    "repo_url": null,
+    "default_branch": "main"
+  },
+  "publication_boundary": {
+    "ignored_roots": [
+      "project-input/",
+      "project-runtime/",
+      "project-archive/",
+      ".venv/"
+    ],
+    "forbidden_tracked_roots": [
+      "project-input/",
+      "project-runtime/",
+      "project-archive/",
+      ".venv/"
+    ]
+  }
+}
