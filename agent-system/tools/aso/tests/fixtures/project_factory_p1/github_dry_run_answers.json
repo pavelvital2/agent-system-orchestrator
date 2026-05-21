@@ -1,0 +1,11 @@
+{
+  "branch": "main",
+  "engine_mode": "reference",
+  "github_owner": "example",
+  "github_repo": "demo",
+  "private": true,
+  "profile": "generic",
+  "project_name": "Demo",
+  "project_slug": "demo",
+  "target": "/tmp/aso-pf1-demo"
+}

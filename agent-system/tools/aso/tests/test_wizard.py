@@ -16,6 +16,7 @@ from unittest import mock
 REPO_ROOT = Path(__file__).resolve().parents[4]
 ASO_TOOL_ROOT = REPO_ROOT / "agent-system" / "tools" / "aso"
 CLI = ASO_TOOL_ROOT / "aso.py"
+P1_FIXTURES = ASO_TOOL_ROOT / "tests" / "fixtures" / "project_factory_p1"
 
 sys.path.insert(0, str(ASO_TOOL_ROOT))
 
@@ -92,6 +93,31 @@ class WizardCommandTests(unittest.TestCase):
             f"gh repo create example/demo-project --private --source {target} --remote origin --push",
         )
         self.assertTrue(plan["confirmation_required_for_real_publish"])
+
+    def test_reference_github_answers_fixture_parses_and_builds_dry_run_plan(self) -> None:
+        answers_path = P1_FIXTURES / "wizard_answers_reference_github.json"
+        with tempfile.TemporaryDirectory() as tmp:
+            tmp_root = Path(tmp)
+            plan_path = tmp_root / "wizard-plan.json"
+            result = _run_cli(
+                ["wizard", "--answers", str(answers_path), "--dry-run", "--json-out", str(plan_path)],
+                env_overrides={"PATH": str(tmp_root / "empty-bin")},
+            )
+            answers = wizard._load_answers(str(answers_path))
+            plan = json.loads(plan_path.read_text(encoding="utf-8"))
+
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual(answers["publish_mode"], "github")
+        self.assertEqual(answers["engine_mode"], "reference")
+        self.assertFalse(answers["confirm_publish"])
+        self.assertEqual(plan["target"], "/tmp/aso-pf1-demo")
+        self.assertEqual(plan["repo_owner"], "example")
+        self.assertEqual(plan["repo_name"], "demo")
+        self.assertEqual(plan["engine_mode"], "reference")
+        self.assertEqual(
+            plan["planned_gh_command"],
+            "gh repo create example/demo --private --source /tmp/aso-pf1-demo --remote origin --push",
+        )
 
     def test_local_answers_dry_run_writes_plan_without_creating_target(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:

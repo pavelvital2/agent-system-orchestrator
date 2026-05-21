@@ -501,8 +501,8 @@ def build_github_dry_run_plan(
         engine_mode=engine_mode,
     )
 
-    owner_text = _required_text(owner, "owner")
-    repo_text = _required_text(repo, "repo")
+    owner_text = _validate_github_owner(owner)
+    repo_text = _validate_github_repo(repo)
     if visibility not in {"public", "private", "internal"}:
         raise ValueError("visibility must be one of public, private, or internal")
 

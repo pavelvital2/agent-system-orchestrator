@@ -18,6 +18,7 @@ REPO_ROOT = Path(__file__).resolve().parents[4]
 ASO_TOOL_ROOT = REPO_ROOT / "agent-system" / "tools" / "aso"
 CLI = ASO_TOOL_ROOT / "aso.py"
 FIXTURES = REPO_ROOT / "agent-system" / "tests" / "fixtures" / "project_verify_clean"
+P1_FIXTURES = ASO_TOOL_ROOT / "tests" / "fixtures" / "project_factory_p1"
 
 sys.path.insert(0, str(ASO_TOOL_ROOT))
 
@@ -53,6 +54,95 @@ def _init_git(root: Path) -> None:
     if result.returncode != 0:
         subprocess.run(["git", "-C", str(root), "init"], check=True, capture_output=True)
         subprocess.run(["git", "-C", str(root), "checkout", "-b", "main"], check=True, capture_output=True)
+
+
+def _write_fake_github_tools(bin_dir: Path) -> None:
+    bin_dir.mkdir(parents=True, exist_ok=True)
+    git = bin_dir / "git"
+    gh = bin_dir / "gh"
+    git.write_text(
+        """#!/usr/bin/env bash
+set -eu
+if [ "${1:-}" != "-C" ]; then
+  exit 2
+fi
+target="$2"
+shift 2
+cmd="${1:-}"
+case "$cmd" in
+  rev-parse)
+    if [ "${2:-}" = "--show-toplevel" ]; then
+      if [ -d "$target/.git" ]; then
+        cd "$target"
+        pwd -P
+        exit 0
+      fi
+      exit 1
+    fi
+    if [ "${2:-}" = "HEAD" ]; then
+      echo "fakecommit123"
+      exit 0
+    fi
+    ;;
+  init)
+    mkdir -p "$target/.git"
+    exit 0
+    ;;
+  add)
+    exit 0
+    ;;
+  commit)
+    if [ "${FAKE_GIT_COMMIT_FAIL:-0}" = "1" ]; then
+      echo "fake git commit failure" >&2
+      exit 42
+    fi
+    exit 0
+    ;;
+  ls-files)
+    if [ "${FAKE_GIT_FORBIDDEN_TRACKED:-0}" = "1" ]; then
+      printf '%s\\n' .gitignore README.md aso.lock project-input/secret.md
+    else
+      printf '%s\\n' .gitignore README.md aso.lock
+    fi
+    exit 0
+    ;;
+  branch)
+    if [ "${2:-}" = "--show-current" ]; then
+      echo "main"
+      exit 0
+    fi
+    ;;
+  remote)
+    exit 1
+    ;;
+esac
+exit 2
+""",
+        encoding="utf-8",
+    )
+    gh.write_text(
+        """#!/usr/bin/env bash
+set -eu
+if [ "${1:-}" = "auth" ] && [ "${2:-}" = "status" ]; then
+  if [ "${FAKE_GH_AUTH_FAIL:-0}" = "1" ]; then
+    echo "fake gh auth failure" >&2
+    exit 43
+  fi
+  exit 0
+fi
+if [ "${1:-}" = "repo" ] && [ "${2:-}" = "create" ]; then
+  if [ "${FAKE_GH_CREATE_FAIL:-0}" = "1" ]; then
+    echo "fake gh repo create failure" >&2
+    exit 44
+  fi
+  exit 0
+fi
+exit 2
+""",
+        encoding="utf-8",
+    )
+    git.chmod(0o755)
+    gh.chmod(0o755)
 
 
 class ProjectCommandTests(unittest.TestCase):
@@ -256,6 +346,56 @@ class ProjectCommandTests(unittest.TestCase):
             f"gh repo create example/demo --private --source {target} --remote origin --push",
         )
 
+    def test_create_github_dry_run_fixture_and_argument_validation(self) -> None:
+        fixture = json.loads((P1_FIXTURES / "github_dry_run_answers.json").read_text(encoding="utf-8"))
+        with tempfile.TemporaryDirectory() as tmp:
+            target = Path(tmp) / "github-demo"
+            report_path = Path(tmp) / "plan.json"
+            args = [
+                "project",
+                "create",
+                "--github",
+                "--dry-run",
+                "--target",
+                str(target),
+                "--name",
+                str(fixture["project_name"]),
+                "--slug",
+                str(fixture["project_slug"]),
+                "--profile",
+                str(fixture["profile"]),
+                "--owner",
+                str(fixture["github_owner"]),
+                "--repo",
+                str(fixture["github_repo"]),
+                "--private",
+                "--branch",
+                str(fixture["branch"]),
+                "--engine-mode",
+                str(fixture["engine_mode"]),
+                "--json-out",
+                str(report_path),
+            ]
+            result = _run_cli(args, env_overrides={"PATH": str(Path(tmp) / "empty-bin")})
+            unsafe_owner_args = list(args)
+            unsafe_owner_args[unsafe_owner_args.index("--owner") + 1] = "../bad"
+            unsafe_repo_args = list(args)
+            unsafe_repo_args[unsafe_repo_args.index("--repo") + 1] = "bad.git"
+            unsafe_owner = _run_cli(unsafe_owner_args)
+            unsafe_repo = _run_cli(unsafe_repo_args)
+            plan = json.loads(report_path.read_text(encoding="utf-8"))
+
+            self.assertFalse(target.exists())
+
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual(plan["repo_owner"], "example")
+        self.assertEqual(plan["repo_name"], "demo")
+        self.assertEqual(plan["engine_mode"], "reference")
+        self.assertEqual(unsafe_owner.returncode, 1)
+        self.assertIn("repo owner contains unsafe characters", unsafe_owner.stderr)
+        self.assertEqual(unsafe_repo.returncode, 1)
+        self.assertIn("repo name contains unsafe characters", unsafe_repo.stderr)
+
     def test_create_github_real_publish_requires_confirm_publish(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             target = Path(tmp) / "github-demo"
@@ -285,6 +425,95 @@ class ProjectCommandTests(unittest.TestCase):
         self.assertEqual(result.returncode, 1)
         self.assertIn("--confirm-publish", result.stderr)
         self.assertFalse(target.exists())
+
+    def test_create_github_real_publish_with_fake_tools_success_path(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            tmp_root = Path(tmp)
+            target = tmp_root / "github-demo"
+            receipt_path = tmp_root / "receipt.json"
+            fake_bin = tmp_root / "bin"
+            _write_fake_github_tools(fake_bin)
+
+            result = _run_cli(
+                [
+                    "project",
+                    "create",
+                    "--github",
+                    "--confirm-publish",
+                    "--target",
+                    str(target),
+                    "--name",
+                    "Demo",
+                    "--slug",
+                    "demo",
+                    "--profile",
+                    "generic",
+                    "--owner",
+                    "example",
+                    "--repo",
+                    "demo",
+                    "--private",
+                    "--branch",
+                    "main",
+                    "--engine-mode",
+                    "reference",
+                    "--json-out",
+                    str(receipt_path),
+                ],
+                env_overrides={"PATH": f"{fake_bin}:{os.environ['PATH']}"},
+            )
+            receipt = json.loads(receipt_path.read_text(encoding="utf-8"))
+
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual(receipt["repository"], "example/demo")
+        self.assertEqual(receipt["commit"], "fakecommit123")
+        self.assertEqual(receipt["tracked_paths"], [".gitignore", "README.md", "aso.lock"])
+        self.assertFalse((target / "agent-system").exists())
+
+    def test_create_github_real_publish_with_fake_tools_failure_paths(self) -> None:
+        cases = (
+            ("FAKE_GH_AUTH_FAIL", "gh auth status returned non-zero exit status 43"),
+            ("FAKE_GIT_COMMIT_FAIL", "git commit returned non-zero exit status 42"),
+            ("FAKE_GH_CREATE_FAIL", "gh repo create returned non-zero exit status 44"),
+            ("FAKE_GIT_FORBIDDEN_TRACKED", "tracked publication-boundary validation failed during pre-push"),
+        )
+
+        for env_name, message in cases:
+            with self.subTest(env_name=env_name), tempfile.TemporaryDirectory() as tmp:
+                tmp_root = Path(tmp)
+                target = tmp_root / "github-demo"
+                fake_bin = tmp_root / "bin"
+                _write_fake_github_tools(fake_bin)
+
+                result = _run_cli(
+                    [
+                        "project",
+                        "create",
+                        "--github",
+                        "--confirm-publish",
+                        "--target",
+                        str(target),
+                        "--name",
+                        "Demo",
+                        "--slug",
+                        "demo",
+                        "--profile",
+                        "generic",
+                        "--owner",
+                        "example",
+                        "--repo",
+                        "demo",
+                        "--private",
+                        "--branch",
+                        "main",
+                        "--engine-mode",
+                        "reference",
+                    ],
+                    env_overrides={"PATH": f"{fake_bin}:{os.environ['PATH']}", env_name: "1"},
+                )
+
+                self.assertEqual(result.returncode, 1)
+                self.assertIn(message, result.stderr)
 
     def test_create_github_real_publish_requires_explicit_branch_before_tools(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
@@ -702,6 +931,50 @@ class ProjectCommandTests(unittest.TestCase):
         self.assertIn("ASO project verify-clean: PASS", result.stdout)
         self.assertIn("Violations: 0", result.stdout)
         self.assertIn("Package drift: 3.2.0 is compatible with current package 3.3.0", result.stdout)
+
+    def test_verify_clean_accepts_p1_reference_and_p0_lock_compatibility_fixtures(self) -> None:
+        cases = (
+            ("reference_valid", "Engine mode: reference", "Package version: 3.3.0"),
+            ("p0_lock_compatible", "Engine mode: vendored", "Package drift: 3.2.0 is compatible with current package 3.3.0"),
+        )
+
+        for fixture_name, engine_text, package_text in cases:
+            with self.subTest(fixture_name=fixture_name):
+                result = _run_cli(["project", "verify-clean", "--root", str(P1_FIXTURES / fixture_name), "--strict"])
+
+                self.assertEqual(result.returncode, 0, result.stderr)
+                self.assertIn("ASO project verify-clean: PASS", result.stdout)
+                self.assertIn(engine_text, result.stdout)
+                self.assertIn(package_text, result.stdout)
+
+    def test_publication_boundary_negative_fixture_fails_when_forbidden_path_is_tracked(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp) / "boundary-negative"
+            shutil.copytree(P1_FIXTURES / "publication_boundary_negative" / "tracked_project_input", root)
+            _init_git(root)
+            subprocess.run(
+                ["git", "-C", str(root), "add", ".gitignore", "README.md", "aso.lock"],
+                check=True,
+                capture_output=True,
+            )
+            subprocess.run(
+                [
+                    "git",
+                    "-C",
+                    str(root),
+                    "add",
+                    "-f",
+                    "project-input/aso_upgrade_project_factory_p1_github_wizard/TASK.md",
+                ],
+                check=True,
+                capture_output=True,
+            )
+
+            result = _run_cli(["project", "verify-clean", "--root", str(root), "--strict"])
+
+        self.assertEqual(result.returncode, 1)
+        self.assertIn("PROJECT_VERIFY_CLEAN_007", result.stdout)
+        self.assertIn("project-input/aso_upgrade_project_factory_p1_github_wizard/TASK.md", result.stdout)
 
     def test_verify_clean_accepts_generated_project_and_writes_json(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
