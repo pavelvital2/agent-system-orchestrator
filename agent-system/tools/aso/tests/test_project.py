@@ -190,12 +190,14 @@ class ProjectCommandTests(unittest.TestCase):
             self.assertTrue((target / "agent-system" / "tools" / "aso" / "aso.py").is_file())
             self.assertTrue((target / "project-input").is_dir())
             self.assertTrue((target / "project-runtime").is_dir())
+            self.assertEqual(len(list((target / "project-runtime" / "state").glob("*.json"))), 9)
             self.assertTrue((target / "project-archive").is_dir())
             self.assertFalse((target / "agent-system" / ".git").exists())
 
         self.assertEqual(create_result.returncode, 0, create_result.stderr)
         self.assertIn("Engine mode: vendored", create_result.stdout)
         self.assertIn("Runtime schema: 3.1.0", create_result.stdout)
+        self.assertIn("Runtime state: initialized", create_result.stdout)
         self.assertEqual(lock["aso_engine"]["version"], "3.4.0")
         self.assertEqual(lock["aso_engine"]["runtime_schema"], "3.1.0")
         self.assertEqual(lock["project"]["repo_url"], "https://github.com/example/demo-project.git")
@@ -226,20 +228,25 @@ class ProjectCommandTests(unittest.TestCase):
                 ]
             )
             verify_result = _run_cli(["project", "verify-clean", "--root", str(target), "--strict"])
+            state_verify_result = _run_cli(["state", "verify", "--root", str(target), "--strict"])
             lock = json.loads((target / lockfile.LOCKFILE_NAME).read_text(encoding="utf-8"))
 
             self.assertTrue((target / ".gitignore").is_file())
             self.assertTrue((target / "README.md").is_file())
             self.assertTrue((target / "project-input").is_dir())
             self.assertTrue((target / "project-runtime").is_dir())
+            self.assertEqual(len(list((target / "project-runtime" / "state").glob("*.json"))), 9)
             self.assertTrue((target / "project-archive").is_dir())
             self.assertFalse((target / "agent-system").exists())
 
         self.assertEqual(create_result.returncode, 0, create_result.stderr)
         self.assertEqual(verify_result.returncode, 0, verify_result.stderr)
+        self.assertEqual(state_verify_result.returncode, 0, state_verify_result.stdout + state_verify_result.stderr)
         self.assertIn("Engine mode: reference", create_result.stdout)
+        self.assertIn("Runtime state: initialized", create_result.stdout)
         self.assertNotIn("- agent-system/", create_result.stdout)
         self.assertIn("ASO project verify-clean: PASS", verify_result.stdout)
+        self.assertIn("ASO state verify: PASSED", state_verify_result.stdout)
         self.assertEqual(lock["aso_engine"]["version"], "3.4.0")
         self.assertEqual(lock["aso_engine"]["runtime_schema"], "3.1.0")
         self.assertEqual(lock["aso_engine"]["engine_mode"], "reference")
@@ -298,6 +305,12 @@ class ProjectCommandTests(unittest.TestCase):
             plan["planned_local_files"],
             [".gitignore", "README.md", "aso.lock", "project-archive/", "project-input/", "project-runtime/"],
         )
+        self.assertTrue(plan["planned_state_init"]["enabled_for_local_create"])
+        self.assertTrue(plan["planned_state_init"]["dry_run"])
+        self.assertFalse(plan["planned_state_init"]["writes_performed"])
+        self.assertEqual(len(plan["planned_state_init"]["planned_writes"]), 9)
+        self.assertFalse(plan["planned_state_init"]["publication_boundary"]["tracked"])
+        self.assertFalse(plan["planned_state_init"]["publication_boundary"]["pushed"])
         self.assertEqual(
             plan["planned_git_commands"],
             [
@@ -345,6 +358,7 @@ class ProjectCommandTests(unittest.TestCase):
             json.loads(stdout.getvalue())["planned_gh_command"],
             f"gh repo create example/demo --private --source {target} --remote origin --push",
         )
+        self.assertFalse(target.exists())
 
     def test_create_github_dry_run_fixture_and_argument_validation(self) -> None:
         fixture = json.loads((P1_FIXTURES / "github_dry_run_answers.json").read_text(encoding="utf-8"))
@@ -391,6 +405,8 @@ class ProjectCommandTests(unittest.TestCase):
         self.assertEqual(plan["repo_owner"], "example")
         self.assertEqual(plan["repo_name"], "demo")
         self.assertEqual(plan["engine_mode"], "reference")
+        self.assertIn("planned_state_init", plan)
+        self.assertEqual(plan["planned_state_init"]["runtime_schema_version"], "3.1.0")
         self.assertEqual(unsafe_owner.returncode, 1)
         self.assertIn("repo owner contains unsafe characters", unsafe_owner.stderr)
         self.assertEqual(unsafe_repo.returncode, 1)
@@ -468,6 +484,8 @@ class ProjectCommandTests(unittest.TestCase):
         self.assertEqual(receipt["repository"], "example/demo")
         self.assertEqual(receipt["commit"], "fakecommit123")
         self.assertEqual(receipt["tracked_paths"], [".gitignore", "README.md", "aso.lock"])
+        self.assertTrue(receipt["runtime_state_initialized"])
+        self.assertEqual(receipt["runtime_state_files"], 9)
         self.assertFalse((target / "agent-system").exists())
 
     def test_create_github_real_publish_with_fake_tools_failure_paths(self) -> None:
@@ -1186,6 +1204,8 @@ class ProjectCommandTests(unittest.TestCase):
 
             generated_agent_system = target / "agent-system"
             self.assertEqual(summary.copied_files, 2)
+            self.assertTrue(summary.runtime_state_initialized)
+            self.assertEqual(summary.runtime_state_files, 9)
             self.assertTrue((generated_agent_system / "README.md").is_file())
             self.assertTrue((generated_agent_system / "tools" / "aso" / "aso.py").is_file())
             self.assertFalse((generated_agent_system / ".git").exists())

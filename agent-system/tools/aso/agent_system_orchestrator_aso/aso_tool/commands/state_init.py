@@ -111,11 +111,15 @@ def _initial_sidecars(
     branch: str,
     package_version: str,
     runtime_schema_version: str,
+    probe_git: bool = True,
 ) -> dict[str, dict[str, Any]]:
     root_text = str(root.resolve(strict=False))
     workspace_id = _workspace_id(project_slug)
     effective_repo_url = repo_url or NONE
     effective_branch = branch or NONE
+    actual_remote = _actual_remote(root) if probe_git else NONE
+    actual_branch = _actual_branch(root) if probe_git else NONE
+    git_toplevel_actual = _run_git(root, ["rev-parse", "--show-toplevel"]) if probe_git else NONE
 
     return {
         "PROJECT_STATE.json": _envelope(
@@ -133,13 +137,13 @@ def _initial_sidecars(
                 "workspace_identity_ref": "project-runtime/state/WORKSPACE_IDENTITY.json",
                 "repository_lock_ref": "project-runtime/state/REPOSITORY_LOCK.json",
                 "project_root_expected": root_text,
-                "git_toplevel_actual": _run_git(root, ["rev-parse", "--show-toplevel"]),
+                "git_toplevel_actual": git_toplevel_actual,
                 "expected_remote": effective_repo_url,
-                "actual_remote": _actual_remote(root),
+                "actual_remote": actual_remote,
                 "expected_git_remote": effective_repo_url,
-                "actual_git_remote": _actual_remote(root),
+                "actual_git_remote": actual_remote,
                 "expected_branch": effective_branch,
-                "actual_branch": _actual_branch(root),
+                "actual_branch": actual_branch,
                 "push_allowed": False,
                 "identity_validation_status": "not_checked",
                 "identity_validation_error": NONE,
@@ -233,9 +237,9 @@ def _initial_sidecars(
                 "project_slug": project_slug,
                 "workspace_type": "project_workspace",
                 "expected_git_remote": effective_repo_url,
-                "actual_git_remote": _actual_remote(root),
+                "actual_git_remote": actual_remote,
                 "expected_branch": effective_branch,
-                "actual_branch": _actual_branch(root),
+                "actual_branch": actual_branch,
                 "identity_validation_status": "not_required",
                 "repository_lock_status": "pending",
                 "push_allowed": False,

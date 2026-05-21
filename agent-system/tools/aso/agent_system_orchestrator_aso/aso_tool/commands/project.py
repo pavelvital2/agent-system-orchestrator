@@ -12,6 +12,7 @@ from dataclasses import dataclass
 from pathlib import Path
 
 from .. import lockfile
+from . import state_init
 
 
 EXIT_OK = 0
@@ -121,6 +122,8 @@ class CreateSummary:
     created_entries: tuple[str, ...]
     copied_files: int
     skipped_paths: tuple[str, ...]
+    runtime_state_initialized: bool
+    runtime_state_files: int
 
 
 def run_verify_clean(args: argparse.Namespace) -> int:
@@ -168,6 +171,7 @@ def run_create(args: object) -> int:
     print(f"Engine mode: {args.engine_mode}")
     print(f"Package version: {lockfile.PACKAGE_VERSION}")
     print(f"Runtime schema: {lockfile.RUNTIME_SCHEMA_VERSION}")
+    print(f"Runtime state: {'initialized' if summary.runtime_state_initialized else 'not initialized'}")
     print("Created entries:")
     for entry in summary.created_entries:
         print(f"- {entry}")
@@ -338,6 +342,8 @@ def publish_github_project(
         "branch": default_branch,
         "commit": commit,
         "tracked_paths": trackable_paths,
+        "runtime_state_initialized": summary.runtime_state_initialized,
+        "runtime_state_files": summary.runtime_state_files,
         "pre_publish_verify_clean": pre_report["status"],
         "post_publish_verify_clean": post_report["status"],
     }
@@ -456,6 +462,14 @@ def create_project(
 
     copied_files = 0
     skipped_paths: tuple[str, ...] = ()
+    runtime_state_files = _initialize_runtime_state(
+        root=target,
+        project_name=project_name,
+        project_slug=project_slug,
+        profile=profile,
+        repo_url=repo_url,
+        default_branch=default_branch,
+    )
     created_entries = [
         ".gitignore",
         "README.md",
@@ -474,6 +488,8 @@ def create_project(
         created_entries=tuple(created_entries),
         copied_files=copied_files,
         skipped_paths=skipped_paths,
+        runtime_state_initialized=True,
+        runtime_state_files=runtime_state_files,
     )
 
 
@@ -522,6 +538,14 @@ def build_github_dry_run_plan(
         "visibility": visibility,
         "branch": default_branch,
         "planned_local_files": local_files,
+        "planned_state_init": _planned_state_init(
+            target=target,
+            project_name=project_name,
+            project_slug=project_slug,
+            profile=profile,
+            repo_url=None,
+            default_branch=default_branch,
+        ),
         "planned_git_commands": [
             f"git -C {target_text} init -b {default_branch}",
             f"git -C {target_text} add {' '.join(trackable_paths)}",
@@ -1025,6 +1049,70 @@ def _planned_local_files(*, engine_mode: str) -> tuple[str, ...]:
     if engine_mode == lockfile.DEFAULT_ENGINE_MODE:
         entries.insert(2, "agent-system/")
     return tuple(entries)
+
+
+def _initialize_runtime_state(
+    *,
+    root: Path,
+    project_name: str,
+    project_slug: str,
+    profile: str,
+    repo_url: str | None,
+    default_branch: str,
+) -> int:
+    sidecars = state_init._initial_sidecars(
+        root=root,
+        project_name=project_name,
+        project_slug=project_slug,
+        profile=profile,
+        repo_url=repo_url or state_init.NONE,
+        branch=default_branch,
+        package_version=lockfile.PACKAGE_VERSION,
+        runtime_schema_version=lockfile.RUNTIME_SCHEMA_VERSION,
+        probe_git=False,
+    )
+    state_root = root / "project-runtime" / "state"
+    ok, detail = state_init._validate_existing_state(state_root, sidecars)
+    if not ok:
+        raise ValueError(f"runtime state init refused: {detail}")
+    wrote, write_detail = state_init._write_sidecars(state_root, sidecars)
+    if not wrote:
+        raise ValueError(f"runtime state init failed: {write_detail}")
+    return len(sidecars)
+
+
+def _planned_state_init(
+    *,
+    target: Path,
+    project_name: str,
+    project_slug: str,
+    profile: str,
+    repo_url: str | None,
+    default_branch: str,
+) -> dict[str, object]:
+    state_root = target / "project-runtime" / "state"
+    return {
+        "enabled_for_local_create": True,
+        "dry_run": True,
+        "writes_performed": False,
+        "project_name": project_name,
+        "project_slug": project_slug,
+        "profile": profile,
+        "repo_url": repo_url,
+        "branch": default_branch,
+        "package_version": lockfile.PACKAGE_VERSION,
+        "runtime_schema_version": lockfile.RUNTIME_SCHEMA_VERSION,
+        "state_root": str(state_root),
+        "planned_writes": [
+            str(state_root / filename)
+            for filename in state_init.SIDECAR_FILENAMES
+        ],
+        "publication_boundary": {
+            "ignored_root": "project-runtime/",
+            "tracked": False,
+            "pushed": False,
+        },
+    }
 
 
 def _validate_create_inputs(
