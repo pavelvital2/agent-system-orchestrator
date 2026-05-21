@@ -30,6 +30,8 @@ class RuntimeSchemaContractTests(unittest.TestCase):
         summary = runtime_schema_contracts.contract_summary()
 
         self.assertEqual(summary["runtime_schema_version"], "3.1.0")
+        self.assertEqual(summary["package_version"], "3.6.0")
+        self.assertEqual(summary["governance_ruleset_version"], "3.6.0")
         self.assertEqual(summary["state_root"], "project-runtime/state")
         self.assertIn("SCHEMA_MANIFEST", summary["required_sidecars"])
         self.assertIn("REPOSITORY_LOCK", summary["optional_sidecars"])

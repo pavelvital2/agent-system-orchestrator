@@ -19,8 +19,8 @@ RUNTIME_SCHEMA_VERSION:
 ## Active version constants
 
 ```text
-CURRENT_PACKAGE_VERSION: 3.5.0
-CURRENT_GOVERNANCE_RULESET_VERSION: 3.5.0
+CURRENT_PACKAGE_VERSION: 3.6.0
+CURRENT_GOVERNANCE_RULESET_VERSION: 3.6.0
 CURRENT_RUNTIME_SCHEMA_VERSION: 3.1.0
 ```
 
@@ -299,6 +299,25 @@ live agent dispatch, checkpoint executor, commit/push automation, distributed
 workers, web control panel, or multi-project registry. P4 dashboard/control
 plane work, P5 queue/dispatcher work, P6 checkpoint executor work, daemon mode,
 and distributed workers are deferred to later bounded package upgrades.
+
+The ASO Product Intake P4 package installs:
+
+```text
+CURRENT_PACKAGE_VERSION: 3.6.0
+CURRENT_GOVERNANCE_RULESET_VERSION: 3.6.0
+CURRENT_RUNTIME_SCHEMA_VERSION: 3.1.0
+PRODUCT_ARTIFACT_SCHEMA_VERSION: 1.0.0
+```
+
+This minor update defines product-intake planning authority while preserving
+Runtime Schema `3.1.0` and the accepted P0/P1/P2/P3 behavior. P4 product
+artifacts are local planning artifacts under governed ignored runtime roots
+such as `project-runtime/product/`, `project-runtime/reports/`, and existing
+render paths where permitted. P4 does not install a runtime daemon, live agent
+dispatch, checkpoint executor, commit/push automation, web dashboard or GUI,
+external API calls, product build execution, deployment execution, secret
+collection UI, live integrations, distributed workers, multi-project registry,
+or application source code generation.
 
 ## Version semantics
 

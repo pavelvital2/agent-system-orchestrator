@@ -1416,4 +1416,63 @@ MIGRATION_NOTE: Runtime Schema 3.1.0 is preserved. P3 adds a proposal/apply cont
 AUTHORIZED_BY: project_owner
 AUDIT_REQUIRED: yes
 STATUS: accepted
+
+CHANGE_ID: GOV-2026-05-21-004
+CHANGE_TITLE: ASO_PRODUCT_INTAKE_P4_CONTRACT_VERSION_BOUNDARY
+DATE: 2026-05-21
+PACKAGE_VERSION_BEFORE: 3.5.0
+PACKAGE_VERSION_AFTER: 3.6.0
+GOVERNANCE_RULESET_BEFORE: 3.5.0
+GOVERNANCE_RULESET_AFTER: 3.6.0
+RUNTIME_SCHEMA_BEFORE: 3.1.0
+RUNTIME_SCHEMA_AFTER: 3.1.0
+CHANGE_TYPE: minor
+CHANGE_SUBTYPE: product_intake_p4_contract_version_boundary
+AFFECTED_FILES:
+- README.md
+- README_INSTALL.md
+- pyproject.toml
+- agent-system/README.md
+- agent-system/PACKAGE_VERSIONING.md
+- agent-system/GOVERNANCE_CHANGELOG.md
+- agent-system/02_runtime/PRODUCT_INTAKE_P4_CONTRACT.md
+- agent-system/11_release/ASO_PRODUCT_INTAKE_P4_V3_6_0_RELEASE_NOTES.md
+- agent-system/09_validators/schemas/aso_lock.schema.json
+- agent-system/09_validators/schemas/apply_receipt.schema.json
+- agent-system/09_validators/schemas/proposal_artifact.schema.json
+- agent-system/09_validators/schemas/runtime_state_3_1_0.contract.json
+- agent-system/09_validators/schemas/schema_manifest.schema.json
+- agent-system/03_templates/apply_receipt.template.json
+- agent-system/03_templates/proposal_artifact.template.json
+- agent-system/scripts/run_governance_smoke_tests.sh
+- agent-system/tests/fixtures/proposal_apply_p3/valid_workspace/project-runtime/state/PROJECT_STATE.json
+- agent-system/tests/fixtures/proposal_apply_p3/valid_workspace/project-runtime/state/SCHEMA_MANIFEST.json
+- agent-system/tests/fixtures/state/p2_valid_workspace/project-runtime/state/PROJECT_STATE.json
+- agent-system/tests/fixtures/state/p2_valid_workspace/project-runtime/state/SCHEMA_MANIFEST.json
+- agent-system/tools/aso/agent_system_orchestrator_aso/__init__.py
+- agent-system/tools/aso/agent_system_orchestrator_aso/aso_tool/aso.py
+- agent-system/tools/aso/agent_system_orchestrator_aso/aso_tool/lockfile.py
+- agent-system/tools/aso/agent_system_orchestrator_aso/aso_tool/proposal_contracts.py
+- agent-system/tools/aso/agent_system_orchestrator_aso/aso_tool/runtime_schema_contracts.py
+- agent-system/tools/aso/tests/test_lockfile.py
+- agent-system/tools/aso/tests/test_packaging.py
+- agent-system/tools/aso/tests/test_project.py
+- agent-system/tools/aso/tests/test_runtime_schema_contracts.py
+AFFECTED_INVARIANTS:
+- Active package/governance/runtime tuple is 3.6.0 / 3.6.0 / 3.1.0.
+- Runtime Schema 3.1.0 remains the canonical sidecar schema for current runtime state.
+- Product artifact schema version is 1.0.0.
+- P4 product artifacts are planning-only local runtime artifacts.
+- Confirmed product artifact writes are limited to allowed ignored runtime roots: project-runtime/product/, project-runtime/reports/, and permitted render roots.
+- P4 does not install live agent dispatch, runtime daemon, checkpoint executor, commit/push automation, GUI/dashboard, external API calls, product build execution, deployment execution, secret collection UI, distributed workers, multi-project registry, or application source code generation.
+- P0/P1/P2/P3 behavior remains governed by accepted compatibility rules.
+AFFECTED_TRANSITIONS:
+- product intake planning -> may create or render planning artifacts only when confirmed and within allowed ignored runtime roots.
+- proposal/apply and runtime state verification -> preserve Runtime Schema 3.1.0 behavior.
+SCHEMA_TEMPLATE_IMPACT: none
+MIGRATION_REQUIRED: no
+MIGRATION_NOTE: Runtime Schema 3.1.0 is preserved. P4 adds product-intake planning contract and package/governance version metadata only; it does not silently migrate active project-runtime state, execute product work, or broaden publication authority.
+AUTHORIZED_BY: project_owner
+AUDIT_REQUIRED: yes
+STATUS: accepted
 ```

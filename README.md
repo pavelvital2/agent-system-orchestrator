@@ -20,15 +20,15 @@ filesystem-governed ASO helper CLI at `agent-system/tools/aso/aso.py`: most
 commands are read-only diagnostics or dry-run proposals, while Project Factory
 commands may create generated projects only within explicit target paths.
 
-This Safe Proposal / Apply P3 package records the active package metadata as
-the governed `3.5.0` package/governance tuple with runtime schema `3.1.0`.
-P3 defines proposal/apply as a bounded local runtime-state automation layer
-over the JSON-first P2 state foundation while preserving the Project Factory
-P1 command boundary. It does not implement a runtime daemon, live agent
-dispatch, checkpoint executor, commit/push automation, distributed workers,
-web control panel, or multi-project registry. P4 dashboard/control-plane
-work, P5 queue/dispatcher work, P6 checkpoint executor work, daemon mode, and
-distributed workers are deferred.
+This Product Intake P4 package records the active package metadata as the
+governed `3.6.0` package/governance tuple with runtime schema `3.1.0`.
+P4 defines product-intake planning authority over local product planning
+artifacts while preserving the JSON-first P2 state foundation, Project Factory
+P1 command boundary, and Safe Proposal / Apply P3 command boundary. It does
+not implement a runtime daemon, live agent dispatch, checkpoint executor,
+commit/push automation, application source code generation, deployment
+execution, external API calls, distributed workers, web control panel, or
+multi-project registry.
 
 The Runtime Schema `3.1.0` sidecar contract is documented in
 `agent-system/02_runtime/RUNTIME_STATE_P2_CONTRACT.md` and packaged as
@@ -37,6 +37,8 @@ It defines required and optional sidecars, the P2 envelope, allowed
 lifecycle/checkpoint/action/compatibility statuses, legacy `2.0.0` and
 `3.0.0` migration compatibility behavior, and fixture expectations. The
 validator contract checks use Python stdlib JSON/data validation only.
+The P4 product-intake planning contract is documented in
+`agent-system/02_runtime/PRODUCT_INTAKE_P4_CONTRACT.md`.
 
 The canonical ASO Python package is:
 
@@ -105,7 +107,7 @@ python3 agent-system/tools/aso/aso.py validate-context-pack agent-system/tests/f
 Runtime State P2 command surfaces formalize JSON sidecars under
 `project-runtime/state/`. JSON sidecars are canonical for P2+ runtime state;
 Markdown or report outputs are compatibility views generated from JSON. The
-active package version is `3.5.0` and the active runtime schema version is
+active package version is `3.6.0` and the active runtime schema version is
 `3.1.0`.
 
 ```text

@@ -17,10 +17,10 @@ and verifies the installed `aso` command. It uses local Python packaging only;
 it does not require secrets, GitHub credentials, remote repository access,
 dispatch authority, checkpoint execution, commit, push, or publication rights.
 
-This install document covers package version `3.5.0` with runtime schema
-`3.1.0`. Safe Proposal / Apply P3 defines bounded local runtime-state
-proposal/apply authority while preserving the Runtime State P2 sidecar schema
-and the Project Factory P1 command boundary.
+This install document covers package version `3.6.0` with runtime schema
+`3.1.0`. Product Intake P4 defines planning-only product artifact authority
+while preserving the Runtime State P2 sidecar schema, the Project Factory P1
+command boundary, and the Safe Proposal / Apply P3 command boundary.
 
 Both installers accept a Python executable and virtual environment path:
 
@@ -168,13 +168,13 @@ gh auth status
 aso project create --github --confirm-publish --engine-mode reference --target /tmp/demo-github --name "Demo GitHub" --slug demo-github --profile generic --branch main --owner OWNER --repo demo-github --private
 ```
 
-Safe Proposal / Apply P3 does not add a runtime daemon, live dispatch,
-checkpoint executor, commit/push automation, distributed workers, web control
-panel, or multi-project registry. The install and verification commands do not
-grant commit, push, tag, merge, checkpoint, or publication authority for the
-package repository or owner roots. P4 dashboard/control-plane work, P5
-queue/dispatcher work, P6 checkpoint executor work, daemon mode, and
-distributed workers are deferred.
+Product Intake P4 and Safe Proposal / Apply P3 do not add a runtime daemon,
+live dispatch, checkpoint executor, commit/push automation, distributed
+workers, web control panel, external API calls, product build execution,
+deployment execution, or multi-project registry. The install and verification
+commands do not grant commit, push, tag, merge, checkpoint, or publication
+authority for the package repository or owner roots. P5 queue/dispatcher work,
+P6 checkpoint executor work, daemon mode, and distributed workers are deferred.
 
 ## Dev Container
 
