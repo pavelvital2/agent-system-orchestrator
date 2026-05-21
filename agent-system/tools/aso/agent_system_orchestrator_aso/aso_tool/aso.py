@@ -19,6 +19,7 @@ from .commands import (
     package_layout,
     package_sync,
     plan_next,
+    propose_checkpoint,
     propose_next_task,
     propose_transition,
     project,
@@ -371,6 +372,42 @@ def build_parser() -> argparse.ArgumentParser:
         help="Output format for stdout when --json-out is not used (default: text).",
     )
     propose_transition_parser.set_defaults(handler=propose_transition.run_transition)
+
+    propose_checkpoint_parser = propose_subparsers.add_parser(
+        "checkpoint",
+        help="Propose checkpoint eligibility without executing a checkpoint.",
+        description=(
+            "Verify current runtime state, inspect CHECKPOINT_STATE, accepted artifacts, "
+            "and audit evidence, then integrate read-only checkpoint-preflight diagnostics "
+            "into a schema-compatible checkpoint proposal. P3 checkpoint execution is not "
+            "implemented: this command never stages, commits, pushes, tags, invokes gh, "
+            "or creates checkpoint receipts."
+        ),
+    )
+    _add_root_argument(propose_checkpoint_parser, validate=False)
+    propose_checkpoint_write_group = propose_checkpoint_parser.add_mutually_exclusive_group()
+    propose_checkpoint_write_group.add_argument(
+        "--dry-run",
+        action="store_true",
+        help="Default behavior; write no workspace files except an explicit allowed --json-out.",
+    )
+    propose_checkpoint_write_group.add_argument(
+        "--confirm-write",
+        action="store_true",
+        help="Write only the proposal artifact under project-runtime/proposals/.",
+    )
+    propose_checkpoint_parser.add_argument(
+        "--json-out",
+        metavar="PATH",
+        help="Write proposal JSON to /tmp/... or an allowed project-runtime proposals/reports path.",
+    )
+    propose_checkpoint_parser.add_argument(
+        "--format",
+        choices=("json", "text"),
+        default="text",
+        help="Output format for stdout when --json-out is not used (default: text).",
+    )
+    propose_checkpoint_parser.set_defaults(handler=propose_checkpoint.run_checkpoint)
 
     checkpoint_preflight_parser = subparsers.add_parser(
         "checkpoint-preflight",
