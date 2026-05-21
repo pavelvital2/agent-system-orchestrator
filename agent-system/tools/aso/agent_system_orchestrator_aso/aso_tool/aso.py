@@ -20,6 +20,7 @@ from .commands import (
     package_sync,
     plan_next,
     propose_next_task,
+    propose_transition,
     project,
     record_result,
     state_init,
@@ -328,6 +329,48 @@ def build_parser() -> argparse.ArgumentParser:
         help="Output format for stdout when --json-out is not used (default: text).",
     )
     propose_next_task_parser.set_defaults(handler=propose_next_task.run_next_task)
+
+    propose_transition_parser = propose_subparsers.add_parser(
+        "transition",
+        help="Propose a guarded lifecycle transition from current P2 state sidecars.",
+        description=(
+            "Verify runtime state, read PROJECT_STATE current_phase, check CURRENT_GATE "
+            "compatibility and evidence, then emit a schema-compatible transition proposal "
+            "with base state hashes. Dry-run is the default and writes no workspace files "
+            "unless --json-out is explicitly supplied. --confirm-write writes only under "
+            "project-runtime/proposals."
+        ),
+    )
+    _add_root_argument(propose_transition_parser, validate=False)
+    propose_transition_parser.add_argument(
+        "--to",
+        required=True,
+        metavar="STAGE",
+        help="Requested lifecycle target stage. Unknown values produce a blocked proposal.",
+    )
+    propose_transition_write_group = propose_transition_parser.add_mutually_exclusive_group()
+    propose_transition_write_group.add_argument(
+        "--dry-run",
+        action="store_true",
+        help="Default behavior; write no workspace files except an explicit allowed --json-out.",
+    )
+    propose_transition_write_group.add_argument(
+        "--confirm-write",
+        action="store_true",
+        help="Write the proposal artifact under project-runtime/proposals/.",
+    )
+    propose_transition_parser.add_argument(
+        "--json-out",
+        metavar="PATH",
+        help="Write proposal JSON to /tmp/... or an allowed project-runtime proposals/reports path.",
+    )
+    propose_transition_parser.add_argument(
+        "--format",
+        choices=("json", "text"),
+        default="text",
+        help="Output format for stdout when --json-out is not used (default: text).",
+    )
+    propose_transition_parser.set_defaults(handler=propose_transition.run_transition)
 
     checkpoint_preflight_parser = subparsers.add_parser(
         "checkpoint-preflight",
