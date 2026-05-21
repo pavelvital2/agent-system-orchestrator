@@ -363,6 +363,66 @@
         "status": { "$ref": "#/$defs/artifactStatus" }
       }
     },
+    "candidateRole": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["role_id", "role", "reason", "capability_ids"],
+      "properties": {
+        "role_id": { "$ref": "#/$defs/externalId" },
+        "role": { "$ref": "#/$defs/nonEmptyString" },
+        "reason": { "$ref": "#/$defs/nonEmptyString" },
+        "capability_ids": { "$ref": "#/$defs/stringList" }
+      }
+    },
+    "candidateTaskGroup": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "task_group_id",
+        "title",
+        "purpose",
+        "suggested_role",
+        "capability_ids",
+        "depends_on_task_group_ids",
+        "is_executable",
+        "creates_task_packet"
+      ],
+      "properties": {
+        "task_group_id": { "$ref": "#/$defs/externalId" },
+        "title": { "$ref": "#/$defs/nonEmptyString" },
+        "purpose": { "$ref": "#/$defs/nonEmptyString" },
+        "suggested_role": { "$ref": "#/$defs/nonEmptyString" },
+        "capability_ids": { "$ref": "#/$defs/stringList" },
+        "depends_on_task_group_ids": { "$ref": "#/$defs/stringList" },
+        "is_executable": { "type": "boolean", "const": false },
+        "creates_task_packet": { "type": "boolean", "const": false }
+      }
+    },
+    "suggestedDomainPackProfile": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["domain_pack", "profile", "rationale"],
+      "properties": {
+        "domain_pack": { "$ref": "#/$defs/nonEmptyString" },
+        "profile": { "$ref": "#/$defs/nonEmptyString" },
+        "rationale": { "$ref": "#/$defs/nonEmptyString" }
+      }
+    },
+    "readinessModeGate": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["gate_id", "readiness_mode", "condition", "status", "blocks_plan_to_build"],
+      "properties": {
+        "gate_id": { "$ref": "#/$defs/externalId" },
+        "readiness_mode": { "$ref": "#/$defs/readinessMode" },
+        "condition": { "$ref": "#/$defs/nonEmptyString" },
+        "status": {
+          "type": "string",
+          "enum": ["blocked", "review_required", "not_ready"]
+        },
+        "blocks_plan_to_build": { "type": "boolean" }
+      }
+    },
     "productIntakeArtifact": {
       "type": "object",
       "allOf": [{ "$ref": "#/$defs/commonEnvelope" }],
@@ -577,7 +637,19 @@
       "allOf": [{ "$ref": "#/$defs/commonEnvelope" }],
       "required": [
         "plan_summary",
+        "recommended_lifecycle_starting_point",
+        "suggested_workstreams",
         "planned_workstreams",
+        "candidate_roles",
+        "candidate_task_groups",
+        "dependencies",
+        "blocking_open_questions",
+        "required_owner_decisions",
+        "suggested_domain_pack_profile",
+        "readiness_mode_gates",
+        "next_safe_aso_action",
+        "implementation_start_claim",
+        "non_executable_notice",
         "non_executable_constraints",
         "creates_task_packets",
         "queues_dispatches",
@@ -588,10 +660,43 @@
       "properties": {
         "artifact_type": { "type": "string", "const": "PRODUCT_PLAN" },
         "plan_summary": { "$ref": "#/$defs/nonEmptyString" },
+        "recommended_lifecycle_starting_point": { "$ref": "#/$defs/nonEmptyString" },
+        "suggested_workstreams": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/plannedWorkstream" }
+        },
         "planned_workstreams": {
           "type": "array",
           "items": { "$ref": "#/$defs/plannedWorkstream" }
         },
+        "candidate_roles": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/candidateRole" }
+        },
+        "candidate_task_groups": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/candidateTaskGroup" }
+        },
+        "dependencies": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/traceNote" }
+        },
+        "blocking_open_questions": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/traceNote" }
+        },
+        "required_owner_decisions": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/traceNote" }
+        },
+        "suggested_domain_pack_profile": { "$ref": "#/$defs/suggestedDomainPackProfile" },
+        "readiness_mode_gates": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/readinessModeGate" }
+        },
+        "next_safe_aso_action": { "$ref": "#/$defs/nonEmptyString" },
+        "implementation_start_claim": { "$ref": "#/$defs/nonEmptyString" },
+        "non_executable_notice": { "$ref": "#/$defs/nonEmptyString" },
         "non_executable_constraints": {
           "type": "array",
           "items": {
@@ -601,8 +706,10 @@
               "no_queue_entries",
               "no_live_dispatch",
               "no_checkpoint_execution",
+              "no_checkpoint_requests_or_proposals",
               "no_commits_or_pushes",
               "no_deployment_execution",
+              "no_app_generation",
               "no_external_api_calls",
               "no_secret_collection"
             ]

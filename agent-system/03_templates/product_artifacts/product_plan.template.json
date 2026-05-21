@@ -20,6 +20,17 @@
   ],
   "human_summary": "Provide a non-executable plan for future governed implementation without creating task packets, queue entries, dispatches, commits, deployments, or checkpoints.",
   "plan_summary": "Describe future governed implementation workstreams after owner review.",
+  "recommended_lifecycle_starting_point": "REQUIREMENTS - resolve blocking product questions before future design or implementation planning.",
+  "suggested_workstreams": [
+    {
+      "planned_workstream_id": "WS-001",
+      "description": "Plan future work for the first approved capability.",
+      "capability_ids": ["CAP-001"],
+      "acceptance_criterion_ids": ["AC-001"],
+      "sequencing_notes": "Owner review must happen before any downstream task packet is created.",
+      "status": "proposed"
+    }
+  ],
   "planned_workstreams": [
     {
       "planned_workstream_id": "WS-001",
@@ -30,13 +41,79 @@
       "status": "proposed"
     }
   ],
+  "candidate_roles": [
+    {
+      "role_id": "ROLE-001",
+      "role": "requirements_analyst",
+      "reason": "Clarify owner decisions and blocking product questions before future governed work.",
+      "capability_ids": ["CAP-001"]
+    },
+    {
+      "role_id": "ROLE-002",
+      "role": "solution_architect",
+      "reason": "Prepare future governed design decomposition after owner review.",
+      "capability_ids": ["CAP-001"]
+    }
+  ],
+  "candidate_task_groups": [
+    {
+      "task_group_id": "TG-001",
+      "title": "Owner decision closure",
+      "purpose": "Close blocking questions and required owner decisions without creating executable task packets.",
+      "suggested_role": "requirements_analyst",
+      "capability_ids": ["CAP-001"],
+      "depends_on_task_group_ids": [],
+      "is_executable": false,
+      "creates_task_packet": false
+    }
+  ],
+  "dependencies": [
+    {
+      "id": "DEPENDENCY-001",
+      "text": "Owner-reviewed scope, acceptance evidence, and secret setup procedure are required before implementation planning.",
+      "source_ref_ids": ["SRC-product-spec", "SRC-capability-matrix"]
+    }
+  ],
+  "blocking_open_questions": [
+    {
+      "id": "BLOCKER-001",
+      "text": "Implementation start remains blocked until owner gaps are resolved.",
+      "source_ref_ids": ["SRC-product-spec"]
+    }
+  ],
+  "required_owner_decisions": [
+    {
+      "id": "OWNER_DECISION-001",
+      "text": "Owner must confirm first-version scope and acceptance evidence before future governed implementation planning.",
+      "source_ref_ids": ["SRC-product-spec", "SRC-capability-matrix"]
+    }
+  ],
+  "suggested_domain_pack_profile": {
+    "domain_pack": "universal_product_planning",
+    "profile": "telegram_bot",
+    "rationale": "Use the selected profile guidance without weakening universal ASO lifecycle gates."
+  },
+  "readiness_mode_gates": [
+    {
+      "gate_id": "GATE-001",
+      "readiness_mode": "mvp",
+      "condition": "Scope, acceptance criteria, blockers, and owner approval policy are resolved before future implementation planning.",
+      "status": "blocked",
+      "blocks_plan_to_build": true
+    }
+  ],
+  "next_safe_aso_action": "Collect owner decisions for blocking questions, rerun product spec and capabilities, then regenerate this non-executable plan.",
+  "implementation_start_claim": "not_claimed_blocked_by_open_questions",
+  "non_executable_notice": "This PRODUCT_PLAN contains candidate planning groups only; it is not an executable DAG, dispatch queue, checkpoint request, commit plan, deployment plan, app generator, external-call instruction, or secret collection artifact.",
   "non_executable_constraints": [
     "no_task_packets",
     "no_queue_entries",
     "no_live_dispatch",
     "no_checkpoint_execution",
+    "no_checkpoint_requests_or_proposals",
     "no_commits_or_pushes",
     "no_deployment_execution",
+    "no_app_generation",
     "no_external_api_calls",
     "no_secret_collection"
   ],

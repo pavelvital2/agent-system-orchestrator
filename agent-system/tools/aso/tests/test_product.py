@@ -690,6 +690,203 @@ class ProductCommandTests(unittest.TestCase):
                 self.assertIn(capability["status"], allowed_statuses)
                 self.assertNotIn(capability["status"], {"implemented", "mvp_ready", "product_pass", "final_acceptance", "checkpoint_done"})
 
+    def test_plan_from_spec_and_capabilities_generates_non_executable_plan_with_blockers(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp) / "workspace"
+            root.mkdir()
+            spec_path = Path(tmp) / "product-spec.json"
+            matrix_path = Path(tmp) / "capability-matrix.json"
+            plan_out = Path(tmp) / "product-plan.json"
+
+            spec_path.write_text(
+                json.dumps(
+                    {
+                        "artifact_id": "PRODUCT_SPEC-test",
+                        "artifact_type": "PRODUCT_SPEC",
+                        "profile": "telegram_bot",
+                        "readiness_mode": "business_ready",
+                        "status": "needs_clarification",
+                        "product_summary": "Telegram order review and marketplace stock approval.",
+                        "problem_statement": "Operators need approved Telegram and marketplace workflows.",
+                        "dependencies": [
+                            {
+                                "id": "DEPENDENCY-001",
+                                "text": "Marketplace sandbox access owner is not confirmed.",
+                                "source_ref_ids": ["SRC-owner-answers"],
+                            }
+                        ],
+                        "open_gaps": [
+                            {
+                                "id": "GAP-001",
+                                "text": "Owner has not confirmed approval policy for stock updates.",
+                                "source_ref_ids": ["SRC-owner-answers"],
+                            }
+                        ],
+                        "acceptance_summary": "Acceptance evidence remains an explicit gap.",
+                        "blocks_implementation_start": True,
+                    }
+                ),
+                encoding="utf-8",
+            )
+            matrix_path.write_text(
+                json.dumps(
+                    {
+                        "artifact_id": "CAPABILITY_MATRIX-test",
+                        "artifact_type": "CAPABILITY_MATRIX",
+                        "profile": "telegram_bot",
+                        "readiness_mode": "business_ready",
+                        "capabilities": [
+                            {
+                                "capability_id": "CAP-001",
+                                "name": "Support Telegram order review",
+                                "description": "The product must support Telegram order review.",
+                                "acceptance_criterion_ids": ["AC-001"],
+                                "acceptance_criteria_refs": ["AC-001"],
+                                "required_integrations": ["Telegram", "Marketplace API"],
+                                "required_secrets": ["TELEGRAM_BOT_TOKEN", "MARKETPLACE_API_KEY"],
+                                "risks": ["External integration scope requires later verification."],
+                                "status": "needs_clarification",
+                            }
+                        ],
+                    }
+                ),
+                encoding="utf-8",
+            )
+
+            result = run_aso(
+                "product",
+                "plan",
+                "--root",
+                str(root),
+                "--from-spec",
+                str(spec_path),
+                "--from-capabilities",
+                str(matrix_path),
+                "--dry-run",
+                "--json-out",
+                str(plan_out),
+            )
+
+            self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+            self.assertEqual(result.stdout, "")
+            artifact = json.loads(plan_out.read_text(encoding="utf-8"))
+            self.assertEqual(artifact["artifact_type"], "PRODUCT_PLAN")
+            self.assertEqual(artifact["status"], "needs_clarification")
+            self.assertIn("REQUIREMENTS", artifact["recommended_lifecycle_starting_point"])
+            self.assertEqual(artifact["suggested_workstreams"][0]["capability_ids"], ["CAP-001"])
+            self.assertEqual(artifact["planned_workstreams"], artifact["suggested_workstreams"])
+            self.assertIn("requirements_analyst", {role["role"] for role in artifact["candidate_roles"]})
+            self.assertFalse(artifact["candidate_task_groups"][0]["is_executable"])
+            self.assertFalse(artifact["candidate_task_groups"][0]["creates_task_packet"])
+            blockers = " ".join(item["text"] for item in artifact["blocking_open_questions"])
+            self.assertIn("approval policy for stock updates", blockers)
+            decisions = " ".join(item["text"] for item in artifact["required_owner_decisions"])
+            self.assertIn("TELEGRAM_BOT_TOKEN", decisions)
+            self.assertEqual(artifact["suggested_domain_pack_profile"]["profile"], "telegram_bot")
+            self.assertTrue(all(gate["blocks_plan_to_build"] for gate in artifact["readiness_mode_gates"]))
+            self.assertIn("product spec", artifact["next_safe_aso_action"])
+            self.assertEqual(artifact["implementation_start_claim"], "not_claimed_blocked_by_open_questions")
+            self.assertIn("no_checkpoint_requests_or_proposals", artifact["non_executable_constraints"])
+            self.assertIn("no_app_generation", artifact["non_executable_constraints"])
+            self.assertFalse(artifact["creates_task_packets"])
+            self.assertFalse(artifact["queues_dispatches"])
+            self.assertFalse(artifact["executes_checkpoints"])
+            self.assertFalse(artifact["performs_commits"])
+            self.assertFalse(artifact["performs_deployments"])
+
+            raw_artifact = json.dumps(artifact, sort_keys=True)
+            self.assertNotIn("ready_to_build", raw_artifact)
+            self.assertNotIn("task_packet_id", raw_artifact)
+            self.assertNotIn("secret_value", raw_artifact)
+
+    def test_plan_output_content_is_deterministic_for_same_spec_and_capabilities(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp) / "workspace"
+            root.mkdir()
+            spec_path = Path(tmp) / "product-spec.json"
+            matrix_path = Path(tmp) / "capability-matrix.json"
+            first_out = Path(tmp) / "first-plan.json"
+            second_out = Path(tmp) / "second-plan.json"
+            spec_path.write_text(
+                json.dumps(
+                    {
+                        "artifact_id": "PRODUCT_SPEC-test",
+                        "artifact_type": "PRODUCT_SPEC",
+                        "profile": "api_service",
+                        "readiness_mode": "mvp",
+                        "status": "ready_for_review",
+                        "product_summary": "API service for approved report exports.",
+                        "problem_statement": "Operators need exportable report data.",
+                        "dependencies": [],
+                        "open_gaps": [],
+                        "acceptance_summary": "Owner review plus checklist evidence.",
+                        "blocks_implementation_start": False,
+                    }
+                ),
+                encoding="utf-8",
+            )
+            matrix_path.write_text(
+                json.dumps(
+                    {
+                        "artifact_id": "CAPABILITY_MATRIX-test",
+                        "artifact_type": "CAPABILITY_MATRIX",
+                        "profile": "api_service",
+                        "readiness_mode": "mvp",
+                        "capabilities": [
+                            {
+                                "capability_id": "CAP-002",
+                                "name": "Export reports",
+                                "description": "The product must export approved reports.",
+                                "acceptance_criterion_ids": ["AC-002"],
+                                "required_integrations": [],
+                                "required_secrets": [],
+                                "risks": [],
+                                "status": "proposed",
+                            },
+                            {
+                                "capability_id": "CAP-001",
+                                "name": "Review report data",
+                                "description": "The product must let operators review report data.",
+                                "acceptance_criterion_ids": ["AC-001"],
+                                "required_integrations": [],
+                                "required_secrets": [],
+                                "risks": [],
+                                "status": "proposed",
+                            },
+                        ],
+                    }
+                ),
+                encoding="utf-8",
+            )
+
+            for output in (first_out, second_out):
+                result = run_aso(
+                    "product",
+                    "plan",
+                    "--root",
+                    str(root),
+                    "--from-spec",
+                    str(spec_path),
+                    "--from-capabilities",
+                    str(matrix_path),
+                    "--dry-run",
+                    "--json-out",
+                    str(output),
+                )
+                self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+
+            first = json.loads(first_out.read_text(encoding="utf-8"))
+            second = json.loads(second_out.read_text(encoding="utf-8"))
+            for artifact in (first, second):
+                artifact["artifact_id"] = "<generated>"
+                artifact["created_at"] = "<generated>"
+            self.assertEqual(first, second)
+            self.assertEqual(
+                [stream["capability_ids"][0] for stream in first["planned_workstreams"]],
+                ["CAP-001", "CAP-002"],
+            )
+            self.assertEqual(first["suggested_domain_pack_profile"]["profile"], "backend_api")
+
 
 if __name__ == "__main__":
     unittest.main()

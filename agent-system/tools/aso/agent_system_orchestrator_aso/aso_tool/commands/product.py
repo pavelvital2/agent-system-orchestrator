@@ -18,6 +18,22 @@ EXIT_BLOCKED = 1
 EXIT_IO_ERROR = 3
 
 READINESS_MODES = ("mvp", "business_ready", "production_ready", "enterprise_like")
+READINESS_GATE_CONDITIONS = {
+    "mvp": "Scope, acceptance criteria, blockers, and owner approval policy are resolved before future MVP implementation planning.",
+    "business_ready": "MVP scope plus operations owner, business-risk approvals, and support expectations are confirmed.",
+    "production_ready": "Business-ready scope plus setup, run, monitoring, rollback, and launch evidence expectations are confirmed.",
+    "enterprise_like": "Production-ready scope plus security, auditability, access control, data governance, and handover expectations are confirmed.",
+}
+PROFILE_GUIDANCE_MAP = {
+    "telegram_bot": "telegram_bot",
+    "marketplace_automation": "fullstack_app",
+    "web_app": "frontend_app",
+    "api_service": "backend_api",
+    "cli_tool": "cli_tool",
+    "analytics_tool": "data_pipeline",
+    "crm_tool": "fullstack_app",
+    "generic": "generic",
+}
 ALLOWED_WORKSPACE_OUTPUTS = (
     "project-runtime/product",
     "project-runtime/reports",
@@ -843,6 +859,15 @@ def _string_items(value: Any) -> list[str]:
     return [_normalize_ws(item) for item in value if isinstance(item, str) and item.strip()]
 
 
+def _unique_strings(items: list[str]) -> list[str]:
+    unique: list[str] = []
+    for item in items:
+        clean = _normalize_ws(item)
+        if clean and clean not in unique:
+            unique.append(clean)
+    return unique
+
+
 def _dict_items(value: Any) -> list[dict[str, Any]]:
     if not isinstance(value, list):
         return []
@@ -1023,6 +1048,282 @@ def _capability_contracts(spec: dict[str, Any], readiness: str) -> list[dict[str
             }
         )
     return capabilities
+
+
+def _plan_capability_rows(capability_matrix: dict[str, Any]) -> list[dict[str, Any]]:
+    return sorted(
+        _dict_items(capability_matrix.get("capabilities")),
+        key=lambda item: str(item.get("capability_id", "")),
+    )
+
+
+def _plan_capability_ids(capability_rows: list[dict[str, Any]]) -> list[str]:
+    capability_ids = [
+        str(capability.get("capability_id"))
+        for capability in capability_rows
+        if isinstance(capability.get("capability_id"), str)
+    ]
+    return capability_ids or ["CAP-001"]
+
+
+def _plan_acceptance_ids(capability: dict[str, Any]) -> list[str]:
+    ids = _string_items(capability.get("acceptance_criterion_ids"))
+    if not ids:
+        ids = _string_items(capability.get("acceptance_criteria_refs"))
+    return ids or [f"AC-{str(capability.get('capability_id', 'CAP-001')).removeprefix('CAP-')}"]
+
+
+def _plan_status_from_capability(capability: dict[str, Any]) -> str:
+    status = str(capability.get("status") or "proposed")
+    if status in {"blocked", "needs_clarification", "out_of_scope", "ready_for_review"}:
+        return status
+    return "proposed"
+
+
+def _plan_workstreams(capability_rows: list[dict[str, Any]]) -> list[dict[str, object]]:
+    rows = capability_rows or [
+        {
+            "capability_id": "CAP-001",
+            "name": "Owner-approved capability pending matrix confirmation",
+            "acceptance_criterion_ids": ["AC-001"],
+            "status": "needs_clarification",
+        }
+    ]
+    workstreams: list[dict[str, object]] = []
+    for index, capability in enumerate(rows, start=1):
+        capability_id = str(capability.get("capability_id") or f"CAP-{index:03d}")
+        name = str(capability.get("name") or capability.get("description") or capability_id)
+        workstreams.append(
+            {
+                "planned_workstream_id": f"WS-{index:03d}",
+                "description": (
+                    f"Future governed workstream for {capability_id}: {name}. "
+                    "This is planning guidance only and does not create executable work."
+                ),
+                "capability_ids": [capability_id],
+                "acceptance_criterion_ids": _plan_acceptance_ids(capability),
+                "sequencing_notes": (
+                    "Owner decisions, readiness gates, and future audit requirements must be satisfied "
+                    "before any downstream dispatchable work is created."
+                ),
+                "status": _plan_status_from_capability(capability),
+            }
+        )
+    return workstreams
+
+
+def _plan_dependency_texts(spec: dict[str, Any], capability_rows: list[dict[str, Any]]) -> list[str]:
+    texts = _trace_texts(spec, "dependencies")
+    integrations: list[str] = []
+    secrets: list[str] = []
+    risks: list[str] = []
+    for capability in capability_rows:
+        integrations.extend(_string_items(capability.get("required_integrations")))
+        secrets.extend(_string_items(capability.get("required_secrets")))
+        risks.extend(_string_items(capability.get("risks")))
+    for integration in _unique_strings(integrations):
+        texts.append(f"{integration} rollout mode, sandbox/read-only policy, and approval boundary must be confirmed.")
+    for secret in _unique_strings(secrets):
+        texts.append(f"{secret} secret owner and setup procedure are required later; no value is collected by this plan.")
+    texts.extend(risks)
+    if not texts:
+        texts.append("Future implementation evidence and owner review are required before lifecycle progression.")
+    return _unique_strings(texts)
+
+
+def _plan_blocking_question_texts(spec: dict[str, Any], capability_rows: list[dict[str, Any]]) -> list[str]:
+    blockers = _trace_texts(spec, "open_gaps")
+    if bool(spec.get("blocks_implementation_start")) and not blockers:
+        blockers.append("PRODUCT_SPEC blocks implementation start until owner gaps are resolved.")
+    for capability in capability_rows:
+        status = str(capability.get("status") or "")
+        if status in {"blocked", "needs_clarification"}:
+            capability_id = str(capability.get("capability_id") or "CAP-unknown")
+            name = str(capability.get("name") or capability.get("description") or "unnamed capability")
+            blockers.append(f"Capability {capability_id} ({name}) remains {status} before future implementation planning.")
+        if not _plan_acceptance_ids(capability):
+            capability_id = str(capability.get("capability_id") or "CAP-unknown")
+            blockers.append(f"Capability {capability_id} needs linked acceptance criteria before future implementation planning.")
+    return _unique_strings(blockers)
+
+
+def _plan_owner_decision_texts(
+    spec: dict[str, Any],
+    capability_rows: list[dict[str, Any]],
+    blockers: list[str],
+) -> list[str]:
+    decisions: list[str] = []
+    if blockers:
+        decisions.append("Owner must resolve blocking product questions before future implementation planning.")
+    integrations: list[str] = []
+    secrets: list[str] = []
+    has_external_or_risky_change = False
+    for capability in capability_rows:
+        integrations.extend(_string_items(capability.get("required_integrations")))
+        secrets.extend(_string_items(capability.get("required_secrets")))
+        searchable = " ".join(
+            [str(capability.get("name", "")), str(capability.get("description", ""))]
+            + _string_items(capability.get("risks"))
+        )
+        has_external_or_risky_change = has_external_or_risky_change or _contains_any(
+            searchable,
+            ("payment", "price", "stock", "inventory", "customer", "message", "delete", "external", "approval"),
+        )
+    if integrations:
+        decisions.append(
+            "Owner must choose first rollout mode for integrations: "
+            f"{', '.join(_unique_strings(integrations))}."
+        )
+    if secrets:
+        decisions.append(
+            "Owner must name the secret owner and setup procedure for required secret names: "
+            f"{', '.join(_unique_strings(secrets))}; values must stay outside product artifacts."
+        )
+    if has_external_or_risky_change:
+        decisions.append("Owner must confirm approval, dry-run, and rollback policy for high-risk business actions.")
+    if str(spec.get("acceptance_summary", "")).casefold().find("gap") >= 0:
+        decisions.append("Owner must confirm acceptance evidence before future implementation planning.")
+    if not decisions:
+        decisions.append("Owner must review and accept this PRODUCT_PLAN before any future governed implementation work.")
+    return _unique_strings(decisions)
+
+
+def _plan_candidate_roles(
+    capability_ids: list[str],
+    blockers: list[str],
+    readiness: str,
+    dependencies: list[str],
+) -> list[dict[str, object]]:
+    role_reasons: list[tuple[str, str]] = []
+    if blockers:
+        role_reasons.append(("requirements_analyst", "Resolve blocking product questions and owner decisions."))
+    role_reasons.append(("solution_architect", "Prepare future governed design decomposition after owner review."))
+    role_reasons.append(("developer", "Implement future approved slices only after dispatchable work exists."))
+    role_reasons.append(("tester", "Verify future implementation evidence against capability acceptance criteria."))
+    if readiness != "mvp" or any(_contains_any(text, ("integration", "secret", "setup", "run", "monitor")) for text in dependencies):
+        role_reasons.append(("devops_setup_engineer", "Plan later setup, run, monitoring, and configuration evidence."))
+    if readiness in {"production_ready", "enterprise_like"}:
+        role_reasons.append(("release_manager", "Plan later launch readiness and rollback review."))
+        role_reasons.append(("technical_writer", "Plan later handover and operational documentation."))
+    return [
+        {
+            "role_id": f"ROLE-{index:03d}",
+            "role": role,
+            "reason": reason,
+            "capability_ids": capability_ids,
+        }
+        for index, (role, reason) in enumerate(role_reasons, start=1)
+    ]
+
+
+def _plan_candidate_task_groups(
+    capability_ids: list[str],
+    blockers: list[str],
+    readiness: str,
+    dependencies: list[str],
+) -> list[dict[str, object]]:
+    groups: list[tuple[str, str, str, str, list[str]]] = []
+    if blockers:
+        groups.append(
+            (
+                "Owner decision closure",
+                "Close blocking questions and required owner decisions without creating executable work.",
+                "requirements_analyst",
+                "",
+                capability_ids,
+            )
+        )
+    design_dep = "TG-001" if blockers else ""
+    groups.append(
+        (
+            "Capability design breakdown",
+            "Translate accepted capabilities into future governed design boundaries and verification expectations.",
+            "solution_architect",
+            design_dep,
+            capability_ids,
+        )
+    )
+    groups.append(
+        (
+            "Future implementation slices",
+            "Group future implementation work by capability after owner review and governed task creation.",
+            "developer",
+            f"TG-{len(groups):03d}",
+            capability_ids,
+        )
+    )
+    groups.append(
+        (
+            "Verification evidence planning",
+            "Plan future checks that prove capability behavior against acceptance criteria.",
+            "tester",
+            f"TG-{len(groups):03d}",
+            capability_ids,
+        )
+    )
+    if readiness != "mvp" or any(_contains_any(text, ("integration", "secret", "setup", "run", "monitor")) for text in dependencies):
+        groups.append(
+            (
+                "Setup and run readiness planning",
+                "Plan future environment, configuration, smoke, monitoring, and rollback evidence.",
+                "devops_setup_engineer",
+                f"TG-{len(groups):03d}",
+                capability_ids,
+            )
+        )
+    task_groups: list[dict[str, object]] = []
+    for index, (title, purpose, role, dependency, group_capability_ids) in enumerate(groups, start=1):
+        task_groups.append(
+            {
+                "task_group_id": f"TG-{index:03d}",
+                "title": title,
+                "purpose": purpose,
+                "suggested_role": role,
+                "capability_ids": group_capability_ids,
+                "depends_on_task_group_ids": [dependency] if dependency else [],
+                "is_executable": False,
+                "creates_task_packet": False,
+            }
+        )
+    return task_groups
+
+
+def _suggested_domain_pack_profile(profile: str, spec: dict[str, Any]) -> dict[str, str]:
+    suggested_profile = PROFILE_GUIDANCE_MAP.get(profile, profile or "generic")
+    domain_pack = "universal_product_planning"
+    if profile not in {"generic", suggested_profile}:
+        domain_pack = f"product_profile:{profile}"
+    summary = str(spec.get("product_summary") or spec.get("problem_statement") or "product plan")
+    return {
+        "domain_pack": domain_pack,
+        "profile": suggested_profile,
+        "rationale": (
+            f"Use profile guidance '{suggested_profile}' for {summary[:120]} while universal ASO "
+            "lifecycle, audit, secret, and write-boundary rules remain authoritative."
+        ),
+    }
+
+
+def _readiness_mode_gates(readiness: str, blockers: list[str]) -> list[dict[str, object]]:
+    selected_index = READINESS_MODES.index(readiness) if readiness in READINESS_MODES else 0
+    gates: list[dict[str, object]] = []
+    for index, mode in enumerate(READINESS_MODES, start=1):
+        if blockers:
+            status = "blocked"
+        elif index - 1 <= selected_index:
+            status = "review_required"
+        else:
+            status = "not_ready"
+        gates.append(
+            {
+                "gate_id": f"GATE-{index:03d}",
+                "readiness_mode": mode,
+                "condition": READINESS_GATE_CONDITIONS[mode],
+                "status": status,
+                "blocks_plan_to_build": True,
+            }
+        )
+    return gates
 
 
 def _question_options(question_id: str, options: list[tuple[str, str, str]]) -> list[dict[str, str]]:
@@ -1532,14 +1833,35 @@ def _build_plan(args: argparse.Namespace, now: datetime) -> tuple[dict[str, obje
     spec, error = _read_json_object(str(args.from_spec))
     if error is not None or spec is None:
         return None, error
-    capabilities, error = _read_json_object(str(args.from_capabilities))
-    if error is not None or capabilities is None:
+    capability_matrix, error = _read_json_object(str(args.from_capabilities))
+    if error is not None or capability_matrix is None:
         return None, error
+    if spec.get("artifact_type") != "PRODUCT_SPEC":
+        return None, "from-spec must be a PRODUCT_SPEC artifact"
+    if capability_matrix.get("artifact_type") != "CAPABILITY_MATRIX":
+        return None, "from-capabilities must be a CAPABILITY_MATRIX artifact"
     _artifact_profile(args, spec)
+    capability_rows = _plan_capability_rows(capability_matrix)
+    capability_ids = _plan_capability_ids(capability_rows)
+    workstreams = _plan_workstreams(capability_rows)
+    dependencies = _plan_dependency_texts(spec, capability_rows)
+    blockers = _plan_blocking_question_texts(spec, capability_rows)
+    required_owner_decisions = _plan_owner_decision_texts(spec, capability_rows, blockers)
+    status = "needs_clarification" if blockers else "ready_for_review"
+    lifecycle_start = (
+        "REQUIREMENTS - resolve blocking product questions before future design or implementation planning."
+        if blockers
+        else "DESIGN - owner review can precede future governed design decomposition."
+    )
+    next_safe_action = (
+        "Collect owner decisions for blocking questions, rerun `aso product spec`, regenerate `aso product capabilities`, then rerun this non-executable plan."
+        if blockers
+        else "Ask the owner to review this PRODUCT_PLAN; only a future governed orchestrator step may create dispatchable task packets after approval."
+    )
     artifact = _common(
         args,
         artifact_type="PRODUCT_PLAN",
-        status="proposed",
+        status=status,
         source_refs=[
             _source_ref(
                 "SRC-product-spec",
@@ -1551,35 +1873,70 @@ def _build_plan(args: argparse.Namespace, now: datetime) -> tuple[dict[str, obje
                 "SRC-capability-matrix",
                 "artifact",
                 "Capability matrix artifact",
-                artifact_id=str(capabilities.get("artifact_id", "CAPABILITY_MATRIX-unknown")),
+                artifact_id=str(capability_matrix.get("artifact_id", "CAPABILITY_MATRIX-unknown")),
             ),
         ],
         human_summary=(
-            "Non-executable product plan scaffold; it does not create task packets, "
-            "queue dispatches, execute checkpoints, commit, push, deploy, call APIs, or collect secrets."
+            "Non-executable product plan generated from PRODUCT_SPEC and CAPABILITY_MATRIX; it does not create "
+            "task packets, queue dispatches, execute checkpoints, commit, push, deploy, call APIs, or collect secrets."
         ),
         now=now,
     )
     artifact.update(
         {
-            "plan_summary": "Future governed implementation workstreams can be proposed after owner review.",
-            "planned_workstreams": [
-                {
-                    "planned_workstream_id": "WS-001",
-                    "description": "Plan future work for the first accepted capability.",
-                    "capability_ids": ["CAP-001"],
-                    "acceptance_criterion_ids": ["AC-001"],
-                    "sequencing_notes": "Owner review must happen before downstream task packets or dispatches are created.",
-                    "status": "proposed",
-                }
-            ],
+            "plan_summary": (
+                "Future governed implementation workstreams are suggested from the capability matrix. "
+                "Open blockers keep this plan in clarification mode and no build readiness is claimed."
+                if blockers
+                else "Future governed implementation workstreams are suggested for owner review; this remains planning only."
+            ),
+            "recommended_lifecycle_starting_point": lifecycle_start,
+            "suggested_workstreams": workstreams,
+            "planned_workstreams": workstreams,
+            "candidate_roles": _plan_candidate_roles(capability_ids, blockers, str(args.readiness), dependencies),
+            "candidate_task_groups": _plan_candidate_task_groups(
+                capability_ids,
+                blockers,
+                str(args.readiness),
+                dependencies,
+            ),
+            "dependencies": _trace_notes_from_texts(
+                "DEPENDENCY",
+                dependencies,
+                ["SRC-product-spec", "SRC-capability-matrix"],
+            ),
+            "blocking_open_questions": _trace_notes_from_texts(
+                "BLOCKER",
+                blockers,
+                ["SRC-product-spec", "SRC-capability-matrix"],
+            ),
+            "required_owner_decisions": _trace_notes_from_texts(
+                "OWNER_DECISION",
+                required_owner_decisions,
+                ["SRC-product-spec", "SRC-capability-matrix"],
+            ),
+            "suggested_domain_pack_profile": _suggested_domain_pack_profile(str(args.profile), spec),
+            "readiness_mode_gates": _readiness_mode_gates(str(args.readiness), blockers),
+            "next_safe_aso_action": next_safe_action,
+            "implementation_start_claim": (
+                "not_claimed_blocked_by_open_questions"
+                if blockers
+                else "not_claimed_owner_review_required"
+            ),
+            "non_executable_notice": (
+                "This PRODUCT_PLAN contains candidate workstreams and task groups only; it is not an executable DAG, "
+                "dispatch queue, checkpoint request or proposal, commit plan, deployment plan, app generator, "
+                "external-call instruction, or secret collection artifact."
+            ),
             "non_executable_constraints": [
                 "no_task_packets",
                 "no_queue_entries",
                 "no_live_dispatch",
                 "no_checkpoint_execution",
+                "no_checkpoint_requests_or_proposals",
                 "no_commits_or_pushes",
                 "no_deployment_execution",
+                "no_app_generation",
                 "no_external_api_calls",
                 "no_secret_collection",
             ],
