@@ -99,15 +99,33 @@ python3 agent-system/tools/aso/aso.py validate-design agent-system/tests/fixture
 python3 agent-system/tools/aso/aso.py validate-context-pack agent-system/tests/fixtures/context_pack/valid_context_pack.json --root . --strict
 ```
 
-Stage 2 command surfaces are also read-only or dry-run only:
+Runtime State P2 command surfaces formalize JSON sidecars under
+`project-runtime/state/`. JSON sidecars are canonical for P2+ runtime state;
+Markdown or report outputs are compatibility views generated from JSON. The
+active package version is `3.4.0` and the active runtime schema version is
+`3.1.0`.
 
 ```text
 python3 agent-system/tools/aso/aso.py validate-rules --root . --strict
-python3 agent-system/tools/aso/aso.py state verify --root agent-system/tests/fixtures/state/valid_workspace --strict --json-out /tmp/aso-stage2-state.json
+python3 agent-system/tools/aso/aso.py state --help
+python3 agent-system/tools/aso/aso.py state init --root /tmp/aso-state-demo --project-name "State Demo" --project-slug state-demo --profile generic --repo-url none --branch main --dry-run --json-out /tmp/aso-state-init-plan.json
+python3 agent-system/tools/aso/aso.py state init --root /tmp/aso-state-demo --project-name "State Demo" --project-slug state-demo --profile generic --repo-url none --branch main --confirm-write --json-out /tmp/aso-state-init-receipt.json
+python3 agent-system/tools/aso/aso.py state verify --root /tmp/aso-state-demo --strict --json-out /tmp/aso-state-verify.json
+python3 agent-system/tools/aso/aso.py state render --root /tmp/aso-state-demo --format markdown --out /tmp/aso-state-render.md
+python3 agent-system/tools/aso/aso.py state migrate --root agent-system/tests/fixtures/state/valid_workspace --to 3.1.0 --dry-run --json-out /tmp/aso-state-migrate-plan.json
 python3 agent-system/tools/aso/aso.py plan-next --root agent-system/tests/fixtures/state/valid_workspace --strict --json-out /tmp/aso-stage2-plan.json
 python3 agent-system/tools/aso/aso.py dashboard --root agent-system/tests/fixtures/state/valid_workspace --out /tmp/aso-stage2-dashboard.html
 python3 agent-system/tools/aso/aso.py checkpoint-preflight --root . --mode package --strict --json-out /tmp/aso-stage2-checkpoint-preflight.json
 ```
+
+`aso state init --dry-run` writes no files. Confirmed initialization requires
+`--confirm-write` and writes only local ignored workspace state under the
+selected root. `aso state migrate --dry-run` emits a deterministic migration
+plan for compatible legacy sidecars; confirmed migration requires
+`--confirm-write`, fails closed on malformed or ambiguous input, and writes
+migration receipts under allowed `project-runtime/` report paths. `aso state
+render` is read-only except for explicit output to `/tmp` or workspace
+`project-runtime/reports` or `project-runtime/rendered` paths.
 
 Stage 3 package-layout diagnostics are read-only and verify package metadata,
 entrypoint, hygiene, and canonical package-source coherence:
@@ -173,10 +191,13 @@ python3 agent-system/tools/aso/aso.py wizard --answers path/to/answers.json --dr
 ```
 
 Generated projects contain `aso.lock`, `.gitignore`, a minimal README, and
-local ignored ASO working roots when needed. Vendored mode may copy safe
-`agent-system/` content. Reference mode records the external ASO engine in
-`aso.lock` and must not track `agent-system/`. Generated projects must not
-publish `project-input/`, `project-runtime/`, `project-archive/`, virtual
+local ignored ASO working roots when needed. Local Project Factory creation may
+initialize Runtime Schema `3.1.0` sidecars under the generated project's
+ignored `project-runtime/state/` root; those sidecars are local runtime state,
+not package publication artifacts. Vendored mode may copy safe `agent-system/`
+content. Reference mode records the external ASO engine in `aso.lock` and must
+not track `agent-system/`. Generated projects must not publish
+`project-input/`, `project-runtime/`, `project-archive/`, virtual
 environments, caches, logs, secret-like files, local upgrade packages, or ASO
 engine `.git` metadata.
 
@@ -221,17 +242,21 @@ reports the canonical next action value `CREATE_AGENT`; it is evidence only and
 does not dispatch an agent.
 
 The helper supports status, lint, doctor, package-layout verification, design
-validation, context pack validation, rule validation, state verification,
-dry-run next-action planning, static dashboard rendering, checkpoint
-eligibility preflight, archive verify inspection, and Project Factory scoped
-generated-project helpers. Diagnostic, validator, planning, dashboard,
-archive, and checkpoint-preflight surfaces remain read-only, dry-run, or
-proposal-only. Project Factory commands may create generated projects and,
-when a later publish flow is explicitly confirmed, publish only clean
-generated-project files from explicit target paths. Outside that boundary, ASO
-does not dispatch agents, mutate package/runtime state, perform checkpoints,
-commit, or push. For package lint compatibility, this scoped boundary is also
-stated as: ASO diagnostic surfaces do not provide general mutation, dispatch, or checkpoint authority.
+validation, context pack validation, rule validation, Runtime Schema `3.1.0`
+state init/migrate/render/verify, dry-run next-action planning, static
+dashboard rendering, checkpoint eligibility preflight, archive verify
+inspection, and Project Factory scoped generated-project helpers. Diagnostic,
+validator, planning, dashboard, archive, and checkpoint-preflight surfaces
+remain read-only, dry-run, or proposal-only. State writes are limited to
+explicit `state init --confirm-write`, `state migrate --confirm-write`, and
+generated-project local initialization under ignored workspace roots. Project
+Factory commands may create generated projects and, when a later publish flow
+is explicitly confirmed, publish only clean generated-project files from
+explicit target paths. Outside that boundary, ASO does not provide
+proposal/apply mutation, a runtime daemon, live agent dispatch, checkpoint
+execution, general package/runtime mutation, commit, or push authority. For
+package lint compatibility, this scoped boundary is also stated as: ASO
+diagnostic surfaces do not provide general mutation, dispatch, or checkpoint authority.
 
 ## Publication boundary
 

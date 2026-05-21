@@ -71,6 +71,26 @@ aso project verify-clean --help
 aso wizard --help
 ```
 
+Runtime State P2 state commands should be available after install:
+
+```text
+aso state --help
+aso state init --root /tmp/aso-state-demo --project-name "State Demo" --project-slug state-demo --profile generic --repo-url none --branch main --dry-run --json-out /tmp/aso-state-init-plan.json
+aso state init --root /tmp/aso-state-demo --project-name "State Demo" --project-slug state-demo --profile generic --repo-url none --branch main --confirm-write --json-out /tmp/aso-state-init-receipt.json
+aso state verify --root /tmp/aso-state-demo --strict --json-out /tmp/aso-state-verify.json
+aso state render --root /tmp/aso-state-demo --format markdown --out /tmp/aso-state-render.md
+aso state migrate --root agent-system/tests/fixtures/state/valid_workspace --to 3.1.0 --dry-run --json-out /tmp/aso-state-migrate-plan.json
+```
+
+`aso state init --dry-run` writes no files. Confirmed initialization requires
+`--confirm-write` and writes only local ignored workspace sidecars under
+`project-runtime/state/`. `aso state migrate --dry-run` emits a deterministic
+plan for compatible legacy sidecars; confirmed migration requires
+`--confirm-write`, fails closed on malformed or ambiguous input, and records
+receipts under allowed `project-runtime/` report paths. `aso state render` is
+read-only except for explicit output to `/tmp`, `project-runtime/reports`, or
+`project-runtime/rendered`.
+
 Create and verify a local vendored generated project without secrets or remote
 access:
 
@@ -86,6 +106,11 @@ Create and verify a local reference generated project without vendoring
 aso project create --local --engine-mode reference --target /tmp/demo-reference --name "Demo Reference" --slug demo-reference --profile generic --repo-url https://github.com/OWNER/demo-reference.git --branch main
 aso project verify-clean --root /tmp/demo-reference --strict
 ```
+
+Local generated projects may initialize Runtime Schema `3.1.0` JSON sidecars
+under their ignored `project-runtime/state/` root. Those files are local
+runtime state and must not be tracked or published by generated-project
+publication flows.
 
 After install, the guided wizard is available through the console command:
 
@@ -114,6 +139,11 @@ authentication and explicit confirmation:
 gh auth status
 aso project create --github --confirm-publish --engine-mode reference --target /tmp/demo-github --name "Demo GitHub" --slug demo-github --profile generic --branch main --owner OWNER --repo demo-github --private
 ```
+
+Runtime State P2 does not add a proposal/apply mutation layer, runtime daemon,
+live dispatch, or checkpoint executor. The install and verification commands
+do not grant commit, push, tag, merge, checkpoint, or publication authority for
+the package repository or owner roots.
 
 ## Dev Container
 

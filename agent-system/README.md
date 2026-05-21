@@ -249,23 +249,41 @@ python3 agent-system/tools/aso/aso.py validate-context-pack path/to/CONTEXT_PACK
 It validates required shape, context budget, archive/deprecated path rejection,
 forbidden document checks, and required document existence under `--root`.
 
-Stage 2 command surfaces are local, read-only, and offline:
+Runtime State P2 command surfaces are local and offline. JSON sidecars under
+`project-runtime/state/` are canonical for P2+ runtime state. Markdown and
+report outputs are compatibility views generated from JSON, not the canonical
+state source. The active package version is `3.4.0` and the active runtime
+schema version is `3.1.0`.
 
 ```text
 python3 agent-system/tools/aso/aso.py validate-rules --root . --strict
-python3 agent-system/tools/aso/aso.py state verify --root agent-system/tests/fixtures/state/valid_workspace --strict --json-out /tmp/aso-stage2-state.json
+python3 agent-system/tools/aso/aso.py state --help
+python3 agent-system/tools/aso/aso.py state init --root /tmp/aso-state-demo --project-name "State Demo" --project-slug state-demo --profile generic --repo-url none --branch main --dry-run --json-out /tmp/aso-state-init-plan.json
+python3 agent-system/tools/aso/aso.py state init --root /tmp/aso-state-demo --project-name "State Demo" --project-slug state-demo --profile generic --repo-url none --branch main --confirm-write --json-out /tmp/aso-state-init-receipt.json
+python3 agent-system/tools/aso/aso.py state verify --root /tmp/aso-state-demo --strict --json-out /tmp/aso-state-verify.json
+python3 agent-system/tools/aso/aso.py state render --root /tmp/aso-state-demo --format markdown --out /tmp/aso-state-render.md
+python3 agent-system/tools/aso/aso.py state migrate --root agent-system/tests/fixtures/state/valid_workspace --to 3.1.0 --dry-run --json-out /tmp/aso-state-migrate-plan.json
 python3 agent-system/tools/aso/aso.py plan-next --root agent-system/tests/fixtures/state/valid_workspace --strict --json-out /tmp/aso-stage2-plan.json
 python3 agent-system/tools/aso/aso.py dashboard --root agent-system/tests/fixtures/state/valid_workspace --out /tmp/aso-stage2-dashboard.html
 python3 agent-system/tools/aso/aso.py checkpoint-preflight --root . --mode package --strict --json-out /tmp/aso-stage2-checkpoint-preflight.json
 ```
 
 `aso validate-rules` checks the packaged governance rule registry. `aso state
-verify` compares Markdown runtime files with JSON sidecars and emits optional
-JSON evidence. `aso plan-next` recommends the next orchestrator action as a
-dry-run report only. `aso dashboard` renders escaped static HTML to stdout,
-`/tmp`, or an explicit workspace `project-runtime/dashboard` path. `aso dag
-render`, `aso context-pack build`, and `aso incident fixture` likewise write
-generated render/proposal artifacts only to stdout, `/tmp`, or explicit
+init --dry-run` writes no files; confirmed initialization requires
+`--confirm-write` and writes only local ignored workspace sidecars under the
+selected root. `aso state migrate --dry-run` emits a deterministic migration
+plan for compatible legacy `2.0.0`/`3.0.0` sidecars; confirmed migration
+requires `--confirm-write`, fails closed on malformed or ambiguous state, and
+writes migration receipts under allowed runtime report paths. `aso state
+render` is read-only except for explicit output to `/tmp`,
+`project-runtime/reports`, or `project-runtime/rendered`. `aso state verify`
+validates Runtime Schema `3.1.0` envelopes, sidecar types, required fields,
+schema alignment, task references, and compatibility diagnostics, then emits
+optional JSON evidence. `aso plan-next` recommends the next orchestrator action
+as a dry-run report only. `aso dashboard` renders escaped static HTML to
+stdout, `/tmp`, or an explicit workspace `project-runtime/dashboard` path.
+`aso dag render`, `aso context-pack build`, and `aso incident fixture` likewise
+write generated render/proposal artifacts only to stdout, `/tmp`, or explicit
 workspace runtime report/proposal directories; tracked package paths are
 rejected with `ASO_OUTPUT_PATH_FORBIDDEN`. `aso checkpoint-preflight` inspects
 checkpoint eligibility without staging, committing, pushing, or changing
@@ -321,17 +339,21 @@ uses the installed `.venv/bin/aso` command for package status, strict lint,
 strict doctor, and strict package-layout verification.
 
 The helper supports status, lint, doctor, package-layout verification, design
-validation, context pack validation, rule validation, state verification,
-dry-run next-action planning, static dashboard rendering, checkpoint
-eligibility preflight, archive verify inspection, and Project Factory scoped
-generated-project helpers. Diagnostic, validator, planning, dashboard,
-archive, and checkpoint-preflight surfaces remain read-only, dry-run, or
-proposal-only. Project Factory commands may create generated projects and,
-when a later publish flow is explicitly confirmed, publish only clean
-generated-project files from explicit target paths. Outside that boundary, ASO
-does not dispatch agents, mutate package/runtime state, perform checkpoints,
-commit, or push. For package lint compatibility, this scoped boundary is also
-stated as: ASO diagnostic surfaces do not provide general mutation, dispatch, or checkpoint authority.
+validation, context pack validation, rule validation, Runtime Schema `3.1.0`
+state init/migrate/render/verify, dry-run next-action planning, static
+dashboard rendering, checkpoint eligibility preflight, archive verify
+inspection, and Project Factory scoped generated-project helpers. Diagnostic,
+validator, planning, dashboard, archive, and checkpoint-preflight surfaces
+remain read-only, dry-run, or proposal-only. State writes are limited to
+explicit `state init --confirm-write`, `state migrate --confirm-write`, and
+generated-project local initialization under ignored workspace roots. Project
+Factory commands may create generated projects and, when a later publish flow
+is explicitly confirmed, publish only clean generated-project files from
+explicit target paths. Outside that boundary, ASO does not provide
+proposal/apply mutation, a runtime daemon, live agent dispatch, checkpoint
+execution, general package/runtime mutation, commit, or push authority. For
+package lint compatibility, this scoped boundary is also stated as: ASO
+diagnostic surfaces do not provide general mutation, dispatch, or checkpoint authority.
 
 ## Project Factory P1
 
@@ -386,15 +408,20 @@ python3 agent-system/tools/aso/aso.py wizard
 python3 agent-system/tools/aso/aso.py wizard --answers path/to/answers.json --dry-run --json-out /tmp/aso-wizard-plan.json
 ```
 
-Generated projects must not track or publish `project-input/`,
-`project-runtime/`, `project-archive/`, virtual environments, caches, logs,
-secret-like files, local upgrade packages, or ASO engine `.git` metadata.
-Reference-mode generated repositories must not track `agent-system/`.
-Vendored-mode generated repositories may track only safe generated-project
-`agent-system/` content that passes the publication boundary.
+Generated projects may initialize Runtime Schema `3.1.0` JSON sidecars under
+their ignored local `project-runtime/state/` root. Those sidecars are local
+runtime state for the generated workspace and are not package or
+generated-project publication artifacts. Generated projects must not track or
+publish `project-input/`, `project-runtime/`, `project-archive/`, virtual
+environments, caches, logs, secret-like files, local upgrade packages, or ASO
+engine `.git` metadata. Reference-mode generated repositories must not track
+`agent-system/`. Vendored-mode generated repositories may track only safe
+generated-project `agent-system/` content that passes the publication
+boundary.
 
-Project Factory P1 does not implement a runtime daemon, dashboard control
-plane, distributed workers, live agent dispatch, or checkpoint executor.
+Runtime State P2 and Project Factory P1 do not implement a runtime daemon,
+dashboard control plane, distributed workers, live agent dispatch,
+proposal/apply mutation layer, or checkpoint executor.
 
 ## Publication and cleanup boundary
 
