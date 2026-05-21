@@ -316,17 +316,22 @@
       "type": "object",
       "allOf": [{ "$ref": "#/$defs/commonEnvelope" }],
       "required": [
+        "product_goal",
         "goal",
         "source_summary",
         "candidate_capabilities",
         "assumptions",
         "missing_information",
+        "constraints",
         "risk_flags",
         "external_integrations",
-        "required_secrets"
+        "required_secrets",
+        "high_risk_business_actions",
+        "recommended_next_action"
       ],
       "properties": {
         "artifact_type": { "type": "string", "const": "PRODUCT_INTAKE" },
+        "product_goal": { "$ref": "#/$defs/nonEmptyString" },
         "goal": { "$ref": "#/$defs/nonEmptyString" },
         "source_summary": { "$ref": "#/$defs/nonEmptyString" },
         "candidate_capabilities": {
@@ -341,6 +346,10 @@
           "type": "array",
           "items": { "$ref": "#/$defs/traceNote" }
         },
+        "constraints": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/traceNote" }
+        },
         "risk_flags": {
           "type": "array",
           "items": { "$ref": "#/$defs/traceNote" }
@@ -352,7 +361,12 @@
         "required_secrets": {
           "type": "array",
           "items": { "$ref": "#/$defs/requiredSecret" }
-        }
+        },
+        "high_risk_business_actions": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/traceNote" }
+        },
+        "recommended_next_action": { "$ref": "#/$defs/nonEmptyString" }
       },
       "unevaluatedProperties": false
     },

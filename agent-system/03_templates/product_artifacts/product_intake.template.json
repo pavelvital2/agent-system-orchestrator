@@ -19,6 +19,7 @@
     }
   ],
   "human_summary": "Summarize the product goal, known gaps, risks, integrations, and required secret names without collecting secret values.",
+  "product_goal": "Describe what the owner wants the product to accomplish.",
   "goal": "Describe what the owner wants the product to accomplish.",
   "source_summary": "Summarize the source material used to build this intake.",
   "candidate_capabilities": [
@@ -43,6 +44,13 @@
       "source_ref_ids": ["SRC-owner-prompt"]
     }
   ],
+  "constraints": [
+    {
+      "id": "CONSTRAINT-001",
+      "text": "State a known planning, compliance, operational, or execution boundary.",
+      "source_ref_ids": ["SRC-owner-prompt"]
+    }
+  ],
   "risk_flags": [
     {
       "id": "RISK-001",
@@ -64,5 +72,13 @@
       "value_status": "not_collected",
       "purpose": "Secret name needed later if the owner approves a Telegram integration."
     }
-  ]
+  ],
+  "high_risk_business_actions": [
+    {
+      "id": "HIGH_RISK-001",
+      "text": "Name any owner-approved business action that needs explicit approval policy before execution planning.",
+      "source_ref_ids": ["SRC-owner-prompt"]
+    }
+  ],
+  "recommended_next_action": "Run product clarification before specification or implementation planning."
 }

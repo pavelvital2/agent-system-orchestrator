@@ -32,6 +32,144 @@ ARTIFACT_FILENAMES = {
 }
 SECRET_NAME_RE = re.compile(r"\b[A-Z][A-Z0-9_]{3,}\b")
 SECRET_HINTS = ("TOKEN", "SECRET", "KEY", "PASSWORD", "WEBHOOK")
+REDACTED_SECRET_PLACEHOLDER = "REDACTED_SECRET_VALUE"
+SECRET_ASSIGNMENT_RE = re.compile(
+    r"(?i)\b([A-Z][A-Z0-9_]*(?:TOKEN|SECRET|KEY|PASSWORD|WEBHOOK)[A-Z0-9_]*|"
+    r"api[_ .-]?key|access[_ .-]?token|refresh[_ .-]?token|webhook[_ .-]?secret|"
+    r"password|passwd|pwd|secret|token)"
+    r"\s*(?::|=|\bis\b|\bare\b)\s*([^\s,;`\"']+)"
+)
+GENERIC_SECRET_NAME_MAP = {
+    "API_KEY": "EXTERNAL_API_KEY",
+    "ACCESS_TOKEN": "EXTERNAL_ACCESS_TOKEN",
+    "REFRESH_TOKEN": "EXTERNAL_REFRESH_TOKEN",
+    "WEBHOOK_SECRET": "EXTERNAL_WEBHOOK_SECRET",
+    "PASSWORD": "EXTERNAL_PASSWORD",
+    "PASSWD": "EXTERNAL_PASSWORD",
+    "PWD": "EXTERNAL_PASSWORD",
+    "SECRET": "EXTERNAL_SECRET",
+    "TOKEN": "EXTERNAL_API_TOKEN",
+}
+INLINE_SECRET_VALUE_RE = re.compile(
+    r"(?i)\b(?:bearer\s+[A-Za-z0-9._~+/=-]{12,}|"
+    r"\d{6,12}:[A-Za-z0-9_-]{20,}|"
+    r"sk-[A-Za-z0-9_-]{10,}|xox[baprs]-[A-Za-z0-9-]{10,}|"
+    r"gh[pousr]_[A-Za-z0-9_]{10,}|glpat-[A-Za-z0-9_-]{10,}|AKIA[0-9A-Z]{12,})"
+)
+
+PRODUCT_PROFILE_HINTS = (
+    ("telegram_bot", ("telegram", "bot", "chat command", "inline keyboard", "webhook")),
+    ("marketplace_automation", ("marketplace", "ozon", "wildberries", "amazon", "shopify", "catalog", "stock", "price")),
+    ("web_app", ("web app", "website", "dashboard", "admin panel", "frontend", "landing")),
+    ("api_service", ("api", "backend", "service", "endpoint", "integration")),
+    ("cli_tool", ("cli", "command line", "terminal", "console")),
+    ("analytics_tool", ("analytics", "report", "metrics", "dashboard", "export")),
+    ("crm_tool", ("crm", "lead", "pipeline", "sales manager")),
+)
+
+CAPABILITY_HINTS = (
+    (
+        "Telegram bot conversation",
+        ("telegram", "bot", "chat", "message", "inline keyboard"),
+        "Handle owner-approved Telegram bot conversations and commands.",
+    ),
+    (
+        "Admin dashboard",
+        ("admin", "dashboard", "panel", "moderator", "back office"),
+        "Provide an operator-facing surface for review and configuration.",
+    ),
+    (
+        "User accounts and roles",
+        ("login", "auth", "account", "role", "user profile", "registration"),
+        "Manage user access, roles, and account lifecycle requirements.",
+    ),
+    (
+        "Catalog and marketplace sync",
+        ("catalog", "marketplace", "stock", "inventory", "price", "promo", "ozon", "wildberries", "shopify"),
+        "Plan catalog, inventory, price, or marketplace synchronization behavior.",
+    ),
+    (
+        "Payments and billing",
+        ("payment", "pay", "invoice", "subscription", "refund", "stripe", "yookassa", "paypal"),
+        "Plan payment, billing, invoice, or refund flows with approval boundaries.",
+    ),
+    (
+        "Notifications",
+        ("notify", "notification", "email", "sms", "alert", "reminder", "broadcast"),
+        "Send owner-approved notifications or reminders through configured channels.",
+    ),
+    (
+        "Reports and analytics",
+        ("report", "analytics", "metric", "statistics", "export", "csv", "dashboard"),
+        "Produce reports, exports, or metrics for owner review.",
+    ),
+    (
+        "Data capture and storage",
+        ("database", "storage", "save", "record", "form", "survey", "file", "upload"),
+        "Capture and store product data according to confirmed retention rules.",
+    ),
+    (
+        "External system integration",
+        ("api", "integration", "webhook", "sync", "crm", "google sheets", "openai"),
+        "Integrate with external systems after credentials and approval policy are defined.",
+    ),
+    (
+        "Search and filtering",
+        ("search", "filter", "sort", "query"),
+        "Let users find and filter product records or content.",
+    ),
+)
+
+INTEGRATION_HINTS = (
+    ("Telegram", ("telegram", "botfather", "telegram bot")),
+    ("Stripe", ("stripe",)),
+    ("YooKassa", ("yookassa", "yoo kassa", "ukassa")),
+    ("PayPal", ("paypal",)),
+    ("Marketplace API", ("marketplace", "ozon", "wildberries", "amazon seller", "shopify")),
+    ("Google Sheets", ("google sheets", "spreadsheet")),
+    ("Google APIs", ("google api", "gmail", "google calendar", "google drive")),
+    ("CRM", ("crm", "amoCRM", "bitrix", "salesforce", "hubspot")),
+    ("Email or SMTP", ("email", "smtp", "mailgun", "sendgrid")),
+    ("SMS provider", ("sms", "twilio")),
+    ("OpenAI API", ("openai", "gpt", "llm")),
+)
+
+INTEGRATION_SECRET_NAMES = {
+    "Telegram": ("TELEGRAM_BOT_TOKEN",),
+    "Stripe": ("STRIPE_API_KEY", "STRIPE_WEBHOOK_SECRET"),
+    "YooKassa": ("YOOKASSA_SHOP_ID", "YOOKASSA_SECRET_KEY"),
+    "PayPal": ("PAYPAL_CLIENT_ID", "PAYPAL_CLIENT_SECRET"),
+    "Marketplace API": ("MARKETPLACE_API_KEY",),
+    "Google Sheets": ("GOOGLE_SERVICE_ACCOUNT_JSON",),
+    "Google APIs": ("GOOGLE_API_KEY",),
+    "CRM": ("CRM_API_TOKEN",),
+    "Email or SMTP": ("SMTP_PASSWORD",),
+    "SMS provider": ("SMS_PROVIDER_API_KEY",),
+    "OpenAI API": ("OPENAI_API_KEY",),
+}
+
+HIGH_RISK_HINTS = (
+    (
+        "Marketplace price, stock, or promotion changes",
+        ("price", "stock", "inventory", "promo", "discount", "publish listing", "marketplace"),
+    ),
+    (
+        "Payment, refund, payout, or subscription changes",
+        ("payment", "charge", "refund", "payout", "invoice", "subscription", "billing"),
+    ),
+    (
+        "Bulk messaging or user-impacting notifications",
+        ("broadcast", "mass message", "bulk", "notify all", "sms", "email campaign"),
+    ),
+    (
+        "User blocking, deletion, or irreversible data changes",
+        ("delete", "erase", "block user", "ban", "remove account", "irreversible"),
+    ),
+    (
+        "Sensitive personal, financial, medical, or legal data handling",
+        ("personal data", "passport", "medical", "diagnosis", "legal", "finance", "bank card", "pii"),
+    ),
+)
 
 
 def _utc_now() -> datetime:
@@ -67,23 +205,158 @@ def _read_json_object(path_text: str) -> tuple[dict[str, Any] | None, str | None
     return loaded, None
 
 
+def _source_kind(path: Path) -> str:
+    suffix = path.suffix.lower()
+    if suffix in {".md", ".markdown"}:
+        return "markdown_tz"
+    if suffix in {".txt", ".text"}:
+        return "text_tz"
+    if suffix in {".json"}:
+        return "json_tz"
+    return "local_tz"
+
+
+def _normalize_ws(text: str) -> str:
+    return re.sub(r"\s+", " ", text).strip()
+
+
+def _redact_secret_values(text: str) -> tuple[str, bool]:
+    redacted = False
+
+    def replace_assignment(match: re.Match[str]) -> str:
+        nonlocal redacted
+        redacted = True
+        return f"{match.group(1).strip()}=[{REDACTED_SECRET_PLACEHOLDER}]"
+
+    sanitized = SECRET_ASSIGNMENT_RE.sub(replace_assignment, text)
+    sanitized, inline_count = INLINE_SECRET_VALUE_RE.subn(f"[{REDACTED_SECRET_PLACEHOLDER}]", sanitized)
+    redacted = redacted or inline_count > 0
+    return sanitized, redacted
+
+
 def _first_non_empty_line(text: str) -> str:
     for line in text.splitlines():
-        clean = line.strip()
+        clean = line.strip().lstrip("#").strip()
         if clean:
-            return clean[:240]
+            return _normalize_ws(clean)[:240]
     return "Owner product goal is not yet specified."
 
 
 def _detected_secret_names(text: str) -> list[str]:
-    names = sorted(
+    names = {
+        match.group(0)
+        for match in SECRET_NAME_RE.finditer(text)
+        if any(hint in match.group(0) for hint in SECRET_HINTS)
+        and match.group(0) != REDACTED_SECRET_PLACEHOLDER
+    }
+    for match in SECRET_ASSIGNMENT_RE.finditer(text):
+        key = re.sub(r"[^A-Za-z0-9]+", "_", match.group(1)).strip("_").upper()
+        if key and any(hint in key for hint in SECRET_HINTS):
+            names.add(GENERIC_SECRET_NAME_MAP.get(key, key))
+    return sorted(names)
+
+
+def _contains_any(text: str, hints: tuple[str, ...]) -> bool:
+    folded = text.casefold()
+    return any(hint.casefold() in folded for hint in hints)
+
+
+def _detected_profile(requested_profile: str, text: str) -> str:
+    if requested_profile != "generic":
+        return requested_profile
+    for profile, hints in PRODUCT_PROFILE_HINTS:
+        if _contains_any(text, hints):
+            return profile
+    return "generic"
+
+
+def _source_summary(path: Path, source_kind: str, goal: str, sanitized_text: str, redacted: bool) -> str:
+    lines = [_normalize_ws(line.lstrip("#-* ").strip()) for line in sanitized_text.splitlines()]
+    useful_lines = [line for line in lines if line][:3]
+    summary = " ".join(useful_lines)[:500] or goal
+    redaction_note = " Secret-like values were redacted." if redacted else ""
+    return f"Source path: {path}; source type: {source_kind}; summary: {summary}{redaction_note}"
+
+
+def _candidate_capabilities(text: str) -> list[dict[str, object]]:
+    capabilities: list[dict[str, object]] = []
+    seen: set[str] = set()
+    for name, hints, description in CAPABILITY_HINTS:
+        if _contains_any(text, hints) and name not in seen:
+            seen.add(name)
+            capabilities.append(
+                {
+                    "capability_id": f"CAP-{len(capabilities) + 1:03d}",
+                    "name": name,
+                    "description": description,
+                    "source_ref_ids": ["SRC-owner-tz"],
+                }
+            )
+    if not capabilities:
+        capabilities.append(
+            {
+                "capability_id": "CAP-001",
+                "name": "Clarified owner workflow",
+                "description": "Clarify and plan the primary owner-visible workflow before implementation.",
+                "source_ref_ids": ["SRC-owner-tz"],
+            }
+        )
+    return capabilities
+
+
+def _trace_notes(prefix: str, texts: list[str]) -> list[dict[str, object]]:
+    return [
         {
-            match.group(0)
-            for match in SECRET_NAME_RE.finditer(text)
-            if any(hint in match.group(0) for hint in SECRET_HINTS)
+            "id": f"{prefix}-{index:03d}",
+            "text": text,
+            "source_ref_ids": ["SRC-owner-tz"],
         }
-    )
+        for index, text in enumerate(texts, start=1)
+    ]
+
+
+def _external_integrations(text: str) -> list[str]:
+    names: list[str] = []
+    for name, hints in INTEGRATION_HINTS:
+        if _contains_any(text, hints) and name not in names:
+            names.append(name)
     return names
+
+
+def _required_secret_names(text: str, integrations: list[str]) -> list[str]:
+    names = set(_detected_secret_names(text))
+    for integration in integrations:
+        names.update(INTEGRATION_SECRET_NAMES.get(integration, ()))
+    return sorted(names)
+
+
+def _high_risk_actions(text: str) -> list[str]:
+    actions = []
+    for action, hints in HIGH_RISK_HINTS:
+        if _contains_any(text, hints):
+            actions.append(action)
+    return actions
+
+
+def _missing_information(text: str, integrations: list[str], secret_names: list[str], high_risk_actions: list[str]) -> list[str]:
+    missing = []
+    if not _contains_any(text, ("user", "customer", "client", "admin", "operator", "manager", "role")):
+        missing.append("Target users, roles, and permissions are not fully specified.")
+    if not _contains_any(text, ("workflow", "scenario", "when", "after", "step", "flow", "use case")):
+        missing.append("Primary workflows and user scenarios need owner confirmation.")
+    if not _contains_any(text, ("data", "database", "storage", "record", "retention", "export", "report")):
+        missing.append("Data model, storage, retention, and export expectations are not fully specified.")
+    if integrations:
+        missing.append("External integration scopes, sandbox modes, credentials, and approval policy need owner confirmation.")
+    if secret_names:
+        missing.append("Secret collection procedure and secret owner are not specified; only secret names were recorded.")
+    if high_risk_actions:
+        missing.append("High-risk business actions require explicit owner approval, rollback policy, and dry-run rules.")
+    if not _contains_any(text, ("acceptance", "done", "test", "verify", "success criteria", "definition of done")):
+        missing.append("Acceptance criteria and verification evidence are not specified.")
+    if not missing:
+        missing.append("Owner should confirm that no additional constraints or acceptance gaps remain.")
+    return missing
 
 
 def _source_ref(source_ref_id: str, source_type: str, title: str, **extra: object) -> dict[str, object]:
@@ -126,13 +399,47 @@ def _build_intake(args: argparse.Namespace, now: datetime) -> tuple[dict[str, ob
     text, error = _read_text(str(args.tz))
     if error is not None or text is None:
         return None, error
-    goal = _first_non_empty_line(text)
-    secret_names = _detected_secret_names(text)
+    if not text.strip():
+        return None, "empty TZ input: provide a non-empty owner TZ or product idea file"
+
+    source_path = Path(str(args.tz)).expanduser().resolve(strict=False)
+    source_kind = _source_kind(source_path)
+    sanitized_text, redacted_secret_values = _redact_secret_values(text)
+    goal = _first_non_empty_line(sanitized_text)
+    detected_profile = _detected_profile(str(args.profile), sanitized_text)
+    integrations = _external_integrations(sanitized_text)
+    secret_names = _required_secret_names(sanitized_text, integrations)
+    high_risk_actions = _high_risk_actions(sanitized_text)
+    candidate_capabilities = _candidate_capabilities(sanitized_text)
+    missing_information = _missing_information(sanitized_text, integrations, secret_names, high_risk_actions)
+    constraints = [
+        "P4 intake is planning-only and does not authorize implementation, dispatch, deployment, commits, pushes, tags, or checkpoint execution.",
+        "No network, LLM, or external API calls are made by this intake command.",
+        "Required secrets are recorded by name only; secret values are not collected or stored.",
+    ]
+    assumptions = [
+        f"Detected product profile is '{detected_profile}' based on local deterministic heuristics and/or the requested profile.",
+        f"Readiness mode '{args.readiness}' is a planning target, not a claim that the product is ready.",
+    ]
+    risk_flags = [
+        "This intake artifact is not implementation evidence and does not authorize live execution.",
+    ]
+    if redacted_secret_values:
+        risk_flags.append("Secret-like values appeared in owner input and were redacted from generated output.")
+        assumptions.append("Any real secret pasted into owner input should be rotated outside ASO.")
+    if high_risk_actions:
+        risk_flags.append("High-risk business actions require owner decision cards, dry-run behavior, and approval policy before execution planning.")
+    recommended_next_action = "Run `aso product clarify` to collect owner decisions before product specification."
+    if high_risk_actions:
+        recommended_next_action = (
+            "Run `aso product clarify` and capture owner approval policy for high-risk actions before specification."
+        )
     source_ref = _source_ref(
         "SRC-owner-tz",
         "owner_input",
         "Owner TZ product request",
-        description=f"Local input file: {Path(str(args.tz)).expanduser()}",
+        path=str(source_path),
+        description=f"Local input file; detected source type: {source_kind}",
     )
     artifact = _common(
         args,
@@ -140,45 +447,29 @@ def _build_intake(args: argparse.Namespace, now: datetime) -> tuple[dict[str, ob
         status="needs_clarification",
         source_refs=[source_ref],
         human_summary=(
-            "Planning-only intake scaffold generated locally; later tasks own full "
-            "capability detection and product generation."
+            "Planning-only intake generated locally with deterministic heuristics; "
+            "unknowns, constraints, risks, integrations, and required secret names remain explicit."
         ),
         now=now,
     )
+    artifact["profile"] = detected_profile
     artifact.update(
         {
+            "product_goal": goal,
             "goal": goal,
-            "source_summary": goal,
-            "candidate_capabilities": [
-                {
-                    "capability_id": "CAP-001",
-                    "name": "Owner requested capability",
-                    "description": "Placeholder capability derived from owner input for planning review.",
-                    "source_ref_ids": ["SRC-owner-tz"],
-                }
-            ],
-            "assumptions": [
-                {
-                    "id": "ASSUMPTION-001",
-                    "text": "Full product decomposition is intentionally deferred to later P4 tasks.",
-                    "source_ref_ids": ["SRC-owner-tz"],
-                }
-            ],
-            "missing_information": [
-                {
-                    "id": "MISSING-001",
-                    "text": "Owner must confirm users, workflows, data, integrations, security, operations, and acceptance.",
-                    "source_ref_ids": ["SRC-owner-tz"],
-                }
-            ],
-            "risk_flags": [
-                {
-                    "id": "RISK-001",
-                    "text": "This scaffold is not implementation evidence and does not authorize execution.",
-                    "source_ref_ids": ["SRC-owner-tz"],
-                }
-            ],
-            "external_integrations": [],
+            "source_summary": _source_summary(source_path, source_kind, goal, sanitized_text, redacted_secret_values),
+            "candidate_capabilities": candidate_capabilities,
+            "assumptions": _trace_notes("ASSUMPTION", assumptions),
+            "missing_information": _trace_notes("MISSING", missing_information),
+            "constraints": _trace_notes("CONSTRAINT", constraints),
+            "risk_flags": _trace_notes("RISK", risk_flags),
+            "external_integrations": _trace_notes(
+                "INTEGRATION",
+                [
+                    f"{name} integration is a planning concern only; no external call was made."
+                    for name in integrations
+                ],
+            ),
             "required_secrets": [
                 {
                     "secret_id": f"SECRET-{index:03d}",
@@ -188,6 +479,8 @@ def _build_intake(args: argparse.Namespace, now: datetime) -> tuple[dict[str, ob
                 }
                 for index, name in enumerate(secret_names, start=1)
             ],
+            "high_risk_business_actions": _trace_notes("HIGH_RISK", high_risk_actions),
+            "recommended_next_action": recommended_next_action,
         }
     )
     return artifact, None
