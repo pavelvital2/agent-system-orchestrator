@@ -1,0 +1,39 @@
+{
+  "artifact_id": "CAPABILITY_MATRIX-YYYYMMDDTHHMMSSZ-example",
+  "artifact_type": "CAPABILITY_MATRIX",
+  "schema_version": "1.0.0",
+  "package_version": "3.6.0",
+  "runtime_schema_version": "3.1.0",
+  "created_at": "2026-05-21T00:00:00Z",
+  "created_by": "aso",
+  "target_root": "project-runtime/product/",
+  "profile": "telegram_bot",
+  "readiness_mode": "mvp",
+  "status": "proposed",
+  "source_refs": [
+    {
+      "source_ref_id": "SRC-acceptance-criteria",
+      "source_type": "artifact",
+      "title": "Acceptance criteria artifact",
+      "artifact_id": "ACCEPTANCE_CRITERIA-YYYYMMDDTHHMMSSZ-example"
+    }
+  ],
+  "human_summary": "Answer what the user wants, what ASO plans to deliver, how it will be verified later, and what is not included.",
+  "user_wants": "Describe the owner-requested product outcome.",
+  "planned_delivery": "Describe the planned governed product scope.",
+  "verification_later": "Describe how future governed implementation will be verified.",
+  "not_included": ["Application source generation", "Deployment execution", "Live external integration execution"],
+  "capabilities": [
+    {
+      "capability_id": "CAP-001",
+      "user_wants": "The owner wants the first approved workflow.",
+      "planned_delivery": "Plan a future governed implementation task for the workflow.",
+      "verification_later": "Verify against acceptance criterion AC-001 after implementation evidence exists.",
+      "not_included": ["Secret collection", "Live dispatch", "Deployment"],
+      "requirement_ids": ["REQ-001"],
+      "user_story_ids": ["US-001"],
+      "acceptance_criterion_ids": ["AC-001"],
+      "status": "proposed"
+    }
+  ]
+}

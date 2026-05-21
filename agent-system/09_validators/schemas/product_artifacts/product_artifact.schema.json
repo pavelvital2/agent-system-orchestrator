@@ -1,0 +1,506 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://agent-system.local/schemas/product_artifacts/product_artifact.schema.json",
+  "title": "P4_PRODUCT_ARTIFACT",
+  "description": "Machine-readable contract for ASO P4 product planning artifacts. These artifacts are planning records only and do not authorize dispatch, implementation, deployment, commits, pushes, tags, or checkpoint execution.",
+  "oneOf": [
+    { "$ref": "#/$defs/productIntakeArtifact" },
+    { "$ref": "#/$defs/openQuestionsArtifact" },
+    { "$ref": "#/$defs/ownerDecisionCardsArtifact" },
+    { "$ref": "#/$defs/productSpecArtifact" },
+    { "$ref": "#/$defs/userStoriesArtifact" },
+    { "$ref": "#/$defs/acceptanceCriteriaArtifact" },
+    { "$ref": "#/$defs/capabilityMatrixArtifact" },
+    { "$ref": "#/$defs/productPlanArtifact" }
+  ],
+  "$defs": {
+    "artifactId": {
+      "type": "string",
+      "pattern": "^[A-Z_]+-[A-Za-z0-9_.:-]+$"
+    },
+    "externalId": {
+      "type": "string",
+      "pattern": "^[A-Z][A-Z0-9_-]*-[A-Za-z0-9_.:-]+$"
+    },
+    "nonEmptyString": {
+      "type": "string",
+      "minLength": 1
+    },
+    "stringList": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/nonEmptyString" }
+    },
+    "readinessMode": {
+      "type": "string",
+      "enum": ["mvp", "business_ready", "production_ready", "enterprise_like"]
+    },
+    "artifactStatus": {
+      "type": "string",
+      "enum": [
+        "proposed",
+        "needs_clarification",
+        "blocked",
+        "ready_for_review",
+        "accepted_by_owner",
+        "out_of_scope"
+      ]
+    },
+    "sourceRef": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["source_ref_id", "source_type", "title"],
+      "properties": {
+        "source_ref_id": { "$ref": "#/$defs/externalId" },
+        "source_type": {
+          "type": "string",
+          "enum": ["owner_input", "task_packet", "contract", "schema_spec", "runtime_contract", "artifact", "other"]
+        },
+        "title": { "$ref": "#/$defs/nonEmptyString" },
+        "path": { "type": "string" },
+        "section": { "type": "string" },
+        "artifact_id": { "$ref": "#/$defs/artifactId" },
+        "description": { "type": "string" }
+      }
+    },
+    "commonEnvelope": {
+      "type": "object",
+      "required": [
+        "artifact_id",
+        "artifact_type",
+        "schema_version",
+        "package_version",
+        "runtime_schema_version",
+        "created_at",
+        "created_by",
+        "target_root",
+        "profile",
+        "readiness_mode",
+        "status",
+        "source_refs",
+        "human_summary"
+      ],
+      "properties": {
+        "artifact_id": { "$ref": "#/$defs/artifactId" },
+        "artifact_type": {
+          "type": "string",
+          "enum": [
+            "PRODUCT_INTAKE",
+            "OPEN_QUESTIONS",
+            "OWNER_DECISION_CARDS",
+            "PRODUCT_SPEC",
+            "USER_STORIES",
+            "ACCEPTANCE_CRITERIA",
+            "CAPABILITY_MATRIX",
+            "PRODUCT_PLAN"
+          ]
+        },
+        "schema_version": { "type": "string", "const": "1.0.0" },
+        "package_version": { "type": "string", "const": "3.6.0" },
+        "runtime_schema_version": { "type": "string", "const": "3.1.0" },
+        "created_at": { "type": "string", "format": "date-time" },
+        "created_by": { "type": "string", "const": "aso" },
+        "target_root": {
+          "type": "string",
+          "pattern": "^project-runtime/(product|reports)(/.*)?$"
+        },
+        "profile": { "$ref": "#/$defs/nonEmptyString" },
+        "readiness_mode": { "$ref": "#/$defs/readinessMode" },
+        "status": { "$ref": "#/$defs/artifactStatus" },
+        "source_refs": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/sourceRef" }
+        },
+        "human_summary": { "$ref": "#/$defs/nonEmptyString" }
+      }
+    },
+    "candidateCapability": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["capability_id", "name", "description", "source_ref_ids"],
+      "properties": {
+        "capability_id": { "$ref": "#/$defs/externalId" },
+        "name": { "$ref": "#/$defs/nonEmptyString" },
+        "description": { "$ref": "#/$defs/nonEmptyString" },
+        "source_ref_ids": { "$ref": "#/$defs/stringList" }
+      }
+    },
+    "traceNote": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "text"],
+      "properties": {
+        "id": { "$ref": "#/$defs/externalId" },
+        "text": { "$ref": "#/$defs/nonEmptyString" },
+        "source_ref_ids": { "$ref": "#/$defs/stringList" }
+      }
+    },
+    "requiredSecret": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["secret_id", "name", "value_status", "purpose"],
+      "properties": {
+        "secret_id": { "$ref": "#/$defs/externalId" },
+        "name": {
+          "type": "string",
+          "pattern": "^[A-Z][A-Z0-9_]*$"
+        },
+        "value_status": {
+          "type": "string",
+          "enum": ["not_collected", "required_by_owner", "redacted", "not_required"]
+        },
+        "purpose": { "$ref": "#/$defs/nonEmptyString" }
+      }
+    },
+    "question": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "question_id",
+        "question",
+        "category",
+        "why_it_matters",
+        "options",
+        "default_recommendation",
+        "blocks_implementation"
+      ],
+      "properties": {
+        "question_id": { "$ref": "#/$defs/externalId" },
+        "question": { "$ref": "#/$defs/nonEmptyString" },
+        "category": { "$ref": "#/$defs/nonEmptyString" },
+        "why_it_matters": { "$ref": "#/$defs/nonEmptyString" },
+        "options": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/decisionOption" }
+        },
+        "default_recommendation": { "type": "string" },
+        "blocks_implementation": { "type": "boolean" },
+        "source_ref_ids": { "$ref": "#/$defs/stringList" }
+      }
+    },
+    "decisionOption": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["option_id", "label", "description"],
+      "properties": {
+        "option_id": { "$ref": "#/$defs/externalId" },
+        "label": { "$ref": "#/$defs/nonEmptyString" },
+        "description": { "$ref": "#/$defs/nonEmptyString" },
+        "tradeoff": { "type": "string" },
+        "risk": { "type": "string" }
+      }
+    },
+    "decisionCard": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "decision_id",
+        "problem",
+        "options",
+        "recommendation",
+        "tradeoffs",
+        "risk",
+        "required_owner_action"
+      ],
+      "properties": {
+        "decision_id": { "$ref": "#/$defs/externalId" },
+        "problem": { "$ref": "#/$defs/nonEmptyString" },
+        "options": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/decisionOption" }
+        },
+        "recommendation": { "$ref": "#/$defs/nonEmptyString" },
+        "tradeoffs": { "$ref": "#/$defs/stringList" },
+        "risk": { "$ref": "#/$defs/nonEmptyString" },
+        "required_owner_action": { "$ref": "#/$defs/nonEmptyString" },
+        "source_ref_ids": { "$ref": "#/$defs/stringList" }
+      }
+    },
+    "requirement": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["requirement_id", "description", "priority", "source_ref_ids"],
+      "properties": {
+        "requirement_id": { "$ref": "#/$defs/externalId" },
+        "description": { "$ref": "#/$defs/nonEmptyString" },
+        "priority": { "type": "string", "enum": ["must", "should", "could", "wont"] },
+        "source_ref_ids": { "$ref": "#/$defs/stringList" },
+        "capability_ids": { "$ref": "#/$defs/stringList" }
+      }
+    },
+    "userStory": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["user_story_id", "requirement_id", "persona", "story", "value", "priority"],
+      "properties": {
+        "user_story_id": { "$ref": "#/$defs/externalId" },
+        "requirement_id": { "$ref": "#/$defs/externalId" },
+        "persona": { "$ref": "#/$defs/nonEmptyString" },
+        "story": { "$ref": "#/$defs/nonEmptyString" },
+        "value": { "$ref": "#/$defs/nonEmptyString" },
+        "priority": { "type": "string", "enum": ["must", "should", "could", "wont"] },
+        "capability_ids": { "$ref": "#/$defs/stringList" }
+      }
+    },
+    "acceptanceCriterion": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "acceptance_criterion_id",
+        "user_story_id",
+        "capability_id",
+        "statement",
+        "verification_method",
+        "expected_evidence",
+        "status"
+      ],
+      "properties": {
+        "acceptance_criterion_id": { "$ref": "#/$defs/externalId" },
+        "user_story_id": { "$ref": "#/$defs/externalId" },
+        "capability_id": { "$ref": "#/$defs/externalId" },
+        "statement": { "$ref": "#/$defs/nonEmptyString" },
+        "verification_method": {
+          "type": "string",
+          "enum": ["owner_review", "manual_review", "demo_review", "automated_test_future", "static_analysis_future"]
+        },
+        "expected_evidence": { "$ref": "#/$defs/nonEmptyString" },
+        "status": { "$ref": "#/$defs/artifactStatus" }
+      }
+    },
+    "capabilityContract": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "capability_id",
+        "user_wants",
+        "planned_delivery",
+        "verification_later",
+        "not_included",
+        "requirement_ids",
+        "user_story_ids",
+        "acceptance_criterion_ids",
+        "status"
+      ],
+      "properties": {
+        "capability_id": { "$ref": "#/$defs/externalId" },
+        "user_wants": { "$ref": "#/$defs/nonEmptyString" },
+        "planned_delivery": { "$ref": "#/$defs/nonEmptyString" },
+        "verification_later": { "$ref": "#/$defs/nonEmptyString" },
+        "not_included": { "$ref": "#/$defs/stringList" },
+        "requirement_ids": { "$ref": "#/$defs/stringList" },
+        "user_story_ids": { "$ref": "#/$defs/stringList" },
+        "acceptance_criterion_ids": { "$ref": "#/$defs/stringList" },
+        "status": { "$ref": "#/$defs/artifactStatus" }
+      }
+    },
+    "plannedWorkstream": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "planned_workstream_id",
+        "description",
+        "capability_ids",
+        "acceptance_criterion_ids",
+        "sequencing_notes",
+        "status"
+      ],
+      "properties": {
+        "planned_workstream_id": { "$ref": "#/$defs/externalId" },
+        "description": { "$ref": "#/$defs/nonEmptyString" },
+        "capability_ids": { "$ref": "#/$defs/stringList" },
+        "acceptance_criterion_ids": { "$ref": "#/$defs/stringList" },
+        "sequencing_notes": { "$ref": "#/$defs/nonEmptyString" },
+        "status": { "$ref": "#/$defs/artifactStatus" }
+      }
+    },
+    "productIntakeArtifact": {
+      "type": "object",
+      "allOf": [{ "$ref": "#/$defs/commonEnvelope" }],
+      "required": [
+        "goal",
+        "source_summary",
+        "candidate_capabilities",
+        "assumptions",
+        "missing_information",
+        "risk_flags",
+        "external_integrations",
+        "required_secrets"
+      ],
+      "properties": {
+        "artifact_type": { "type": "string", "const": "PRODUCT_INTAKE" },
+        "goal": { "$ref": "#/$defs/nonEmptyString" },
+        "source_summary": { "$ref": "#/$defs/nonEmptyString" },
+        "candidate_capabilities": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/candidateCapability" }
+        },
+        "assumptions": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/traceNote" }
+        },
+        "missing_information": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/traceNote" }
+        },
+        "risk_flags": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/traceNote" }
+        },
+        "external_integrations": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/traceNote" }
+        },
+        "required_secrets": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/requiredSecret" }
+        }
+      },
+      "unevaluatedProperties": false
+    },
+    "openQuestionsArtifact": {
+      "type": "object",
+      "allOf": [{ "$ref": "#/$defs/commonEnvelope" }],
+      "required": ["questions"],
+      "properties": {
+        "artifact_type": { "type": "string", "const": "OPEN_QUESTIONS" },
+        "questions": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/question" }
+        }
+      },
+      "unevaluatedProperties": false
+    },
+    "ownerDecisionCardsArtifact": {
+      "type": "object",
+      "allOf": [{ "$ref": "#/$defs/commonEnvelope" }],
+      "required": ["decision_cards"],
+      "properties": {
+        "artifact_type": { "type": "string", "const": "OWNER_DECISION_CARDS" },
+        "decision_cards": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/decisionCard" }
+        }
+      },
+      "unevaluatedProperties": false
+    },
+    "productSpecArtifact": {
+      "type": "object",
+      "allOf": [{ "$ref": "#/$defs/commonEnvelope" }],
+      "required": [
+        "product_name",
+        "problem_statement",
+        "target_users",
+        "outcomes",
+        "requirements",
+        "scope_in",
+        "scope_out"
+      ],
+      "properties": {
+        "artifact_type": { "type": "string", "const": "PRODUCT_SPEC" },
+        "product_name": { "$ref": "#/$defs/nonEmptyString" },
+        "problem_statement": { "$ref": "#/$defs/nonEmptyString" },
+        "target_users": { "$ref": "#/$defs/stringList" },
+        "outcomes": { "$ref": "#/$defs/stringList" },
+        "requirements": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/requirement" }
+        },
+        "scope_in": { "$ref": "#/$defs/stringList" },
+        "scope_out": { "$ref": "#/$defs/stringList" }
+      },
+      "unevaluatedProperties": false
+    },
+    "userStoriesArtifact": {
+      "type": "object",
+      "allOf": [{ "$ref": "#/$defs/commonEnvelope" }],
+      "required": ["stories"],
+      "properties": {
+        "artifact_type": { "type": "string", "const": "USER_STORIES" },
+        "stories": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/userStory" }
+        }
+      },
+      "unevaluatedProperties": false
+    },
+    "acceptanceCriteriaArtifact": {
+      "type": "object",
+      "allOf": [{ "$ref": "#/$defs/commonEnvelope" }],
+      "required": ["criteria"],
+      "properties": {
+        "artifact_type": { "type": "string", "const": "ACCEPTANCE_CRITERIA" },
+        "criteria": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/acceptanceCriterion" }
+        }
+      },
+      "unevaluatedProperties": false
+    },
+    "capabilityMatrixArtifact": {
+      "type": "object",
+      "allOf": [{ "$ref": "#/$defs/commonEnvelope" }],
+      "required": [
+        "user_wants",
+        "planned_delivery",
+        "verification_later",
+        "not_included",
+        "capabilities"
+      ],
+      "properties": {
+        "artifact_type": { "type": "string", "const": "CAPABILITY_MATRIX" },
+        "user_wants": { "$ref": "#/$defs/nonEmptyString" },
+        "planned_delivery": { "$ref": "#/$defs/nonEmptyString" },
+        "verification_later": { "$ref": "#/$defs/nonEmptyString" },
+        "not_included": { "$ref": "#/$defs/stringList" },
+        "capabilities": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/capabilityContract" }
+        }
+      },
+      "unevaluatedProperties": false
+    },
+    "productPlanArtifact": {
+      "type": "object",
+      "allOf": [{ "$ref": "#/$defs/commonEnvelope" }],
+      "required": [
+        "plan_summary",
+        "planned_workstreams",
+        "non_executable_constraints",
+        "creates_task_packets",
+        "queues_dispatches",
+        "executes_checkpoints",
+        "performs_commits",
+        "performs_deployments"
+      ],
+      "properties": {
+        "artifact_type": { "type": "string", "const": "PRODUCT_PLAN" },
+        "plan_summary": { "$ref": "#/$defs/nonEmptyString" },
+        "planned_workstreams": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/plannedWorkstream" }
+        },
+        "non_executable_constraints": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "enum": [
+              "no_task_packets",
+              "no_queue_entries",
+              "no_live_dispatch",
+              "no_checkpoint_execution",
+              "no_commits_or_pushes",
+              "no_deployment_execution",
+              "no_external_api_calls",
+              "no_secret_collection"
+            ]
+          }
+        },
+        "creates_task_packets": { "type": "boolean", "const": false },
+        "queues_dispatches": { "type": "boolean", "const": false },
+        "executes_checkpoints": { "type": "boolean", "const": false },
+        "performs_commits": { "type": "boolean", "const": false },
+        "performs_deployments": { "type": "boolean", "const": false }
+      },
+      "unevaluatedProperties": false
+    }
+  }
+}

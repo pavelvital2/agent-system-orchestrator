@@ -1,0 +1,48 @@
+{
+  "artifact_id": "PRODUCT_PLAN-YYYYMMDDTHHMMSSZ-example",
+  "artifact_type": "PRODUCT_PLAN",
+  "schema_version": "1.0.0",
+  "package_version": "3.6.0",
+  "runtime_schema_version": "3.1.0",
+  "created_at": "2026-05-21T00:00:00Z",
+  "created_by": "aso",
+  "target_root": "project-runtime/product/",
+  "profile": "telegram_bot",
+  "readiness_mode": "mvp",
+  "status": "proposed",
+  "source_refs": [
+    {
+      "source_ref_id": "SRC-capability-matrix",
+      "source_type": "artifact",
+      "title": "Capability matrix artifact",
+      "artifact_id": "CAPABILITY_MATRIX-YYYYMMDDTHHMMSSZ-example"
+    }
+  ],
+  "human_summary": "Provide a non-executable plan for future governed implementation without creating task packets, queue entries, dispatches, commits, deployments, or checkpoints.",
+  "plan_summary": "Describe future governed implementation workstreams after owner review.",
+  "planned_workstreams": [
+    {
+      "planned_workstream_id": "WS-001",
+      "description": "Plan future work for the first approved capability.",
+      "capability_ids": ["CAP-001"],
+      "acceptance_criterion_ids": ["AC-001"],
+      "sequencing_notes": "Owner review must happen before any downstream task packet is created.",
+      "status": "proposed"
+    }
+  ],
+  "non_executable_constraints": [
+    "no_task_packets",
+    "no_queue_entries",
+    "no_live_dispatch",
+    "no_checkpoint_execution",
+    "no_commits_or_pushes",
+    "no_deployment_execution",
+    "no_external_api_calls",
+    "no_secret_collection"
+  ],
+  "creates_task_packets": false,
+  "queues_dispatches": false,
+  "executes_checkpoints": false,
+  "performs_commits": false,
+  "performs_deployments": false
+}

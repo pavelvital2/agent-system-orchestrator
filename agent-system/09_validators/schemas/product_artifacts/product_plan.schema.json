@@ -1,0 +1,7 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://agent-system.local/schemas/product_artifacts/product_plan.schema.json",
+  "title": "PRODUCT_PLAN",
+  "description": "P4 non-executable product plan artifact schema.",
+  "$ref": "product_artifact.schema.json#/$defs/productPlanArtifact"
+}

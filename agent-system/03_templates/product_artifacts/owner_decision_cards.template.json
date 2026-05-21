@@ -1,0 +1,49 @@
+{
+  "artifact_id": "OWNER_DECISION_CARDS-YYYYMMDDTHHMMSSZ-example",
+  "artifact_type": "OWNER_DECISION_CARDS",
+  "schema_version": "1.0.0",
+  "package_version": "3.6.0",
+  "runtime_schema_version": "3.1.0",
+  "created_at": "2026-05-21T00:00:00Z",
+  "created_by": "aso",
+  "target_root": "project-runtime/product/",
+  "profile": "telegram_bot",
+  "readiness_mode": "mvp",
+  "status": "ready_for_review",
+  "source_refs": [
+    {
+      "source_ref_id": "SRC-open-questions",
+      "source_type": "artifact",
+      "title": "Open questions artifact",
+      "artifact_id": "OPEN_QUESTIONS-YYYYMMDDTHHMMSSZ-example"
+    }
+  ],
+  "human_summary": "Present owner-facing product decisions with options, tradeoffs, risks, and required owner action.",
+  "decision_cards": [
+    {
+      "decision_id": "DECISION-001",
+      "problem": "Choose the initial product scope.",
+      "options": [
+        {
+          "option_id": "OPT-001",
+          "label": "Narrow MVP",
+          "description": "Deliver the smallest coherent workflow first.",
+          "tradeoff": "Faster review, fewer advanced capabilities.",
+          "risk": "May defer some owner expectations."
+        },
+        {
+          "option_id": "OPT-002",
+          "label": "Broader MVP",
+          "description": "Include more workflow coverage in the initial plan.",
+          "tradeoff": "More complete scope, slower review.",
+          "risk": "More unresolved assumptions."
+        }
+      ],
+      "recommendation": "Prefer the narrow MVP unless the owner confirms broader scope.",
+      "tradeoffs": ["Speed versus breadth", "Review clarity versus feature coverage"],
+      "risk": "Unclear scope can produce invalid downstream task packets.",
+      "required_owner_action": "Select one option or provide revised scope.",
+      "source_ref_ids": ["SRC-open-questions"]
+    }
+  ]
+}

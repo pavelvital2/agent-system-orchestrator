@@ -1,0 +1,7 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://agent-system.local/schemas/product_artifacts/capability_matrix.schema.json",
+  "title": "CAPABILITY_MATRIX",
+  "description": "P4 capability matrix artifact schema.",
+  "$ref": "product_artifact.schema.json#/$defs/capabilityMatrixArtifact"
+}

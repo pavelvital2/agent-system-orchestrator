@@ -1,0 +1,33 @@
+{
+  "artifact_id": "USER_STORIES-YYYYMMDDTHHMMSSZ-example",
+  "artifact_type": "USER_STORIES",
+  "schema_version": "1.0.0",
+  "package_version": "3.6.0",
+  "runtime_schema_version": "3.1.0",
+  "created_at": "2026-05-21T00:00:00Z",
+  "created_by": "aso",
+  "target_root": "project-runtime/product/",
+  "profile": "telegram_bot",
+  "readiness_mode": "mvp",
+  "status": "proposed",
+  "source_refs": [
+    {
+      "source_ref_id": "SRC-product-spec",
+      "source_type": "artifact",
+      "title": "Product spec artifact",
+      "artifact_id": "PRODUCT_SPEC-YYYYMMDDTHHMMSSZ-example"
+    }
+  ],
+  "human_summary": "Translate approved requirements into owner-reviewable user stories with stable trace IDs.",
+  "stories": [
+    {
+      "user_story_id": "US-001",
+      "requirement_id": "REQ-001",
+      "persona": "Primary user",
+      "story": "As a primary user, I want to complete the first approved workflow so that I receive the expected product outcome.",
+      "value": "Makes the MVP workflow testable and reviewable.",
+      "priority": "must",
+      "capability_ids": ["CAP-001"]
+    }
+  ]
+}

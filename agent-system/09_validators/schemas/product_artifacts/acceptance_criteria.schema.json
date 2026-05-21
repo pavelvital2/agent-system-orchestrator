@@ -1,0 +1,7 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://agent-system.local/schemas/product_artifacts/acceptance_criteria.schema.json",
+  "title": "ACCEPTANCE_CRITERIA",
+  "description": "P4 acceptance criteria artifact schema.",
+  "$ref": "product_artifact.schema.json#/$defs/acceptanceCriteriaArtifact"
+}

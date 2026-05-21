@@ -1,0 +1,7 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://agent-system.local/schemas/product_artifacts/owner_decision_cards.schema.json",
+  "title": "OWNER_DECISION_CARDS",
+  "description": "P4 owner decision cards artifact schema.",
+  "$ref": "product_artifact.schema.json#/$defs/ownerDecisionCardsArtifact"
+}

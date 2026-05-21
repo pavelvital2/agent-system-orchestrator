@@ -1,0 +1,68 @@
+{
+  "artifact_id": "PRODUCT_INTAKE-YYYYMMDDTHHMMSSZ-example",
+  "artifact_type": "PRODUCT_INTAKE",
+  "schema_version": "1.0.0",
+  "package_version": "3.6.0",
+  "runtime_schema_version": "3.1.0",
+  "created_at": "2026-05-21T00:00:00Z",
+  "created_by": "aso",
+  "target_root": "project-runtime/product/",
+  "profile": "telegram_bot",
+  "readiness_mode": "mvp",
+  "status": "proposed",
+  "source_refs": [
+    {
+      "source_ref_id": "SRC-owner-prompt",
+      "source_type": "owner_input",
+      "title": "Owner product request",
+      "description": "Original owner request summarized for planning."
+    }
+  ],
+  "human_summary": "Summarize the product goal, known gaps, risks, integrations, and required secret names without collecting secret values.",
+  "goal": "Describe what the owner wants the product to accomplish.",
+  "source_summary": "Summarize the source material used to build this intake.",
+  "candidate_capabilities": [
+    {
+      "capability_id": "CAP-001",
+      "name": "Example capability",
+      "description": "Describe the candidate capability in owner-facing terms.",
+      "source_ref_ids": ["SRC-owner-prompt"]
+    }
+  ],
+  "assumptions": [
+    {
+      "id": "ASSUMPTION-001",
+      "text": "State an assumption that must be reviewed before implementation planning.",
+      "source_ref_ids": ["SRC-owner-prompt"]
+    }
+  ],
+  "missing_information": [
+    {
+      "id": "MISSING-001",
+      "text": "Describe information needed before implementation can be planned safely.",
+      "source_ref_ids": ["SRC-owner-prompt"]
+    }
+  ],
+  "risk_flags": [
+    {
+      "id": "RISK-001",
+      "text": "Describe a planning risk or uncertainty.",
+      "source_ref_ids": ["SRC-owner-prompt"]
+    }
+  ],
+  "external_integrations": [
+    {
+      "id": "INTEGRATION-001",
+      "text": "Name any external integration as a planning concern only.",
+      "source_ref_ids": ["SRC-owner-prompt"]
+    }
+  ],
+  "required_secrets": [
+    {
+      "secret_id": "SECRET-001",
+      "name": "TELEGRAM_BOT_TOKEN",
+      "value_status": "not_collected",
+      "purpose": "Secret name needed later if the owner approves a Telegram integration."
+    }
+  ]
+}

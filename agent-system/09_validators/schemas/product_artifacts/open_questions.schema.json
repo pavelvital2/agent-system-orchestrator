@@ -1,0 +1,7 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://agent-system.local/schemas/product_artifacts/open_questions.schema.json",
+  "title": "OPEN_QUESTIONS",
+  "description": "P4 open questions artifact schema.",
+  "$ref": "product_artifact.schema.json#/$defs/openQuestionsArtifact"
+}

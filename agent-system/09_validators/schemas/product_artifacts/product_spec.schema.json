@@ -1,0 +1,7 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://agent-system.local/schemas/product_artifacts/product_spec.schema.json",
+  "title": "PRODUCT_SPEC",
+  "description": "P4 product specification artifact schema.",
+  "$ref": "product_artifact.schema.json#/$defs/productSpecArtifact"
+}

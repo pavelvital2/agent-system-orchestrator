@@ -1,0 +1,45 @@
+{
+  "artifact_id": "OPEN_QUESTIONS-YYYYMMDDTHHMMSSZ-example",
+  "artifact_type": "OPEN_QUESTIONS",
+  "schema_version": "1.0.0",
+  "package_version": "3.6.0",
+  "runtime_schema_version": "3.1.0",
+  "created_at": "2026-05-21T00:00:00Z",
+  "created_by": "aso",
+  "target_root": "project-runtime/product/",
+  "profile": "telegram_bot",
+  "readiness_mode": "mvp",
+  "status": "needs_clarification",
+  "source_refs": [
+    {
+      "source_ref_id": "SRC-product-intake",
+      "source_type": "artifact",
+      "title": "Product intake artifact",
+      "artifact_id": "PRODUCT_INTAKE-YYYYMMDDTHHMMSSZ-example"
+    }
+  ],
+  "human_summary": "List owner questions that must be answered or explicitly deferred before governed implementation planning.",
+  "questions": [
+    {
+      "question_id": "Q-001",
+      "question": "Which user workflow should be delivered first?",
+      "category": "scope",
+      "why_it_matters": "The first workflow determines the initial capability and acceptance criteria.",
+      "options": [
+        {
+          "option_id": "OPT-001",
+          "label": "Workflow A",
+          "description": "Prioritize the first owner-described workflow."
+        },
+        {
+          "option_id": "OPT-002",
+          "label": "Workflow B",
+          "description": "Prioritize the second owner-described workflow."
+        }
+      ],
+      "default_recommendation": "Use the workflow with the clearest acceptance criteria.",
+      "blocks_implementation": true,
+      "source_ref_ids": ["SRC-product-intake"]
+    }
+  ]
+}
