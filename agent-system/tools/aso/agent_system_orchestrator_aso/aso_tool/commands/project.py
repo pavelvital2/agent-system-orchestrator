@@ -135,7 +135,14 @@ def run_verify_clean(args: argparse.Namespace) -> int:
 
 
 def run_create(args: object) -> int:
-    """Run `aso project create --local`."""
+    """Run `aso project create`."""
+
+    if getattr(args, "github", False):
+        return run_create_github(args)
+
+    if getattr(args, "dry_run", False) or getattr(args, "confirm_publish", False):
+        print("error: --dry-run and --confirm-publish are only supported with --github", file=sys.stderr)
+        return EXIT_FAIL
 
     try:
         target = Path(str(args.target)).expanduser()
@@ -171,6 +178,40 @@ def run_create(args: object) -> int:
         )
     else:
         print(f"PYTHONDONTWRITEBYTECODE=1 aso project verify-clean --root {summary.target} --strict")
+    return EXIT_OK
+
+
+def run_create_github(args: object) -> int:
+    """Run `aso project create --github --dry-run`."""
+
+    if getattr(args, "confirm_publish", False):
+        print("error: real GitHub publish is not implemented by this dry-run planner", file=sys.stderr)
+        return EXIT_FAIL
+    if not getattr(args, "dry_run", False):
+        print("error: --github requires --dry-run for planning or --confirm-publish for real publish", file=sys.stderr)
+        return EXIT_FAIL
+
+    try:
+        plan = build_github_dry_run_plan(
+            target=Path(str(args.target)).expanduser(),
+            project_name=str(args.name),
+            project_slug=str(args.slug),
+            profile=str(args.profile),
+            owner=getattr(args, "owner", None),
+            repo=getattr(args, "repo", None),
+            visibility=_visibility_from_args(args),
+            default_branch=str(args.branch),
+            engine_mode=str(args.engine_mode),
+        )
+    except ValueError as exc:
+        print(f"error: {exc}", file=sys.stderr)
+        return EXIT_FAIL
+
+    if getattr(args, "json_out", None):
+        if not _write_json(str(args.json_out), plan):
+            return EXIT_IO_ERROR
+    else:
+        print(json.dumps(plan, indent=2, sort_keys=True))
     return EXIT_OK
 
 
@@ -306,6 +347,61 @@ def create_project(
         copied_files=copied_files,
         skipped_paths=skipped_paths,
     )
+
+
+def build_github_dry_run_plan(
+    *,
+    target: Path,
+    project_name: str,
+    project_slug: str,
+    profile: str,
+    owner: object,
+    repo: object,
+    visibility: str,
+    default_branch: str,
+    engine_mode: str,
+) -> dict[str, object]:
+    """Build a deterministic GitHub publication plan without touching git, gh, or disk."""
+
+    target = target.expanduser()
+    _validate_create_inputs(
+        target=target,
+        project_name=project_name,
+        project_slug=project_slug,
+        profile=profile,
+        default_branch=default_branch,
+        engine_mode=engine_mode,
+    )
+
+    owner_text = _required_text(owner, "owner")
+    repo_text = _required_text(repo, "repo")
+    if visibility not in {"public", "private", "internal"}:
+        raise ValueError("visibility must be one of public, private, or internal")
+
+    local_files = list(_planned_local_files(engine_mode=engine_mode))
+    trackable_paths = [path.rstrip("/") for path in local_files if path not in {"project-archive/", "project-input/", "project-runtime/"}]
+    visibility_flag = f"--{visibility}"
+    target_text = str(target)
+
+    return {
+        "target": target_text,
+        "project_name": project_name,
+        "slug": project_slug,
+        "profile": profile,
+        "engine_mode": engine_mode,
+        "repo_owner": owner_text,
+        "repo_name": repo_text,
+        "visibility": visibility,
+        "branch": default_branch,
+        "planned_local_files": local_files,
+        "planned_git_commands": [
+            f"git -C {target_text} init -b {default_branch}",
+            f"git -C {target_text} add {' '.join(trackable_paths)}",
+            f'git -C {target_text} commit -m "Initial ASO project"',
+        ],
+        "planned_gh_command": f"gh repo create {owner_text}/{repo_text} {visibility_flag} --source {target_text} --remote origin --push",
+        "confirmation_required_for_real_publish": True,
+    }
 
 
 def _verify_lockfile(root: Path, violations: list[dict[str, object]]) -> dict[str, object]:
@@ -653,14 +749,43 @@ def _print_verify_clean_text(report: dict[str, object]) -> None:
 def _write_json(path_text: str, report: dict[str, object]) -> bool:
     path = Path(path_text).expanduser()
     if not path.parent.exists():
-        print(f"aso project verify-clean: json-out parent does not exist: {path.parent}", file=sys.stderr)
+        print(f"aso project: json-out parent does not exist: {path.parent}", file=sys.stderr)
         return False
     try:
         path.write_text(json.dumps(report, indent=2, sort_keys=True) + "\n", encoding="utf-8")
     except OSError as exc:
-        print(f"aso project verify-clean: failed to write json-out: {exc}", file=sys.stderr)
+        print(f"aso project: failed to write json-out: {exc}", file=sys.stderr)
         return False
     return True
+
+
+def _visibility_from_args(args: object) -> str:
+    if getattr(args, "public", False):
+        return "public"
+    if getattr(args, "internal", False):
+        return "internal"
+    return "private"
+
+
+def _required_text(value: object, name: str) -> str:
+    text = "" if value is None else str(value).strip()
+    if not text:
+        raise ValueError(f"{name} is required for --github")
+    return text
+
+
+def _planned_local_files(*, engine_mode: str) -> tuple[str, ...]:
+    entries = [
+        ".gitignore",
+        "README.md",
+        "aso.lock",
+        "project-archive/",
+        "project-input/",
+        "project-runtime/",
+    ]
+    if engine_mode == lockfile.DEFAULT_ENGINE_MODE:
+        entries.insert(2, "agent-system/")
+    return tuple(entries)
 
 
 def _validate_create_inputs(

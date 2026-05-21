@@ -19,8 +19,8 @@ RUNTIME_SCHEMA_VERSION:
 ## Active version constants
 
 ```text
-CURRENT_PACKAGE_VERSION: 3.2.0
-CURRENT_GOVERNANCE_RULESET_VERSION: 3.2.0
+CURRENT_PACKAGE_VERSION: 3.3.0
+CURRENT_GOVERNANCE_RULESET_VERSION: 3.3.0
 CURRENT_RUNTIME_SCHEMA_VERSION: 3.0.0
 ```
 
@@ -250,6 +250,19 @@ project clean-repository verification, installation bootstrap improvements,
 and Project Factory release documentation. It keeps the runtime schema at
 `3.0.0` because it adds package CLI/product capability without changing the
 accepted meaning of runtime state.
+
+The ASO Project Factory P1 package installs:
+
+```text
+CURRENT_PACKAGE_VERSION: 3.3.0
+CURRENT_GOVERNANCE_RULESET_VERSION: 3.3.0
+CURRENT_RUNTIME_SCHEMA_VERSION: 3.0.0
+```
+
+This minor update adds Project Factory GitHub publication planning,
+reference-mode generated projects, and the package wizard capability surface.
+It keeps the runtime schema at `3.0.0` because it does not change the accepted
+meaning of runtime state.
 
 ## Version semantics
 

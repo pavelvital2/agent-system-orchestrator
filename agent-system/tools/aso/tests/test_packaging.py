@@ -68,12 +68,12 @@ class PackagingCommandTests(unittest.TestCase):
         self.assertEqual(package_find["include"], ["agent_system_orchestrator_aso*"])
         self.assertFalse((REPO_ROOT / "agent_system_orchestrator_aso").exists())
 
-    def test_stage3_package_version_is_coherent(self) -> None:
+    def test_package_version_is_coherent(self) -> None:
         pyproject = tomllib.loads((REPO_ROOT / "pyproject.toml").read_text(encoding="utf-8"))
         init_file = (ASO_TOOL_ROOT / "agent_system_orchestrator_aso" / "__init__.py").read_text(encoding="utf-8")
         package_version = pyproject["project"]["version"]
 
-        self.assertEqual(package_version, "3.2.0")
+        self.assertEqual(package_version, "3.3.0")
         self.assertIn(f'__version__ = "{package_version}"', init_file)
 
 

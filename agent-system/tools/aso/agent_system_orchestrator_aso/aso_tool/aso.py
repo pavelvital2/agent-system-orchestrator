@@ -562,11 +562,16 @@ def build_parser() -> argparse.ArgumentParser:
             "or mutate runtime schema."
         ),
     )
-    project_create_parser.add_argument(
+    create_mode_group = project_create_parser.add_mutually_exclusive_group(required=True)
+    create_mode_group.add_argument(
         "--local",
-        required=True,
         action="store_true",
         help="Create a local workspace only; no network or GitHub operations are performed.",
+    )
+    create_mode_group.add_argument(
+        "--github",
+        action="store_true",
+        help="Plan or publish a GitHub-backed workspace.",
     )
     project_create_parser.add_argument(
         "--target",
@@ -609,6 +614,50 @@ def build_parser() -> argparse.ArgumentParser:
         choices=project.lockfile.SUPPORTED_ENGINE_MODES,
         default="vendored",
         help="ASO engine mode for the generated project (default: vendored).",
+    )
+    project_create_parser.add_argument(
+        "--owner",
+        default=None,
+        metavar="OWNER",
+        help="GitHub owner or organization for --github mode.",
+    )
+    project_create_parser.add_argument(
+        "--repo",
+        default=None,
+        metavar="REPO",
+        help="GitHub repository name for --github mode.",
+    )
+    visibility_group = project_create_parser.add_mutually_exclusive_group()
+    visibility_group.add_argument(
+        "--public",
+        action="store_true",
+        help="Plan or publish a public GitHub repository.",
+    )
+    visibility_group.add_argument(
+        "--private",
+        action="store_true",
+        help="Plan or publish a private GitHub repository.",
+    )
+    visibility_group.add_argument(
+        "--internal",
+        action="store_true",
+        help="Plan or publish an internal GitHub repository.",
+    )
+    publish_mode_group = project_create_parser.add_mutually_exclusive_group()
+    publish_mode_group.add_argument(
+        "--dry-run",
+        action="store_true",
+        help="For --github, emit a deterministic publication plan without git, gh, network, or filesystem writes.",
+    )
+    publish_mode_group.add_argument(
+        "--confirm-publish",
+        action="store_true",
+        help="Confirm real GitHub publication. Not implemented by this dry-run planner.",
+    )
+    project_create_parser.add_argument(
+        "--json-out",
+        metavar="PATH",
+        help="Write a GitHub dry-run plan JSON to this explicit path.",
     )
     project_create_parser.set_defaults(handler=project.run_create)
 

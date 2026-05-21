@@ -1,5 +1,8 @@
 from __future__ import annotations
 
+import argparse
+import contextlib
+import io
 import json
 import os
 import shutil
@@ -7,6 +10,7 @@ import subprocess
 import sys
 import tempfile
 import unittest
+from unittest import mock
 from pathlib import Path
 
 
@@ -21,9 +25,11 @@ from agent_system_orchestrator_aso.aso_tool import lockfile  # noqa: E402
 from agent_system_orchestrator_aso.aso_tool.commands import project  # noqa: E402
 
 
-def _run_cli(args: list[str]) -> subprocess.CompletedProcess[str]:
+def _run_cli(args: list[str], *, env_overrides: dict[str, str] | None = None) -> subprocess.CompletedProcess[str]:
     env = dict(os.environ)
     env["PYTHONDONTWRITEBYTECODE"] = "1"
+    if env_overrides:
+        env.update(env_overrides)
     return subprocess.run(
         [sys.executable, str(CLI), *args],
         check=False,
@@ -148,6 +154,180 @@ class ProjectCommandTests(unittest.TestCase):
         self.assertEqual(lock["aso_engine"]["runtime_schema"], "3.0.0")
         self.assertEqual(lock["aso_engine"]["engine_mode"], "reference")
         self.assertIsNone(lock["project"]["repo_url"])
+
+    def test_create_github_dry_run_writes_deterministic_plan_without_target_mutation(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            tmp_root = Path(tmp)
+            target = tmp_root / "github-demo"
+            report_path = tmp_root / "github-plan.json"
+            second_report_path = tmp_root / "github-plan-2.json"
+
+            args = [
+                "project",
+                "create",
+                "--github",
+                "--dry-run",
+                "--target",
+                str(target),
+                "--name",
+                "Demo",
+                "--slug",
+                "demo",
+                "--profile",
+                "generic",
+                "--owner",
+                "example",
+                "--repo",
+                "demo",
+                "--private",
+                "--branch",
+                "main",
+                "--engine-mode",
+                "reference",
+            ]
+            result = _run_cli([*args, "--json-out", str(report_path)], env_overrides={"PATH": str(tmp_root / "empty-bin")})
+            second_result = _run_cli([*args, "--json-out", str(second_report_path)])
+            plan = json.loads(report_path.read_text(encoding="utf-8"))
+            second_plan = json.loads(second_report_path.read_text(encoding="utf-8"))
+
+            self.assertFalse(target.exists())
+
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual(second_result.returncode, 0, second_result.stderr)
+        self.assertEqual(plan, second_plan)
+        self.assertEqual(plan["target"], str(target))
+        self.assertEqual(plan["project_name"], "Demo")
+        self.assertEqual(plan["slug"], "demo")
+        self.assertEqual(plan["profile"], "generic")
+        self.assertEqual(plan["engine_mode"], "reference")
+        self.assertEqual(plan["repo_owner"], "example")
+        self.assertEqual(plan["repo_name"], "demo")
+        self.assertEqual(plan["visibility"], "private")
+        self.assertEqual(plan["branch"], "main")
+        self.assertEqual(
+            plan["planned_local_files"],
+            [".gitignore", "README.md", "aso.lock", "project-archive/", "project-input/", "project-runtime/"],
+        )
+        self.assertEqual(
+            plan["planned_git_commands"],
+            [
+                f"git -C {target} init -b main",
+                f"git -C {target} add .gitignore README.md aso.lock",
+                f'git -C {target} commit -m "Initial ASO project"',
+            ],
+        )
+        self.assertEqual(
+            plan["planned_gh_command"],
+            f"gh repo create example/demo --private --source {target} --remote origin --push",
+        )
+        self.assertTrue(plan["confirmation_required_for_real_publish"])
+
+    def test_create_github_dry_run_uses_no_subprocesses(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            target = Path(tmp) / "github-demo"
+            args = argparse.Namespace(
+                github=True,
+                dry_run=True,
+                confirm_publish=False,
+                target=str(target),
+                name="Demo",
+                slug="demo",
+                profile="generic",
+                owner="example",
+                repo="demo",
+                public=False,
+                private=True,
+                internal=False,
+                branch="main",
+                engine_mode="reference",
+                json_out=None,
+            )
+
+            stdout = io.StringIO()
+            with (
+                mock.patch.object(project.subprocess, "run", side_effect=AssertionError("subprocess must not run")),
+                contextlib.redirect_stdout(stdout),
+            ):
+                result = project.run_create(args)
+
+        self.assertEqual(result, 0)
+        self.assertEqual(
+            json.loads(stdout.getvalue())["planned_gh_command"],
+            f"gh repo create example/demo --private --source {target} --remote origin --push",
+        )
+
+    def test_create_github_requires_owner_and_repo(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            base_args = [
+                "project",
+                "create",
+                "--github",
+                "--dry-run",
+                "--target",
+                str(Path(tmp) / "github-demo"),
+                "--name",
+                "Demo",
+                "--slug",
+                "demo",
+                "--profile",
+                "generic",
+                "--private",
+                "--branch",
+                "main",
+                "--engine-mode",
+                "reference",
+            ]
+
+            missing_owner = _run_cli([*base_args, "--repo", "demo"])
+            missing_repo = _run_cli([*base_args, "--owner", "example"])
+
+        self.assertEqual(missing_owner.returncode, 1)
+        self.assertIn("owner is required for --github", missing_owner.stderr)
+        self.assertEqual(missing_repo.returncode, 1)
+        self.assertIn("repo is required for --github", missing_repo.stderr)
+
+    def test_create_mode_and_visibility_flags_are_mutually_exclusive(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            target = str(Path(tmp) / "github-demo")
+            local_and_github = _run_cli(
+                [
+                    "project",
+                    "create",
+                    "--local",
+                    "--github",
+                    "--target",
+                    target,
+                    "--name",
+                    "Demo",
+                    "--slug",
+                    "demo",
+                ]
+            )
+            public_and_private = _run_cli(
+                [
+                    "project",
+                    "create",
+                    "--github",
+                    "--dry-run",
+                    "--target",
+                    target,
+                    "--name",
+                    "Demo",
+                    "--slug",
+                    "demo",
+                    "--owner",
+                    "example",
+                    "--repo",
+                    "demo",
+                    "--public",
+                    "--private",
+                ]
+            )
+
+        self.assertEqual(local_and_github.returncode, 2)
+        self.assertIn("not allowed with argument", local_and_github.stderr)
+        self.assertEqual(public_and_private.returncode, 2)
+        self.assertIn("not allowed with argument", public_and_private.stderr)
 
     def test_verify_clean_accepts_valid_fixture(self) -> None:
         result = _run_cli(["project", "verify-clean", "--root", str(FIXTURES / "valid_minimal"), "--strict"])

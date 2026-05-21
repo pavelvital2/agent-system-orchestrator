@@ -20,11 +20,11 @@ filesystem-governed ASO helper CLI at `agent-system/tools/aso/aso.py`: most
 commands are read-only diagnostics or dry-run proposals, while Project Factory
 commands may create generated projects only within explicit target paths.
 
-This Project Factory P0 package records the active package metadata as the
-governed `3.2.0` package/governance tuple with runtime schema `3.0.0`.
-The runtime schema remains unchanged because this package adds local project
-workspace creation and clean-repository verification without changing accepted
-runtime state meaning.
+This Project Factory P1 package records the active package metadata as the
+governed `3.3.0` package/governance tuple with runtime schema `3.0.0`.
+The runtime schema remains unchanged because this package adds GitHub
+publication planning and reference-mode generated projects without changing
+accepted runtime state meaning.
 
 The canonical ASO Python package is:
 

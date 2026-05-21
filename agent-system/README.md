@@ -155,10 +155,10 @@ The package includes a filesystem-governed ASO helper CLI at
 dry-run proposals, while Project Factory commands may create generated
 projects only within explicit target paths.
 
-This Project Factory P0 package records the active package metadata as the
-governed `3.2.0` package/governance tuple with runtime schema `3.0.0`.
-It preserves the read-only diagnostic command surfaces and adds local generated
-project creation plus clean-repository verification.
+This Project Factory P1 package records the active package metadata as the
+governed `3.3.0` package/governance tuple with runtime schema `3.0.0`.
+It preserves the read-only diagnostic command surfaces and adds GitHub
+publication planning plus reference-mode generated projects.
 
 The canonical installable ASO package source is:
 
@@ -495,10 +495,10 @@ agent-system/GOVERNANCE_CHANGELOG.md
 Current active tuple and Project Factory marker:
 
 ```text
-CURRENT_PACKAGE_VERSION: 3.2.0
-CURRENT_GOVERNANCE_RULESET_VERSION: 3.2.0
+CURRENT_PACKAGE_VERSION: 3.3.0
+CURRENT_GOVERNANCE_RULESET_VERSION: 3.3.0
 CURRENT_RUNTIME_SCHEMA_VERSION: 3.0.0
-PROJECT_FACTORY_RELEASE_MARKER: project-factory-p0
+PROJECT_FACTORY_RELEASE_MARKER: project-factory-p1
 ```
 
 ## Examples
