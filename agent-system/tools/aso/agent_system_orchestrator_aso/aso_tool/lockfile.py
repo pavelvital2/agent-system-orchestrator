@@ -10,10 +10,11 @@ from pathlib import Path
 LOCKFILE_NAME = "aso.lock"
 LOCKFILE_VERSION = "1.0"
 PACKAGE_NAME = "agent-system-orchestrator"
-PACKAGE_VERSION = "3.4.0"
+PACKAGE_VERSION = "3.5.0"
 RUNTIME_SCHEMA_VERSION = "3.1.0"
 COMPATIBLE_ENGINE_VERSION_TUPLES = (
     (PACKAGE_VERSION, RUNTIME_SCHEMA_VERSION),
+    ("3.4.0", "3.1.0"),
     ("3.3.0", "3.0.0"),
     ("3.2.0", "3.0.0"),
 )

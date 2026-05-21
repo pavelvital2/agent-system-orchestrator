@@ -124,6 +124,23 @@
         "validate_transition"
       ],
       "rationale": "Action semantics must match the runtime tuple: owner waits require owner-facing blocked state, pause requires a blocker and resume path, and terminal stop requires completed invariants."
+    },
+    {
+      "id": "GOV-PROPOSAL-APPLY-P3-BOUNDARY",
+      "severity": "critical",
+      "source_docs": [
+        "agent-system/02_runtime/PROPOSAL_APPLY_P3_CONTRACT.md",
+        "agent-system/02_runtime/RUNTIME_STATE_P2_CONTRACT.md"
+      ],
+      "check_target": "proposal_apply_runtime_boundary",
+      "trigger": "proposal/apply automation, receipt generation, or checkpoint proposal evidence is requested",
+      "expected_action": [
+        "block_unbounded_mutation",
+        "require_local_runtime_artifact_roots",
+        "require_state_verify",
+        "require_receipt"
+      ],
+      "rationale": "Safe Proposal / Apply P3 is bounded to local runtime-state proposal, apply, receipt, and report artifacts under project-runtime/proposals, project-runtime/receipts, and project-runtime/reports. It does not authorize daemon operation, live dispatch, checkpoint execution, commit/push automation, distributed workers, a web control panel, or a multi-project registry."
     }
   ]
 }

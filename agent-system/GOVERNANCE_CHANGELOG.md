@@ -1370,4 +1370,49 @@ MIGRATION_NOTE: Existing runtime schema 3.0.0 workspaces remain compatible but a
 AUTHORIZED_BY: project_owner
 AUDIT_REQUIRED: yes
 STATUS: accepted
+
+CHANGE_ID: GOV-2026-05-21-003
+CHANGE_TITLE: ASO_SAFE_PROPOSAL_APPLY_P3_CONTRACT_VERSION_BOUNDARY
+DATE: 2026-05-21
+PACKAGE_VERSION_BEFORE: 3.4.0
+PACKAGE_VERSION_AFTER: 3.5.0
+GOVERNANCE_RULESET_BEFORE: 3.4.0
+GOVERNANCE_RULESET_AFTER: 3.5.0
+RUNTIME_SCHEMA_BEFORE: 3.1.0
+RUNTIME_SCHEMA_AFTER: 3.1.0
+CHANGE_TYPE: minor
+CHANGE_SUBTYPE: proposal_apply_p3_contract_version_boundary
+AFFECTED_FILES:
+- README.md
+- README_INSTALL.md
+- pyproject.toml
+- agent-system/README.md
+- agent-system/PACKAGE_VERSIONING.md
+- agent-system/GOVERNANCE_CHANGELOG.md
+- agent-system/02_runtime/PROPOSAL_APPLY_P3_CONTRACT.md
+- agent-system/02_runtime/RUNTIME_STATE_P2_CONTRACT.md
+- agent-system/09_validators/rules/governance_rules.json
+- agent-system/09_validators/schemas/aso_lock.schema.json
+- agent-system/09_validators/schemas/runtime_state_3_1_0.contract.json
+- agent-system/09_validators/schemas/schema_manifest.schema.json
+- agent-system/tools/aso/agent_system_orchestrator_aso/__init__.py
+- agent-system/tools/aso/agent_system_orchestrator_aso/aso_tool/lockfile.py
+- agent-system/tools/aso/agent_system_orchestrator_aso/aso_tool/runtime_schema_contracts.py
+AFFECTED_INVARIANTS:
+- Active package/governance/runtime tuple is 3.5.0 / 3.5.0 / 3.1.0.
+- Runtime Schema 3.1.0 remains the canonical sidecar schema for current runtime state.
+- Proposal/apply is bounded local runtime-state automation through proposal, review, dry-run, confirmed apply, receipt, and post-apply verification.
+- Allowed local runtime artifact roots for P3 are project-runtime/proposals/, project-runtime/receipts/, and project-runtime/reports/.
+- P3 does not install a runtime daemon, live agent dispatch, checkpoint executor, commit/push automation, distributed workers, web control panel, or multi-project registry.
+AFFECTED_TRANSITIONS:
+- state verification -> remains the required before/after guard for confirmed apply.
+- proposal creation -> may write only proposal artifacts under project-runtime/proposals/.
+- confirmed apply -> may write only validated state sidecars, receipts, and reports under allowed project-runtime roots.
+- checkpoint proposal -> records eligibility evidence only and does not execute checkpoint, commit, or push actions.
+SCHEMA_TEMPLATE_IMPACT: none
+MIGRATION_REQUIRED: no
+MIGRATION_NOTE: Runtime Schema 3.1.0 is preserved. P3 adds a proposal/apply contract and package/governance version metadata only; it does not silently migrate active project-runtime state or broaden publication authority.
+AUTHORIZED_BY: project_owner
+AUDIT_REQUIRED: yes
+STATUS: accepted
 ```

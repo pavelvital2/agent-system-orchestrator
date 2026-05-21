@@ -3,7 +3,7 @@
 ## Purpose
 
 Runtime State P2 defines the package-level JSON-first runtime state boundary
-for ASO package version `3.4.0`, governance ruleset version `3.4.0`, and
+for ASO package version `3.5.0`, governance ruleset version `3.5.0`, and
 runtime schema version `3.1.0`.
 
 The filesystem remains the governed boundary. The canonical P2 runtime state

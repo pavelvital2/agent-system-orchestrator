@@ -19,8 +19,8 @@ RUNTIME_SCHEMA_VERSION:
 ## Active version constants
 
 ```text
-CURRENT_PACKAGE_VERSION: 3.4.0
-CURRENT_GOVERNANCE_RULESET_VERSION: 3.4.0
+CURRENT_PACKAGE_VERSION: 3.5.0
+CURRENT_GOVERNANCE_RULESET_VERSION: 3.5.0
 CURRENT_RUNTIME_SCHEMA_VERSION: 3.1.0
 ```
 
@@ -280,6 +280,23 @@ remain compatible where their publication boundary and engine metadata satisfy
 the accepted compatibility rules. P2 does not install a runtime daemon, live
 agent dispatch, proposal/apply mutation layer, checkpoint executor,
 distributed workers, or external queue infrastructure.
+
+The ASO Safe Proposal / Apply P3 package installs:
+
+```text
+CURRENT_PACKAGE_VERSION: 3.5.0
+CURRENT_GOVERNANCE_RULESET_VERSION: 3.5.0
+CURRENT_RUNTIME_SCHEMA_VERSION: 3.1.0
+```
+
+This minor update defines proposal/apply as a bounded local runtime-state
+automation layer while preserving Runtime Schema `3.1.0`. P3 may create
+proposal, receipt, and report artifacts under `project-runtime/proposals/`,
+`project-runtime/receipts/`, and `project-runtime/reports/`; those roots remain
+local runtime artifacts and must not be published from the package repository
+or generated-project publication flows. P3 does not install a runtime daemon,
+live agent dispatch, checkpoint executor, commit/push automation, distributed
+workers, web control panel, or multi-project registry.
 
 ## Version semantics
 

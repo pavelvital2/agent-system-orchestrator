@@ -20,12 +20,13 @@ filesystem-governed ASO helper CLI at `agent-system/tools/aso/aso.py`: most
 commands are read-only diagnostics or dry-run proposals, while Project Factory
 commands may create generated projects only within explicit target paths.
 
-This Runtime State P2 package records the active package metadata as the
-governed `3.4.0` package/governance tuple with runtime schema `3.1.0`.
-Runtime State P2 defines the JSON-first runtime state foundation for future
-state automation while preserving the Project Factory P1 command boundary.
-It does not implement a runtime daemon, proposal/apply mutation layer, live
-agent dispatch, or checkpoint executor.
+This Safe Proposal / Apply P3 package records the active package metadata as
+the governed `3.5.0` package/governance tuple with runtime schema `3.1.0`.
+P3 defines proposal/apply as a bounded local runtime-state automation layer
+over the JSON-first P2 state foundation while preserving the Project Factory
+P1 command boundary. It does not implement a runtime daemon, live agent
+dispatch, checkpoint executor, commit/push automation, distributed workers,
+web control panel, or multi-project registry.
 
 The Runtime Schema `3.1.0` sidecar contract is documented in
 `agent-system/02_runtime/RUNTIME_STATE_P2_CONTRACT.md` and packaged as
@@ -102,7 +103,7 @@ python3 agent-system/tools/aso/aso.py validate-context-pack agent-system/tests/f
 Runtime State P2 command surfaces formalize JSON sidecars under
 `project-runtime/state/`. JSON sidecars are canonical for P2+ runtime state;
 Markdown or report outputs are compatibility views generated from JSON. The
-active package version is `3.4.0` and the active runtime schema version is
+active package version is `3.5.0` and the active runtime schema version is
 `3.1.0`.
 
 ```text
@@ -252,9 +253,9 @@ explicit `state init --confirm-write`, `state migrate --confirm-write`, and
 generated-project local initialization under ignored workspace roots. Project
 Factory commands may create generated projects and, when a later publish flow
 is explicitly confirmed, publish only clean generated-project files from
-explicit target paths. Outside that boundary, ASO does not provide
-proposal/apply mutation, a runtime daemon, live agent dispatch, checkpoint
-execution, general package/runtime mutation, commit, or push authority. For
+explicit target paths. Outside the P3 local runtime-state proposal/apply
+boundary, ASO does not provide a runtime daemon, live agent dispatch,
+checkpoint execution, general package/runtime mutation, commit, or push authority. For
 package lint compatibility, this scoped boundary is also stated as: ASO
 diagnostic surfaces do not provide general mutation, dispatch, or checkpoint authority.
 

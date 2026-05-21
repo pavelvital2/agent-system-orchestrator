@@ -17,9 +17,10 @@ and verifies the installed `aso` command. It uses local Python packaging only;
 it does not require secrets, GitHub credentials, remote repository access,
 dispatch authority, checkpoint execution, commit, push, or publication rights.
 
-This install document covers package version `3.4.0` with runtime schema
-`3.1.0`. Runtime State P2 defines the JSON-first runtime state contract while
-preserving the Project Factory P1 command boundary.
+This install document covers package version `3.5.0` with runtime schema
+`3.1.0`. Safe Proposal / Apply P3 defines bounded local runtime-state
+proposal/apply authority while preserving the Runtime State P2 sidecar schema
+and the Project Factory P1 command boundary.
 
 Both installers accept a Python executable and virtual environment path:
 
@@ -140,10 +141,11 @@ gh auth status
 aso project create --github --confirm-publish --engine-mode reference --target /tmp/demo-github --name "Demo GitHub" --slug demo-github --profile generic --branch main --owner OWNER --repo demo-github --private
 ```
 
-Runtime State P2 does not add a proposal/apply mutation layer, runtime daemon,
-live dispatch, or checkpoint executor. The install and verification commands
-do not grant commit, push, tag, merge, checkpoint, or publication authority for
-the package repository or owner roots.
+Safe Proposal / Apply P3 does not add a runtime daemon, live dispatch,
+checkpoint executor, commit/push automation, distributed workers, web control
+panel, or multi-project registry. The install and verification commands do not
+grant commit, push, tag, merge, checkpoint, or publication authority for the
+package repository or owner roots.
 
 ## Dev Container
 

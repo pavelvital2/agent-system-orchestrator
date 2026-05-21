@@ -155,10 +155,11 @@ The package includes a filesystem-governed ASO helper CLI at
 dry-run proposals, while Project Factory commands may create generated
 projects only within explicit target paths.
 
-This Runtime State P2 package records the active package metadata as the
-governed `3.4.0` package/governance tuple with runtime schema `3.1.0`.
-It preserves the Project Factory P1 command boundary and defines the
-JSON-first runtime state foundation for later governed automation.
+This Safe Proposal / Apply P3 package records the active package metadata as
+the governed `3.5.0` package/governance tuple with runtime schema `3.1.0`.
+It preserves the Project Factory P1 command boundary and defines bounded
+local runtime-state proposal/apply authority over the JSON-first P2 state
+foundation.
 
 The Runtime Schema `3.1.0` contract is documented in
 `agent-system/02_runtime/RUNTIME_STATE_P2_CONTRACT.md` and packaged as
@@ -252,7 +253,7 @@ forbidden document checks, and required document existence under `--root`.
 Runtime State P2 command surfaces are local and offline. JSON sidecars under
 `project-runtime/state/` are canonical for P2+ runtime state. Markdown and
 report outputs are compatibility views generated from JSON, not the canonical
-state source. The active package version is `3.4.0` and the active runtime
+state source. The active package version is `3.5.0` and the active runtime
 schema version is `3.1.0`.
 
 ```text
@@ -349,9 +350,9 @@ explicit `state init --confirm-write`, `state migrate --confirm-write`, and
 generated-project local initialization under ignored workspace roots. Project
 Factory commands may create generated projects and, when a later publish flow
 is explicitly confirmed, publish only clean generated-project files from
-explicit target paths. Outside that boundary, ASO does not provide
-proposal/apply mutation, a runtime daemon, live agent dispatch, checkpoint
-execution, general package/runtime mutation, commit, or push authority. For
+explicit target paths. Outside the P3 local runtime-state proposal/apply
+boundary, ASO does not provide a runtime daemon, live agent dispatch,
+checkpoint execution, general package/runtime mutation, commit, or push authority. For
 package lint compatibility, this scoped boundary is also stated as: ASO
 diagnostic surfaces do not provide general mutation, dispatch, or checkpoint authority.
 
@@ -359,7 +360,7 @@ diagnostic surfaces do not provide general mutation, dispatch, or checkpoint aut
 
 Project Factory P1 supports local vendored creation, local reference creation,
 GitHub dry-run planning, confirmed GitHub publish, and a guided
-wizard. It remains available in package version `3.4.0`; existing P1/P0
+wizard. It remains available in package version `3.5.0`; existing P1/P0
 generated-project lockfiles remain compatible when they satisfy the accepted
 publication-boundary and engine-mode rules.
 
@@ -419,9 +420,9 @@ engine `.git` metadata. Reference-mode generated repositories must not track
 generated-project `agent-system/` content that passes the publication
 boundary.
 
-Runtime State P2 and Project Factory P1 do not implement a runtime daemon,
-dashboard control plane, distributed workers, live agent dispatch,
-proposal/apply mutation layer, or checkpoint executor.
+Safe Proposal / Apply P3 and Project Factory P1 do not implement a runtime
+daemon, dashboard control plane, distributed workers, live agent dispatch,
+checkpoint executor, commit/push automation, or multi-project registry.
 
 ## Publication and cleanup boundary
 
@@ -594,11 +595,11 @@ agent-system/GOVERNANCE_CHANGELOG.md
 Current active tuple and package markers:
 
 ```text
-CURRENT_PACKAGE_VERSION: 3.4.0
-CURRENT_GOVERNANCE_RULESET_VERSION: 3.4.0
+CURRENT_PACKAGE_VERSION: 3.5.0
+CURRENT_GOVERNANCE_RULESET_VERSION: 3.5.0
 CURRENT_RUNTIME_SCHEMA_VERSION: 3.1.0
 PROJECT_FACTORY_RELEASE_MARKER: project-factory-p1
-RUNTIME_STATE_RELEASE_MARKER: runtime-state-p2
+RUNTIME_STATE_RELEASE_MARKER: proposal-apply-p3
 ```
 
 ## Examples

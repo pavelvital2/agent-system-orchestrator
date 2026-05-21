@@ -579,8 +579,8 @@ def build_parser() -> argparse.ArgumentParser:
     )
     state_init_parser.add_argument(
         "--package-version",
-        default="3.4.0",
-        help="Package version to record (default: 3.4.0).",
+        default="3.5.0",
+        help="Package version to record (default: 3.5.0).",
     )
     state_init_parser.add_argument(
         "--runtime-schema-version",
