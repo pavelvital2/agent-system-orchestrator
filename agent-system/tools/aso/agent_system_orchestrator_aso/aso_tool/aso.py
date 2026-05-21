@@ -21,6 +21,7 @@ from .commands import (
     plan_next,
     project,
     record_result,
+    state_init,
     state_verify,
     status,
     validate_context_pack,
@@ -535,10 +536,72 @@ def build_parser() -> argparse.ArgumentParser:
 
     state_parser = subparsers.add_parser(
         "state",
-        help="Workspace state inspection commands.",
-        description="Read-only workspace state inspection commands.",
+        help="Workspace state commands.",
+        description="Workspace runtime state commands.",
     )
     state_subparsers = state_parser.add_subparsers(dest="state_command", metavar="COMMAND")
+    state_init_parser = state_subparsers.add_parser(
+        "init",
+        help="Initialize Runtime Schema 3.1.0 JSON state sidecars.",
+        description=(
+            "Plan or create deterministic Runtime Schema 3.1.0 JSON sidecars under "
+            "project-runtime/state. Dry-run writes nothing; writes require --confirm-write."
+        ),
+    )
+    _add_root_argument(state_init_parser, validate=False)
+    state_init_parser.add_argument(
+        "--project-name",
+        metavar="TEXT",
+        help="Project display name for PROJECT_STATE (default: derived from --root).",
+    )
+    state_init_parser.add_argument(
+        "--project-slug",
+        metavar="TEXT",
+        help="Project slug for workspace identity (default: derived from --root).",
+    )
+    state_init_parser.add_argument(
+        "--profile",
+        default="orchestrator",
+        metavar="TEXT",
+        help="Profile name recorded in SCHEMA_MANIFEST (default: orchestrator).",
+    )
+    state_init_parser.add_argument(
+        "--repo-url",
+        metavar="URL_OR_NONE",
+        help="Expected repository URL (default: detected remote.origin.url or NONE).",
+    )
+    state_init_parser.add_argument(
+        "--branch",
+        metavar="TEXT",
+        help="Expected branch (default: detected current branch or NONE).",
+    )
+    state_init_parser.add_argument(
+        "--package-version",
+        default="3.4.0",
+        help="Package version to record (default: 3.4.0).",
+    )
+    state_init_parser.add_argument(
+        "--runtime-schema-version",
+        default="3.1.0",
+        help="Runtime schema version to initialize (default: 3.1.0).",
+    )
+    state_init_parser.add_argument(
+        "--dry-run",
+        action="store_true",
+        help="Print a deterministic JSON plan and write no files.",
+    )
+    state_init_parser.add_argument(
+        "--confirm-write",
+        action="store_true",
+        help="Explicitly allow writes under project-runtime/state.",
+    )
+    state_init_parser.add_argument(
+        "--json-out",
+        metavar="PATH",
+        help="Write the dry-run plan or confirmed write receipt JSON to PATH.",
+    )
+    state_init_parser.set_defaults(handler=state_init.run)
+
     state_verify_parser = state_subparsers.add_parser(
         "verify",
         help="Verify workspace JSON state sidecars.",

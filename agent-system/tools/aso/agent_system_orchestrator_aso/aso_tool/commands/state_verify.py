@@ -17,8 +17,9 @@ EXIT_OK = 0
 EXIT_FINDINGS = 1
 EXIT_IO_ERROR = 3
 
-SCHEMA_VERSION = "2.0.0"
-ENVELOPE_FIELDS = (
+LEGACY_SCHEMA_VERSION = "2.0.0"
+CURRENT_SCHEMA_VERSION = runtime_schema_contracts.ACTIVE_RUNTIME_SCHEMA_VERSION
+LEGACY_ENVELOPE_FIELDS = (
     "schema_version",
     "sidecar_type",
     "markdown_source",
@@ -27,7 +28,10 @@ ENVELOPE_FIELDS = (
     "updated_by",
     "content",
 )
-ENVELOPE_FIELD_SET = set(ENVELOPE_FIELDS)
+CURRENT_ENVELOPE_FIELDS = runtime_schema_contracts.REQUIRED_ENVELOPE_FIELDS
+CURRENT_OPTIONAL_ENVELOPE_FIELDS = runtime_schema_contracts.OPTIONAL_ENVELOPE_FIELDS
+LEGACY_ENVELOPE_FIELD_SET = set(LEGACY_ENVELOPE_FIELDS)
+CURRENT_ENVELOPE_FIELD_SET = set(CURRENT_ENVELOPE_FIELDS) | set(CURRENT_OPTIONAL_ENVELOPE_FIELDS)
 RFC3339_UTC_RE = re.compile(r"^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z$")
 NONE_VALUES = {"", "NONE", "none", "null", "UNKNOWN"}
 PROFILE_ROLES = {
@@ -272,6 +276,23 @@ SIDECARS: tuple[SidecarSpec, ...] = (
     ),
 )
 
+CURRENT_P2_EXTRA_SIDECARS: tuple[SidecarSpec, ...] = (
+    SidecarSpec(
+        "SCHEMA_MANIFEST",
+        "SCHEMA_MANIFEST.json",
+        "project-runtime/SCHEMA_MANIFEST.md",
+        (
+            "state_root",
+            "runtime_schema_version",
+            "package_version",
+            "created_by_profile",
+            "sidecars",
+        ),
+        {},
+    ),
+)
+SIDECAR_BY_TYPE = {spec.sidecar_type: spec for spec in (*SIDECARS, *CURRENT_P2_EXTRA_SIDECARS)}
+
 ENUM_FIELDS = {
     ("PROJECT_STATE", "workspace_type"): {"package_repo", "project_workspace", "implementation_repo", "test_fixture"},
     ("PROJECT_STATE", "identity_validation_status"): {"not_checked", "passed", "failed", "blocked"},
@@ -424,6 +445,7 @@ LIST_OR_NONE_FIELDS = {
     ("TASK_REGISTRY", "tasks"),
     ("ACCEPTED_ARTIFACTS", "artifacts"),
     ("WORKSPACE_IDENTITY", "validation_errors"),
+    ("SCHEMA_MANIFEST", "sidecars"),
 }
 
 OBJECT_OR_NONE_FIELDS = {
@@ -959,7 +981,12 @@ def _validate_sidecar(root: Path, spec: SidecarSpec) -> tuple[dict[str, object] 
         ]
 
     findings: list[Finding] = []
-    for field in ENVELOPE_FIELDS:
+    raw_schema_version = payload.get("schema_version")
+    is_current_schema = raw_schema_version == CURRENT_SCHEMA_VERSION
+    envelope_fields = CURRENT_ENVELOPE_FIELDS if is_current_schema else LEGACY_ENVELOPE_FIELDS
+    envelope_field_set = CURRENT_ENVELOPE_FIELD_SET if is_current_schema else LEGACY_ENVELOPE_FIELD_SET
+
+    for field in envelope_fields:
         if field not in payload:
             findings.append(
                 _finding(
@@ -971,7 +998,7 @@ def _validate_sidecar(root: Path, spec: SidecarSpec) -> tuple[dict[str, object] 
                     "Populate every required sidecar envelope field.",
                 )
             )
-    for extra in sorted(set(payload) - ENVELOPE_FIELD_SET):
+    for extra in sorted(set(payload) - envelope_field_set):
         findings.append(
             _finding(
                 "SIDECAR_UNKNOWN_GOVERNED_FIELD",
@@ -983,15 +1010,26 @@ def _validate_sidecar(root: Path, spec: SidecarSpec) -> tuple[dict[str, object] 
             )
         )
 
-    if payload.get("schema_version") != SCHEMA_VERSION:
+    if raw_schema_version not in {LEGACY_SCHEMA_VERSION, CURRENT_SCHEMA_VERSION}:
         findings.append(
             _finding(
                 "SIDECAR_SCHEMA_VERSION_MISSING_OR_INVALID",
                 "Sidecar schema version is invalid",
-                f"{relpath}.schema_version must be {SCHEMA_VERSION!r}.",
+                f"{relpath}.schema_version must be {LEGACY_SCHEMA_VERSION!r} or {CURRENT_SCHEMA_VERSION!r}.",
                 relpath,
                 "schema_version",
-                "Use the stable Stage 2 sidecar schema version.",
+                "Use a supported runtime sidecar schema version.",
+            )
+        )
+    if is_current_schema and payload.get("runtime_schema_version") != CURRENT_SCHEMA_VERSION:
+        findings.append(
+            _finding(
+                "SIDECAR_RUNTIME_SCHEMA_VERSION_INVALID",
+                "Sidecar runtime schema version is invalid",
+                f"{relpath}.runtime_schema_version must be {CURRENT_SCHEMA_VERSION!r}.",
+                relpath,
+                "runtime_schema_version",
+                "Keep schema_version and runtime_schema_version aligned for current runtime state.",
             )
         )
     if payload.get("sidecar_type") != spec.sidecar_type:
@@ -1005,7 +1043,7 @@ def _validate_sidecar(root: Path, spec: SidecarSpec) -> tuple[dict[str, object] 
                 "Keep sidecar_type aligned with the sidecar filename.",
             )
         )
-    if payload.get("markdown_source") != spec.markdown_source:
+    if "markdown_source" in payload and payload.get("markdown_source") != spec.markdown_source:
         findings.append(
             _finding(
                 "SIDECAR_MARKDOWN_SOURCE_MISMATCH",
@@ -1069,7 +1107,8 @@ def _validate_sidecar(root: Path, spec: SidecarSpec) -> tuple[dict[str, object] 
     findings.extend(_validate_required_fields(spec, content, relpath))
     if isinstance(content, dict):
         findings.extend(_validate_enum_values(spec, content, relpath))
-        findings.extend(_validate_markdown_parity(root, spec, content, relpath))
+        if not is_current_schema:
+            findings.extend(_validate_markdown_parity(root, spec, content, relpath))
     return payload, findings
 
 
@@ -1172,11 +1211,54 @@ def _checkpoint_findings(sidecars: dict[str, dict[str, object]]) -> list[Finding
     ]
 
 
+def _is_current_p2_state(sidecars: dict[str, dict[str, object]], root: Path) -> bool:
+    if (root / runtime_schema_contracts.STATE_ROOT / "SCHEMA_MANIFEST.json").is_file():
+        return True
+    for payload in sidecars.values():
+        if payload.get("schema_version") == CURRENT_SCHEMA_VERSION:
+            return True
+        content = payload.get("content")
+        if isinstance(content, dict) and content.get("runtime_schema_version") == CURRENT_SCHEMA_VERSION:
+            return True
+    return False
+
+
+def _optional_sidecar_status(root: Path) -> tuple[list[str], list[str]]:
+    present: list[str] = []
+    missing: list[str] = []
+    for sidecar_type in runtime_schema_contracts.OPTIONAL_SIDECARS:
+        filename = f"{sidecar_type}.json"
+        if (root / runtime_schema_contracts.STATE_ROOT / filename).is_file():
+            present.append(sidecar_type)
+        else:
+            missing.append(sidecar_type)
+    return sorted(present), sorted(missing)
+
+
+def _optional_readiness_findings(missing_optional: list[str]) -> list[Finding]:
+    findings: list[Finding] = []
+    for sidecar_type in missing_optional:
+        findings.append(
+            _finding(
+                "SIDECAR_OPTIONAL_SIDECAR_MISSING",
+                "Optional state sidecar is missing",
+                f"{runtime_schema_contracts.STATE_ROOT}/{sidecar_type}.json is optional under Runtime Schema {CURRENT_SCHEMA_VERSION}.",
+                f"{runtime_schema_contracts.STATE_ROOT}/{sidecar_type}.json",
+                "",
+                "Create the optional sidecar when that readiness signal is needed.",
+                severity="info",
+            )
+        )
+    return findings
+
+
 def _report(root: Path, strict: bool) -> tuple[dict[str, object], int]:
     findings: list[Finding] = []
     loaded_sidecars: dict[str, dict[str, object]] = {}
     present: list[str] = []
     missing: list[str] = []
+    optional_present: list[str] = []
+    optional_missing: list[str] = []
 
     if not root.exists() or not root.is_dir():
         finding = _finding(
@@ -1189,7 +1271,7 @@ def _report(root: Path, strict: bool) -> tuple[dict[str, object], int]:
         )
         summary = _summary([finding])
         status, exit_code = _status(summary, strict, io_error=True)
-        return _build_report(root, strict, status, summary, [finding], {}, [], []), exit_code
+        return _build_report(root, strict, status, summary, [finding], {}, [], [], False, [], []), exit_code
 
     for spec in SIDECARS:
         payload, sidecar_findings = _validate_sidecar(root, spec)
@@ -1200,12 +1282,56 @@ def _report(root: Path, strict: bool) -> tuple[dict[str, object], int]:
             present.append(spec.sidecar_type)
             loaded_sidecars[spec.sidecar_type] = payload
 
+    current_p2_state = _is_current_p2_state(loaded_sidecars, root)
+    if current_p2_state:
+        for sidecar_type in runtime_schema_contracts.REQUIRED_SIDECARS:
+            if sidecar_type in loaded_sidecars or sidecar_type in missing:
+                continue
+            spec = SIDECAR_BY_TYPE.get(sidecar_type)
+            if spec is None:
+                findings.append(
+                    _finding(
+                        "SIDECAR_CONTRACT_SPEC_MISSING",
+                        "Verifier is missing a required sidecar spec",
+                        f"Runtime schema contract requires {sidecar_type}, but state verify has no validator spec.",
+                        runtime_schema_contracts.STATE_ROOT,
+                        sidecar_type,
+                        "Update state verify sidecar specs from the active runtime schema contract.",
+                    )
+                )
+                missing.append(sidecar_type)
+                continue
+            payload, sidecar_findings = _validate_sidecar(root, spec)
+            findings.extend(sidecar_findings)
+            if payload is None:
+                if sidecar_type not in missing:
+                    missing.append(sidecar_type)
+            else:
+                if sidecar_type not in present:
+                    present.append(sidecar_type)
+                loaded_sidecars[sidecar_type] = payload
+
+        optional_present, optional_missing = _optional_sidecar_status(root)
+        findings.extend(_optional_readiness_findings(optional_missing))
+
     findings.extend(_reference_findings(loaded_sidecars))
     findings.extend(_checkpoint_findings(loaded_sidecars))
     findings = sorted(findings, key=lambda item: (item.severity != "error", item.rule_id, item.path, item.field, item.details))
     summary = _summary(findings)
     status, exit_code = _status(summary, strict)
-    return _build_report(root, strict, status, summary, findings, loaded_sidecars, present, missing), exit_code
+    return _build_report(
+        root,
+        strict,
+        status,
+        summary,
+        findings,
+        loaded_sidecars,
+        present,
+        missing,
+        current_p2_state,
+        optional_present,
+        optional_missing,
+    ), exit_code
 
 
 def _build_report(
@@ -1217,7 +1343,22 @@ def _build_report(
     sidecars: dict[str, dict[str, object]],
     present: list[str],
     missing: list[str],
+    current_p2_state: bool,
+    optional_present: list[str],
+    optional_missing: list[str],
 ) -> dict[str, object]:
+    required_expected = (
+        list(runtime_schema_contracts.REQUIRED_SIDECARS)
+        if current_p2_state
+        else [spec.sidecar_type for spec in SIDECARS]
+    )
+    expected = (
+        sorted(set(required_expected) | set(runtime_schema_contracts.OPTIONAL_SIDECARS))
+        if current_p2_state
+        else sorted(required_expected)
+    )
+    all_present = sorted(set(present) | set(optional_present))
+    all_missing = sorted(set(missing) | set(optional_missing)) if current_p2_state else sorted(missing)
     return {
         "tool": "aso",
         "command": "state verify",
@@ -1228,9 +1369,16 @@ def _build_report(
         "summary": summary,
         "findings": [finding.to_json() for finding in findings],
         "state": {
-            "sidecars_expected": [spec.sidecar_type for spec in SIDECARS],
-            "sidecars_present": sorted(present),
-            "sidecars_missing": sorted(missing),
+            "runtime_schema_current_p2": current_p2_state,
+            "sidecars_expected": expected,
+            "sidecars_present": all_present,
+            "sidecars_missing": all_missing,
+            "required_sidecars_expected": sorted(required_expected),
+            "required_sidecars_present": sorted(sidecar for sidecar in present if sidecar in set(required_expected)),
+            "required_sidecars_missing": sorted(sidecar for sidecar in missing if sidecar in set(required_expected)),
+            "optional_sidecars_expected": sorted(runtime_schema_contracts.OPTIONAL_SIDECARS) if current_p2_state else [],
+            "optional_sidecars_present": optional_present,
+            "optional_sidecars_missing": optional_missing,
             "task_registry_count": len(_task_registry(sidecars)),
         },
         "runtime_schema_contract": runtime_schema_contracts.contract_summary(),
