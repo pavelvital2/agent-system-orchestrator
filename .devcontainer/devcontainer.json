@@ -1,0 +1,13 @@
+{
+  "name": "agent-system-orchestrator",
+  "image": "mcr.microsoft.com/devcontainers/python:1-3.11-bookworm",
+  "customizations": {
+    "vscode": {
+      "settings": {
+        "python.defaultInterpreterPath": "${workspaceFolder}/.venv/bin/python"
+      }
+    }
+  },
+  "postCreateCommand": "bash install.sh",
+  "remoteUser": "vscode"
+}

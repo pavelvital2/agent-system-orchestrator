@@ -15,6 +15,8 @@ verify-install:
 	test -x "$(ASO_BIN)"
 	PYTHONDONTWRITEBYTECODE=1 "$(ASO_BIN)" --help >/dev/null
 	PYTHONDONTWRITEBYTECODE=1 "$(ASO_BIN)" status --root . --mode package
+	PYTHONDONTWRITEBYTECODE=1 "$(ASO_BIN)" project create --help >/dev/null
+	PYTHONDONTWRITEBYTECODE=1 "$(ASO_BIN)" project verify-clean --help >/dev/null
 	PYTHONDONTWRITEBYTECODE=1 "$(ASO_BIN)" lint --root . --mode package --strict
 	PYTHONDONTWRITEBYTECODE=1 "$(ASO_BIN)" doctor --root . --mode package --strict
 	PYTHONDONTWRITEBYTECODE=1 "$(ASO_BIN)" package-layout verify --root . --strict
@@ -26,6 +28,8 @@ test: source-hygiene
 smoke:
 	PYTHONDONTWRITEBYTECODE=1 $(PYTHON) $(ASO_SCRIPT) --help >/dev/null
 	PYTHONDONTWRITEBYTECODE=1 $(PYTHON) $(ASO_SCRIPT) status --root . --mode package
+	PYTHONDONTWRITEBYTECODE=1 $(PYTHON) $(ASO_SCRIPT) project create --help >/dev/null
+	PYTHONDONTWRITEBYTECODE=1 $(PYTHON) $(ASO_SCRIPT) project verify-clean --help >/dev/null
 	PYTHONDONTWRITEBYTECODE=1 $(PYTHON) $(ASO_SCRIPT) lint --root . --mode package --strict
 	PYTHONDONTWRITEBYTECODE=1 $(PYTHON) $(ASO_SCRIPT) doctor --root . --mode package --strict
 	PYTHONDONTWRITEBYTECODE=1 $(PYTHON) $(ASO_SCRIPT) package-layout verify --root . --strict

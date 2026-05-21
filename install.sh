@@ -96,6 +96,8 @@ if [ "$verify_install" -eq 1 ]; then
 
   PYTHONDONTWRITEBYTECODE=1 "$venv_aso" --help >/dev/null
   PYTHONDONTWRITEBYTECODE=1 "$venv_aso" status --root . --mode package >/dev/null
+  PYTHONDONTWRITEBYTECODE=1 "$venv_aso" project create --help >/dev/null
+  PYTHONDONTWRITEBYTECODE=1 "$venv_aso" project verify-clean --help >/dev/null
   PYTHONDONTWRITEBYTECODE=1 "$venv_aso" package-layout verify --root . --strict
 fi
 
