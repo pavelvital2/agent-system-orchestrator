@@ -6,6 +6,7 @@ import subprocess
 import sys
 import tempfile
 import unittest
+from unittest import mock
 from pathlib import Path
 
 
@@ -14,6 +15,12 @@ REPO_ROOT = Path(__file__).resolve().parents[4]
 CLI = ASO_DIR / "aso.py"
 FIXTURE_ROOT = REPO_ROOT / "agent-system" / "tests" / "fixtures" / "state"
 P2_VALID_WORKSPACE = FIXTURE_ROOT / "p2_valid_workspace"
+
+if str(ASO_DIR) not in sys.path:
+    sys.path.insert(0, str(ASO_DIR))
+
+from agent_system_orchestrator_aso.aso_tool import proposal_contracts  # noqa: E402
+from agent_system_orchestrator_aso.aso_tool.commands import apply as apply_command  # noqa: E402
 
 
 def run_aso(*args: str) -> subprocess.CompletedProcess[str]:
@@ -219,12 +226,105 @@ class ApplyDryRunCommandTests(unittest.TestCase):
             self.assertFalse(plan["would_apply"])
             self.assertIn("malformed_json", "\n".join(plan["blocked_reasons"]))
 
-    def test_confirm_apply_fails_closed_without_mutation(self) -> None:
+    def test_confirm_apply_succeeds_for_valid_report_write_proposal_and_writes_receipt(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = copy_p2_workspace(tmp)
+            proposal_path = self._proposal(root, tmp)
+            state_before = workspace_snapshot(root / "project-runtime" / "state")
+            receipt_copy = Path(tmp) / "apply-receipt.json"
+
+            result = run_aso(
+                "apply",
+                "--root",
+                str(root),
+                "--proposal",
+                str(proposal_path),
+                "--confirm-apply",
+                "--json-out",
+                str(receipt_copy),
+            )
+
+            self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+            self.assertEqual(result.stdout, "")
+            receipt = json.loads(receipt_copy.read_text(encoding="utf-8"))
+            receipt_validation = proposal_contracts.validate_apply_receipt(receipt)
+            self.assertTrue(receipt_validation.passed, "\n".join(receipt_validation.errors))
+            self.assertEqual(receipt["outcome"], "applied")
+            self.assertEqual(receipt["proposal_type"], "next_task")
+            self.assertIn("state_verify_after_apply", receipt["validators_passed"])
+            self.assertIn("project-runtime/reports/next-task-proposal.json", receipt["result_state_hashes"])
+            receipts = sorted((root / "project-runtime" / "receipts").glob("*.json"))
+            self.assertEqual(len(receipts), 1)
+            self.assertEqual(json.loads(receipts[0].read_text(encoding="utf-8")), receipt)
+            self.assertTrue((root / "project-runtime" / "reports" / "next-task-proposal.json").is_file())
+            self.assertEqual(state_before, workspace_snapshot(root / "project-runtime" / "state"))
+
+            verify = run_aso("state", "verify", "--root", str(root), "--strict")
+            self.assertEqual(verify.returncode, 0, verify.stdout + verify.stderr)
+
+    def test_confirm_apply_forced_multi_operation_write_failure_removes_partials(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = copy_p2_workspace(tmp)
+            proposal_path = self._proposal(root, tmp)
+            proposal = json.loads(proposal_path.read_text(encoding="utf-8"))
+            second_operation = dict(proposal["operations"][0])
+            second_operation["operation_id"] = "write-second-report"
+            second_operation["target"] = "project-runtime/reports/second-report.json"
+            proposal["operations"].append(second_operation)
+            write_json(proposal_path, proposal)
+            state_before = workspace_snapshot(root / "project-runtime" / "state")
+            original_atomic_write = apply_command._atomic_write_json
+
+            def fail_second_report(path: Path, payload: dict[str, object], *, overwrite: bool) -> tuple[bool, str]:
+                if path.name == "second-report.json":
+                    return False, "forced write failure"
+                return original_atomic_write(path, payload, overwrite=overwrite)
+
+            with mock.patch.object(apply_command, "_atomic_write_json", side_effect=fail_second_report):
+                result, exit_code = apply_command._run_confirmed_apply(root, proposal_path)
+
+            self.assertEqual(exit_code, apply_command.EXIT_IO_ERROR)
+            self.assertFalse(result["would_apply"])
+            self.assertIn("atomic_write_failed", "\n".join(result["blocked_reasons"]))
+            self.assertEqual(state_before, workspace_snapshot(root / "project-runtime" / "state"))
+            self.assertFalse((root / "project-runtime" / "reports" / "next-task-proposal.json").exists())
+            self.assertFalse((root / "project-runtime" / "reports" / "second-report.json").exists())
+            self.assertFalse((root / "project-runtime" / "receipts").exists())
+
+    def test_missing_confirm_apply_prevents_workspace_mutation(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             root = copy_p2_workspace(tmp)
             proposal_path = self._proposal(root, tmp)
             before = workspace_snapshot(root)
-            plan_path = Path(tmp) / "confirm-plan.json"
+            plan_path = Path(tmp) / "apply-plan.json"
+
+            result = run_aso(
+                "apply",
+                "--root",
+                str(root),
+                "--proposal",
+                str(proposal_path),
+                "--json-out",
+                str(plan_path),
+            )
+
+            self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+            plan = json.loads(plan_path.read_text(encoding="utf-8"))
+            self.assertTrue(plan["would_apply"])
+            self.assertFalse((root / "project-runtime" / "receipts").exists())
+            self.assertFalse((root / "project-runtime" / "reports" / "next-task-proposal.json").exists())
+            self.assertEqual(before, workspace_snapshot(root))
+
+    def test_confirm_apply_stale_proposal_prevents_workspace_mutation(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = copy_p2_workspace(tmp)
+            proposal_path = self._proposal(root, tmp)
+            sidecar_path = root / "project-runtime" / "state" / "NEXT_ACTION.json"
+            sidecar = json.loads(sidecar_path.read_text(encoding="utf-8"))
+            sidecar["state_revision"] = 2
+            write_json(sidecar_path, sidecar)
+            before = workspace_snapshot(root)
+            plan_path = Path(tmp) / "stale-apply.json"
 
             result = run_aso(
                 "apply",
@@ -240,7 +340,62 @@ class ApplyDryRunCommandTests(unittest.TestCase):
             self.assertEqual(result.returncode, 1, result.stdout + result.stderr)
             plan = json.loads(plan_path.read_text(encoding="utf-8"))
             self.assertFalse(plan["would_apply"])
-            self.assertIn("confirm_apply_not_implemented", "\n".join(plan["blocked_reasons"]))
+            self.assertIn("base_hash_stale", "\n".join(plan["blocked_reasons"]))
+            self.assertEqual(before, workspace_snapshot(root))
+
+    def test_confirm_apply_forbidden_mutation_prevents_workspace_mutation(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = copy_p2_workspace(tmp)
+            proposal_path = self._proposal(root, tmp)
+            proposal = json.loads(proposal_path.read_text(encoding="utf-8"))
+            proposal["operations"][0]["target"] = "project-input/owner-note.json"
+            write_json(proposal_path, proposal)
+            before = workspace_snapshot(root)
+            plan_path = Path(tmp) / "forbidden-apply.json"
+
+            result = run_aso(
+                "apply",
+                "--root",
+                str(root),
+                "--proposal",
+                str(proposal_path),
+                "--confirm-apply",
+                "--json-out",
+                str(plan_path),
+            )
+
+            self.assertEqual(result.returncode, 1, result.stdout + result.stderr)
+            plan = json.loads(plan_path.read_text(encoding="utf-8"))
+            self.assertFalse(plan["would_apply"])
+            self.assertIn("operation_path_guard", "\n".join(plan["blocked_reasons"]))
+            self.assertEqual(before, workspace_snapshot(root))
+
+    def test_confirm_apply_unsupported_sidecar_patch_fails_closed(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = copy_p2_workspace(tmp)
+            proposal_path = self._proposal(root, tmp)
+            proposal = json.loads(proposal_path.read_text(encoding="utf-8"))
+            proposal["operations"][0]["operation_type"] = "sidecar_patch"
+            proposal["operations"][0]["target"] = "project-runtime/state/NEXT_ACTION.json"
+            write_json(proposal_path, proposal)
+            before = workspace_snapshot(root)
+            plan_path = Path(tmp) / "unsupported-apply.json"
+
+            result = run_aso(
+                "apply",
+                "--root",
+                str(root),
+                "--proposal",
+                str(proposal_path),
+                "--confirm-apply",
+                "--json-out",
+                str(plan_path),
+            )
+
+            self.assertEqual(result.returncode, 1, result.stdout + result.stderr)
+            plan = json.loads(plan_path.read_text(encoding="utf-8"))
+            self.assertFalse(plan["would_apply"])
+            self.assertIn("confirmed_apply_supported_scope", "\n".join(plan["blocked_reasons"]))
             self.assertEqual(before, workspace_snapshot(root))
 
 

@@ -416,7 +416,8 @@ def build_parser() -> argparse.ArgumentParser:
         description=(
             "Validate a P3 proposal against the current workspace and emit a read-only "
             "apply plan. --dry-run writes no runtime sidecars or state. --confirm-apply "
-            "is accepted only as a fail-closed guard in this P3 dry-run task."
+            "re-runs guards immediately before applying supported safe operations and "
+            "writing a project-runtime receipt."
         ),
     )
     _add_root_argument(apply_parser, validate=False)
@@ -435,12 +436,12 @@ def build_parser() -> argparse.ArgumentParser:
     apply_mode_group.add_argument(
         "--confirm-apply",
         action="store_true",
-        help="Fail-closed placeholder for a later confirmed apply implementation.",
+        help="Apply supported safe proposal operations and write an apply receipt.",
     )
     apply_parser.add_argument(
         "--json-out",
         metavar="PATH",
-        help="Write the dry-run apply plan JSON to /tmp/... or project-runtime/reports/...",
+        help="Write the dry-run plan or confirmed receipt JSON to /tmp/... or allowed project-runtime output paths.",
     )
     apply_parser.add_argument(
         "--format",
