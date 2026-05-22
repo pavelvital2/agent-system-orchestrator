@@ -10,7 +10,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Iterable
 
-from . import package_checks
+from . import mode_guard, package_checks
 
 
 EXIT_OK = 0
@@ -1460,6 +1460,35 @@ def _package_finding(finding: package_checks.Finding) -> Finding:
 
 
 def _package_report(root: Path, strict: bool) -> tuple[dict[str, object], int]:
+    guard_finding = mode_guard.package_mode_guard(root)
+    if guard_finding is not None:
+        findings = [
+            Finding(
+                guard_finding.rule_id,
+                guard_finding.severity,
+                guard_finding.title,
+                guard_finding.details,
+                guard_finding.files,
+                guard_finding.recommendation,
+            )
+        ]
+        return {
+            "tool": "aso",
+            "command": "lint",
+            "mode": "package",
+            "status": "failed",
+            "root": str(root),
+            "strict": strict,
+            "findings": [finding.to_json(mode="package") for finding in findings],
+            "summary": _summary(findings),
+            "package": {
+                "package_consistency": "FAIL",
+                "generated_roots": {},
+                "readmes": {},
+                "git_tracked_generated_files": [],
+            },
+        }, EXIT_FINDINGS
+
     inspection = package_checks.inspect_package(root)
     findings = [_package_finding(finding) for finding in inspection.findings]
     summary = _summary(findings)

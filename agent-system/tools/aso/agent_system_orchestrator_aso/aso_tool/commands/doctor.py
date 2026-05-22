@@ -11,7 +11,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Iterable
 
-from . import lint, package_checks
+from . import lint, mode_guard, package_checks
 
 
 EXIT_OK = 0
@@ -376,6 +376,36 @@ def _check_ci_presence(root: Path) -> list[Diagnostic]:
 
 
 def _package_report(root: Path, strict: bool) -> tuple[dict[str, object], int]:
+    guard_finding = mode_guard.package_mode_guard(root)
+    if guard_finding is not None:
+        findings = [
+            Diagnostic(
+                guard_finding.rule_id,
+                guard_finding.severity,
+                guard_finding.title,
+                guard_finding.details,
+                guard_finding.files,
+                guard_finding.recommendation,
+            )
+        ]
+        return {
+            "tool": "aso",
+            "command": "doctor",
+            "mode": "package",
+            "status": "failed",
+            "root": str(root),
+            "strict": strict,
+            "summary": _summary(findings),
+            "findings": [finding.to_json("package") for finding in findings],
+            "package": {
+                "package_consistency": "FAIL",
+                "generated_roots": {},
+                "readmes": {},
+                "git_tracked_generated_files": [],
+                "versions": {},
+            },
+        }, EXIT_FINDINGS
+
     inspection = package_checks.inspect_package(root)
     findings = [_from_package_finding(finding) for finding in inspection.findings]
     findings.extend(_check_package_paths(root))

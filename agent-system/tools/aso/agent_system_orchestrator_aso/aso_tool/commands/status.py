@@ -9,10 +9,11 @@ import sys
 from dataclasses import dataclass
 from pathlib import Path
 
-from . import package_checks
+from . import mode_guard, package_checks
 
 
 EXIT_OK = 0
+EXIT_FINDINGS = 1
 EXIT_IO_ERROR = 3
 
 RUNTIME_FILES = (
@@ -314,6 +315,25 @@ def _report(root: Path) -> dict[str, object]:
 
 
 def _package_report(root: Path) -> dict[str, object]:
+    guard_finding = mode_guard.package_mode_guard(root)
+    if guard_finding is not None:
+        return {
+            "tool": "aso",
+            "command": "status",
+            "mode": "package",
+            "status": "failed",
+            "root": str(root),
+            "summary": {
+                "package_consistency": "FAIL",
+                "finding_count": 1,
+                "generated_roots": {},
+                "readmes": {},
+                "git_tracked_generated_files": [],
+            },
+            "files": {},
+            "findings": [guard_finding.to_json(mode="package")],
+        }
+
     inspection = package_checks.inspect_package(root)
     consistency = package_checks.consistency(inspection.findings)
     status_by_consistency = {
@@ -408,4 +428,6 @@ def run(args: argparse.Namespace) -> int:
         _print_text(report)
     if args.json_out and not _write_json(args.json_out, report):
         return EXIT_IO_ERROR
+    if args.mode == "package" and report.get("status") == "failed":
+        return EXIT_FINDINGS
     return EXIT_OK

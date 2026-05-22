@@ -379,6 +379,23 @@ PUSH_ALLOWED: false
             after = sorted(path.relative_to(root).as_posix() for path in root.rglob("*"))
             self.assertEqual(before, after)
 
+    def test_package_doctor_rejects_workspace_root_with_mode_guard(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            write_workspace(root)
+            (root / "aso.lock").write_text('{"package_version":"3.6.1"}\n', encoding="utf-8")
+            (root / "agent-system" / "tools" / "aso").mkdir(parents=True)
+            json_out = root / "doctor.json"
+
+            result = run_doctor(root, "--mode", "package", "--strict", "--json-out", str(json_out))
+
+            self.assertEqual(result.returncode, 1, result.stdout + result.stderr)
+            self.assertIn("MODE_GUARD_001", result.stdout)
+            self.assertNotIn("PACKAGE_LAYOUT_006", result.stdout)
+            report = json.loads(json_out.read_text(encoding="utf-8"))
+            self.assertEqual(report["status"], "failed")
+            self.assertEqual(report["findings"][0]["rule_id"], "MODE_GUARD_001")
+
 
 if __name__ == "__main__":
     unittest.main()

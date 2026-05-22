@@ -1,0 +1,5 @@
+{
+  "package_version": "3.6.1",
+  "runtime_schema_version": "3.1.0",
+  "engine_mode": "vendored"
+}

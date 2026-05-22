@@ -9,6 +9,12 @@ from pathlib import Path
 
 
 CLI = Path(__file__).resolve().parents[1] / "aso.py"
+INCIDENT_001_ROOT = (
+    Path(__file__).resolve().parent
+    / "fixtures"
+    / "hotfix_p4_1"
+    / "incident_001_workspace_root"
+)
 
 
 RUNTIME_CONTENT = {
@@ -251,6 +257,35 @@ class StatusCommandTests(unittest.TestCase):
             self.assertEqual(report["status"], "passed")
             self.assertEqual(report["summary"]["generated_roots"]["project-runtime"], "absent")
             self.assertEqual(report["summary"]["generated_roots"]["project-input"], "present-untracked")
+
+    def test_package_status_rejects_workspace_root_with_mode_guard(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            json_out = Path(tmp) / "status.json"
+
+            result = subprocess.run(
+                [
+                    sys.executable,
+                    str(CLI),
+                    "status",
+                    "--root",
+                    str(INCIDENT_001_ROOT),
+                    "--mode",
+                    "package",
+                    "--json-out",
+                    str(json_out),
+                ],
+                check=False,
+                text=True,
+                capture_output=True,
+            )
+
+            self.assertEqual(result.returncode, 1, result.stdout + result.stderr)
+            self.assertIn("MODE_GUARD_001", result.stdout)
+            self.assertNotIn("PACKAGE_LAYOUT_006", result.stdout)
+            report = json.loads(json_out.read_text(encoding="utf-8"))
+            self.assertEqual(report["status"], "failed")
+            self.assertEqual(report["findings"][0]["rule_id"], "MODE_GUARD_001")
+            self.assertIn("--mode workspace", report["findings"][0]["recommendation"])
 
 
 if __name__ == "__main__":

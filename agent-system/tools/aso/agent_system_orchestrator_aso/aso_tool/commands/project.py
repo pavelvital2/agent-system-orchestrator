@@ -180,7 +180,7 @@ def run_create(args: object) -> int:
     if args.engine_mode == lockfile.DEFAULT_ENGINE_MODE:
         print(
             "PYTHONDONTWRITEBYTECODE=1 python3 "
-            f"{summary.target / 'agent-system/tools/aso/aso.py'} status --root {summary.target} --mode package"
+            f"{summary.target / 'agent-system/tools/aso/aso.py'} status --root {summary.target} --mode workspace"
         )
     else:
         print(f"PYTHONDONTWRITEBYTECODE=1 aso project verify-clean --root {summary.target} --strict")
@@ -1162,7 +1162,7 @@ def _gitignore_text() -> str:
 
 def _readme_text(*, project_name: str, project_slug: str, engine_mode: str) -> str:
     command = (
-        "PYTHONDONTWRITEBYTECODE=1 python3 agent-system/tools/aso/aso.py status --root . --mode package"
+        "PYTHONDONTWRITEBYTECODE=1 python3 agent-system/tools/aso/aso.py status --root . --mode workspace"
         if engine_mode == lockfile.DEFAULT_ENGINE_MODE
         else "PYTHONDONTWRITEBYTECODE=1 aso project verify-clean --root . --strict"
     )

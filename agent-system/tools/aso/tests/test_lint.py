@@ -730,6 +730,19 @@ AGENT_TERMINATION_REQUIRED: false
             self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
             self.assertIn("LINT_NAMING_008", result.stdout)
 
+    def test_package_lint_rejects_workspace_root_with_mode_guard(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            write_runtime(root)
+            (root / "aso.lock").write_text('{"package_version":"3.6.1"}\n', encoding="utf-8")
+            (root / "agent-system" / "tools" / "aso").mkdir(parents=True)
+
+            result = run_lint(root, "--mode", "package", "--strict")
+
+            self.assertEqual(result.returncode, 1, result.stdout + result.stderr)
+            self.assertIn("MODE_GUARD_001", result.stdout)
+            self.assertNotIn("PACKAGE_LAYOUT_006", result.stdout)
+
 
 if __name__ == "__main__":
     unittest.main()
