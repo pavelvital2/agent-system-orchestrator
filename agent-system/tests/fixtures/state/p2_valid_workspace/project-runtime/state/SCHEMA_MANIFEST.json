@@ -1,7 +1,7 @@
 {
   "content": {
     "created_by_profile": "tester",
-    "package_version": "3.6.0",
+    "package_version": "3.6.1",
     "runtime_schema_version": "3.1.0",
     "sidecars": [
       "PROJECT_STATE.json",

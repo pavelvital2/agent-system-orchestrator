@@ -19,8 +19,8 @@ RUNTIME_SCHEMA_VERSION:
 ## Active version constants
 
 ```text
-CURRENT_PACKAGE_VERSION: 3.6.0
-CURRENT_GOVERNANCE_RULESET_VERSION: 3.6.0
+CURRENT_PACKAGE_VERSION: 3.6.1
+CURRENT_GOVERNANCE_RULESET_VERSION: 3.6.1
 CURRENT_RUNTIME_SCHEMA_VERSION: 3.1.0
 ```
 
@@ -323,6 +323,25 @@ The branch `upgrade/product-intake-capability-p4-v3.6.0` is superseded and
 non-authoritative. It may remain in remote history but must not be merged as
 the corrected P4 line. The authoritative branch is
 `upgrade/project-design-gap-governance-p4-v3.6.0`.
+
+The ASO Hotfix Workspace Bootstrap / Runtime Materialization / Agent Lifecycle
+P4.1 package installs:
+
+```text
+CURRENT_PACKAGE_VERSION: 3.6.1
+CURRENT_GOVERNANCE_RULESET_VERSION: 3.6.1
+CURRENT_RUNTIME_SCHEMA_VERSION: 3.1.0
+DESIGN_GAP_GOVERNANCE_SCHEMA_VERSION: 1.0.0
+```
+
+This patch documents the P4.1 hotfix boundary while preserving Runtime Schema
+`3.1.0`. P4.1 fixes workspace/package mode guard handling, derived runtime
+Markdown view materialization from JSON sidecars, and the required agent
+lifecycle termination event after RESULT before audit routing. It does not
+change the P2/P3 sidecar envelope, semantically read raw TZ, replace the
+project designer or requirements analyst, install product-intake code, add a
+daemon, live dispatch, checkpoint executor, product-intake engine, product
+generator, external worker system, or secret collection flow.
 
 ## Version semantics
 

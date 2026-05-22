@@ -7,8 +7,8 @@ from typing import Any
 
 
 ACTIVE_RUNTIME_SCHEMA_VERSION = "3.1.0"
-ACTIVE_PACKAGE_VERSION = "3.6.0"
-ACTIVE_GOVERNANCE_RULESET_VERSION = "3.6.0"
+ACTIVE_PACKAGE_VERSION = "3.6.1"
+ACTIVE_GOVERNANCE_RULESET_VERSION = "3.6.1"
 
 STATE_ROOT = "project-runtime/state"
 CONTRACT_RELATIVE_PATH = "agent-system/09_validators/schemas/runtime_state_3_1_0.contract.json"

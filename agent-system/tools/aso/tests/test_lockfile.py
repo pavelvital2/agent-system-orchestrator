@@ -36,7 +36,7 @@ class LockfileHelperTests(unittest.TestCase):
         publication_boundary = generated["publication_boundary"]
 
         self.assertTrue(result.ok, result.to_json())
-        self.assertEqual(aso_engine["version"], "3.6.0")
+        self.assertEqual(aso_engine["version"], "3.6.1")
         self.assertEqual(aso_engine["runtime_schema"], "3.1.0")
         self.assertEqual(aso_engine["engine_mode"], "vendored")
         self.assertEqual(lockfile.SUPPORTED_ENGINE_MODES, ("vendored", "reference"))
@@ -57,7 +57,7 @@ class LockfileHelperTests(unittest.TestCase):
         result = lockfile.validate_lockfile(generated)
 
         self.assertTrue(result.ok, result.to_json())
-        self.assertEqual(generated["aso_engine"]["version"], "3.6.0")
+        self.assertEqual(generated["aso_engine"]["version"], "3.6.1")
         self.assertEqual(generated["aso_engine"]["runtime_schema"], "3.1.0")
         self.assertEqual(generated["aso_engine"]["engine_mode"], "reference")
 

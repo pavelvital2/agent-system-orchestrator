@@ -1463,4 +1463,61 @@ MIGRATION_NOTE: Runtime Schema 3.1.0 is preserved. P4 adds governance contract a
 AUTHORIZED_BY: project_owner
 AUDIT_REQUIRED: yes
 STATUS: proposed
+
+CHANGE_ID: GOV-2026-05-22-002
+CHANGE_TITLE: ASO_WORKSPACE_BOOTSTRAP_RUNTIME_LIFECYCLE_P4_1_CONTRACT_VERSION_BOUNDARY
+DATE: 2026-05-22
+PACKAGE_VERSION_BEFORE: 3.6.0
+PACKAGE_VERSION_AFTER: 3.6.1
+GOVERNANCE_RULESET_BEFORE: 3.6.0
+GOVERNANCE_RULESET_AFTER: 3.6.1
+RUNTIME_SCHEMA_BEFORE: 3.1.0
+RUNTIME_SCHEMA_AFTER: 3.1.0
+DESIGN_GAP_GOVERNANCE_SCHEMA_AFTER: 1.0.0
+CHANGE_TYPE: patch
+CHANGE_SUBTYPE: workspace_bootstrap_runtime_lifecycle_hotfix_boundary
+AFFECTED_FILES:
+- README.md
+- README_INSTALL.md
+- pyproject.toml
+- agent-system/README.md
+- agent-system/PACKAGE_VERSIONING.md
+- agent-system/GOVERNANCE_CHANGELOG.md
+- agent-system/02_runtime/WORKSPACE_BOOTSTRAP_RUNTIME_LIFECYCLE_P4_1_HOTFIX_CONTRACT.md
+- agent-system/11_release/ASO_WORKSPACE_BOOTSTRAP_RUNTIME_LIFECYCLE_P4_1_V3_6_1_RELEASE_NOTES.md
+- agent-system/09_validators/schemas/apply_receipt.schema.json
+- agent-system/09_validators/schemas/aso_lock.schema.json
+- agent-system/09_validators/schemas/proposal_artifact.schema.json
+- agent-system/09_validators/schemas/runtime_state_3_1_0.contract.json
+- agent-system/09_validators/schemas/schema_manifest.schema.json
+- agent-system/tests/fixtures/proposal_apply_p3/valid_workspace/project-runtime/state/PROJECT_STATE.json
+- agent-system/tests/fixtures/proposal_apply_p3/valid_workspace/project-runtime/state/SCHEMA_MANIFEST.json
+- agent-system/tests/fixtures/state/p2_valid_workspace/project-runtime/state/PROJECT_STATE.json
+- agent-system/tests/fixtures/state/p2_valid_workspace/project-runtime/state/SCHEMA_MANIFEST.json
+- agent-system/tools/aso/tests/test_lockfile.py
+- agent-system/tools/aso/tests/test_packaging.py
+- agent-system/tools/aso/tests/test_project.py
+- agent-system/tools/aso/agent_system_orchestrator_aso/__init__.py
+- agent-system/tools/aso/agent_system_orchestrator_aso/aso_tool/aso.py
+- agent-system/tools/aso/agent_system_orchestrator_aso/aso_tool/lockfile.py
+- agent-system/tools/aso/agent_system_orchestrator_aso/aso_tool/proposal_contracts.py
+- agent-system/tools/aso/agent_system_orchestrator_aso/aso_tool/runtime_schema_contracts.py
+AFFECTED_INVARIANTS:
+- Active package/governance/runtime tuple is 3.6.1 / 3.6.1 / 3.1.0.
+- Runtime Schema 3.1.0 remains the canonical sidecar schema for current runtime state.
+- P4.1 fixes workspace/package mode guard handling, derived runtime Markdown materialization, and lifecycle termination event recording after RESULT before audit routing.
+- ASO remains a deterministic governance/control conveyor and does not replace project designer or requirements analyst reasoning.
+- ASO does not semantically read TZ, infer product capability intent from raw text, or install product-intake code or a product-intake engine.
+- P4.1 does not install a daemon, live dispatch, checkpoint executor, product generation, external workers, or secret collection.
+- The branch upgrade/product-intake-capability-p4-v3.6.0 is superseded and non-authoritative but must remain untouched.
+AFFECTED_TRANSITIONS:
+- RESULT_RECEIVED -> AGENT_TERMINATED -> AUDIT_ROUTE_READY is the required lifecycle ordering for profile-agent completion before audit routing.
+- runtime sidecar verification -> may require deterministic derived Markdown compatibility views without changing canonical JSON authority.
+- workspace bootstrap validation -> must not be blocked by package-mode checks unless package mode is explicitly valid for the root.
+SCHEMA_TEMPLATE_IMPACT: none
+MIGRATION_REQUIRED: no
+MIGRATION_NOTE: Runtime Schema 3.1.0 is preserved. P4.1 changes package/governance metadata and hotfix boundary documentation only in this task; it does not migrate active project-runtime state or redefine the P2/P3 runtime sidecar envelope.
+AUTHORIZED_BY: project_owner
+AUDIT_REQUIRED: yes
+STATUS: proposed
 ```
