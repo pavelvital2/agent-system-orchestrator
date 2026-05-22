@@ -198,7 +198,7 @@ class ProjectCommandTests(unittest.TestCase):
         self.assertIn("Engine mode: vendored", create_result.stdout)
         self.assertIn("Runtime schema: 3.1.0", create_result.stdout)
         self.assertIn("Runtime state: initialized", create_result.stdout)
-        self.assertEqual(lock["aso_engine"]["version"], "3.5.0")
+        self.assertEqual(lock["aso_engine"]["version"], "3.6.0")
         self.assertEqual(lock["aso_engine"]["runtime_schema"], "3.1.0")
         self.assertEqual(lock["project"]["repo_url"], "https://github.com/example/demo-project.git")
 
@@ -247,7 +247,7 @@ class ProjectCommandTests(unittest.TestCase):
         self.assertNotIn("- agent-system/", create_result.stdout)
         self.assertIn("ASO project verify-clean: PASS", verify_result.stdout)
         self.assertIn("ASO state verify: PASSED", state_verify_result.stdout)
-        self.assertEqual(lock["aso_engine"]["version"], "3.5.0")
+        self.assertEqual(lock["aso_engine"]["version"], "3.6.0")
         self.assertEqual(lock["aso_engine"]["runtime_schema"], "3.1.0")
         self.assertEqual(lock["aso_engine"]["engine_mode"], "reference")
         self.assertIsNone(lock["project"]["repo_url"])
@@ -948,12 +948,12 @@ class ProjectCommandTests(unittest.TestCase):
         self.assertEqual(result.returncode, 0, result.stderr)
         self.assertIn("ASO project verify-clean: PASS", result.stdout)
         self.assertIn("Violations: 0", result.stdout)
-        self.assertIn("Package drift: 3.2.0 is compatible with current package 3.5.0", result.stdout)
+        self.assertIn("Package drift: 3.2.0 is compatible with current package 3.6.0", result.stdout)
 
     def test_verify_clean_accepts_p1_reference_and_p0_lock_compatibility_fixtures(self) -> None:
         cases = (
-            ("reference_valid", "Engine mode: reference", "Package drift: 3.3.0 is compatible with current package 3.5.0"),
-            ("p0_lock_compatible", "Engine mode: vendored", "Package drift: 3.2.0 is compatible with current package 3.5.0"),
+            ("reference_valid", "Engine mode: reference", "Package drift: 3.3.0 is compatible with current package 3.6.0"),
+            ("p0_lock_compatible", "Engine mode: vendored", "Package drift: 3.2.0 is compatible with current package 3.6.0"),
         )
 
         for fixture_name, engine_text, package_text in cases:
