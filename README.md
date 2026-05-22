@@ -20,16 +20,15 @@ filesystem-governed ASO helper CLI at `agent-system/tools/aso/aso.py`: most
 commands are read-only diagnostics or dry-run proposals, while Project Factory
 commands may create generated projects only within explicit target paths.
 
-This P4.1 hotfix package records the active
-package metadata as the governed `3.6.1` package/governance tuple with runtime
-schema `3.1.0`. P4.1 fixes workspace/package mode guard handling, derived
-runtime Markdown materialization from JSON sidecars, and the missing
-lifecycle termination event after RESULT before audit routing while preserving
-the P2/P3 Runtime Schema `3.1.0` sidecar envelope. ASO remains a governance
-and control conveyor: it does not interpret raw TZ content, replace project
-designer reasoning, generate product questions from TZ, install product-intake
-code or a product-intake engine, run a daemon, dispatch live agents, execute
-checkpoints, generate products, collect secrets, or run external workers.
+This P5 package records the active package metadata as the governed `3.7.0`
+package/governance tuple with runtime schema `3.1.0` and artifact package
+schema `1.0.0`. P5 defines the artifact package model boundary while
+preserving the P2/P3 Runtime Schema `3.1.0` sidecar envelope. ASO remains a
+governance and control conveyor: it does not interpret raw TZ content, replace
+project designer reasoning, generate product questions from TZ, install
+product-intake code or a product-intake engine, run a daemon, dispatch live
+agents, execute checkpoints, generate products, collect secrets, or run
+external workers.
 
 The Runtime Schema `3.1.0` sidecar contract is documented in
 `agent-system/02_runtime/RUNTIME_STATE_P2_CONTRACT.md` and packaged as
@@ -43,6 +42,8 @@ The corrected P4 governance boundary is documented in
 `agent-system/02_runtime/PROJECT_DESIGN_GAP_GOVERNANCE_P4_CONTRACT.md`.
 The P4.1 hotfix boundary is documented in
 `agent-system/02_runtime/WORKSPACE_BOOTSTRAP_RUNTIME_LIFECYCLE_P4_1_HOTFIX_CONTRACT.md`.
+The P5 artifact package model boundary is documented in
+`agent-system/02_runtime/ARTIFACT_PACKAGE_MODEL_P5_CONTRACT.md`.
 It supersedes the non-authoritative
 `upgrade/product-intake-capability-p4-v3.6.0` branch without deleting it.
 
@@ -119,7 +120,7 @@ python3 agent-system/tools/aso/aso.py validate-context-pack agent-system/tests/f
 Runtime State P2 command surfaces formalize JSON sidecars under
 `project-runtime/state/`. JSON sidecars are canonical for P2+ runtime state;
 Markdown or report outputs are compatibility views generated from JSON. The
-active package version is `3.6.1` and the active runtime schema version is
+active package version is `3.7.0` and the active runtime schema version is
 `3.1.0`.
 
 ```text

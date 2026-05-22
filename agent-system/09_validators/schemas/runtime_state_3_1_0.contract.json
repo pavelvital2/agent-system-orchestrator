@@ -1,8 +1,9 @@
 {
   "contract_id": "ASO_RUNTIME_STATE_SCHEMA_3_1_0",
   "description": "JSON-first runtime state sidecar contract for ASO Runtime Schema 3.1.0. This contract is validated with Python stdlib checks; it is not an external jsonschema dependency.",
-  "governance_ruleset_version": "3.6.1",
-  "package_version": "3.6.1",
+  "governance_ruleset_version": "3.7.0",
+  "package_version": "3.7.0",
+  "artifact_package_schema_version": "1.0.0",
   "runtime_schema_version": "3.1.0",
   "state_root": "project-runtime/state",
   "sidecar_envelope": {

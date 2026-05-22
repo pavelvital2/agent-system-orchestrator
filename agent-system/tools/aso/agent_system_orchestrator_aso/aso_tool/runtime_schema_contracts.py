@@ -7,8 +7,9 @@ from typing import Any
 
 
 ACTIVE_RUNTIME_SCHEMA_VERSION = "3.1.0"
-ACTIVE_PACKAGE_VERSION = "3.6.1"
-ACTIVE_GOVERNANCE_RULESET_VERSION = "3.6.1"
+ACTIVE_PACKAGE_VERSION = "3.7.0"
+ACTIVE_GOVERNANCE_RULESET_VERSION = "3.7.0"
+ACTIVE_ARTIFACT_PACKAGE_SCHEMA_VERSION = "1.0.0"
 
 STATE_ROOT = "project-runtime/state"
 CONTRACT_RELATIVE_PATH = "agent-system/09_validators/schemas/runtime_state_3_1_0.contract.json"
@@ -135,6 +136,7 @@ def contract_summary() -> dict[str, object]:
         "runtime_schema_version": ACTIVE_RUNTIME_SCHEMA_VERSION,
         "package_version": ACTIVE_PACKAGE_VERSION,
         "governance_ruleset_version": ACTIVE_GOVERNANCE_RULESET_VERSION,
+        "artifact_package_schema_version": ACTIVE_ARTIFACT_PACKAGE_SCHEMA_VERSION,
         "state_root": STATE_ROOT,
         "contract_path": CONTRACT_RELATIVE_PATH,
         "required_envelope_fields": list(REQUIRED_ENVELOPE_FIELDS),

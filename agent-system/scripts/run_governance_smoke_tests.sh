@@ -761,8 +761,8 @@ assert_coverage_matrix() {
 }
 
 assert_version_changelog_coherence() {
-  awk -v pkg="CURRENT_PACKAGE_VERSION: 3.6.1" \
-    -v governance="CURRENT_GOVERNANCE_RULESET_VERSION: 3.6.1" \
+  awk -v pkg="CURRENT_PACKAGE_VERSION: 3.7.0" \
+    -v governance="CURRENT_GOVERNANCE_RULESET_VERSION: 3.7.0" \
     -v runtime="CURRENT_RUNTIME_SCHEMA_VERSION: 3.1.0" '
     /^## Active version constants$/ { in_section=1; section_seen=1; next }
     section_seen && in_section && /^## / { in_section=0 }
@@ -770,13 +770,13 @@ assert_version_changelog_coherence() {
     in_section && $0 == governance { governance_found=1 }
     in_section && $0 == runtime { runtime_found=1 }
     END { exit(section_seen && pkg_found && governance_found && runtime_found ? 0 : 1) }
-  ' "$PACKAGE_VERSIONING" || die "PACKAGE_VERSIONING active version constants missing 3.6.1 / 3.6.1 / 3.1.0"
+  ' "$PACKAGE_VERSIONING" || die "PACKAGE_VERSIONING active version constants missing 3.7.0 / 3.7.0 / 3.1.0"
 
-  awk -v pkg="CURRENT_PACKAGE_VERSION: 3.6.1" \
-    -v governance="CURRENT_GOVERNANCE_RULESET_VERSION: 3.6.1" \
+  awk -v pkg="CURRENT_PACKAGE_VERSION: 3.7.0" \
+    -v governance="CURRENT_GOVERNANCE_RULESET_VERSION: 3.7.0" \
     -v runtime="CURRENT_RUNTIME_SCHEMA_VERSION: 3.1.0" \
     -v marker="PROJECT_FACTORY_RELEASE_MARKER: project-factory-p1" \
-    -v runtime_marker="RUNTIME_STATE_RELEASE_MARKER: workspace-bootstrap-runtime-lifecycle-p4.1" '
+    -v runtime_marker="RUNTIME_STATE_RELEASE_MARKER: artifact-package-model-p5" '
     /^Current active tuple and package markers:$/ { in_section=1; section_seen=1; next }
     section_seen && in_section && /^## Examples$/ { in_section=0 }
     in_section && $0 == pkg { pkg_found=1 }
@@ -785,7 +785,7 @@ assert_version_changelog_coherence() {
     in_section && $0 == marker { marker_found=1 }
     in_section && $0 == runtime_marker { runtime_marker_found=1 }
     END { exit(section_seen && pkg_found && governance_found && runtime_found && marker_found && runtime_marker_found ? 0 : 1) }
-  ' "$PACKAGE_README" || die "README current active tuple missing 3.6.1 / 3.6.1 / 3.1.0 Workspace Bootstrap Runtime Lifecycle P4.1 marker"
+  ' "$PACKAGE_README" || die "README current active tuple missing 3.7.0 / 3.7.0 / 3.1.0 Artifact Package Model P5 marker"
 
   awk -v change_id="CHANGE_ID: GOV-2026-05-21-003" '
     $0 == change_id { in_entry=1; entry_seen=1 }
@@ -804,7 +804,7 @@ assert_version_changelog_coherence() {
     }
   ' "$GOVERNANCE_CHANGELOG" || die "GOVERNANCE_CHANGELOG GOV-2026-05-21-003 must exist with exactly one accepted status and no proposed status within entry boundary"
 
-  printf 'PASS: version coherence asserts active 3.6.1 package/governance with runtime schema 3.1.0\n'
+  printf 'PASS: version coherence asserts active 3.7.0 package/governance with runtime schema 3.1.0\n'
   PASS_COUNT=$((PASS_COUNT + 1))
 }
 

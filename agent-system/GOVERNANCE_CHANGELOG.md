@@ -1520,4 +1520,58 @@ MIGRATION_NOTE: Runtime Schema 3.1.0 is preserved. P4.1 changes package/governan
 AUTHORIZED_BY: project_owner
 AUDIT_REQUIRED: yes
 STATUS: proposed
+
+CHANGE_ID: GOV-2026-05-22-003
+CHANGE_TITLE: TASK_ASO_APM5_010_CONTRACT_VERSION_BOUNDARY
+DATE: 2026-05-22
+PACKAGE_VERSION_BEFORE: 3.6.1
+PACKAGE_VERSION_AFTER: 3.7.0
+GOVERNANCE_RULESET_BEFORE: 3.6.1
+GOVERNANCE_RULESET_AFTER: 3.7.0
+RUNTIME_SCHEMA_BEFORE: 3.1.0
+RUNTIME_SCHEMA_AFTER: 3.1.0
+ARTIFACT_PACKAGE_SCHEMA_AFTER: 1.0.0
+DESIGN_GAP_GOVERNANCE_SCHEMA_AFTER: 1.0.0
+CHANGE_TYPE: minor
+CHANGE_SUBTYPE: artifact_package_model_p5_contract_version_boundary
+AFFECTED_FILES:
+- README.md
+- README_INSTALL.md
+- pyproject.toml
+- agent-system/README.md
+- agent-system/PACKAGE_VERSIONING.md
+- agent-system/GOVERNANCE_CHANGELOG.md
+- agent-system/02_runtime/ARTIFACT_PACKAGE_MODEL_P5_CONTRACT.md
+- agent-system/03_templates/apply_receipt.template.json
+- agent-system/03_templates/proposal_artifact.template.json
+- agent-system/09_validators/schemas/apply_receipt.schema.json
+- agent-system/09_validators/schemas/aso_lock.schema.json
+- agent-system/09_validators/schemas/proposal_artifact.schema.json
+- agent-system/09_validators/schemas/runtime_state_3_1_0.contract.json
+- agent-system/09_validators/schemas/schema_manifest.schema.json
+- agent-system/scripts/run_governance_smoke_tests.sh
+- agent-system/tools/aso/tests/test_lockfile.py
+- agent-system/tools/aso/tests/test_packaging.py
+- agent-system/tools/aso/tests/test_project.py
+- agent-system/tools/aso/agent_system_orchestrator_aso/__init__.py
+- agent-system/tools/aso/agent_system_orchestrator_aso/aso_tool/aso.py
+- agent-system/tools/aso/agent_system_orchestrator_aso/aso_tool/lockfile.py
+- agent-system/tools/aso/agent_system_orchestrator_aso/aso_tool/proposal_contracts.py
+- agent-system/tools/aso/agent_system_orchestrator_aso/aso_tool/runtime_schema_contracts.py
+AFFECTED_INVARIANTS:
+- Active package/governance/runtime tuple is 3.7.0 / 3.7.0 / 3.1.0.
+- Artifact package schema version is 1.0.0.
+- Runtime Schema 3.1.0 remains the canonical sidecar schema for current runtime state.
+- P5 defines publishable artifact package boundaries without treating project-input, project-runtime, project-archive, or .venv as package artifacts.
+- Earlier accepted engine tuples remain compatibility cases for generated-project lockfile validation.
+- P5 does not install a daemon, live dispatch, checkpoint executor, product generation, external workers, or secret collection.
+AFFECTED_TRANSITIONS:
+- package metadata update -> independent audit -> orchestrator-owned checkpoint only after audit pass.
+- package artifact validation -> fail closed when workspace-local roots are treated as publishable package artifacts.
+SCHEMA_TEMPLATE_IMPACT: metadata_only
+MIGRATION_REQUIRED: no
+MIGRATION_NOTE: Runtime Schema 3.1.0 is preserved. P5 adds artifact package schema 1.0.0 metadata and package-boundary documentation only; it does not migrate active project-runtime state or redefine the P2/P3 runtime sidecar envelope.
+AUTHORIZED_BY: project_owner
+AUDIT_REQUIRED: yes
+STATUS: proposed
 ```
