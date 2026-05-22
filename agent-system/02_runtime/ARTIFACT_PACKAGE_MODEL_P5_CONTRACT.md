@@ -29,6 +29,13 @@ The structured P5 schema files and templates are defined by:
 agent-system/02_runtime/ARTIFACT_PACKAGE_SCHEMA_P5_1_0_CONTRACT.md
 ```
 
+The workspace-local raw, candidate, accepted, and rejected artifact storage
+model is defined by:
+
+```text
+agent-system/02_runtime/ARTIFACT_STORAGE_P5_CONTRACT.md
+```
+
 ## Publishable Package Artifacts
 
 P5 treats these package-relative roots as publishable package artifacts when
@@ -105,6 +112,10 @@ ASO must not:
 
 - migrate active `project-runtime/` state as part of this P5 boundary;
 - redefine the P2/P3 Runtime Schema `3.1.0` sidecar envelope;
+- treat `project-runtime/artifacts/raw/`,
+  `project-runtime/artifacts/candidates/`,
+  `project-runtime/artifacts/accepted/`, or
+  `project-runtime/artifacts/rejected/` as publishable package roots;
 - treat `project-input/`, `project-runtime/`, `project-archive/`, or `.venv/`
   as publishable package roots;
 - install product-intake code or a product-intake engine;

@@ -11,6 +11,19 @@ Runtime Schema `3.1.0` sidecar envelope and does not create artifact CLI
 commands, package storage, lifecycle mutation, dispatch, checkpoint execution,
 commit, push, or publication behavior.
 
+The separate P5 workspace-local storage contract is:
+
+```text
+agent-system/02_runtime/ARTIFACT_STORAGE_P5_CONTRACT.md
+```
+
+That contract defines `project-runtime/artifacts/raw/`,
+`project-runtime/artifacts/candidates/`,
+`project-runtime/artifacts/accepted/`, and
+`project-runtime/artifacts/rejected/` as runtime workspace-local storage roots.
+Those roots are not publishable package artifacts and are not Runtime Schema
+sidecars.
+
 ## Schema Files
 
 The active P5 schema files are:
