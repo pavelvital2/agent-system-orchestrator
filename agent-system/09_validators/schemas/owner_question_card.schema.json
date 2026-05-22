@@ -54,7 +54,7 @@
     {
       "if": {
         "properties": {
-          "status": { "enum": ["ready_for_owner", "presented_to_owner"] }
+          "status": { "enum": ["ready_for_owner", "presented", "presented_to_owner"] }
         },
         "required": ["status"]
       },
@@ -147,14 +147,17 @@
       "type": "string",
       "enum": [
         "draft",
+        "audit_pending",
         "ready_for_audit",
         "audit_failed",
         "ready_for_owner",
+        "presented",
         "presented_to_owner",
         "answered",
         "integrated",
         "closed",
-        "superseded"
+        "superseded",
+        "blocked"
       ]
     },
     "questionOption": {
@@ -182,7 +185,7 @@
         "queue_position": { "type": "integer", "minimum": 1 },
         "presentation_state": {
           "type": "string",
-          "enum": ["queued", "current", "presented", "answered", "skipped", "blocked"]
+          "enum": ["queued", "current", "presented", "answered", "integrated", "skipped", "blocked"]
         },
         "previous_question_id": {
           "oneOf": [

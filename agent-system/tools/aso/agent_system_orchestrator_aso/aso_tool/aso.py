@@ -14,6 +14,7 @@ from .commands import (
     context_pack_build,
     dashboard,
     dag,
+    design,
     doctor,
     incident_fixture,
     lint,
@@ -209,6 +210,109 @@ def build_parser() -> argparse.ArgumentParser:
         help="Write the context pack validation report JSON to this explicit path.",
     )
     validate_context_pack_parser.set_defaults(handler=validate_context_pack.run)
+
+    design_parser = subparsers.add_parser(
+        "design",
+        help="Design gap governance commands.",
+        description=(
+            "Validate project-designer-authored gap, owner question, owner decision, "
+            "and stage gate artifacts. These commands route existing audited question "
+            "cards only; they do not read raw TZ semantically or generate questions."
+        ),
+    )
+    design_subparsers = design_parser.add_subparsers(dest="design_command", metavar="COMMAND")
+
+    design_verify_parser = design_subparsers.add_parser(
+        "verify",
+        help="Verify design gap and owner question artifacts.",
+        description=(
+            "Read-only validation for gap register shape, owner question card shape, "
+            "non-technical owner question policy, audit-pass evidence, owner answer "
+            "linkage, one-question-at-a-time routing, and gap/question cross-links."
+        ),
+    )
+    _add_root_argument(design_verify_parser, validate=False)
+    design_verify_parser.add_argument(
+        "--strict",
+        action="store_true",
+        help="Treat warnings as a failing design governance result.",
+    )
+    design_verify_parser.set_defaults(handler=design.run_verify)
+
+    design_questions_parser = design_subparsers.add_parser(
+        "questions",
+        help="Owner question routing commands.",
+        description="Route existing audited owner question cards one at a time.",
+    )
+    design_questions_subparsers = design_questions_parser.add_subparsers(
+        dest="design_questions_command",
+        metavar="COMMAND",
+    )
+    design_questions_next_parser = design_questions_subparsers.add_parser(
+        "next",
+        help="Return the next audited ready owner question card.",
+        description=(
+            "Select the next existing ready_for_owner card by queue position. "
+            "The command does not create or rewrite question content."
+        ),
+    )
+    _add_root_argument(design_questions_next_parser, validate=False)
+    design_questions_next_parser.add_argument(
+        "--json-out",
+        required=True,
+        metavar="PATH",
+        help="Write the selected question JSON to /tmp/... or an allowed runtime report path.",
+    )
+    design_questions_next_parser.set_defaults(handler=design.run_questions_next)
+
+    design_decision_parser = design_subparsers.add_parser(
+        "decision",
+        help="Owner decision record commands.",
+        description="Record an owner answer against an existing audited question card.",
+    )
+    design_decision_subparsers = design_decision_parser.add_subparsers(
+        dest="design_decision_command",
+        metavar="COMMAND",
+    )
+    design_decision_record_parser = design_decision_subparsers.add_parser(
+        "record",
+        help="Plan or write an owner answer record for an existing question.",
+        description=(
+            "Validates the selected option against an existing question card. "
+            "--dry-run writes nothing; --confirm-write writes only under "
+            "project-runtime/owner-decisions."
+        ),
+    )
+    _add_root_argument(design_decision_record_parser, validate=False)
+    design_decision_record_parser.add_argument("--question-id", required=True, metavar="Q-ID")
+    design_decision_record_parser.add_argument("--answer", required=True, metavar="OPTION_ID")
+    decision_mode_group = design_decision_record_parser.add_mutually_exclusive_group(required=True)
+    decision_mode_group.add_argument("--dry-run", action="store_true", help="Validate and render the answer record without writing files.")
+    decision_mode_group.add_argument("--confirm-write", action="store_true", help="Write the answer record under project-runtime/owner-decisions.")
+    design_decision_record_parser.set_defaults(handler=design.run_decision_record)
+
+    design_gate_parser = design_subparsers.add_parser(
+        "gate",
+        help="Design stage gate commands.",
+        description="Verify whether unanswered blocking gaps prevent crossing a lifecycle stage.",
+    )
+    design_gate_subparsers = design_gate_parser.add_subparsers(dest="design_gate_command", metavar="COMMAND")
+    design_gate_verify_parser = design_gate_subparsers.add_parser(
+        "verify",
+        help="Verify that a lifecycle stage is not blocked by unanswered gaps.",
+        description=(
+            "Fails closed when the requested stage reaches or crosses an unanswered "
+            "gap's blocking_stage and no accepted assumption or answer linkage exists."
+        ),
+    )
+    _add_root_argument(design_gate_verify_parser, validate=False)
+    design_gate_verify_parser.add_argument("--stage", required=True, metavar="STAGE")
+    design_gate_verify_parser.add_argument(
+        "--strict",
+        action="store_true",
+        help="Treat warnings as a failing design gate result.",
+    )
+    design_gate_verify_parser.set_defaults(handler=design.run_gate_verify)
 
     context_pack_parser = subparsers.add_parser(
         "context-pack",
