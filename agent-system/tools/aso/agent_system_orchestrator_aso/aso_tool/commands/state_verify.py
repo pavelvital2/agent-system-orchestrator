@@ -883,7 +883,7 @@ def _validate_markdown_parity(root: Path, spec: SidecarSpec, content: dict[str, 
                 f"{spec.markdown_source} is required while Stage 2 keeps Markdown compatibility views.",
                 spec.markdown_source,
                 "",
-                "Restore the matching project-runtime Markdown file.",
+                "Run aso state render --root WORKSPACE --confirm-write to materialize derived Markdown views from project-runtime/state JSON sidecars.",
             )
         ]
 

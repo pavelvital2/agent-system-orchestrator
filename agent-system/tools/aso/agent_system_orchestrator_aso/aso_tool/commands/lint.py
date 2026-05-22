@@ -406,7 +406,7 @@ def _validate_root_and_required_files(root: Path) -> tuple[dict[str, RuntimeFile
                     "Required runtime file is missing",
                     f"{runtime_file.relpath} is not present.",
                     [runtime_file.relpath],
-                    "Restore the required runtime file from the matching template.",
+                    "Run aso state render --root WORKSPACE --confirm-write to materialize derived Markdown views from project-runtime/state JSON sidecars.",
                 )
             )
 
