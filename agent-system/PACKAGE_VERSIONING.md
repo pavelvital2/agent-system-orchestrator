@@ -19,8 +19,8 @@ RUNTIME_SCHEMA_VERSION:
 ## Active version constants
 
 ```text
-CURRENT_PACKAGE_VERSION: 3.5.0
-CURRENT_GOVERNANCE_RULESET_VERSION: 3.5.0
+CURRENT_PACKAGE_VERSION: 3.6.0
+CURRENT_GOVERNANCE_RULESET_VERSION: 3.6.0
 CURRENT_RUNTIME_SCHEMA_VERSION: 3.1.0
 ```
 
@@ -299,6 +299,30 @@ live agent dispatch, checkpoint executor, commit/push automation, distributed
 workers, web control panel, or multi-project registry. P4 dashboard/control
 plane work, P5 queue/dispatcher work, P6 checkpoint executor work, daemon mode,
 and distributed workers are deferred to later bounded package upgrades.
+
+The corrected ASO Project Design Gap Governance P4 package installs:
+
+```text
+CURRENT_PACKAGE_VERSION: 3.6.0
+CURRENT_GOVERNANCE_RULESET_VERSION: 3.6.0
+CURRENT_RUNTIME_SCHEMA_VERSION: 3.1.0
+DESIGN_GAP_GOVERNANCE_SCHEMA_VERSION: 1.0.0
+```
+
+This minor update defines the authoritative designer-led project design and
+gap governance contract while preserving Runtime Schema `3.1.0`. ASO remains a
+deterministic governance/control conveyor: it validates artifacts, gates
+transitions, routes audited owner questions, records receipts, and audits
+process shape. ASO does not semantically read TZ, replace project designer or
+requirements analyst reasoning, generate product questions from TZ content,
+ask owners to choose implementation technologies, add product-intake code, or
+install a daemon, live dispatch, checkpoint executor, product generator,
+external worker system, or secret collection flow.
+
+The branch `upgrade/product-intake-capability-p4-v3.6.0` is superseded and
+non-authoritative. It may remain in remote history but must not be merged as
+the corrected P4 line. The authoritative branch is
+`upgrade/project-design-gap-governance-p4-v3.6.0`.
 
 ## Version semantics
 

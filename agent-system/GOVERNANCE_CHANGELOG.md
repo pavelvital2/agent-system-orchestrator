@@ -1416,4 +1416,51 @@ MIGRATION_NOTE: Runtime Schema 3.1.0 is preserved. P3 adds a proposal/apply cont
 AUTHORIZED_BY: project_owner
 AUDIT_REQUIRED: yes
 STATUS: accepted
+
+CHANGE_ID: GOV-2026-05-22-001
+CHANGE_TITLE: ASO_PROJECT_DESIGN_GAP_GOVERNANCE_P4_CONTRACT_VERSION_BOUNDARY
+DATE: 2026-05-22
+PACKAGE_VERSION_BEFORE: 3.5.0
+PACKAGE_VERSION_AFTER: 3.6.0
+GOVERNANCE_RULESET_BEFORE: 3.5.0
+GOVERNANCE_RULESET_AFTER: 3.6.0
+RUNTIME_SCHEMA_BEFORE: 3.1.0
+RUNTIME_SCHEMA_AFTER: 3.1.0
+DESIGN_GAP_GOVERNANCE_SCHEMA_AFTER: 1.0.0
+CHANGE_TYPE: minor
+CHANGE_SUBTYPE: project_design_gap_governance_contract_version_boundary
+AFFECTED_FILES:
+- README.md
+- pyproject.toml
+- agent-system/README.md
+- agent-system/PACKAGE_VERSIONING.md
+- agent-system/GOVERNANCE_CHANGELOG.md
+- agent-system/02_runtime/PROJECT_DESIGN_GAP_GOVERNANCE_P4_CONTRACT.md
+- agent-system/11_release/ASO_PROJECT_DESIGN_GAP_GOVERNANCE_P4_V3_6_0_RELEASE_NOTES.md
+- agent-system/tools/aso/agent_system_orchestrator_aso/__init__.py
+- agent-system/tools/aso/agent_system_orchestrator_aso/aso_tool/aso.py
+- agent-system/tools/aso/agent_system_orchestrator_aso/aso_tool/lockfile.py
+- agent-system/tools/aso/agent_system_orchestrator_aso/aso_tool/proposal_contracts.py
+- agent-system/tools/aso/agent_system_orchestrator_aso/aso_tool/runtime_schema_contracts.py
+AFFECTED_INVARIANTS:
+- Active package/governance/runtime tuple is 3.6.0 / 3.6.0 / 3.1.0.
+- Design/gap governance schema version is 1.0.0.
+- ASO remains a deterministic governance/control conveyor and does not replace project designer or requirements analyst reasoning.
+- TZ semantic reading and product question authorship remain profile-agent responsibilities, not deterministic ASO code responsibilities.
+- Owner-facing questions must be functional, product, UX, interface, visualization, workflow, or business-usage questions in plain language.
+- Engineering implementation choices must not be pushed to non-engineer owners.
+- Gaps may be immediate blockers, deferred blockers, bounded assumptions, or optional items, but ASO must block crossing the declared blocking stage when required owner input or accepted assumption is missing.
+- The branch upgrade/product-intake-capability-p4-v3.6.0 is superseded and non-authoritative but must remain untouched.
+- P4 does not install product-intake code, runtime daemon, live dispatch, checkpoint executor, product generation, external workers, or secret collection.
+AFFECTED_TRANSITIONS:
+- design gap unresolved at blocking stage -> stop dependent transition and route to audited owner question or accepted bounded assumption.
+- audited owner question ready -> present exactly one owner question card.
+- owner answer recorded -> validate receipt and unblock only the linked stage/gap allowed by policy.
+- package metadata update -> independent audit -> orchestrator-owned checkpoint only after audit pass.
+SCHEMA_TEMPLATE_IMPACT: none
+MIGRATION_REQUIRED: no
+MIGRATION_NOTE: Runtime Schema 3.1.0 is preserved. P4 adds governance contract and version metadata for designer-led project design, gap blocking, and owner question policy; it does not migrate active project-runtime state or redefine the P2/P3 runtime sidecar envelope.
+AUTHORIZED_BY: project_owner
+AUDIT_REQUIRED: yes
+STATUS: proposed
 ```

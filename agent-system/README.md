@@ -155,11 +155,18 @@ The package includes a filesystem-governed ASO helper CLI at
 dry-run proposals, while Project Factory commands may create generated
 projects only within explicit target paths.
 
-This Safe Proposal / Apply P3 package records the active package metadata as
-the governed `3.5.0` package/governance tuple with runtime schema `3.1.0`.
-It preserves the Project Factory P1 command boundary and defines bounded
-local runtime-state proposal/apply authority over the JSON-first P2 state
-foundation.
+This corrected Project Design Gap Governance P4 package records the active
+package metadata as the governed `3.6.0` package/governance tuple with runtime
+schema `3.1.0`. It preserves the Project Factory P1 command boundary and the
+P2/P3 Runtime Schema `3.1.0` sidecar envelope while defining designer-led
+project design, gap blocking policy, owner question policy, and audited owner
+decision flow.
+
+ASO remains a deterministic governance/control conveyor. It validates and
+gates artifacts produced by profile agents; it does not semantically read TZ,
+replace project designer reasoning, generate product questions from TZ,
+install product-intake code, run a daemon, dispatch live agents, execute
+checkpoints, generate products, collect secrets, or run external workers.
 
 The Runtime Schema `3.1.0` contract is documented in
 `agent-system/02_runtime/RUNTIME_STATE_P2_CONTRACT.md` and packaged as
@@ -169,6 +176,11 @@ lifecycle/checkpoint/action/compatibility statuses, migration compatibility
 for legacy `2.0.0` and `3.0.0` sidecars, and fixture expectations. Contract
 validation is Python stdlib only and does not add a runtime `jsonschema`
 dependency.
+
+The corrected P4 governance boundary is documented in
+`agent-system/02_runtime/PROJECT_DESIGN_GAP_GOVERNANCE_P4_CONTRACT.md`.
+It supersedes the non-authoritative
+`upgrade/product-intake-capability-p4-v3.6.0` branch without deleting it.
 
 The canonical installable ASO package source is:
 
@@ -253,7 +265,7 @@ forbidden document checks, and required document existence under `--root`.
 Runtime State P2 command surfaces are local and offline. JSON sidecars under
 `project-runtime/state/` are canonical for P2+ runtime state. Markdown and
 report outputs are compatibility views generated from JSON, not the canonical
-state source. The active package version is `3.5.0` and the active runtime
+state source. The active package version is `3.6.0` and the active runtime
 schema version is `3.1.0`.
 
 ```text
@@ -294,8 +306,9 @@ The corrected state examples use
 uses the canonical next action value `CREATE_AGENT` without dispatching an
 agent.
 
-Safe Proposal / Apply P3 command surfaces are local and guarded. They use the
-package/governance `3.5.0` tuple with Runtime Schema `3.1.0`; they do not
+Safe Proposal / Apply P3 command surfaces are local and guarded. They run
+under the current package/governance `3.6.0` tuple with Runtime Schema `3.1.0`
+and preserve the P3 contract; they do not
 dispatch agents, do not commit or push, and do not publish runtime artifacts.
 Proposal commands default to dry-run. `--confirm-write` may write only proposal
 artifacts under `project-runtime/proposals/`. `aso apply --dry-run` validates
@@ -379,7 +392,7 @@ diagnostic surfaces do not provide general mutation, dispatch, or checkpoint aut
 
 Project Factory P1 supports local vendored creation, local reference creation,
 GitHub dry-run planning, confirmed GitHub publish, and a guided
-wizard. It remains available in package version `3.5.0`; existing P1/P0
+wizard. It remains available in package version `3.6.0`; existing P1/P0
 generated-project lockfiles remain compatible when they satisfy the accepted
 publication-boundary and engine-mode rules.
 
@@ -617,11 +630,12 @@ agent-system/GOVERNANCE_CHANGELOG.md
 Current active tuple and package markers:
 
 ```text
-CURRENT_PACKAGE_VERSION: 3.5.0
-CURRENT_GOVERNANCE_RULESET_VERSION: 3.5.0
+CURRENT_PACKAGE_VERSION: 3.6.0
+CURRENT_GOVERNANCE_RULESET_VERSION: 3.6.0
 CURRENT_RUNTIME_SCHEMA_VERSION: 3.1.0
 PROJECT_FACTORY_RELEASE_MARKER: project-factory-p1
-RUNTIME_STATE_RELEASE_MARKER: proposal-apply-p3
+RUNTIME_STATE_RELEASE_MARKER: project-design-gap-governance-p4
+DESIGN_GAP_GOVERNANCE_SCHEMA_VERSION: 1.0.0
 ```
 
 ## Examples
