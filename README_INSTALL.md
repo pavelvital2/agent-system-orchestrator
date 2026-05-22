@@ -67,6 +67,20 @@ strict package-layout verification. Package validation still works without
 PYTHONDONTWRITEBYTECODE=1 python3 agent-system/tools/aso/aso.py lint --root . --mode package --strict
 ```
 
+Initialized project workspaces use explicit workspace mode and materialized
+runtime views:
+
+```text
+aso state render --root /path/to/project --confirm-write
+aso status --root /path/to/project --mode workspace
+aso lint --root /path/to/project --mode workspace --strict
+aso doctor --root /path/to/project --mode workspace --strict
+aso lifecycle terminate-agent --root /path/to/project --from-result project-runtime/results/worker/RESULT_TASK_ID_ATTEMPT_001.md --confirm-write
+```
+
+After a profile-agent RESULT is recorded, the lifecycle termination event must
+exist before audit routing.
+
 Project Factory help should also be available after install:
 
 ```text
@@ -152,6 +166,10 @@ access:
 ```text
 aso project create --local --engine-mode vendored --target /tmp/demo-vendored --name "Demo Vendored" --slug demo-vendored --profile generic --repo-url none --branch main
 aso project verify-clean --root /tmp/demo-vendored --strict
+python3 /tmp/demo-vendored/agent-system/tools/aso/aso.py state render --root /tmp/demo-vendored --confirm-write
+python3 /tmp/demo-vendored/agent-system/tools/aso/aso.py status --root /tmp/demo-vendored --mode workspace
+python3 /tmp/demo-vendored/agent-system/tools/aso/aso.py lint --root /tmp/demo-vendored --mode workspace --strict
+python3 /tmp/demo-vendored/agent-system/tools/aso/aso.py doctor --root /tmp/demo-vendored --mode workspace --strict
 ```
 
 Create and verify a local reference generated project without vendoring
@@ -160,6 +178,10 @@ Create and verify a local reference generated project without vendoring
 ```text
 aso project create --local --engine-mode reference --target /tmp/demo-reference --name "Demo Reference" --slug demo-reference --profile generic --repo-url https://github.com/OWNER/demo-reference.git --branch main
 aso project verify-clean --root /tmp/demo-reference --strict
+aso state render --root /tmp/demo-reference --confirm-write
+aso status --root /tmp/demo-reference --mode workspace
+aso lint --root /tmp/demo-reference --mode workspace --strict
+aso doctor --root /tmp/demo-reference --mode workspace --strict
 ```
 
 Local generated projects may initialize Runtime Schema `3.1.0` JSON sidecars

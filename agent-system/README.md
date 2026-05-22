@@ -276,8 +276,10 @@ python3 agent-system/tools/aso/aso.py validate-rules --root . --strict
 python3 agent-system/tools/aso/aso.py state --help
 python3 agent-system/tools/aso/aso.py state init --root /tmp/aso-state-demo --project-name "State Demo" --project-slug state-demo --profile generic --repo-url none --branch main --dry-run --json-out /tmp/aso-state-init-plan.json
 python3 agent-system/tools/aso/aso.py state init --root /tmp/aso-state-demo --project-name "State Demo" --project-slug state-demo --profile generic --repo-url none --branch main --confirm-write --json-out /tmp/aso-state-init-receipt.json
+python3 agent-system/tools/aso/aso.py state render --root /tmp/aso-state-demo --confirm-write
 python3 agent-system/tools/aso/aso.py state verify --root /tmp/aso-state-demo --strict --json-out /tmp/aso-state-verify.json
 python3 agent-system/tools/aso/aso.py state render --root /tmp/aso-state-demo --format markdown --out /tmp/aso-state-render.md
+python3 agent-system/tools/aso/aso.py lifecycle terminate-agent --root /tmp/aso-state-demo --from-result project-runtime/results/worker/RESULT_TASK_ID_ATTEMPT_001.md --confirm-write
 python3 agent-system/tools/aso/aso.py state migrate --root agent-system/tests/fixtures/state/valid_workspace --to 3.1.0 --dry-run --json-out /tmp/aso-state-migrate-plan.json
 python3 agent-system/tools/aso/aso.py plan-next --root agent-system/tests/fixtures/state/valid_workspace --strict --json-out /tmp/aso-stage2-plan.json
 python3 agent-system/tools/aso/aso.py dashboard --root agent-system/tests/fixtures/state/valid_workspace --out /tmp/aso-stage2-dashboard.html
@@ -405,6 +407,8 @@ package content into the generated project:
 ```text
 python3 agent-system/tools/aso/aso.py project create --local --engine-mode vendored --target /tmp/demo-vendored --name "Demo Vendored" --slug demo-vendored --profile generic --repo-url none --branch main
 python3 agent-system/tools/aso/aso.py project verify-clean --root /tmp/demo-vendored --strict
+python3 agent-system/tools/aso/aso.py lint --root /tmp/demo-vendored --mode workspace --strict
+python3 agent-system/tools/aso/aso.py doctor --root /tmp/demo-vendored --mode workspace --strict
 ```
 
 Local reference mode records the external ASO engine in `aso.lock` and does not
@@ -413,6 +417,8 @@ vendor `agent-system/`:
 ```text
 python3 agent-system/tools/aso/aso.py project create --local --engine-mode reference --target /tmp/demo-reference --name "Demo Reference" --slug demo-reference --profile generic --repo-url https://github.com/OWNER/demo-reference.git --branch main
 python3 agent-system/tools/aso/aso.py project verify-clean --root /tmp/demo-reference --strict
+python3 agent-system/tools/aso/aso.py lint --root /tmp/demo-reference --mode workspace --strict
+python3 agent-system/tools/aso/aso.py doctor --root /tmp/demo-reference --mode workspace --strict
 ```
 
 GitHub dry-run and confirmed publish use the selected `vendored` or

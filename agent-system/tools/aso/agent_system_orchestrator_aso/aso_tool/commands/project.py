@@ -12,7 +12,7 @@ from dataclasses import dataclass
 from pathlib import Path
 
 from .. import lockfile
-from . import state_init
+from . import state_init, state_render
 
 
 EXIT_OK = 0
@@ -124,6 +124,7 @@ class CreateSummary:
     skipped_paths: tuple[str, ...]
     runtime_state_initialized: bool
     runtime_state_files: int
+    runtime_markdown_views: int
 
 
 def run_verify_clean(args: argparse.Namespace) -> int:
@@ -172,6 +173,7 @@ def run_create(args: object) -> int:
     print(f"Package version: {lockfile.PACKAGE_VERSION}")
     print(f"Runtime schema: {lockfile.RUNTIME_SCHEMA_VERSION}")
     print(f"Runtime state: {'initialized' if summary.runtime_state_initialized else 'not initialized'}")
+    print(f"Runtime markdown views: materialized ({summary.runtime_markdown_views})")
     print("Created entries:")
     for entry in summary.created_entries:
         print(f"- {entry}")
@@ -183,7 +185,7 @@ def run_create(args: object) -> int:
             f"{summary.target / 'agent-system/tools/aso/aso.py'} status --root {summary.target} --mode workspace"
         )
     else:
-        print(f"PYTHONDONTWRITEBYTECODE=1 aso project verify-clean --root {summary.target} --strict")
+        print(f"PYTHONDONTWRITEBYTECODE=1 aso status --root {summary.target} --mode workspace")
     return EXIT_OK
 
 
@@ -462,7 +464,7 @@ def create_project(
 
     copied_files = 0
     skipped_paths: tuple[str, ...] = ()
-    runtime_state_files = _initialize_runtime_state(
+    runtime_state_files, runtime_markdown_views = _initialize_runtime_state(
         root=target,
         project_name=project_name,
         project_slug=project_slug,
@@ -490,6 +492,7 @@ def create_project(
         skipped_paths=skipped_paths,
         runtime_state_initialized=True,
         runtime_state_files=runtime_state_files,
+        runtime_markdown_views=runtime_markdown_views,
     )
 
 
@@ -1059,7 +1062,7 @@ def _initialize_runtime_state(
     profile: str,
     repo_url: str | None,
     default_branch: str,
-) -> int:
+) -> tuple[int, int]:
     sidecars = state_init._initial_sidecars(
         root=root,
         project_name=project_name,
@@ -1078,7 +1081,16 @@ def _initialize_runtime_state(
     wrote, write_detail = state_init._write_sidecars(state_root, sidecars)
     if not wrote:
         raise ValueError(f"runtime state init failed: {write_detail}")
-    return len(sidecars)
+    materialize_report, materialize_exit = state_render.materialize_compatibility_views(root)
+    if materialize_exit != state_render.EXIT_OK:
+        raise ValueError(f"runtime markdown materialization failed: {materialize_report.get('findings', [])}")
+    materialize_summary = materialize_report.get("summary")
+    views_written = (
+        materialize_summary.get("views_written")
+        if isinstance(materialize_summary, dict)
+        else None
+    )
+    return len(sidecars), int(views_written) if isinstance(views_written, int) else 0
 
 
 def _planned_state_init(
@@ -1161,10 +1173,23 @@ def _gitignore_text() -> str:
 
 
 def _readme_text(*, project_name: str, project_slug: str, engine_mode: str) -> str:
-    command = (
-        "PYTHONDONTWRITEBYTECODE=1 python3 agent-system/tools/aso/aso.py status --root . --mode workspace"
+    commands = (
+        (
+            "PYTHONDONTWRITEBYTECODE=1 python3 agent-system/tools/aso/aso.py state render --root . --confirm-write",
+            "PYTHONDONTWRITEBYTECODE=1 python3 agent-system/tools/aso/aso.py status --root . --mode workspace",
+            "PYTHONDONTWRITEBYTECODE=1 python3 agent-system/tools/aso/aso.py lint --root . --mode workspace --strict",
+            "PYTHONDONTWRITEBYTECODE=1 python3 agent-system/tools/aso/aso.py doctor --root . --mode workspace --strict",
+            "PYTHONDONTWRITEBYTECODE=1 python3 agent-system/tools/aso/aso.py lifecycle terminate-agent --root . --from-result project-runtime/results/worker/RESULT_TASK_ID_ATTEMPT_001.md --confirm-write",
+        )
         if engine_mode == lockfile.DEFAULT_ENGINE_MODE
-        else "PYTHONDONTWRITEBYTECODE=1 aso project verify-clean --root . --strict"
+        else (
+            "PYTHONDONTWRITEBYTECODE=1 aso project verify-clean --root . --strict",
+            "PYTHONDONTWRITEBYTECODE=1 aso state render --root . --confirm-write",
+            "PYTHONDONTWRITEBYTECODE=1 aso status --root . --mode workspace",
+            "PYTHONDONTWRITEBYTECODE=1 aso lint --root . --mode workspace --strict",
+            "PYTHONDONTWRITEBYTECODE=1 aso doctor --root . --mode workspace --strict",
+            "PYTHONDONTWRITEBYTECODE=1 aso lifecycle terminate-agent --root . --from-result project-runtime/results/worker/RESULT_TASK_ID_ATTEMPT_001.md --confirm-write",
+        )
     )
     engine_note = (
         "This project vendors ASO engine files under `agent-system/`."
@@ -1177,8 +1202,11 @@ def _readme_text(*, project_name: str, project_slug: str, engine_mode: str) -> s
         f"{engine_note}\n\n"
         "## Local ASO commands\n\n"
         "```bash\n"
-        f"{command}\n"
+        + "\n".join(commands)
+        + "\n"
         "```\n\n"
+        "Before routing a profile-agent RESULT to audit, record the lifecycle "
+        "termination event with `aso lifecycle terminate-agent --confirm-write`.\n\n"
         "## Publication boundary\n\n"
         "The local ASO working roots `project-input/`, `project-runtime/`, and "
         "`project-archive/` are intentionally ignored and should not be tracked.\n\n"
