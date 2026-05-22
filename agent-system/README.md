@@ -383,18 +383,36 @@ The helper supports status, lint, doctor, package-layout verification, design
 validation, context pack validation, rule validation, Runtime Schema `3.1.0`
 state init/migrate/render/verify, dry-run next-action planning, static
 dashboard rendering, checkpoint eligibility preflight, archive verify
-inspection, and Project Factory scoped generated-project helpers. Diagnostic,
-validator, planning, dashboard, archive, and checkpoint-preflight surfaces
-remain read-only, dry-run, or proposal-only. State writes are limited to
+inspection, P5 artifact package validation and classification, lifecycle
+receipt materialization, and Project Factory scoped generated-project helpers.
+Diagnostic, validator, planning, dashboard, archive, and checkpoint-preflight
+surfaces remain read-only, dry-run, or proposal-only. State writes are limited to
 explicit `state init --confirm-write`, `state migrate --confirm-write`, and
 generated-project local initialization under ignored workspace roots. Project
 Factory commands may create generated projects and, when a later publish flow
 is explicitly confirmed, publish only clean generated-project files from
 explicit target paths. Outside the P3 local runtime-state proposal/apply
 boundary, ASO does not provide a runtime daemon, live agent dispatch,
-checkpoint execution, general package/runtime mutation, commit, or push authority. For
-package lint compatibility, this scoped boundary is also stated as: ASO
-diagnostic surfaces do not provide general mutation, dispatch, or checkpoint authority.
+checkpoint execution, general package/runtime mutation, commit, or push
+authority. For package lint compatibility, this scoped boundary is also
+stated as: ASO diagnostic surfaces do not provide general mutation, dispatch, or checkpoint authority.
+
+Profile-agent completion follows the P5 artifact package sequence:
+
+```text
+RESULT_RECEIVED -> ARTIFACT_ACCEPTED -> AGENT_TERMINATED -> AUDIT_ROUTE_READY
+```
+
+Profile-agent output starts as a candidate artifact package under
+`project-runtime/artifacts/candidates/`. The orchestrator accepts the candidate
+into `project-runtime/artifacts/accepted/`, records the acceptance receipt and
+`ARTIFACT_ACCEPTED` lifecycle event, and only then terminates the agent
+instance and marks audit routing ready. Context handed to later agents must
+cite accepted artifact packages or rendered views under
+`project-runtime/rendered/`; raw chat context, raw artifacts, rejected
+artifacts, and local runtime scratch files are not accepted context.
+`AUDIT_ROUTE_READY` is a readiness marker only and does not dispatch live
+agents or execute checkpoints.
 
 ## Project Factory P1
 

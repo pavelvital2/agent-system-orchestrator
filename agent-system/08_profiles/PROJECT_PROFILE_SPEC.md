@@ -24,6 +24,8 @@ Profiles must not:
 - bypass required audits;
 - change runtime state meanings or transitions;
 - alter accepted-state locking;
+- treat candidate artifact packages, raw artifacts, rejected artifacts, or raw
+  agent chat as accepted project truth;
 - weaken forbidden file, credential, or secret handling;
 - introduce project-specific business terminology into universal core;
 - authorize deployment, launch, or completion outside the lifecycle gates.
@@ -70,5 +72,19 @@ Profile-related evidence should be concrete and traceable:
 - test results or explicit reason tests were not applicable;
 - setup notes for required configuration without exposing secret values;
 - launch or handover readiness notes when those gates are in scope.
+
+Profile-agent task output is candidate artifact package output until accepted
+by the orchestrator. Downstream profile guidance and task packets must cite
+accepted artifact packages under `project-runtime/artifacts/accepted/` or
+rendered runtime views under `project-runtime/rendered/` for context. The
+required completion ordering remains:
+
+```text
+RESULT_RECEIVED -> ARTIFACT_ACCEPTED -> AGENT_TERMINATED -> AUDIT_ROUTE_READY
+```
+
+`AUDIT_ROUTE_READY` is only readiness evidence for audit routing; profiles must
+not interpret it as live dispatch, checkpoint execution, deployment authority,
+or final acceptance.
 
 Secret names may be referenced only as required configuration keys. Secret values must never be read, printed, stored, committed, or included in evidence.

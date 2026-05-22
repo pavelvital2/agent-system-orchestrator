@@ -15,7 +15,8 @@ Project Factory P1 GitHub publish uses:
 
 ```text
 engine mode: selected vendored or reference mode
-runtime schema: 3.0.0
+active runtime schema: 3.1.0
+artifact package schema: 1.0.0
 ```
 
 GitHub publish mode creates or uses a clean generated-project target, records
@@ -95,6 +96,11 @@ cookies
 caches
 logs
 ```
+
+The P5 workspace-local artifact package roots under `project-runtime/artifacts/`
+and rendered views under `project-runtime/rendered/` are covered by the
+`project-runtime/**` exclusion. They may provide local accepted context inside
+a workspace, but they are not GitHub publication content for Project Factory.
 
 Reference-mode GitHub repositories must not track vendored `agent-system/`
 content. Vendored-mode GitHub repositories may track only safe generated-project
@@ -183,4 +189,5 @@ Evidence must not include secret values or full credential output.
 ## No Runtime Schema Change
 
 This contract does not change runtime-state semantics. Project Factory P1
-GitHub publish uses runtime schema `3.0.0`.
+GitHub publish uses the active runtime schema recorded in `aso.lock` and
+preserves compatibility for accepted historical generated-project tuples.

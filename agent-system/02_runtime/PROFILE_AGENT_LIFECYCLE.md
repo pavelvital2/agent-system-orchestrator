@@ -100,11 +100,18 @@ the dispatched task and must match the task named in `TASK`.
 
 ## Termination event
 
-After `AGENT_RESULT_RECEIVED`, the orchestrator must accept the governed
-artifact package, record `ARTIFACT_ACCEPTED` with its receipt, and only then
-emit `agent_instance_terminated` for the same `AGENT_INSTANCE_ID`. The task can
-be treated as audit-route-ready only after the subsequent `AUDIT_ROUTE_READY`
-event.
+After `RESULT_RECEIVED`, the profile-agent RESULT remains candidate artifact
+package output under `project-runtime/artifacts/candidates/`. The orchestrator
+must accept the governed candidate package into
+`project-runtime/artifacts/accepted/`, record `ARTIFACT_ACCEPTED` with its
+receipt, and only then emit `agent_instance_terminated` for the same
+`AGENT_INSTANCE_ID`. The task can be treated as audit-route-ready only after
+the subsequent `AUDIT_ROUTE_READY` event.
+
+Downstream context must cite accepted artifact packages or rendered views under
+`project-runtime/rendered/`. Raw agent context, candidate packages, raw
+artifacts, and rejected artifacts must not be treated as accepted source of
+truth for the next profile-agent instance.
 
 The termination event is required even when the runtime environment cannot
 physically delete a chat, process, container, or session.

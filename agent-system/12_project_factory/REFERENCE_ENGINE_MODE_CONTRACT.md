@@ -22,12 +22,14 @@ reference
 Project Factory P1 reference mode uses:
 
 ```text
-package version: 3.3.0
-runtime schema: 3.0.0
+active package version: 3.7.0
+active runtime schema: 3.1.0
+artifact package schema: 1.0.0
 ```
 
-The runtime schema remains `3.0.0`. Reference mode changes generated-project
-packaging, not runtime-state semantics.
+Reference mode was introduced for `3.3.0 / 3.0.0` generated projects and
+remains compatible in the active P5 package. Reference mode changes
+generated-project packaging, not runtime-state semantics.
 
 ## Required Lockfile Fields
 
@@ -37,8 +39,8 @@ packaging, not runtime-state semantics.
 {
   "aso_engine": {
     "package_name": "agent-system-orchestrator",
-    "version": "3.3.0",
-    "runtime_schema": "3.0.0",
+    "version": "3.7.0",
+    "runtime_schema": "3.1.0",
     "source": "https://github.com/pavelvital2/agent-system-orchestrator",
     "engine_mode": "reference"
   }
@@ -79,6 +81,10 @@ project-archive/
 ```
 
 They are local workspace roots and must not be tracked or published.
+P5 artifact package storage under `project-runtime/artifacts/` and rendered
+views under `project-runtime/rendered/` are also local ignored workspace state;
+they may be used as context inside the workspace only after acceptance/render,
+not as published Project Factory repository content.
 
 ## Engine Resolution Boundary
 
@@ -116,7 +122,7 @@ generated project as invalid when:
 
 - `aso.lock` is missing or invalid JSON;
 - `aso_engine.engine_mode` is not `reference`;
-- `aso_engine.runtime_schema` is not `3.0.0`;
+- `aso_engine.runtime_schema` is incompatible with `aso_engine.version`;
 - required generated-project metadata is missing;
 - `.gitignore` does not protect local working roots;
 - `agent-system/` is tracked in a reference-mode generated project;
@@ -131,5 +137,4 @@ boundary violations.
 ## No Runtime Schema Change
 
 Reference mode is a Project Factory packaging mode. It is not a runtime-state
-schema migration and must not change the runtime schema from `3.0.0`.
-
+schema migration and must not silently change runtime schema semantics.

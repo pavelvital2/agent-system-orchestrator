@@ -22,13 +22,15 @@ Project Factory P0 uses:
 
 ```text
 lockfile_version: 1.0
-package version: 3.2.0
-runtime schema: 3.0.0
+active package version: 3.7.0
+active runtime schema: 3.1.0
+artifact package schema: 1.0.0
 ```
 
-The runtime schema remains `3.0.0`. `aso.lock` describes package/product
-capability and generated-project metadata; it does not alter runtime-state
-semantics.
+`aso.lock` describes package/product capability and generated-project
+metadata; it does not alter runtime-state semantics. P5 preserves the
+Project Factory lock boundary and accepts historical generated-project tuples
+that satisfy the compatibility rules.
 
 ## Required Shape
 
@@ -39,8 +41,8 @@ Project Factory P0 lock files must include:
   "lockfile_version": "1.0",
   "aso_engine": {
     "package_name": "agent-system-orchestrator",
-    "version": "3.2.0",
-    "runtime_schema": "3.0.0",
+    "version": "3.7.0",
+    "runtime_schema": "3.1.0",
     "source": "https://github.com/pavelvital2/agent-system-orchestrator",
     "engine_mode": "vendored"
   },
@@ -97,7 +99,8 @@ Rules:
 
 - `package_name` must identify the ASO package.
 - `version` must be the package version used to create or verify the project.
-- `runtime_schema` must be `3.0.0` for Project Factory P0.
+- `runtime_schema` must match the package tuple; the active P5 tuple uses
+  `3.1.0`, and historical compatible tuples may use `3.1.0` or `3.0.0`.
 - `source` should identify the package source used by the generated project.
 - `engine_mode` must be `vendored` for the required P0 implementation.
 
@@ -185,7 +188,7 @@ secret-like files.
 - required fields are missing;
 - `aso_engine.version` is incompatible with the verifier's supported package
   contract;
-- `aso_engine.runtime_schema` is not `3.0.0` for Project Factory P0;
+- `aso_engine.runtime_schema` is not compatible with `aso_engine.version`;
 - `aso_engine.engine_mode` is unsupported;
 - publication boundary roots omit required local ASO working roots;
 - repository URL or default branch metadata conflicts with the actual Git
@@ -195,9 +198,21 @@ Strict verification must return non-zero for lock validation failures.
 
 ## Compatibility
 
+The active verifier accepts these package/runtime tuples:
+
+```text
+3.7.0 / 3.1.0
+3.6.1 / 3.1.0
+3.6.0 / 3.1.0
+3.5.0 / 3.1.0
+3.4.0 / 3.1.0
+3.3.0 / 3.0.0
+3.2.0 / 3.0.0
+```
+
 P0 implementations must not require third-party Python dependencies for lock
 reading or validation unless a later bounded architecture decision explicitly
 accepts the dependency.
 
 The lock contract is a package/product contract. It is not a runtime-state
-schema migration.
+schema migration and does not publish P5 workspace-local artifact storage.

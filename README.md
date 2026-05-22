@@ -103,12 +103,25 @@ python3 agent-system/tools/aso/aso.py state render --root /path/to/project --con
 python3 agent-system/tools/aso/aso.py status --root /path/to/project --mode workspace
 python3 agent-system/tools/aso/aso.py lint --root /path/to/project --mode workspace --strict
 python3 agent-system/tools/aso/aso.py doctor --root /path/to/project --mode workspace --strict
+python3 agent-system/tools/aso/aso.py lifecycle receive-result --root /path/to/project --from-result project-runtime/results/worker/RESULT_TASK_ID_ATTEMPT_001.md --confirm-write
+python3 agent-system/tools/aso/aso.py artifact accept --root /path/to/project --package project-runtime/artifacts/candidates/TASK_ID/manifest.json --confirm-write
 python3 agent-system/tools/aso/aso.py lifecycle terminate-agent --root /path/to/project --from-result project-runtime/results/worker/RESULT_TASK_ID_ATTEMPT_001.md --confirm-write
 ```
 
 Run `state render --confirm-write` after state initialization/materialization
-changes. After a profile-agent RESULT is recorded, run
-`lifecycle terminate-agent --confirm-write` before routing the RESULT to audit.
+changes. After a profile-agent RESULT is recorded, the governed completion
+sequence is:
+
+```text
+RESULT_RECEIVED -> ARTIFACT_ACCEPTED -> AGENT_TERMINATED -> AUDIT_ROUTE_READY
+```
+
+Profile-agent output is first a candidate artifact package under
+`project-runtime/artifacts/candidates/`. Context for later task packets should
+come from accepted artifact packages under `project-runtime/artifacts/accepted/`
+or rendered state views under `project-runtime/rendered/`, not from raw agent
+chat context. `AUDIT_ROUTE_READY` is only a deterministic readiness marker; it
+does not dispatch a live auditor or execute a checkpoint.
 
 Design and context-pack validators are read-only:
 

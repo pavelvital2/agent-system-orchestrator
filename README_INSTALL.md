@@ -74,11 +74,24 @@ aso state render --root /path/to/project --confirm-write
 aso status --root /path/to/project --mode workspace
 aso lint --root /path/to/project --mode workspace --strict
 aso doctor --root /path/to/project --mode workspace --strict
+aso lifecycle receive-result --root /path/to/project --from-result project-runtime/results/worker/RESULT_TASK_ID_ATTEMPT_001.md --confirm-write
+aso artifact accept --root /path/to/project --package project-runtime/artifacts/candidates/TASK_ID/manifest.json --confirm-write
 aso lifecycle terminate-agent --root /path/to/project --from-result project-runtime/results/worker/RESULT_TASK_ID_ATTEMPT_001.md --confirm-write
 ```
 
-After a profile-agent RESULT is recorded, the lifecycle termination event must
-exist before audit routing.
+After a profile-agent RESULT is recorded, completion must follow the P5
+artifact package sequence:
+
+```text
+RESULT_RECEIVED -> ARTIFACT_ACCEPTED -> AGENT_TERMINATED -> AUDIT_ROUTE_READY
+```
+
+The profile-agent RESULT is treated as candidate artifact package output until
+the orchestrator accepts it into `project-runtime/artifacts/accepted/` and
+records the artifact acceptance receipt. Later context packs and task packets
+must cite accepted artifact packages or rendered views under
+`project-runtime/rendered/`; raw agent context is not accepted project truth.
+`AUDIT_ROUTE_READY` does not dispatch live agents or execute checkpoints.
 
 Project Factory help should also be available after install:
 

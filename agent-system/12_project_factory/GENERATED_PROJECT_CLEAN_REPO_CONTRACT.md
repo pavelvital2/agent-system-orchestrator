@@ -19,11 +19,15 @@ A generated project is clean when:
   machine artifacts;
 - no forbidden local root or artifact is tracked by Git;
 - no vendored package content contains nested Git repository metadata;
-- the lock package tuple is compatible with Project Factory P0:
+- the lock package tuple is compatible with the active Project Factory
+  boundary:
 
 ```text
-package version: 3.2.0
-runtime schema: 3.0.0
+active package version: 3.7.0
+active runtime schema: 3.1.0
+compatible historical tuples:
+3.6.1/3.1.0, 3.6.0/3.1.0, 3.5.0/3.1.0, 3.4.0/3.1.0,
+3.3.0/3.0.0, 3.2.0/3.0.0
 ```
 
 ## Required Local Ignore Entries
@@ -145,6 +149,12 @@ project-archive/
 They are generated workspace state, not publishable package or project
 documentation. Their contents must remain ignored unless a later bounded
 project-specific governance decision explicitly changes the publication model.
+P5 artifact package storage under `project-runtime/artifacts/raw/`,
+`project-runtime/artifacts/candidates/`,
+`project-runtime/artifacts/accepted/`, and
+`project-runtime/artifacts/rejected/` is included in this local ignored
+workspace boundary and must not be tracked or published by Project Factory
+flows.
 
 ## Verification Contract
 
@@ -182,5 +192,7 @@ caller should write it outside the clean repository or to an ignored location.
 
 ## No Runtime Schema Change
 
-This contract does not change runtime-state semantics. It relies on package
-version `3.2.0` and runtime schema `3.0.0`.
+This contract does not change runtime-state semantics. In the active P5
+package it relies on package version `3.7.0`, runtime schema `3.1.0`, and
+artifact package schema `1.0.0`, while preserving compatibility for accepted
+historical generated-project lock tuples.

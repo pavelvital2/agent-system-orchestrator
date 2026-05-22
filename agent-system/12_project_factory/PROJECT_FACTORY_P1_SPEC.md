@@ -9,12 +9,15 @@ using the selected engine mode.
 The target package tuple is:
 
 ```text
-package version: 3.3.0
-runtime schema: 3.0.0
+active package version: 3.7.0
+active runtime schema: 3.1.0
+artifact package schema: 1.0.0
 ```
 
-The runtime schema remains `3.0.0`. Project Factory P1 adds project factory
-capability and publication workflow contracts; it does not change the accepted
+Project Factory P1 was introduced for the `3.3.0 / 3.0.0` package tuple and
+remains available in the active P5 `3.7.0 / 3.1.0` tuple. P5 preserves the
+Project Factory P1 command boundary while adding artifact package metadata and
+workspace-local artifact storage semantics. It does not change the accepted
 meaning of current runtime state files.
 
 ## Capability Model
@@ -50,8 +53,10 @@ or publish generated projects only within explicit target paths and only with
 explicit confirmation for network or GitHub actions.
 
 Diagnostics, validators, planning, dashboard rendering, archive inspection,
-and checkpoint preflight remain read-only, dry-run, or proposal-only unless a
-Project Factory command explicitly creates or publishes a generated project.
+P5 artifact package validation/rendering, lifecycle receipt materialization,
+and checkpoint preflight remain read-only, dry-run, proposal-only, or
+workspace-local receipt/classification operations unless a Project Factory
+command explicitly creates or publishes a generated project.
 
 Existing ASO commands must not be removed, renamed, or given incompatible
 semantics. P1 extends the Project Factory command surface; it does not grant
@@ -178,6 +183,11 @@ project-archive/
 
 They must be ignored and must not be tracked.
 
+P5 candidate, accepted, rejected, and raw artifact package storage under
+`project-runtime/artifacts/` is local workspace state. Generated-project docs
+may tell users how to render or inspect it locally, but Project Factory
+publication flows must not publish it.
+
 The detailed reference engine contract is defined in:
 
 ```text
@@ -272,10 +282,15 @@ creating a GitHub repository or requiring GitHub credentials.
 Project Factory P1 uses:
 
 ```text
-package version: 3.3.0
-runtime schema: 3.0.0
+active package version: 3.7.0
+active runtime schema: 3.1.0
+artifact package schema: 1.0.0
+compatible historical tuples:
+3.6.1/3.1.0, 3.6.0/3.1.0, 3.5.0/3.1.0, 3.4.0/3.1.0,
+3.3.0/3.0.0, 3.2.0/3.0.0
 ```
 
 Implementation tasks must stop and request a governance decision if they
 discover that runtime-state semantics need to change. Such a change is outside
-this P1 contract and must not be handled by silently bumping runtime schema.
+this P1/P5 compatibility contract and must not be handled by silently bumping
+runtime schema.

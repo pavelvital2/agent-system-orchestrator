@@ -86,6 +86,9 @@ design architecture, or decompose implementation work.
 - initialized project context;
 - first requirements or design bootstrap task packet under
   `project-runtime/bootstrap/`;
+- candidate artifact package output under
+  `project-runtime/artifacts/candidates/` when a profile agent returns
+  bootstrap evidence;
 - initial GAP if source inputs are insufficient;
 - one valid `NEXT_ACTION` using the current `NEXT_ACTION_TEMPLATE.md` and
   active runtime schema for either `TARGET_ROLE: requirements_analyst` or
@@ -120,8 +123,19 @@ BLOCKING_OR_RESUME_CONTEXT: NONE
 
 ## Exit criteria
 
-Bootstrap exits when the orchestrator has a valid next bounded task packet and
-enough source material to dispatch the next role.
+Bootstrap exits when the orchestrator has a valid next bounded task packet,
+enough source material to dispatch the next role, and any bootstrap
+profile-agent RESULT has completed the P5 acceptance sequence:
+
+```text
+RESULT_RECEIVED -> ARTIFACT_ACCEPTED -> AGENT_TERMINATED -> AUDIT_ROUTE_READY
+```
+
+Accepted bootstrap context must be cited from accepted artifact packages under
+`project-runtime/artifacts/accepted/` or rendered views under
+`project-runtime/rendered/`. Candidate packages, raw artifacts, rejected
+artifacts, raw agent chat, and local runtime scratch files are not accepted
+context for downstream dispatch.
 
 ## Continuation gate
 
