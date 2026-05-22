@@ -68,6 +68,20 @@ cancelled -> active
 - A handoff must not expand task packet scope.
 - A handoff must not introduce project-specific requirements into universal runtime rules.
 - A handoff must not contain secrets or credentials.
+- A corrected P4 project-design handoff must target the runtime role
+  `requirements_analyst` and state in `PURPOSE` or `SCOPE` that the agent is
+  performing the `PROJECT_DESIGNER` responsibility profile.
+- A project-design handoff must include
+  `agent-system/01_roles/PROJECT_DESIGNER.md` in REQUIRED_DOCS and must include
+  the source TZ, owner decision records, accepted design context, and applicable
+  template references only when those inputs are explicitly authorized.
+- A project-design handoff must forbid ASO semantic TZ interpretation,
+  product-intake automation, live dispatch, runtime mutation, checkpoint
+  execution, product generation, external workers, secret collection, and
+  technical owner questions.
+- A handoff to `project_owner` for a design gap must reference one audited
+  owner question card only. Bulk gap lists may remain internal evidence, but
+  owner-facing handoff is sequential.
 
 ## Consumption Rules
 
@@ -94,5 +108,11 @@ Before dispatch, the orchestrator must verify:
 - `CONSUMED_BY_RESULT` is `NONE`;
 - `SUPERSEDED_BY` is `NONE`;
 - scope and forbidden changes match the active task packet and governance.
+- project-design handoffs use the runtime role `requirements_analyst`, not a
+  new runtime role value, unless a later audited schema revision explicitly
+  changes the runtime schema.
+- owner-facing design-gap handoffs contain no framework, library, database,
+  queue, ORM, transport, deployment, hosting, cache, worker, scheduler, or API
+  mechanism question.
 
 Invalid handoffs must be rejected or corrected through governed recovery flow. A handoff cannot override governance authority, runtime state transition rules, role instructions, accepted-state locking, or filesystem governance.

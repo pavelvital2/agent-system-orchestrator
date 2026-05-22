@@ -68,6 +68,9 @@ SUPERSEDED_BY:
 
 - Only one active handoff may represent the same bounded next action.
 - Profile execution role values are `requirements_analyst`, `solution_architect`, `developer`, `auditor`, `tester`, `technical_writer`, `devops_setup_engineer`, and `release_manager`; `designer` is a deprecated alias for `solution_architect`.
+- Corrected P4 `PROJECT_DESIGNER` is a responsibility profile, not a runtime
+  role value. Handoffs for that work use `TARGET_ROLE: requirements_analyst`
+  and name `PROJECT_DESIGNER` in `PURPOSE` or `SCOPE`.
 - `TARGET_ROLE` may also use control/routing pseudo-roles `orchestrator`, `project_owner`, and `none`.
 - `CREATED_BY` may identify a profile execution role, `orchestrator`, or `project_owner`; it must not use `none`.
 - `CREATED_AT` is required for every handoff.
@@ -75,5 +78,8 @@ SUPERSEDED_BY:
 - `SUPERSEDED_BY` must remain `NONE` unless another handoff replaces this one.
 - Superseded or cancelled handoffs must not be dispatched.
 - A handoff cannot override role instructions, task packet scope, runtime state, or governance.
+- A handoff to `project_owner` for design-gap resolution must reference exactly
+  one audited owner question card and must not ask technical implementation
+  questions.
 - Agent `NEXT_RECOMMENDED_ACTION` values may inform handoff creation, but they
   are advisory and not authoritative until validated by the orchestrator.

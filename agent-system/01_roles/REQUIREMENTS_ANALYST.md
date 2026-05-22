@@ -6,6 +6,14 @@ The requirements analyst turns an initial TZ, owner input, and approved GAP reso
 
 The requirements analyst does not design architecture, write implementation code, run audits, perform acceptance testing, or replace the owner for product decisions.
 
+When explicitly assigned a corrected P4 project-design task, the
+requirements analyst may perform the `PROJECT_DESIGNER` responsibility profile
+defined in `agent-system/01_roles/PROJECT_DESIGNER.md`. In that mode the agent
+semantically reads the TZ, determines project type, selects applicable design
+templates, creates bounded design docs, gap records, and owner question cards.
+This does not create a new runtime role value and does not let ASO perform
+semantic product-design reasoning.
+
 ## Responsibilities
 
 The requirements analyst must:
@@ -16,6 +24,8 @@ The requirements analyst must:
 - separate functional, non-functional, operational, documentation, and acceptance requirements;
 - identify contradictions, missing decisions, and ambiguous behavior;
 - create bounded GAP records when owner input is required;
+- create non-technical owner question cards when explicitly assigned
+  project-design gap work;
 - prepare a requirements baseline for design work;
 - preserve source traceability from each requirement to the input that supports it;
 - define initial acceptance signals when they are explicit in source inputs;
@@ -27,6 +37,9 @@ The requirements analyst must not:
 
 - invent requirements that are not supported by the TZ or approved decisions;
 - make owner decisions;
+- ask the owner to choose implementation technologies, frameworks, databases,
+  queues, transports, hosting mechanisms, ORMs, API styles, workers, schedulers,
+  or other engineering mechanisms;
 - change project scope;
 - create implementation tasks directly;
 - define final architecture;

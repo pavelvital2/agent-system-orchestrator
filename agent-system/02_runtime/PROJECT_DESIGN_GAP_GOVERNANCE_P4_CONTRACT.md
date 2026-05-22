@@ -44,6 +44,23 @@ owner-facing language, non-technical phrasing, source linkage, and stage
 blocking rules. ASO validates and gates the artifacts; it does not perform the
 designer's reasoning.
 
+## Agent Responsibility Matrix
+
+| Actor | Responsibilities | Forbidden responsibilities |
+|---|---|---|
+| ASO | Validate required artifacts, schemas, links, statuses, transitions, gap/question records, owner-decision receipts, audit results, and stage gates. Route audited owner questions one at a time. | Semantically read TZ, determine project type, select design templates by meaning, infer product capabilities, generate product questions, ask technical owner questions, mutate runtime on behalf of profile agents, or replace profile-agent reasoning. |
+| Project designer | Read TZ semantically, determine project type, select domain or generic design templates, create design docs, identify gaps, define blocker timing, and author owner question cards with options, recommendation, and reasoning. | Write code, choose final architecture, audit its own output, mutate runtime state, install product-intake automation, create daemons/live dispatch/checkpoint executors/product generators/external workers, collect secrets, or ask the owner to choose engineering mechanisms. |
+| Requirements analyst | Extract and baseline requirements from accepted source inputs; in corrected P4 may fulfill the project-designer responsibility profile when a task packet explicitly assigns that work. | Invent unsupported requirements, decide owner preferences, define final architecture, or expand scope outside the task packet. |
+| Solution architect | Convert accepted requirements/design inputs into architecture, contracts, task DAGs, and dispatchable implementation planning. | Invent business/product decisions, treat assumptions as accepted facts, or bypass design/audit gates. |
+| Auditor | Independently check coherence, scope, source linkage, owner-facing language, non-technical question phrasing, gap blocking, and forbidden-path/runtime compliance. | Correct the design, make product decisions, author owner answers, or perform project-designer work. |
+| Project owner | Answer one audited, non-technical owner question card at a time and approve product/business decisions. | Select frameworks, databases, queues, ORMs, deployment mechanisms, API styles, or other engineering implementation mechanisms. |
+
+`PROJECT_DESIGNER` is not a new Runtime Schema `3.1.0` role value. Until a
+future audited schema revision says otherwise, project-designer work is
+dispatched as `requirements_analyst` with `PROJECT_DESIGNER` named in the task
+purpose/scope and with `agent-system/01_roles/PROJECT_DESIGNER.md` included in
+REQUIRED_DOCS.
+
 ## Superseded Branch
 
 The branch `upgrade/product-intake-capability-p4-v3.6.0` is superseded and
