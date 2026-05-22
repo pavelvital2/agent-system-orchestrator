@@ -25,6 +25,8 @@ Validators help the orchestrator detect:
 - secret-handling violations;
 - invalid solution architect design traceability, scoring, or design audit
   readiness;
+- invalid project-designer design/gap audit evidence, owner question
+  correction routing, or unaudited owner question presentation;
 - invalid product capability, MVP readiness, or final acceptance claims.
 
 ## Source of authority
@@ -62,6 +64,7 @@ agent-system/09_validators/REASONING_LEVEL_VALIDATION_RULES.md
 agent-system/09_validators/AGENT_LIFECYCLE_VALIDATION_RULES.md
 agent-system/09_validators/DESIGN_TRACEABILITY_RULES.md
 agent-system/09_validators/DESIGN_REVIEW_RUBRIC.md
+agent-system/09_validators/DESIGN_GAP_AUDIT_CORRECTION_RULES.md
 agent-system/09_validators/PRODUCT_CAPABILITY_GATE_POLICY.md
 ```
 
@@ -148,6 +151,7 @@ before_dispatch:
   reasoning level floor validity
   product capability gate validity when product readiness is claimed
   research/requester return validity when applicable
+  design/gap audit evidence validity before owner question presentation
 
 after_agent_result:
   result validity
@@ -166,6 +170,7 @@ after_audit_result:
   result validity
   research result schema validity when auditing TASK_KIND research_dependency
   product capability gate validity before product, MVP, or final acceptance routing
+  design/gap audit correction validity before owner question presentation
   transition validity
   accepted-state rules
   research/requester return validity when applicable

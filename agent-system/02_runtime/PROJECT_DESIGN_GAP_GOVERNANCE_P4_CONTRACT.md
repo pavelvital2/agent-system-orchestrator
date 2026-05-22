@@ -187,6 +187,18 @@ The auditor must verify that gap categorization is reasonable, deferral does
 not hide an immediate blocker, assumptions are visible and bounded, and no
 engineering decision is pushed to the owner.
 
+Audit and correction evidence for project-designer outputs is governed by:
+
+```text
+agent-system/03_templates/PROJECT_DESIGN_AUDIT_TEMPLATE.md
+agent-system/09_validators/DESIGN_GAP_AUDIT_CORRECTION_RULES.md
+```
+
+Question cards that are technical, vague, missing recommendations, missing
+recommendation reasons, missing blocking fields, over-blocking, incorrectly
+linked, or unaudited must return to project-designer correction and independent
+re-audit before owner presentation.
+
 ## Runtime Schema Boundary
 
 Runtime Schema remains `3.1.0`. P4 adds governance artifacts, design/gap

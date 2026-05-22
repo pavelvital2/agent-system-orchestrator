@@ -170,6 +170,22 @@ agent-system/09_validators/DESIGN_REVIEW_RUBRIC.md
 The audit evidence must include the deterministic design rubric statuses and
 score required by `DESIGN_REVIEW_RUBRIC.md`.
 
+For `PROJECT_DESIGNER` responsibility-profile output, including project design
+docs, gap registers, owner question cards, owner decision records, and owner
+answer integration records, the auditor must also apply:
+
+```text
+agent-system/03_templates/PROJECT_DESIGN_AUDIT_TEMPLATE.md
+agent-system/09_validators/DESIGN_GAP_AUDIT_CORRECTION_RULES.md
+agent-system/05_gap_flow/OWNER_QUESTION_FLOW.md
+```
+
+The audit evidence must include owner-question checklist statuses, artifact
+refs checked, validator or manual-check evidence, and a correction route when a
+question is technical, vague, missing a recommendation, missing a
+recommendation reason, missing blocking fields, over-blocking, incorrectly
+linked, or marked presentable without independent audit pass evidence.
+
 Аудитор проверяет:
 
 - соответствует ли проектная документация ТЗ;
@@ -201,6 +217,11 @@ score required by `DESIGN_REVIEW_RUBRIC.md`.
   criteria, oversized task scope, missing test strategy, unresolved
   dependencies, missing owner decision marker, unclear product capability
   level, and implementation task before required design gate.
+- any project-designer owner question hard fail blocks audit pass, including
+  technical implementation language, vague owner wording, missing options,
+  missing recommendation, missing recommendation reason, missing blocking
+  stage, over-blocking without rationale, missing gap linkage, missing owner
+  impact, or missing independent audit evidence before owner routing.
 
 If the validator cannot be run in the current environment, the auditor may use
 the documentation rules as an equivalent manual check. If neither executable

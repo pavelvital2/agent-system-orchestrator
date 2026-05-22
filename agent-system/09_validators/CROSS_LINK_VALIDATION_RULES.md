@@ -237,6 +237,7 @@ agent-system/09_validators/GIT_CHECKPOINT_VALIDATION_RULES.md
 agent-system/09_validators/CROSS_LINK_VALIDATION_RULES.md
 agent-system/09_validators/RESEARCH_RETURN_VALIDATION_RULES.md
 agent-system/09_validators/REASONING_LEVEL_VALIDATION_RULES.md
+agent-system/09_validators/DESIGN_GAP_AUDIT_CORRECTION_RULES.md
 ```
 
 If a validator is referenced by smoke evidence or another validator rule, the
