@@ -7,9 +7,11 @@ import argparse
 import sys
 from pathlib import Path
 
+from . import artifact_storage
 from .commands import (
     apply,
     archive_verify,
+    artifact,
     checkpoint_preflight,
     context_pack_build,
     dashboard,
@@ -578,6 +580,200 @@ def build_parser() -> argparse.ArgumentParser:
         help="Write the read-only checkpoint preflight report JSON to this explicit path.",
     )
     checkpoint_preflight_parser.set_defaults(handler=checkpoint_preflight.run)
+
+    artifact_parser = subparsers.add_parser(
+        "artifact",
+        help="P5 artifact storage commands.",
+        description=(
+            "Validate and classify existing P5 artifact package manifests under "
+            "project-runtime/artifacts. Write operations require --confirm-write and "
+            "do not dispatch agents, mutate lifecycle state, or execute checkpoints."
+        ),
+    )
+    artifact_subparsers = artifact_parser.add_subparsers(dest="artifact_command", metavar="COMMAND")
+    artifact_validate_parser = artifact_subparsers.add_parser(
+        "validate",
+        help="Validate a P5 artifact package manifest.",
+        description="Read-only validation for artifact_package_manifest.schema.json and package path boundaries.",
+    )
+    _add_root_argument(artifact_validate_parser, validate=False)
+    artifact_validate_parser.add_argument(
+        "--package",
+        "--artifact",
+        dest="artifact",
+        required=True,
+        metavar="PATH",
+        help="Artifact package manifest JSON to validate.",
+    )
+    artifact_validate_parser.add_argument(
+        "--type",
+        dest="artifact_type",
+        choices=artifact.ALLOWED_ARTIFACT_TYPES,
+        help="Expected artifact_type value for the package manifest.",
+    )
+    artifact_validate_parser.add_argument(
+        "--strict",
+        action="store_true",
+        help="Run validation in strict mode.",
+    )
+    artifact_validate_parser.add_argument(
+        "--format",
+        choices=("text", "json"),
+        default="text",
+        help="Output format (default: text).",
+    )
+    artifact_validate_parser.add_argument(
+        "--json-out",
+        metavar="PATH",
+        help="Write validation report JSON to /tmp/... or project-runtime/reports/...",
+    )
+    artifact_validate_parser.set_defaults(handler=artifact.run_validate)
+
+    artifact_accept_parser = artifact_subparsers.add_parser(
+        "accept",
+        help="Copy a candidate artifact into the accepted bucket.",
+        description=(
+            "Classify an existing candidate artifact as accepted by append-only copy. "
+            "Without --confirm-write the command returns a blocked dry-run plan."
+        ),
+    )
+    _add_root_argument(artifact_accept_parser, validate=False)
+    artifact_accept_parser.add_argument(
+        "--package",
+        "--artifact",
+        dest="artifact",
+        required=True,
+        metavar="project-runtime/artifacts/candidates/...",
+        help="Candidate artifact path under project-runtime/artifacts/candidates.",
+    )
+    artifact_accept_parser.add_argument(
+        "--confirm-write",
+        action="store_true",
+        help="Write the accepted copy under project-runtime/artifacts/accepted.",
+    )
+    artifact_accept_parser.add_argument(
+        "--format",
+        choices=("text", "json"),
+        default="text",
+        help="Output format (default: text).",
+    )
+    artifact_accept_parser.add_argument(
+        "--json-out",
+        metavar="PATH",
+        help="Write classification report JSON to /tmp/... or project-runtime/reports/...",
+    )
+    artifact_accept_parser.set_defaults(handler=artifact.run_accept)
+
+    artifact_reject_parser = artifact_subparsers.add_parser(
+        "reject",
+        help="Copy a candidate artifact into the rejected bucket.",
+        description=(
+            "Classify an existing candidate artifact as rejected by append-only copy. "
+            "Without --confirm-write the command returns a blocked dry-run plan."
+        ),
+    )
+    _add_root_argument(artifact_reject_parser, validate=False)
+    artifact_reject_parser.add_argument(
+        "--package",
+        "--artifact",
+        dest="artifact",
+        required=True,
+        metavar="project-runtime/artifacts/candidates/...",
+        help="Candidate artifact path under project-runtime/artifacts/candidates.",
+    )
+    artifact_reject_parser.add_argument(
+        "--confirm-write",
+        action="store_true",
+        help="Write the rejected copy under project-runtime/artifacts/rejected.",
+    )
+    artifact_reject_parser.add_argument(
+        "--reason",
+        help="Reason for rejecting the candidate artifact.",
+    )
+    artifact_reject_parser.add_argument(
+        "--format",
+        choices=("text", "json"),
+        default="text",
+        help="Output format (default: text).",
+    )
+    artifact_reject_parser.add_argument(
+        "--json-out",
+        metavar="PATH",
+        help="Write classification report JSON to /tmp/... or project-runtime/reports/...",
+    )
+    artifact_reject_parser.set_defaults(handler=artifact.run_reject)
+
+    artifact_list_parser = artifact_subparsers.add_parser(
+        "list",
+        help="List governed artifact storage files.",
+        description="Read-only listing of project-runtime/artifacts buckets.",
+    )
+    _add_root_argument(artifact_list_parser, validate=False)
+    artifact_list_parser.add_argument(
+        "--state",
+        dest="bucket",
+        choices=("candidates", "accepted", "rejected"),
+        help="Limit listing to one artifact state.",
+    )
+    artifact_list_parser.add_argument(
+        "--bucket",
+        dest="bucket",
+        choices=artifact_storage.ARTIFACT_STORAGE_BUCKETS,
+        help="Limit listing to one bucket.",
+    )
+    artifact_list_parser.add_argument(
+        "--format",
+        choices=("text", "json"),
+        default="text",
+        help="Output format (default: text).",
+    )
+    artifact_list_parser.set_defaults(handler=artifact.run_list)
+
+    artifact_render_parser = artifact_subparsers.add_parser(
+        "render",
+        help="Render a deterministic artifact storage report.",
+        description=(
+            "Render a read-only artifact storage report to stdout. Writing with --out "
+            "is limited to project-runtime/reports, "
+            "project-runtime/rendered, or /tmp."
+        ),
+    )
+    _add_root_argument(artifact_render_parser, validate=False)
+    artifact_render_parser.add_argument(
+        "--package",
+        dest="artifact",
+        metavar="PATH",
+        help="Render a report for one artifact package path.",
+    )
+    artifact_render_parser.add_argument(
+        "--state",
+        dest="bucket",
+        choices=("candidates", "accepted", "rejected"),
+        help="Limit rendering to one artifact state.",
+    )
+    artifact_render_parser.add_argument(
+        "--bucket",
+        dest="bucket",
+        choices=artifact_storage.ARTIFACT_STORAGE_BUCKETS,
+        help="Limit rendering to one bucket.",
+    )
+    artifact_render_parser.add_argument(
+        "--format",
+        choices=("markdown", "json"),
+        default="markdown",
+        help="Output format (default: markdown).",
+    )
+    artifact_render_parser.add_argument(
+        "--out",
+        metavar="PATH",
+        help="Write rendered report to /tmp/... or project-runtime/reports|rendered/...",
+    )
+    artifact_render_parser.add_argument(
+        "--confirm-write",
+        action="store_true",
+        help="Accepted for compatibility; explicit --out report writes are path-policy guarded.",
+    )
+    artifact_render_parser.set_defaults(handler=artifact.run_render)
 
     record_result_parser = subparsers.add_parser(
         "record-result",
