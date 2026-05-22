@@ -274,7 +274,7 @@ def write_workspace(root: Path, overrides: dict[str, str] | None = None) -> list
         "\n".join(
             [
                 '{"event":"agent_result_received","agent_instance_id":"agent_TASK_DEMO_001_attempt_001","task_id":"TASK_DEMO_001","result_ref":"project-runtime/results/worker/RESULT_TASK_DEMO_001_ATTEMPT_001.md","reuse_allowed":false}',
-                '{"event":"agent_instance_terminated","agent_instance_id":"agent_TASK_DEMO_001_attempt_001","task_id":"TASK_DEMO_001","reuse_allowed":false}',
+                '{"event":"agent_instance_terminated","event_type":"AGENT_TERMINATED","agent_instance_id":"agent_TASK_DEMO_001_attempt_001","task_id":"TASK_DEMO_001","agent_role":"developer","role":"developer","result_ref":"project-runtime/results/worker/RESULT_TASK_DEMO_001_ATTEMPT_001.md","termination_reason":"result_submitted","terminated_at":"2026-05-17T10:31:00Z","created_by":"orchestrator","next_allowed_action":"audit_route","reuse_allowed":false}',
             ]
         )
         + "\n",

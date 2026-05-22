@@ -7,6 +7,7 @@ import json
 import re
 import sys
 from dataclasses import dataclass
+from datetime import datetime
 from pathlib import Path
 from typing import Iterable
 
@@ -135,6 +136,15 @@ class Finding:
         if mode is not None:
             payload["mode"] = mode
         return payload
+
+
+@dataclass
+class AgentEventRecord:
+    events: set[str]
+    task_ids: set[str]
+    reuse_violations: set[str]
+    result_events: list[dict[str, object]]
+    termination_events: list[dict[str, object]]
 
 
 def _runtime_path(root: Path, name: str) -> Path:
@@ -1134,9 +1144,34 @@ def _result_files(root: Path) -> list[Path]:
     return paths
 
 
-def _agent_events(root: Path) -> dict[str, dict[str, set[str]]]:
+TERMINATION_EVENT_TYPES = {
+    "AGENT_TERMINATED",
+    "AUDITOR_AGENT_TERMINATED",
+    "agent_instance_terminated",
+    "auditor_agent_terminated",
+}
+
+
+RESULT_RECEIVED_EVENT_TYPES = {
+    "RESULT_RECEIVED",
+    "AUDIT_RESULT_RECEIVED",
+    "agent_result_received",
+}
+
+
+def _empty_agent_event_record() -> AgentEventRecord:
+    return AgentEventRecord(set(), set(), set(), [], [])
+
+
+def _payload_event_types(payload: dict[str, object]) -> set[str]:
+    event = str(payload.get("event", "")).strip()
+    event_type = str(payload.get("event_type", "")).strip()
+    return {value for value in (event, event_type) if value}
+
+
+def _agent_events(root: Path) -> dict[str, AgentEventRecord]:
     events_path = root / "project-runtime" / "agents" / "instances.jsonl"
-    events: dict[str, dict[str, set[str]]] = {}
+    events: dict[str, AgentEventRecord] = {}
     if not events_path.exists():
         return events
 
@@ -1150,22 +1185,134 @@ def _agent_events(root: Path) -> dict[str, dict[str, set[str]]]:
             payload = json.loads(raw_line)
         except json.JSONDecodeError:
             continue
+        if not isinstance(payload, dict):
+            continue
         agent_id = str(payload.get("agent_instance_id", "")).strip()
-        event = str(payload.get("event", "")).strip()
-        if agent_id and event:
-            record = events.setdefault(
-                agent_id,
-                {"events": set(), "task_ids": set(), "reuse_violations": set()},
-            )
-            record["events"].add(event)
+        payload_types = _payload_event_types(payload)
+        if agent_id and payload_types:
+            record = events.setdefault(agent_id, _empty_agent_event_record())
+            record.events.update(payload_types)
             task_id = str(payload.get("task_id", payload.get("TASK_ID", ""))).strip()
             if task_id:
-                record["task_ids"].add(task_id)
+                record.task_ids.add(task_id)
             reuse_allowed = str(payload.get("reuse_allowed", "")).strip().lower()
-            if event == "agent_result_received" and reuse_allowed != "false":
+            if payload_types & RESULT_RECEIVED_EVENT_TYPES:
+                record.result_events.append(payload)
+            if (payload_types & RESULT_RECEIVED_EVENT_TYPES) and reuse_allowed != "false":
                 raw_reuse_allowed = str(payload.get("reuse_allowed", "MISSING")).strip()
-                record["reuse_violations"].add(raw_reuse_allowed or "MISSING")
+                record.reuse_violations.add(raw_reuse_allowed or "MISSING")
+            if payload_types & TERMINATION_EVENT_TYPES:
+                record.termination_events.append(payload)
     return events
+
+
+def _parse_timestamp(value: object) -> datetime | None:
+    if not isinstance(value, str) or not value.strip():
+        return None
+    text = value.strip()
+    if text.endswith("Z"):
+        text = f"{text[:-1]}+00:00"
+    try:
+        return datetime.fromisoformat(text)
+    except ValueError:
+        return None
+
+
+def _expected_termination_event_type(role: str) -> str:
+    return "AUDITOR_AGENT_TERMINATED" if role == "auditor" else "AGENT_TERMINATED"
+
+
+def _expected_next_allowed_action(role: str) -> str:
+    return "checkpoint_preflight" if role == "auditor" else "audit_route"
+
+
+def _matching_result_received_event(
+    event_record: AgentEventRecord,
+    *,
+    task_id: str,
+    result_ref: str,
+) -> dict[str, object] | None:
+    for event in event_record.result_events:
+        if str(event.get("task_id", "")).strip() != task_id:
+            continue
+        if str(event.get("result_ref", "")).strip() != result_ref:
+            continue
+        return event
+    return None
+
+
+def _valid_termination_event(
+    root: Path,
+    event_record: AgentEventRecord,
+    *,
+    result_fields: dict[str, str],
+    result_ref: str,
+) -> tuple[bool, str]:
+    task_id = result_fields.get("TASK_ID", "")
+    role = result_fields.get("ROLE", "")
+    expected_type = _expected_termination_event_type(role)
+    if len(event_record.termination_events) > 1:
+        return False, "multiple termination events for agent instance"
+    matching_received_event = _matching_result_received_event(
+        event_record,
+        task_id=task_id,
+        result_ref=result_ref,
+    )
+    received_timestamp = None
+    if matching_received_event is not None:
+        received_timestamp = _parse_timestamp(
+            matching_received_event.get("timestamp_utc")
+            or matching_received_event.get("received_at")
+        )
+
+    matches: list[dict[str, object]] = []
+    issues: list[str] = []
+    for event in event_record.termination_events:
+        event_type = str(event.get("event_type", "")).strip()
+        if event_type != expected_type:
+            issues.append(f"event_type={event_type or 'MISSING'}")
+            continue
+        if str(event.get("task_id", "")).strip() != task_id:
+            issues.append(f"task_id={str(event.get('task_id', 'MISSING')).strip() or 'MISSING'}")
+            continue
+        if str(event.get("result_ref", "")).strip() != result_ref:
+            issues.append(f"result_ref={str(event.get('result_ref', 'MISSING')).strip() or 'MISSING'}")
+            continue
+        if not (root / result_ref).is_file():
+            issues.append(f"result_ref_missing={result_ref}")
+            continue
+        event_role = str(event.get("agent_role") or event.get("role", "")).strip()
+        if event_role != role:
+            issues.append(f"agent_role={event_role or 'MISSING'}")
+            continue
+        if str(event.get("termination_reason", "")).strip() != "result_submitted":
+            issues.append("termination_reason invalid")
+            continue
+        if str(event.get("created_by", "")).strip() != "orchestrator":
+            issues.append("created_by invalid")
+            continue
+        if str(event.get("next_allowed_action", "")).strip() != _expected_next_allowed_action(role):
+            issues.append("next_allowed_action invalid")
+            continue
+        if str(event.get("reuse_allowed", "false")).strip().lower() not in {"false", ""}:
+            issues.append("reuse_allowed invalid")
+            continue
+        terminated_timestamp = _parse_timestamp(
+            event.get("terminated_at") or event.get("timestamp_utc")
+        )
+        if received_timestamp is not None and terminated_timestamp is not None:
+            if terminated_timestamp < received_timestamp:
+                issues.append("terminated_at before result receipt")
+                continue
+        matches.append(event)
+
+    if len(matches) == 1:
+        return True, ""
+    if len(matches) > 1:
+        return False, "multiple matching termination events"
+    if issues:
+        return False, "; ".join(sorted(set(issues)))
+    return False, "missing AGENT_TERMINATED event"
 
 
 def _check_agent_lifecycle(root: Path) -> list[Finding]:
@@ -1190,6 +1337,7 @@ def _check_agent_lifecycle(root: Path) -> list[Finding]:
         fields = {occurrence.key: occurrence.value for occurrence in _parse_occurrences(text)}
         relpath = _rel(root, path)
         agent_id = fields.get("AGENT_INSTANCE_ID", "")
+        task_id = fields.get("TASK_ID", "")
         reuse_allowed = fields.get("REUSE_ALLOWED", "")
         termination_required = fields.get("AGENT_TERMINATION_REQUIRED", "")
         missing_fields = [
@@ -1231,43 +1379,45 @@ def _check_agent_lifecycle(root: Path) -> list[Finding]:
                 )
             )
         if not _is_none(agent_id):
-            event_record = events.get(
-                agent_id,
-                {"events": set(), "task_ids": set(), "reuse_violations": set()},
+            event_record = events.get(agent_id, _empty_agent_event_record())
+            termination_valid, termination_issue = _valid_termination_event(
+                root,
+                event_record,
+                result_fields=fields,
+                result_ref=relpath,
             )
-            terminated = "agent_instance_terminated" in event_record["events"]
-            if not terminated:
+            if not termination_valid:
                 findings.append(
                     Finding(
                         "LINT_AGENT_003",
                         "error",
-                        "Agent termination event is missing after RESULT",
+                        "Agent termination event is missing or invalid after RESULT",
                         (
                             f"{relpath} records AGENT_INSTANCE_ID={agent_id} "
-                            "but no agent_instance_terminated event exists."
+                            f"but no matching AGENT_TERMINATED event exists: {termination_issue}."
                         ),
                         [relpath, "project-runtime/agents/instances.jsonl"],
-                        "Terminate the profile agent and record agent_instance_terminated with reuse_allowed=false.",
+                        "Run aso lifecycle terminate-agent --root WORKSPACE --from-result RESULT_PATH --confirm-write.",
                     )
                 )
-            if event_record["reuse_violations"]:
+            if event_record.reuse_violations:
                 findings.append(
                     Finding(
                         "LINT_AGENT_004",
                         "error",
                         "Agent result event allows reuse",
-                        f"agent_result_received for {agent_id} has reuse_allowed={', '.join(sorted(event_record['reuse_violations']))}.",
+                        f"agent_result_received for {agent_id} has reuse_allowed={', '.join(sorted(event_record.reuse_violations))}.",
                         ["project-runtime/agents/instances.jsonl"],
                         "Record result receipt with reuse_allowed=false and terminate the agent instance.",
                     )
                 )
-            if len(event_record["task_ids"]) > 1:
+            if len(event_record.task_ids) > 1:
                 findings.append(
                     Finding(
                         "LINT_AGENT_006",
                         "error",
                         "Agent instance is associated with multiple task ids",
-                        f"{agent_id} appears with task ids: {', '.join(sorted(event_record['task_ids']))}.",
+                        f"{agent_id} appears with task ids: {', '.join(sorted(event_record.task_ids))}.",
                         ["project-runtime/agents/instances.jsonl"],
                         "Use one fresh AGENT_INSTANCE_ID per task.",
                     )

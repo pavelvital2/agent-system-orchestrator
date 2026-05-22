@@ -196,7 +196,7 @@ def write_runtime(root: Path, overrides: dict[str, str] | None = None) -> list[P
                 '{"event":"agent_instance_created","agent_instance_id":"agent_TASK_DEMO_001_attempt_001","task_id":"TASK_DEMO_001","role":"developer","timestamp_utc":"2026-05-17T10:00:00Z"}',
                 '{"event":"agent_task_dispatched","agent_instance_id":"agent_TASK_DEMO_001_attempt_001","task_id":"TASK_DEMO_001","role":"developer","timestamp_utc":"2026-05-17T10:01:00Z"}',
                 '{"event":"agent_result_received","agent_instance_id":"agent_TASK_DEMO_001_attempt_001","task_id":"TASK_DEMO_001","result_ref":"project-runtime/results/worker/RESULT_TASK_DEMO_001_ATTEMPT_001.md","reuse_allowed":false,"timestamp_utc":"2026-05-17T10:30:00Z"}',
-                '{"event":"agent_instance_terminated","agent_instance_id":"agent_TASK_DEMO_001_attempt_001","task_id":"TASK_DEMO_001","reuse_allowed":false,"timestamp_utc":"2026-05-17T10:31:00Z"}',
+                '{"event":"agent_instance_terminated","event_type":"AGENT_TERMINATED","agent_instance_id":"agent_TASK_DEMO_001_attempt_001","task_id":"TASK_DEMO_001","agent_role":"developer","role":"developer","result_ref":"project-runtime/results/worker/RESULT_TASK_DEMO_001_ATTEMPT_001.md","termination_reason":"result_submitted","terminated_at":"2026-05-17T10:31:00Z","created_by":"orchestrator","next_allowed_action":"audit_route","reuse_allowed":false,"timestamp_utc":"2026-05-17T10:31:00Z"}',
             ]
         )
         + "\n",
@@ -659,7 +659,7 @@ AGENT_TERMINATION_REQUIRED: false
                 "\n".join(
                     [
                         '{"event":"agent_result_received","agent_instance_id":"agent_TASK_DEMO_001_attempt_001","task_id":"TASK_DEMO_001","reuse_allowed":true}',
-                        '{"event":"agent_instance_terminated","agent_instance_id":"agent_TASK_DEMO_001_attempt_001","task_id":"TASK_OTHER_002","reuse_allowed":false}',
+                        '{"event":"agent_instance_terminated","event_type":"AGENT_TERMINATED","agent_instance_id":"agent_TASK_DEMO_001_attempt_001","task_id":"TASK_OTHER_002","agent_role":"developer","role":"developer","result_ref":"project-runtime/results/worker/RESULT_TASK_DEMO_001_ATTEMPT_001.md","termination_reason":"result_submitted","terminated_at":"2026-05-17T10:31:00Z","created_by":"orchestrator","next_allowed_action":"audit_route","reuse_allowed":false}',
                     ]
                 )
                 + "\n",
@@ -671,6 +671,54 @@ AGENT_TERMINATION_REQUIRED: false
             self.assertEqual(result.returncode, 1, result.stdout + result.stderr)
             self.assertIn("LINT_AGENT_004", result.stdout)
             self.assertIn("LINT_AGENT_006", result.stdout)
+
+    def test_lint_agent_003_rejects_wrong_termination_task_id(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            write_runtime(root)
+            instances_path = root / "project-runtime" / "agents" / "instances.jsonl"
+            text = instances_path.read_text(encoding="utf-8")
+            instances_path.write_text(text.replace('"task_id":"TASK_DEMO_001","agent_role"', '"task_id":"TASK_OTHER_002","agent_role"'), encoding="utf-8")
+            json_out = root / "lint.json"
+
+            result = run_lint(root, "--json-out", str(json_out))
+            report = json.loads(json_out.read_text(encoding="utf-8"))
+
+            self.assertEqual(result.returncode, 1, result.stdout + result.stderr)
+            agent_findings = [item for item in report["findings"] if item["rule_id"] == "LINT_AGENT_003"]
+            self.assertEqual(len(agent_findings), 1)
+            self.assertIn("task_id=TASK_OTHER_002", agent_findings[0]["details"])
+
+    def test_lint_agent_003_rejects_wrong_termination_result_ref(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            write_runtime(root)
+            instances_path = root / "project-runtime" / "agents" / "instances.jsonl"
+            text = instances_path.read_text(encoding="utf-8")
+            old_ref = '"result_ref":"project-runtime/results/worker/RESULT_TASK_DEMO_001_ATTEMPT_001.md"'
+            before_termination_ref, termination_ref_and_after = text.split(old_ref, 1)
+            instances_path.write_text(
+                before_termination_ref
+                + old_ref
+                + termination_ref_and_after.replace(
+                    old_ref,
+                    '"result_ref":"project-runtime/results/worker/RESULT_TASK_OTHER_002_ATTEMPT_001.md"',
+                    1,
+                ),
+                encoding="utf-8",
+            )
+            json_out = root / "lint.json"
+
+            result = run_lint(root, "--json-out", str(json_out))
+            report = json.loads(json_out.read_text(encoding="utf-8"))
+
+            self.assertEqual(result.returncode, 1, result.stdout + result.stderr)
+            agent_findings = [item for item in report["findings"] if item["rule_id"] == "LINT_AGENT_003"]
+            self.assertEqual(len(agent_findings), 1)
+            self.assertIn(
+                "result_ref=project-runtime/results/worker/RESULT_TASK_OTHER_002_ATTEMPT_001.md",
+                agent_findings[0]["details"],
+            )
 
     def test_lint_errors_when_result_references_task_missing_from_registry(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
@@ -696,7 +744,7 @@ AGENT_TERMINATION_REQUIRED: false
                 root,
                 [
                     '{"event":"agent_result_received","agent_instance_id":"audit_TASK_DEMO_001_attempt_001","task_id":"TASK_DEMO_001","result_ref":"project-runtime/results/audit/AUDIT_RESULT_TASK_DEMO_001_ATTEMPT_001.md","reuse_allowed":false}',
-                    '{"event":"agent_instance_terminated","agent_instance_id":"audit_TASK_DEMO_001_attempt_001","task_id":"TASK_DEMO_001","reuse_allowed":false}',
+                    '{"event":"auditor_agent_terminated","event_type":"AUDITOR_AGENT_TERMINATED","agent_instance_id":"audit_TASK_DEMO_001_attempt_001","task_id":"TASK_DEMO_001","agent_role":"auditor","role":"auditor","result_ref":"project-runtime/results/audit/AUDIT_RESULT_TASK_DEMO_001_ATTEMPT_001.md","termination_reason":"result_submitted","terminated_at":"2026-05-17T10:31:00Z","created_by":"orchestrator","next_allowed_action":"checkpoint_preflight","reuse_allowed":false}',
                 ],
             )
 
@@ -721,7 +769,7 @@ AGENT_TERMINATION_REQUIRED: false
                 root,
                 [
                     '{"event":"agent_result_received","agent_instance_id":"audit_TASK_DEMO_001_attempt_001","task_id":"TASK_DEMO_001","result_ref":"project-runtime/results/audit/AUDIT_RESULT_TASK_DEMO_001_ATTEMPT_001.md","reuse_allowed":false}',
-                    '{"event":"agent_instance_terminated","agent_instance_id":"audit_TASK_DEMO_001_attempt_001","task_id":"TASK_DEMO_001","reuse_allowed":false}',
+                    '{"event":"auditor_agent_terminated","event_type":"AUDITOR_AGENT_TERMINATED","agent_instance_id":"audit_TASK_DEMO_001_attempt_001","task_id":"TASK_DEMO_001","agent_role":"auditor","role":"auditor","result_ref":"project-runtime/results/audit/AUDIT_RESULT_TASK_DEMO_001_ATTEMPT_001.md","termination_reason":"result_submitted","terminated_at":"2026-05-17T10:31:00Z","created_by":"orchestrator","next_allowed_action":"checkpoint_preflight","reuse_allowed":false}',
                 ],
             )
 
