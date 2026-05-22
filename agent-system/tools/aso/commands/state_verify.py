@@ -27,6 +27,10 @@ ENVELOPE_FIELDS = (
 )
 ENVELOPE_FIELD_SET = set(ENVELOPE_FIELDS)
 RFC3339_UTC_RE = re.compile(r"^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z$")
+RESULT_PACKAGE_REF_RE = re.compile(r"^project-runtime/artifacts/accepted/RESULT_PACKAGE_[A-Za-z0-9_:-]+\.json$")
+AUDIT_RESULT_PACKAGE_REF_RE = re.compile(r"^project-runtime/artifacts/accepted/AUDIT_RESULT_PACKAGE_[A-Za-z0-9_:-]+\.json$")
+WORKER_RESULT_REF_RE = re.compile(r"^project-runtime/results/worker/RESULT_[A-Za-z0-9_:-]+_ATTEMPT_[0-9]+\.md$")
+AUDIT_RESULT_REF_RE = re.compile(r"^project-runtime/results/audit/AUDIT_RESULT_[A-Za-z0-9_:-]+_ATTEMPT_[0-9]+\.md$")
 NONE_VALUES = {"", "NONE", "none", "null", "UNKNOWN"}
 PROFILE_ROLES = {
     "requirements_analyst",
@@ -1130,6 +1134,107 @@ def _reference_findings(sidecars: dict[str, dict[str, object]]) -> list[Finding]
     return findings
 
 
+def _artifact_package_findings(sidecars: dict[str, dict[str, object]]) -> list[Finding]:
+    accepted = _content(sidecars, "ACCEPTED_ARTIFACTS")
+    artifacts = accepted.get("artifacts")
+    if not isinstance(artifacts, list):
+        return []
+
+    findings: list[Finding] = []
+    for index, artifact in enumerate(artifacts):
+        if not isinstance(artifact, dict):
+            continue
+        artifact_type = artifact.get("artifact_type")
+        if artifact_type not in {"RESULT_PACKAGE", "AUDIT_RESULT_PACKAGE"}:
+            continue
+        path = "project-runtime/state/ACCEPTED_ARTIFACTS.json"
+        prefix = f"content.artifacts[{index}]"
+        status = artifact.get("status")
+        artifact_ref = artifact.get("artifact_ref")
+        source_result_ref = artifact.get("source_result_ref")
+        audit_ref = artifact.get("audit_ref")
+        if status != "accepted":
+            findings.append(
+                _finding(
+                    "SIDECAR_ARTIFACT_PACKAGE_STATUS_INVALID",
+                    "Artifact package entry is not accepted",
+                    f"ACCEPTED_ARTIFACTS.{prefix}.status={status!r} must be 'accepted' for {artifact_type}.",
+                    path,
+                    f"{prefix}.status",
+                    "Only accepted RESULT/AUDIT_RESULT package entries may participate in audit routing or checkpoint evidence.",
+                )
+            )
+        if artifact_type == "RESULT_PACKAGE":
+            if not isinstance(artifact_ref, str) or not RESULT_PACKAGE_REF_RE.fullmatch(artifact_ref):
+                findings.append(
+                    _finding(
+                        "SIDECAR_RESULT_PACKAGE_REF_INVALID",
+                        "RESULT package artifact_ref is invalid",
+                        f"ACCEPTED_ARTIFACTS.{prefix}.artifact_ref={artifact_ref!r} must reference an accepted RESULT package JSON artifact.",
+                        path,
+                        f"{prefix}.artifact_ref",
+                        "Use project-runtime/artifacts/accepted/RESULT_PACKAGE_<TASK_ID>_ATTEMPT_<N>.json.",
+                    )
+                )
+            if not isinstance(source_result_ref, str) or not WORKER_RESULT_REF_RE.fullmatch(source_result_ref):
+                findings.append(
+                    _finding(
+                        "SIDECAR_RESULT_PACKAGE_SOURCE_REF_INVALID",
+                        "RESULT package source_result_ref is invalid",
+                        f"ACCEPTED_ARTIFACTS.{prefix}.source_result_ref={source_result_ref!r} must reference the worker RESULT.",
+                        path,
+                        f"{prefix}.source_result_ref",
+                        "Use project-runtime/results/worker/RESULT_<TASK_ID>_ATTEMPT_<N>.md.",
+                    )
+                )
+            if audit_ref != "NONE":
+                findings.append(
+                    _finding(
+                        "SIDECAR_RESULT_PACKAGE_AUDIT_REF_INVALID",
+                        "RESULT package audit_ref must not preclaim audit evidence",
+                        f"ACCEPTED_ARTIFACTS.{prefix}.audit_ref={audit_ref!r} must be 'NONE' before audit.",
+                        path,
+                        f"{prefix}.audit_ref",
+                        "Leave audit_ref as NONE until an AUDIT_RESULT package is accepted.",
+                    )
+                )
+        if artifact_type == "AUDIT_RESULT_PACKAGE":
+            if not isinstance(artifact_ref, str) or not AUDIT_RESULT_PACKAGE_REF_RE.fullmatch(artifact_ref):
+                findings.append(
+                    _finding(
+                        "SIDECAR_AUDIT_RESULT_PACKAGE_REF_INVALID",
+                        "AUDIT_RESULT package artifact_ref is invalid",
+                        f"ACCEPTED_ARTIFACTS.{prefix}.artifact_ref={artifact_ref!r} must reference an accepted AUDIT_RESULT package JSON artifact.",
+                        path,
+                        f"{prefix}.artifact_ref",
+                        "Use project-runtime/artifacts/accepted/AUDIT_RESULT_PACKAGE_<TASK_ID>_ATTEMPT_<N>.json.",
+                    )
+                )
+            if not isinstance(source_result_ref, str) or not WORKER_RESULT_REF_RE.fullmatch(source_result_ref):
+                findings.append(
+                    _finding(
+                        "SIDECAR_AUDIT_RESULT_PACKAGE_SOURCE_REF_INVALID",
+                        "AUDIT_RESULT package source_result_ref is invalid",
+                        f"ACCEPTED_ARTIFACTS.{prefix}.source_result_ref={source_result_ref!r} must reference the audited worker RESULT.",
+                        path,
+                        f"{prefix}.source_result_ref",
+                        "Use project-runtime/results/worker/RESULT_<TASK_ID>_ATTEMPT_<N>.md.",
+                    )
+                )
+            if not isinstance(audit_ref, str) or not AUDIT_RESULT_REF_RE.fullmatch(audit_ref):
+                findings.append(
+                    _finding(
+                        "SIDECAR_AUDIT_RESULT_PACKAGE_AUDIT_REF_INVALID",
+                        "AUDIT_RESULT package audit_ref is invalid",
+                        f"ACCEPTED_ARTIFACTS.{prefix}.audit_ref={audit_ref!r} must reference the AUDIT_RESULT.",
+                        path,
+                        f"{prefix}.audit_ref",
+                        "Use project-runtime/results/audit/AUDIT_RESULT_<TASK_ID>_ATTEMPT_<N>.md.",
+                    )
+                )
+    return findings
+
+
 def _truthy_refs(value: object) -> bool:
     if not isinstance(value, list):
         return False
@@ -1199,6 +1304,7 @@ def _report(root: Path, strict: bool) -> tuple[dict[str, object], int]:
             loaded_sidecars[spec.sidecar_type] = payload
 
     findings.extend(_reference_findings(loaded_sidecars))
+    findings.extend(_artifact_package_findings(loaded_sidecars))
     findings.extend(_checkpoint_findings(loaded_sidecars))
     findings = sorted(findings, key=lambda item: (item.severity != "error", item.rule_id, item.path, item.field, item.details))
     summary = _summary(findings)

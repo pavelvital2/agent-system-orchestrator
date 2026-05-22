@@ -117,6 +117,9 @@ project-runtime/results/worker/RESULT_<TASK_ID>_ATTEMPT_<N>.md
 This schema does not create that storage location and does not record or route
 the result. It only defines the structured package contract.
 
+`acceptance_status: accepted` is required before a worker RESULT package may be
+used as the pre-audit acceptance gate for creating an auditor route.
+
 ## AUDIT_RESULT Package
 
 `audit_result_package.schema.json` defines a structured envelope for auditor
@@ -136,6 +139,11 @@ project-runtime/results/audit/AUDIT_RESULT_<TASK_ID>_ATTEMPT_<N>.md
 `audited_result_ref` identifies the worker RESULT that was audited. The schema
 requires the mandatory audit check labels from
 `agent-system/03_templates/AGENT_RESULT_TEMPLATE.md`.
+
+`audited_result_package_ref` identifies the accepted RESULT package that
+authorized the audit route. `audited_result_acceptance_status` must be
+`accepted`; an AUDIT_RESULT package must not claim to audit an unaccepted or
+malformed RESULT package.
 
 This schema does not authorize checkpoint execution, commit, push, publication,
 or state mutation.

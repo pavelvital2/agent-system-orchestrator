@@ -13,6 +13,8 @@
     "runtime_schema_version",
     "artifact_package_schema_version",
     "audit_result_ref",
+    "audited_result_package_ref",
+    "audited_result_acceptance_status",
     "audited_result_ref",
     "task_id",
     "agent_instance_id",
@@ -48,6 +50,12 @@
       "type": "string",
       "pattern": "^project-runtime/results/audit/AUDIT_RESULT_[A-Za-z0-9_:-]+_ATTEMPT_[0-9]+\\.md$"
     },
+    "audited_result_package_ref": {
+      "type": "string",
+      "minLength": 1,
+      "pattern": "^project-runtime/artifacts/accepted/RESULT_PACKAGE_[A-Za-z0-9_:-]+\\.json$"
+    },
+    "audited_result_acceptance_status": { "type": "string", "const": "accepted" },
     "audited_result_ref": {
       "type": "string",
       "pattern": "^project-runtime/results/worker/RESULT_[A-Za-z0-9_:-]+_ATTEMPT_[0-9]+\\.md$"

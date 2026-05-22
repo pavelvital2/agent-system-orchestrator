@@ -41,6 +41,124 @@ def report_from(result: subprocess.CompletedProcess[str]) -> dict[str, object]:
     return json.loads(result.stdout)
 
 
+def add_accepted_result_package(
+    root: Path,
+    result_path: Path,
+    *,
+    artifact_ref: str = "project-runtime/artifacts/accepted/RESULT_PACKAGE_TASK_DEMO_001_ATTEMPT_001.json",
+    package_payload: dict[str, object] | None = None,
+    write_package: bool = True,
+) -> None:
+    result_ref = result_path.relative_to(root).as_posix()
+    default_payload: dict[str, object] = {
+        "package_id": "RESULT_PACKAGE_TASK_DEMO_001_ATTEMPT_001",
+        "schema_version": "1.0.0",
+        "package_version": "3.7.0",
+        "governance_ruleset_version": "3.7.0",
+        "runtime_schema_version": "3.1.0",
+        "artifact_package_schema_version": "1.0.0",
+        "result_ref": result_ref,
+        "task_id": "TASK_DEMO_001",
+        "agent_instance_id": "agent_TASK_DEMO_001_attempt_001",
+        "role": "developer",
+        "status": "pass",
+        "acceptance_status": "accepted",
+        "changed_files": "NONE",
+        "created_files": "NONE",
+        "deleted_files": "NONE",
+        "structured_artifacts": "NONE",
+        "commands_run": "NONE",
+        "tests_run": "NONE",
+        "evidence": ["fixture"],
+        "scope_verification": ["fixture"],
+        "forbidden_changes_check": ["fixture"],
+        "risks": "NONE",
+        "limitations": "NONE",
+        "blockers": "NONE",
+        "gaps": "NONE",
+        "next_recommended_action": ["CREATE_AUDITOR"],
+        "reuse_allowed": False,
+        "agent_termination_required": True,
+        "validation": {
+            "status": "passed",
+            "validators": ["fixture"],
+            "notes": "NONE",
+        },
+    }
+    if write_package:
+        package_path = Path(artifact_ref) if Path(artifact_ref).is_absolute() else root / artifact_ref
+        package_path.parent.mkdir(parents=True, exist_ok=True)
+        package_path.write_text(
+            json.dumps(
+                default_payload if package_payload is None else package_payload,
+                indent=2,
+                sort_keys=True,
+            )
+            + "\n",
+            encoding="utf-8",
+        )
+    accepted_path = root / "project-runtime" / "state" / "ACCEPTED_ARTIFACTS.json"
+    accepted_path.parent.mkdir(parents=True, exist_ok=True)
+    accepted_path.write_text(
+        json.dumps(
+            {
+                "schema_version": "2.0.0",
+                "sidecar_type": "ACCEPTED_ARTIFACTS",
+                "markdown_source": "project-runtime/ACCEPTED_ARTIFACTS.md",
+                "state_revision": 1,
+                "updated_at": "2026-01-01T00:00:00Z",
+                "updated_by": "orchestrator",
+                "content": {
+                    "artifacts": [
+                        {
+                            "accepted_at": "2026-01-01T00:00:00Z",
+                            "artifact_id": "RESULT_PACKAGE_TASK_DEMO_001_ATTEMPT_001",
+                            "artifact_ref": artifact_ref,
+                            "artifact_type": "RESULT_PACKAGE",
+                            "audit_ref": "NONE",
+                            "branch": "NONE",
+                            "checkpoint_ref": "NONE",
+                            "commit_hash": "NONE",
+                            "notes": "fixture",
+                            "push_status": "not_required",
+                            "source_result_ref": result_ref,
+                            "source_task": "TASK_DEMO_001",
+                            "status": "accepted",
+                            "superseded_by": "NONE",
+                            "supersedes": "NONE",
+                            "updated_at": "2026-01-01T00:00:00Z",
+                        }
+                    ]
+                },
+            },
+            indent=2,
+            sort_keys=True,
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+
+
+def terminate_agent(root: Path, result_path: Path) -> subprocess.CompletedProcess[str]:
+    return subprocess.run(
+        [
+            sys.executable,
+            str(CLI),
+            "lifecycle",
+            "terminate-agent",
+            "--root",
+            str(root),
+            "--from-result",
+            str(result_path),
+            "--confirm-write",
+        ],
+        check=False,
+        text=True,
+        capture_output=True,
+        cwd=REPO_ROOT,
+    )
+
+
 class RecordResultCommandTests(unittest.TestCase):
     def test_help_declares_dry_run_read_only(self) -> None:
         result = subprocess.run(
@@ -104,6 +222,7 @@ class RecordResultCommandTests(unittest.TestCase):
             result_path = root / "project-runtime" / "results" / "worker" / "RESULT_TASK_DEMO_001_ATTEMPT_001.md"
             result_path.parent.mkdir(parents=True)
             shutil.copyfile(fixture("RESULT_TASK_DEMO_001_PASS.md"), result_path)
+            add_accepted_result_package(root, result_path)
 
             before = run_record_result(result_path, "--strict")
             terminate = subprocess.run(
@@ -134,6 +253,144 @@ class RecordResultCommandTests(unittest.TestCase):
         self.assertEqual(after.returncode, 0, after.stdout + after.stderr)
         after_report = report_from(after)
         self.assertEqual(after_report["recommended_next_action"], "CREATE_AUDITOR")
+
+    def test_profile_pass_inside_workspace_requires_accepted_result_package_before_audit_route(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            result_path = root / "project-runtime" / "results" / "worker" / "RESULT_TASK_DEMO_001_ATTEMPT_001.md"
+            result_path.parent.mkdir(parents=True)
+            shutil.copyfile(fixture("RESULT_TASK_DEMO_001_PASS.md"), result_path)
+            terminate = subprocess.run(
+                [
+                    sys.executable,
+                    str(CLI),
+                    "lifecycle",
+                    "terminate-agent",
+                    "--root",
+                    str(root),
+                    "--from-result",
+                    str(result_path),
+                    "--confirm-write",
+                ],
+                check=False,
+                text=True,
+                capture_output=True,
+                cwd=REPO_ROOT,
+            )
+            result = run_record_result(result_path, "--strict")
+
+        self.assertEqual(terminate.returncode, 0, terminate.stdout + terminate.stderr)
+        self.assertEqual(result.returncode, 1, result.stdout + result.stderr)
+        report = report_from(result)
+        self.assertEqual(report["recommended_next_action"], "NONE")
+        self.assertFalse(report["checkpoint_candidate"])
+        rule_ids = {item["rule_id"] for item in report["validation_errors"]}
+        self.assertIn("RESULT_PACKAGE_ACCEPTANCE_001", rule_ids)
+
+    def test_strict_rejects_raw_accepted_artifact_ref_for_result_package(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            result_path = root / "project-runtime" / "results" / "worker" / "RESULT_TASK_DEMO_001_ATTEMPT_001.md"
+            result_path.parent.mkdir(parents=True)
+            shutil.copyfile(fixture("RESULT_TASK_DEMO_001_PASS.md"), result_path)
+            add_accepted_result_package(
+                root,
+                result_path,
+                artifact_ref="project-runtime/artifacts/raw/RESULT_PACKAGE_TASK_DEMO_001_ATTEMPT_001.json",
+            )
+            terminate = terminate_agent(root, result_path)
+            result = run_record_result(result_path, "--strict")
+
+        self.assertEqual(terminate.returncode, 0, terminate.stdout + terminate.stderr)
+        self.assertEqual(result.returncode, 1, result.stdout + result.stderr)
+        report = report_from(result)
+        self.assertEqual(report["recommended_next_action"], "NONE")
+        rule_ids = {item["rule_id"] for item in report["validation_errors"]}
+        self.assertIn("RESULT_PACKAGE_ACCEPTANCE_001", rule_ids)
+        evidence = "; ".join(item["evidence"] for item in report["validation_errors"])
+        self.assertIn("project-runtime/artifacts/accepted/RESULT_PACKAGE_*.json", evidence)
+
+    def test_strict_rejects_absolute_out_of_workspace_accepted_artifact_ref(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp) / "workspace"
+            outside = Path(tmp) / "outside" / "RESULT_PACKAGE_TASK_DEMO_001_ATTEMPT_001.json"
+            result_path = root / "project-runtime" / "results" / "worker" / "RESULT_TASK_DEMO_001_ATTEMPT_001.md"
+            result_path.parent.mkdir(parents=True)
+            shutil.copyfile(fixture("RESULT_TASK_DEMO_001_PASS.md"), result_path)
+            add_accepted_result_package(root, result_path, artifact_ref=str(outside))
+            terminate = terminate_agent(root, result_path)
+            result = run_record_result(result_path, "--strict")
+
+        self.assertEqual(terminate.returncode, 0, terminate.stdout + terminate.stderr)
+        self.assertEqual(result.returncode, 1, result.stdout + result.stderr)
+        report = report_from(result)
+        self.assertEqual(report["recommended_next_action"], "NONE")
+        rule_ids = {item["rule_id"] for item in report["validation_errors"]}
+        self.assertIn("RESULT_PACKAGE_ACCEPTANCE_001", rule_ids)
+        evidence = "; ".join(item["evidence"] for item in report["validation_errors"])
+        self.assertIn("workspace-relative", evidence)
+
+    def test_strict_rejects_out_of_workspace_accepted_package_resolution(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp) / "workspace"
+            outside = Path(tmp) / "outside"
+            result_path = root / "project-runtime" / "results" / "worker" / "RESULT_TASK_DEMO_001_ATTEMPT_001.md"
+            result_path.parent.mkdir(parents=True)
+            outside.mkdir(parents=True)
+            shutil.copyfile(fixture("RESULT_TASK_DEMO_001_PASS.md"), result_path)
+            accepted_dir = root / "project-runtime" / "artifacts" / "accepted"
+            accepted_dir.parent.mkdir(parents=True)
+            accepted_dir.symlink_to(outside, target_is_directory=True)
+            add_accepted_result_package(
+                root,
+                result_path,
+                artifact_ref="project-runtime/artifacts/accepted/RESULT_PACKAGE_TASK_DEMO_001_ATTEMPT_001.json",
+            )
+            terminate = terminate_agent(root, result_path)
+            result = run_record_result(result_path, "--strict")
+
+        self.assertEqual(terminate.returncode, 0, terminate.stdout + terminate.stderr)
+        self.assertEqual(result.returncode, 1, result.stdout + result.stderr)
+        report = report_from(result)
+        self.assertEqual(report["recommended_next_action"], "NONE")
+        rule_ids = {item["rule_id"] for item in report["validation_errors"]}
+        self.assertIn("RESULT_PACKAGE_ACCEPTANCE_001", rule_ids)
+        evidence = "; ".join(item["evidence"] for item in report["validation_errors"])
+        self.assertIn("outside workspace", evidence)
+
+    def test_strict_rejects_incomplete_accepted_result_package_json(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            result_path = root / "project-runtime" / "results" / "worker" / "RESULT_TASK_DEMO_001_ATTEMPT_001.md"
+            result_path.parent.mkdir(parents=True)
+            shutil.copyfile(fixture("RESULT_TASK_DEMO_001_PASS.md"), result_path)
+            add_accepted_result_package(
+                root,
+                result_path,
+                package_payload={
+                    "package_id": "RESULT_PACKAGE_TASK_DEMO_001_ATTEMPT_001",
+                    "result_ref": result_path.relative_to(root).as_posix(),
+                    "task_id": "TASK_DEMO_001",
+                    "agent_instance_id": "agent_TASK_DEMO_001_attempt_001",
+                    "role": "developer",
+                    "status": "pass",
+                    "acceptance_status": "accepted",
+                    "reuse_allowed": False,
+                    "agent_termination_required": True,
+                },
+            )
+            terminate = terminate_agent(root, result_path)
+            result = run_record_result(result_path, "--strict")
+
+        self.assertEqual(terminate.returncode, 0, terminate.stdout + terminate.stderr)
+        self.assertEqual(result.returncode, 1, result.stdout + result.stderr)
+        report = report_from(result)
+        self.assertEqual(report["recommended_next_action"], "NONE")
+        rule_ids = {item["rule_id"] for item in report["validation_errors"]}
+        self.assertIn("RESULT_PACKAGE_ACCEPTANCE_001", rule_ids)
+        evidence = "; ".join(item["evidence"] for item in report["validation_errors"])
+        self.assertIn("schema_version is required", evidence)
+        self.assertIn("validation is required", evidence)
 
     def test_audit_pass_routes_to_checkpoint_preflight_candidate(self) -> None:
         result = run_record_result(fixture("AUDIT_RESULT_TASK_DEMO_001_PASS.md"), "--strict")

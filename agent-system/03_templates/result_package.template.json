@@ -10,6 +10,7 @@
   "agent_instance_id": "agent_TASK_TEMPLATE_attempt_001",
   "role": "developer",
   "status": "pass",
+  "acceptance_status": "accepted",
   "changed_files": "NONE",
   "created_files": "NONE",
   "deleted_files": "NONE",

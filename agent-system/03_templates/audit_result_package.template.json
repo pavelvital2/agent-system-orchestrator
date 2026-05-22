@@ -6,6 +6,8 @@
   "runtime_schema_version": "3.1.0",
   "artifact_package_schema_version": "1.0.0",
   "audit_result_ref": "project-runtime/results/audit/AUDIT_RESULT_TASK_TEMPLATE_ATTEMPT_001.md",
+  "audited_result_package_ref": "project-runtime/artifacts/accepted/RESULT_PACKAGE_TASK_TEMPLATE_ATTEMPT_001.json",
+  "audited_result_acceptance_status": "accepted",
   "audited_result_ref": "project-runtime/results/worker/RESULT_TASK_TEMPLATE_ATTEMPT_001.md",
   "task_id": "TASK_TEMPLATE",
   "agent_instance_id": "audit_TASK_TEMPLATE_attempt_001",

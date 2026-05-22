@@ -203,6 +203,7 @@ class ArtifactPackageSchemaTests(unittest.TestCase):
         invalid_result = copy.deepcopy(template)
         invalid_result["reuse_allowed"] = True
         invalid_result["agent_termination_required"] = False
+        invalid_result["acceptance_status"] = "draft"
 
         validator = Draft202012Validator(schema)
         errors = sorted(validator.iter_errors(invalid_result), key=lambda error: list(error.path))
@@ -210,6 +211,22 @@ class ArtifactPackageSchemaTests(unittest.TestCase):
 
         self.assertIn("False was expected", messages)
         self.assertIn("True was expected", messages)
+        self.assertIn("'accepted' was expected", messages)
+
+    @unittest.skipIf(Draft202012Validator is None, "jsonschema is not installed")
+    def test_audit_result_package_requires_accepted_result_package_reference(self) -> None:
+        schema = self._load_json("agent-system/09_validators/schemas/audit_result_package.schema.json")
+        template = self._load_json("agent-system/03_templates/audit_result_package.template.json")
+        invalid_audit = copy.deepcopy(template)
+        invalid_audit["audited_result_package_ref"] = "project-runtime/artifacts/raw/RESULT_PACKAGE_TASK_TEMPLATE_ATTEMPT_001.json"
+        invalid_audit["audited_result_acceptance_status"] = "candidate"
+
+        validator = Draft202012Validator(schema)
+        errors = sorted(validator.iter_errors(invalid_audit), key=lambda error: list(error.path))
+        messages = "\n".join(error.message for error in errors)
+
+        self.assertIn("does not match", messages)
+        self.assertIn("'accepted' was expected", messages)
 
 
 if __name__ == "__main__":

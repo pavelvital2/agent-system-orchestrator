@@ -63,6 +63,52 @@ BYPASS_ACTION_MARKERS = {
     "TESTER",
     "TECHNICAL_WRITER",
 }
+ACCEPTED_ARTIFACTS_RELPATH = "project-runtime/state/ACCEPTED_ARTIFACTS.json"
+ACCEPTED_RESULT_PACKAGE_REF_RE = re.compile(
+    r"^project-runtime/artifacts/accepted/RESULT_PACKAGE_[A-Za-z0-9_:-]+\.json$"
+)
+RESULT_PACKAGE_TYPES = {"RESULT_PACKAGE", "result_package"}
+REQUIRED_RESULT_PACKAGE_FIELDS = (
+    "package_id",
+    "schema_version",
+    "package_version",
+    "governance_ruleset_version",
+    "runtime_schema_version",
+    "artifact_package_schema_version",
+    "result_ref",
+    "task_id",
+    "agent_instance_id",
+    "role",
+    "status",
+    "acceptance_status",
+    "changed_files",
+    "created_files",
+    "deleted_files",
+    "structured_artifacts",
+    "commands_run",
+    "tests_run",
+    "evidence",
+    "scope_verification",
+    "forbidden_changes_check",
+    "risks",
+    "limitations",
+    "blockers",
+    "gaps",
+    "next_recommended_action",
+    "reuse_allowed",
+    "agent_termination_required",
+    "validation",
+)
+RESULT_PACKAGE_CONSTANTS = {
+    "schema_version": "1.0.0",
+    "package_version": "3.7.0",
+    "governance_ruleset_version": "3.7.0",
+    "runtime_schema_version": "3.1.0",
+    "artifact_package_schema_version": "1.0.0",
+    "acceptance_status": "accepted",
+    "reuse_allowed": False,
+    "agent_termination_required": True,
+}
 
 
 @dataclass(frozen=True)
@@ -201,6 +247,113 @@ def _result_root(path: Path) -> Path | None:
     return None
 
 
+def _result_ref(root: Path, result_path: Path) -> str:
+    try:
+        return result_path.resolve(strict=False).relative_to(root.resolve(strict=False)).as_posix()
+    except ValueError:
+        return result_path.as_posix()
+
+
+def _load_json_object(path: Path) -> tuple[dict[str, Any] | None, str]:
+    try:
+        payload = json.loads(path.read_text(encoding="utf-8"))
+    except OSError as exc:
+        return None, str(exc)
+    except json.JSONDecodeError as exc:
+        return None, f"{exc.msg} at line {exc.lineno} column {exc.colno}"
+    if not isinstance(payload, dict):
+        return None, "JSON root is not an object"
+    return payload, ""
+
+
+def _accepted_package_path(root: Path, package_ref: str) -> tuple[Path | None, str]:
+    if not package_ref or package_ref.upper() == "NONE":
+        return None, "artifact_ref is missing"
+    if Path(package_ref).is_absolute():
+        return None, "artifact_ref must be workspace-relative"
+    if not ACCEPTED_RESULT_PACKAGE_REF_RE.fullmatch(package_ref):
+        return None, "artifact_ref must match project-runtime/artifacts/accepted/RESULT_PACKAGE_*.json"
+
+    root_resolved = root.resolve(strict=False)
+    package_path = root / package_ref
+    try:
+        package_path.resolve(strict=False).relative_to(root_resolved)
+    except ValueError:
+        return None, "artifact_ref resolves outside workspace"
+    return package_path, ""
+
+
+def _result_package_errors(root: Path, package_ref: str, fields: dict[str, Any], result_ref: str) -> list[str]:
+    package_path, path_error = _accepted_package_path(root, package_ref)
+    if path_error:
+        return [path_error]
+    assert package_path is not None
+    payload, error = _load_json_object(package_path)
+    if error:
+        return [f"{package_ref}: {error}"]
+
+    expected = {
+        "result_ref": result_ref,
+        "task_id": _as_string(fields, "TASK_ID"),
+        "agent_instance_id": _as_string(fields, "AGENT_INSTANCE_ID"),
+        "role": _as_string(fields, "ROLE"),
+        "status": _as_string(fields, "STATUS"),
+        "acceptance_status": "accepted",
+        "reuse_allowed": False,
+        "agent_termination_required": True,
+    }
+    errors: list[str] = []
+    for field in REQUIRED_RESULT_PACKAGE_FIELDS:
+        if field not in payload:
+            errors.append(f"{field} is required")
+    for field, expected_value in RESULT_PACKAGE_CONSTANTS.items():
+        if payload.get(field) != expected_value:
+            errors.append(f"{field}={payload.get(field)!r}, expected {expected_value!r}")
+    package_id = payload.get("package_id")
+    if not isinstance(package_id, str) or not re.fullmatch(r"RESULT_PACKAGE_[A-Za-z0-9_:-]+", package_id):
+        errors.append("package_id must match RESULT_PACKAGE_*")
+    for field, expected_value in expected.items():
+        if payload.get(field) != expected_value:
+            errors.append(f"{field}={payload.get(field)!r}, expected {expected_value!r}")
+    return errors
+
+
+def _accepted_result_package(root: Path, fields: dict[str, Any], result_path: Path) -> tuple[bool, str]:
+    accepted_path = root / ACCEPTED_ARTIFACTS_RELPATH
+    payload, error = _load_json_object(accepted_path)
+    if error:
+        return False, f"{ACCEPTED_ARTIFACTS_RELPATH}: {error}"
+
+    content = payload.get("content")
+    artifacts = content.get("artifacts") if isinstance(content, dict) else None
+    if not isinstance(artifacts, list):
+        return False, f"{ACCEPTED_ARTIFACTS_RELPATH}.content.artifacts must be a list"
+
+    task_id = _as_string(fields, "TASK_ID")
+    result_ref = _result_ref(root, result_path)
+    candidate_details: list[str] = []
+    for index, artifact in enumerate(artifacts):
+        if not isinstance(artifact, dict):
+            continue
+        if artifact.get("status") != "accepted":
+            continue
+        if artifact.get("artifact_type") not in RESULT_PACKAGE_TYPES:
+            continue
+        if artifact.get("source_task") != task_id:
+            continue
+        if artifact.get("source_result_ref") != result_ref:
+            candidate_details.append(f"content.artifacts[{index}].source_result_ref={artifact.get('source_result_ref')!r}")
+            continue
+        package_ref = str(artifact.get("artifact_ref", "")).strip()
+        package_errors = _result_package_errors(root, package_ref, fields, result_ref)
+        if package_errors:
+            return False, "; ".join(package_errors)
+        return True, package_ref
+
+    detail = "; ".join(candidate_details) if candidate_details else f"no accepted RESULT_PACKAGE entry for {result_ref}"
+    return False, detail
+
+
 def _has_matching_termination(root: Path, fields: dict[str, Any], result_path: Path) -> bool:
     events_path = root / "project-runtime" / "agents" / "instances.jsonl"
     if not events_path.is_file():
@@ -333,6 +486,8 @@ def _route(
     strict: bool,
     *,
     terminated: bool,
+    accepted_result_package: bool,
+    accepted_result_package_detail: str,
 ) -> tuple[str, bool, list[Rule], list[Rule]]:
     status = _as_string(fields, "STATUS")
     role = _as_string(fields, "ROLE")
@@ -406,6 +561,16 @@ def _route(
                 )
             )
             return "NONE", False, blocking_rules, validation_errors
+        if strict and not accepted_result_package:
+            validation_errors.append(
+                Rule(
+                    "RESULT_PACKAGE_ACCEPTANCE_001",
+                    "error",
+                    "Profile RESULT cannot route to audit before its RESULT package is accepted.",
+                    accepted_result_package_detail,
+                )
+            )
+            return "NONE", False, blocking_rules, validation_errors
         if strict and _contains_bypass_claim(claims):
             validation_errors.append(
                 Rule(
@@ -463,14 +628,20 @@ def build_report(result_path: Path, strict: bool) -> tuple[dict[str, Any], int]:
     recommended_next_action = "NONE"
     checkpoint_candidate = False
     blocking_rules: list[Rule] = []
+    accepted_result_package = True
+    accepted_result_package_detail = "not required"
     if not io_errors and not validation_errors:
         root = _result_root(result_path)
         terminated = True if root is None else _has_matching_termination(root, fields, result_path)
+        if root is not None and result_type == "profile_result" and role in PROFILE_ROLES:
+            accepted_result_package, accepted_result_package_detail = _accepted_result_package(root, fields, result_path)
         recommended_next_action, checkpoint_candidate, blocking_rules, route_errors = _route(
             fields,
             result_type,
             strict,
             terminated=terminated,
+            accepted_result_package=accepted_result_package,
+            accepted_result_package_detail=accepted_result_package_detail,
         )
         validation_errors.extend(route_errors)
 
@@ -498,6 +669,8 @@ def build_report(result_path: Path, strict: bool) -> tuple[dict[str, Any], int]:
         "evidence": {
             "agent_instance_id": _as_string(fields, "AGENT_INSTANCE_ID"),
             "task": _as_string(fields, "TASK"),
+            "accepted_result_package": accepted_result_package,
+            "accepted_result_package_ref": accepted_result_package_detail if accepted_result_package else "",
             "source_result_refs": _source_result_refs(fields),
             "claimed_next_actions": _claimed_next_actions(fields),
             "parsed_fields": sorted(fields),

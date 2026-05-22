@@ -98,6 +98,37 @@ class StateMigrateCommandTests(unittest.TestCase):
             rule_ids = {finding["rule_id"] for finding in report["findings"]}
             self.assertIn("SIDECAR_ENUM_VALUE_INVALID", rule_ids)
 
+    def test_migration_rejects_malformed_legacy_result_package_artifact(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = copy_fixture(tmp, "valid_workspace")
+            path = root / "project-runtime" / "state" / "ACCEPTED_ARTIFACTS.json"
+            payload = json.loads(path.read_text(encoding="utf-8"))
+            content = payload["content"]
+            self.assertIsInstance(content, dict)
+            artifacts = content["artifacts"]
+            self.assertIsInstance(artifacts, list)
+            artifacts[0].update(
+                {
+                    "artifact_type": "RESULT_PACKAGE",
+                    "artifact_ref": "project-runtime/artifacts/raw/RESULT_PACKAGE_TASK_FIXTURE_STATE_001_ATTEMPT_1.json",
+                    "source_result_ref": "project-runtime/results/RESULT_TASK_FIXTURE_STATE_001.md",
+                    "audit_ref": "project-runtime/results/audit/AUDIT_RESULT_TASK_FIXTURE_STATE_001_ATTEMPT_1.md",
+                    "status": "draft",
+                }
+            )
+            path.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+
+            result = run_aso("state", "migrate", "--root", str(root), "--dry-run")
+
+            self.assertEqual(result.returncode, 1, result.stdout + result.stderr)
+            report = json.loads(result.stdout)
+            self.assertEqual(report["status"], "failed")
+            rule_ids = {finding["rule_id"] for finding in report["findings"]}
+            self.assertIn("SIDECAR_ARTIFACT_PACKAGE_STATUS_INVALID", rule_ids)
+            self.assertIn("SIDECAR_RESULT_PACKAGE_REF_INVALID", rule_ids)
+            self.assertIn("SIDECAR_RESULT_PACKAGE_SOURCE_REF_INVALID", rule_ids)
+            self.assertIn("SIDECAR_RESULT_PACKAGE_AUDIT_REF_INVALID", rule_ids)
+
     def test_writes_require_confirm_write(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             root = copy_fixture(tmp, "valid_workspace")
