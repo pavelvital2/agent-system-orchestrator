@@ -75,6 +75,13 @@ about product behavior, business use, workflow, interface behavior, content,
 priority, acceptance expectations, or operational constraints in plain
 language.
 
+The canonical one-question-at-a-time routing semantics are defined in:
+
+```text
+agent-system/05_gap_flow/OWNER_QUESTION_FLOW.md
+agent-system/03_templates/OWNER_QUESTION_QUEUE_TEMPLATE.md
+```
+
 Allowed owner question categories:
 
 - functionality;
@@ -119,6 +126,33 @@ status
 
 Owner interaction is sequential. Internal gap registers may list many gaps, but
 ASO must present audited owner questions one card at a time.
+
+Owner question cards use this corrected P4 flow status model:
+
+```text
+draft
+audit_pending
+ready_for_owner
+presented
+answered
+integrated
+superseded
+blocked
+```
+
+Only `ready_for_owner` cards with independent audit pass evidence are eligible
+for owner presentation. ASO must select at most one next question. If no card is
+eligible, ASO waits or reports that no owner question is ready. If more than one
+card is current/presented or deterministic ordering is ambiguous, ASO fails
+closed and blocks presentation until the queue is corrected.
+
+An owner answer must link to the same `QUESTION_ID` and `GAP_ID` as the
+presented question card. Answer recording requires explicit owner confirmation;
+ASO must not infer an answer from the recommendation, silence, default option,
+or raw chat context. An answer moves the card to `answered`, but the linked gap
+is not closed until accepted source-of-truth update and closure evidence exist,
+unless the answer record itself is the accepted bounded source-of-truth and that
+is recorded.
 
 ## Gap Blocking Policy
 

@@ -52,6 +52,19 @@ When a GAP requires owner input, the orchestrator must create or update an owner
 agent-system/03_templates/OWNER_DECISION_TEMPLATE.md
 ```
 
+For corrected P4 design/gap governance, owner questions are routed through the
+one-question-at-a-time flow defined in:
+
+```text
+agent-system/05_gap_flow/OWNER_QUESTION_FLOW.md
+agent-system/03_templates/OWNER_QUESTION_QUEUE_TEMPLATE.md
+```
+
+ASO may route existing audited owner question cards and record explicitly
+confirmed owner decisions. ASO must not semantically read TZ, generate owner
+questions, present unaudited cards, or select more than one current owner
+question.
+
 The owner decision record must include:
 
 - question;
