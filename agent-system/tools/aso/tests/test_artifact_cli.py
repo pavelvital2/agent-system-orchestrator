@@ -218,6 +218,16 @@ class ArtifactCliTests(unittest.TestCase):
         self.assertEqual(report["status"], "written")
         self.assertTrue(candidate.exists())
         self.assertEqual(json.loads(accepted.read_text(encoding="utf-8")), self.manifest)
+        self.assertEqual(report["receipt"]["artifact_id"], "RESULT_TASK_DEMO_ATTEMPT_001")
+        self.assertEqual(report["receipt_ref"], "project-runtime/receipts/artifacts/TASK_DEMO/RESULT_TASK_DEMO_ATTEMPT_001.acceptance.json")
+        self.assertTrue((self.root / report["receipt_ref"]).exists())
+        events = [
+            json.loads(line)
+            for line in (self.root / "project-runtime/agents/instances.jsonl").read_text(encoding="utf-8").splitlines()
+        ]
+        self.assertEqual(events[0]["event_type"], "ARTIFACT_ACCEPTED")
+        self.assertEqual(events[0]["artifact_id"], "RESULT_TASK_DEMO_ATTEMPT_001")
+        self.assertEqual(events[0]["receipt_ref"], report["receipt_ref"])
 
     def test_artifact_reject_spec_form_uses_rejected_bucket(self) -> None:
         self._write_candidate()

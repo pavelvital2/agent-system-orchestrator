@@ -19,14 +19,20 @@ P4.1 fixes these workflow/runtime issues:
 - runtime Markdown view materialization, where legacy human-readable
   `project-runtime/*.md` compatibility views are derived from canonical JSON
   sidecars under `project-runtime/state/`;
-- profile-agent lifecycle termination recording, so a termination event exists
-  after RESULT and before audit routing.
+- profile-agent lifecycle termination recording, so accepted artifact receipt
+  evidence and a termination event exist after RESULT and before audit routing
+  readiness.
 
 The required lifecycle sequence is:
 
 ```text
-RESULT_RECEIVED -> AGENT_TERMINATED -> AUDIT_ROUTE_READY
+RESULT_RECEIVED -> ARTIFACT_ACCEPTED -> AGENT_TERMINATED -> AUDIT_ROUTE_READY
 ```
+
+`ARTIFACT_ACCEPTED`, `AGENT_TERMINATED`, and `AUDIT_ROUTE_READY` events
+reference accepted artifact ids and artifact acceptance receipt refs. This is
+receipt/order evidence only; it does not add daemon behavior, live dispatch, or
+checkpoint execution.
 
 ## Authority Boundary
 

@@ -8,9 +8,8 @@ artifacts, candidate artifacts, accepted artifacts, and rejected artifacts.
 It applies to ASO package version `3.7.0`, governance ruleset version `3.7.0`,
 Runtime Schema version `3.1.0`, and Artifact Package Schema version `1.0.0`.
 
-This contract does not create CLI accept/reject/render/list commands, lifecycle
-integration, context-pack integration, checkpoint execution, commit behavior,
-push behavior, daemon behavior, live dispatch, or product-intake behavior.
+This contract does not create checkpoint execution, commit behavior, push
+behavior, daemon behavior, live dispatch, or product-intake behavior.
 
 ## Storage Roots
 
@@ -40,6 +39,12 @@ accepted project truth.
 acceptance decision. Acceptance records must reference their candidate and
 source evidence.
 
+Artifact acceptance writes an immutable acceptance receipt under
+`project-runtime/receipts/artifacts/` and records an `ARTIFACT_ACCEPTED`
+lifecycle event with `artifact_id`, accepted artifact ref, and receipt ref.
+That event is an ordering prerequisite for `AGENT_TERMINATED` and
+`AUDIT_ROUTE_READY`; it is not live dispatch or checkpoint execution.
+
 `rejected` stores immutable rejected artifact records after a governed rejection
 decision. Rejection records must reference their candidate and source evidence
 and must preserve the rejection rationale or evidence reference.
@@ -57,9 +62,10 @@ The flow records classification. It must not mutate or delete the prior raw or
 candidate artifact. Accepted and rejected records are new immutable records that
 refer back to their evidence chain.
 
-The P5 storage model only defines paths and expectations. A later governed task
-may add CLI commands or lifecycle integration for submitting, validating,
-accepting, rejecting, rendering, or listing artifacts.
+The P5 storage model defines paths and expectations. Governed CLI validation,
+classification, listing, rendering, and lifecycle acceptance receipt
+integration may operate on these paths without adding live dispatch,
+checkpoint execution, daemon behavior, or product-intake behavior.
 
 ## Safe Path Requirements
 

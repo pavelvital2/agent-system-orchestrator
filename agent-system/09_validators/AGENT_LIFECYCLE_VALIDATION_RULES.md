@@ -26,6 +26,7 @@ before_dispatch:
 after_agent_result:
   validate RESULT lifecycle fields
   validate agent result-received event when present
+  require accepted artifact receipt before termination
   require agent termination event before lifecycle completion
 
 before_next_task_dispatch:
@@ -72,20 +73,43 @@ AGENT_TERMINATION_REQUIRED
 
 `TASK_ID` must match the dispatched task and must not contradict `TASK`.
 
-### AGENT_LIFECYCLE_003: termination event required
+### AGENT_LIFECYCLE_003: ordered completion events required
 
 After a RESULT exists for an `AGENT_INSTANCE_ID`, the lifecycle is incomplete
-until `project-runtime/agents/instances.jsonl` contains:
+until `project-runtime/agents/instances.jsonl` contains this ordered sequence:
 
 ```text
-event: agent_instance_terminated
+event_type: RESULT_RECEIVED
 agent_instance_id: <same AGENT_INSTANCE_ID>
 task_id: <same TASK_ID>
+result_ref: <same RESULT ref>
 reuse_allowed: false
+
+event_type: ARTIFACT_ACCEPTED
+agent_instance_id: <same AGENT_INSTANCE_ID>
+task_id: <same TASK_ID>
+artifact_id: <accepted artifact id>
+artifact_ref: <accepted artifact ref>
+receipt_ref: <artifact acceptance receipt ref>
+
+event_type: AGENT_TERMINATED
+agent_instance_id: <same AGENT_INSTANCE_ID>
+task_id: <same TASK_ID>
+result_ref: <same RESULT ref>
+artifact_ids: <accepted artifact ids>
+artifact_receipt_refs: <artifact acceptance receipt refs>
+reuse_allowed: false
+
+event_type: AUDIT_ROUTE_READY
+agent_instance_id: <same AGENT_INSTANCE_ID>
+task_id: <same TASK_ID>
+artifact_ids: <accepted artifact ids>
+artifact_receipt_refs: <artifact acceptance receipt refs>
 ```
 
 Inline prose such as "agent closed" is not a substitute for the machine-readable
-termination event.
+termination event. `AUDIT_ROUTE_READY` is a readiness marker only and must not
+perform live auditor dispatch or checkpoint execution.
 
 ### AGENT_LIFECYCLE_004: result-received reuse flag
 

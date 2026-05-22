@@ -31,8 +31,21 @@ deletion.
 ## Завершение агента
 
 Агент считается lifecycle-complete только после того, как оркестратор получил
-RESULT, записал событие `agent_result_received`, а затем записал
-`agent_instance_terminated` для того же `AGENT_INSTANCE_ID`.
+RESULT, записал событие `agent_result_received`, принял связанный artifact
+package с receipt через `ARTIFACT_ACCEPTED`, затем записал
+`agent_instance_terminated` для того же `AGENT_INSTANCE_ID`, и после этого
+записал `AUDIT_ROUTE_READY`.
+
+Обязательный порядок:
+
+```text
+RESULT_RECEIVED -> ARTIFACT_ACCEPTED -> AGENT_TERMINATED -> AUDIT_ROUTE_READY
+```
+
+Lifecycle events after RESULT receipt must reference the accepted
+`artifact_id`, accepted artifact ref, and artifact acceptance receipt ref.
+`AUDIT_ROUTE_READY` records readiness only; it must not dispatch an auditor,
+execute a checkpoint, or run live daemon behavior.
 
 После этого:
 
@@ -41,8 +54,8 @@ RESULT, записал событие `agent_result_received`, а затем з�
 - для новой задачи создаётся новый агент.
 - RESULT должен быть сохранён или получить deterministic `RESULT_REF`;
 - handoff, если он использовался, должен быть помечен как consumed через `CONSUMED_BY_RESULT`.
-- переход к следующей задаче или lifecycle phase запрещён до
-  orchestrator-recorded termination event.
+- переход к audit routing запрещён до accepted artifact receipt,
+  orchestrator-recorded termination event, and `AUDIT_ROUTE_READY`.
 
 ## Запреты
 

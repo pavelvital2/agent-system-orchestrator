@@ -83,37 +83,48 @@ Expected replay result: strict lint fails before materialization with
 --confirm-write`, derived Markdown views exist, include the derived-view
 banner, and strict workspace lint/doctor pass.
 
-## Incident 003: RESULT Routed Before Agent Termination
+## Incident 003: RESULT Routed Before Artifact Receipt And Agent Termination
 
 Failure mode:
 
 ```text
 A profile-agent RESULT could proceed toward audit routing without an explicit
-agent termination lifecycle event.
+artifact acceptance receipt and agent termination lifecycle event.
 ```
 
 Corrected behavior:
 
 ```text
-RESULT_RECEIVED -> AGENT_TERMINATED -> AUDIT_ROUTE_READY
+RESULT_RECEIVED -> ARTIFACT_ACCEPTED -> AGENT_TERMINATED -> AUDIT_ROUTE_READY
 ```
+
+`ARTIFACT_ACCEPTED`, `AGENT_TERMINATED`, and `AUDIT_ROUTE_READY` reference the
+accepted artifact id and artifact acceptance receipt. The replay remains local
+and deterministic; it does not add daemon behavior, live dispatch, checkpoint
+execution, or product-intake behavior.
 
 Coverage:
 
 ```text
 TESTS:
-- agent-system/tools/aso/tests/test_lifecycle.py::LifecycleCommandTests::test_terminate_agent_writes_agent_terminated_event
+- agent-system/tools/aso/tests/test_lifecycle.py::LifecycleCommandTests::test_lifecycle_records_result_acceptance_termination_and_audit_ready_order
 - agent-system/tools/aso/tests/test_lifecycle.py::LifecycleCommandTests::test_terminate_agent_requires_existing_result
+- agent-system/tools/aso/tests/test_artifact_cli.py::ArtifactCliTests::test_artifact_accept_confirm_write_copies_candidate_without_deleting_source
 - agent-system/tools/aso/tests/test_lint.py lifecycle LINT_AGENT_003 positive and negative guards
 COMMANDS:
+- python3 agent-system/tools/aso/aso.py lifecycle receive-result --root WORKSPACE --from-result project-runtime/results/worker/RESULT_TASK_DEMO_001_ATTEMPT_001.md --confirm-write
+- python3 agent-system/tools/aso/aso.py artifact accept --root WORKSPACE --package project-runtime/artifacts/candidates/TASK_DEMO_001/manifest.json --confirm-write
 - python3 agent-system/tools/aso/aso.py lifecycle terminate-agent --root WORKSPACE --from-result project-runtime/results/worker/RESULT_TASK_DEMO_001_ATTEMPT_001.md --confirm-write
 - python3 agent-system/tools/aso/aso.py lint --root WORKSPACE --mode workspace --strict
 ```
 
 Expected replay result: a RESULT without a matching termination event fails
-`LINT_AGENT_003`; a matching `AGENT_TERMINATED` event with the same task,
-agent instance, and result reference allows strict workspace lint to proceed.
-Wrong task IDs or result references remain blockers.
+`LINT_AGENT_003`; lifecycle termination refuses to write until a matching
+`RESULT_RECEIVED` event and `ARTIFACT_ACCEPTED` event with receipt exist. A
+matching ordered sequence with the same task, agent instance, result reference,
+artifact id, and receipt reference allows strict workspace lint to proceed.
+Wrong task IDs, result references, or missing artifact receipt references remain
+blockers in the lifecycle materializer.
 
 ## Release Validation Commands
 

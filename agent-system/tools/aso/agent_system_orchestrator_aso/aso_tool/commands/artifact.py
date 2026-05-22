@@ -7,6 +7,7 @@ import json
 import re
 import shutil
 import sys
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
@@ -59,6 +60,10 @@ ALLOWED_ROLES = (
     "owner",
 )
 ALLOWED_STATUSES = ("pass", "fail", "blocked", "gap", "pending")
+
+
+def _now_utc() -> str:
+    return datetime.now(timezone.utc).replace(microsecond=0).isoformat().replace("+00:00", "Z")
 
 
 def _json_bytes(payload: dict[str, object]) -> str:
@@ -369,6 +374,61 @@ def _classification_plan(root: Path, source_text: str, target_bucket: str, confi
     return report, source_abs, target_path
 
 
+def _acceptance_receipt_payload(
+    root: Path,
+    source_path: Path,
+    target_path: Path,
+) -> tuple[dict[str, object], dict[str, object], str]:
+    manifest, _findings = _read_json_object(source_path)
+    manifest = manifest or {}
+    artifact_id = _as_text(manifest.get("artifact_id")) or target_path.stem.upper()
+    task_id = _as_text(manifest.get("task_id"))
+    role = _as_text(manifest.get("role"))
+    producer = manifest.get("producer") if isinstance(manifest.get("producer"), dict) else {}
+    agent_instance_id = _as_text(producer.get("agent_instance_id") if isinstance(producer, dict) else "")
+    accepted_at = _now_utc()
+    source_ref = source_path.relative_to(root).as_posix()
+    target_ref = target_path.relative_to(root).as_posix()
+    receipt_relpath = f"project-runtime/receipts/artifacts/{task_id or 'UNKNOWN'}/{artifact_id}.acceptance.json"
+    receipt = {
+        "receipt_type": "ARTIFACT_ACCEPTANCE_RECEIPT",
+        "receipt_schema_version": "1.0.0",
+        "receipt_id": f"ARTIFACT_ACCEPTED-{artifact_id}",
+        "artifact_id": artifact_id,
+        "artifact_ref": target_ref,
+        "candidate_ref": source_ref,
+        "task_id": task_id,
+        "role": role,
+        "agent_instance_id": agent_instance_id,
+        "accepted_at": accepted_at,
+        "accepted_by": "orchestrator",
+        "storage_transition": "candidates -> accepted",
+    }
+    event = {
+        "event": "artifact_accepted",
+        "event_type": "ARTIFACT_ACCEPTED",
+        "task_id": task_id,
+        "role": role,
+        "agent_role": role,
+        "agent_instance_id": agent_instance_id,
+        "artifact_id": artifact_id,
+        "artifact_ref": target_ref,
+        "candidate_ref": source_ref,
+        "receipt_ref": receipt_relpath,
+        "accepted_at": accepted_at,
+        "timestamp_utc": accepted_at,
+        "created_by": "orchestrator",
+    }
+    return receipt, event, receipt_relpath
+
+
+def _append_lifecycle_event(root: Path, event: dict[str, object]) -> None:
+    events_path = root / "project-runtime" / "agents" / "instances.jsonl"
+    events_path.parent.mkdir(parents=True, exist_ok=True)
+    with events_path.open("a", encoding="utf-8") as handle:
+        handle.write(json.dumps(event, sort_keys=True) + "\n")
+
+
 def _run_classify(args: argparse.Namespace, target_bucket: str) -> int:
     root = Path(args.root).expanduser()
     report, source_path, target_path = _classification_plan(
@@ -385,10 +445,21 @@ def _run_classify(args: argparse.Namespace, target_bucket: str) -> int:
         try:
             target_path.parent.mkdir(parents=True, exist_ok=True)
             shutil.copyfile(source_path, target_path)
+            if target_bucket == "accepted":
+                receipt, event, receipt_relpath = _acceptance_receipt_payload(root, source_path, target_path)
+                receipt_path = root / receipt_relpath
+                receipt_path.parent.mkdir(parents=True, exist_ok=True)
+                receipt_path.write_text(_json_bytes(receipt), encoding="utf-8")
+                _append_lifecycle_event(root, event)
+                report["receipt"] = receipt
+                report["receipt_ref"] = receipt_relpath
+                report["event"] = event
         except OSError as exc:
             print(f"aso {report['command']}: failed to write artifact: {exc}", file=sys.stderr)
             return EXIT_IO_ERROR
         files_written.append(target_path.relative_to(root).as_posix())
+        if target_bucket == "accepted" and isinstance(report.get("receipt_ref"), str):
+            files_written.append(str(report["receipt_ref"]))
         report["status"] = "written"
         report["read_only"] = False
         report["mutations_performed"] = True

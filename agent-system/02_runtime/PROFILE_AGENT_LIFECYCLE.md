@@ -28,7 +28,9 @@ AGENT_INSTANCE_CREATED
 AGENT_TASK_DISPATCHED
 AGENT_RESULT_RECEIVED
 AGENT_RESULT_VALIDATED
+ARTIFACT_ACCEPTED
 AGENT_INSTANCE_TERMINATED
+AUDIT_ROUTE_READY
 ```
 
 The forbidden state is:
@@ -55,11 +57,24 @@ profile-agent instance are:
 {"event":"agent_instance_created","agent_instance_id":"agent_TASK_DEMO_001_attempt_001","task_id":"TASK_DEMO_001","role":"developer","timestamp_utc":"2026-05-17T10:00:00Z"}
 {"event":"agent_task_dispatched","agent_instance_id":"agent_TASK_DEMO_001_attempt_001","task_id":"TASK_DEMO_001","role":"developer","timestamp_utc":"2026-05-17T10:01:00Z"}
 {"event":"agent_result_received","agent_instance_id":"agent_TASK_DEMO_001_attempt_001","task_id":"TASK_DEMO_001","result_ref":"project-runtime/results/worker/RESULT_TASK_DEMO_001_ATTEMPT_001.md","reuse_allowed":false,"timestamp_utc":"2026-05-17T10:30:00Z"}
-{"event":"agent_instance_terminated","agent_instance_id":"agent_TASK_DEMO_001_attempt_001","task_id":"TASK_DEMO_001","reuse_allowed":false,"timestamp_utc":"2026-05-17T10:31:00Z"}
+{"event":"artifact_accepted","event_type":"ARTIFACT_ACCEPTED","agent_instance_id":"agent_TASK_DEMO_001_attempt_001","task_id":"TASK_DEMO_001","artifact_id":"RESULT_TASK_DEMO_001_ATTEMPT_001","artifact_ref":"project-runtime/artifacts/accepted/TASK_DEMO_001/manifest.json","receipt_ref":"project-runtime/receipts/artifacts/TASK_DEMO_001/RESULT_TASK_DEMO_001_ATTEMPT_001.acceptance.json","timestamp_utc":"2026-05-17T10:30:30Z"}
+{"event":"agent_instance_terminated","event_type":"AGENT_TERMINATED","agent_instance_id":"agent_TASK_DEMO_001_attempt_001","task_id":"TASK_DEMO_001","result_ref":"project-runtime/results/worker/RESULT_TASK_DEMO_001_ATTEMPT_001.md","artifact_ids":["RESULT_TASK_DEMO_001_ATTEMPT_001"],"artifact_receipt_refs":["project-runtime/receipts/artifacts/TASK_DEMO_001/RESULT_TASK_DEMO_001_ATTEMPT_001.acceptance.json"],"reuse_allowed":false,"timestamp_utc":"2026-05-17T10:31:00Z"}
+{"event":"audit_route_ready","event_type":"AUDIT_ROUTE_READY","agent_instance_id":"agent_TASK_DEMO_001_attempt_001","task_id":"TASK_DEMO_001","result_ref":"project-runtime/results/worker/RESULT_TASK_DEMO_001_ATTEMPT_001.md","artifact_ids":["RESULT_TASK_DEMO_001_ATTEMPT_001"],"artifact_receipt_refs":["project-runtime/receipts/artifacts/TASK_DEMO_001/RESULT_TASK_DEMO_001_ATTEMPT_001.acceptance.json"],"timestamp_utc":"2026-05-17T10:31:01Z"}
 ```
 
 `agent_result_received` and `agent_instance_terminated` must record
 `reuse_allowed: false`.
+
+The mandatory completion ordering is:
+
+```text
+RESULT_RECEIVED -> ARTIFACT_ACCEPTED -> AGENT_TERMINATED -> AUDIT_ROUTE_READY
+```
+
+`ARTIFACT_ACCEPTED`, `AGENT_TERMINATED`, and `AUDIT_ROUTE_READY` events must
+carry the accepted `artifact_id`, accepted artifact ref, and artifact
+acceptance receipt ref. `AUDIT_ROUTE_READY` is a readiness marker only; it does
+not dispatch an auditor or mutate checkpoint state.
 
 ## Required RESULT fields
 
@@ -85,9 +100,11 @@ the dispatched task and must match the task named in `TASK`.
 
 ## Termination event
 
-After `AGENT_RESULT_RECEIVED`, the orchestrator must emit
-`agent_instance_terminated` for the same `AGENT_INSTANCE_ID` before the task can
-be treated as lifecycle-complete.
+After `AGENT_RESULT_RECEIVED`, the orchestrator must accept the governed
+artifact package, record `ARTIFACT_ACCEPTED` with its receipt, and only then
+emit `agent_instance_terminated` for the same `AGENT_INSTANCE_ID`. The task can
+be treated as audit-route-ready only after the subsequent `AUDIT_ROUTE_READY`
+event.
 
 The termination event is required even when the runtime environment cannot
 physically delete a chat, process, container, or session.

@@ -815,12 +815,36 @@ def build_parser() -> argparse.ArgumentParser:
         description="Orchestrator-owned lifecycle event materializers; no agent dispatch is performed.",
     )
     lifecycle_subparsers = lifecycle_parser.add_subparsers(dest="lifecycle_command", metavar="COMMAND")
+    receive_result_parser = lifecycle_subparsers.add_parser(
+        "receive-result",
+        help="Record a RESULT_RECEIVED event for a completed agent RESULT.",
+        description=(
+            "Validate a RESULT artifact and append a RESULT_RECEIVED lifecycle event "
+            "to project-runtime/agents/instances.jsonl. Writes require --confirm-write."
+        ),
+    )
+    _add_root_argument(receive_result_parser, validate=False)
+    receive_result_parser.add_argument(
+        "--from-result",
+        required=True,
+        metavar="RESULT.md",
+        help="Profile RESULT or AUDIT_RESULT Markdown artifact received from the agent instance.",
+    )
+    receive_result_parser.add_argument(
+        "--confirm-write",
+        action="store_true",
+        help="Append the result receipt event under project-runtime/agents/instances.jsonl.",
+    )
+    receive_result_parser.set_defaults(handler=lifecycle.run_receive_result)
+
     terminate_agent_parser = lifecycle_subparsers.add_parser(
         "terminate-agent",
         help="Record an agent termination event after RESULT receipt.",
         description=(
-            "Validate a RESULT artifact and append an AGENT_TERMINATED lifecycle event "
-            "to project-runtime/agents/instances.jsonl. Writes require --confirm-write."
+            "Validate a RESULT artifact, require RESULT_RECEIVED and ARTIFACT_ACCEPTED "
+            "predecessor events, then append AGENT_TERMINATED and AUDIT_ROUTE_READY "
+            "lifecycle events to project-runtime/agents/instances.jsonl. Writes require "
+            "--confirm-write."
         ),
     )
     _add_root_argument(terminate_agent_parser, validate=False)

@@ -1505,13 +1505,13 @@ AFFECTED_FILES:
 AFFECTED_INVARIANTS:
 - Active package/governance/runtime tuple is 3.6.1 / 3.6.1 / 3.1.0.
 - Runtime Schema 3.1.0 remains the canonical sidecar schema for current runtime state.
-- P4.1 fixes workspace/package mode guard handling, derived runtime Markdown materialization, and lifecycle termination event recording after RESULT before audit routing.
+- P4.1 fixes workspace/package mode guard handling, derived runtime Markdown materialization, and lifecycle termination event recording after RESULT/artifact acceptance before audit routing readiness.
 - ASO remains a deterministic governance/control conveyor and does not replace project designer or requirements analyst reasoning.
 - ASO does not semantically read TZ, infer product capability intent from raw text, or install product-intake code or a product-intake engine.
 - P4.1 does not install a daemon, live dispatch, checkpoint executor, product generation, external workers, or secret collection.
 - The branch upgrade/product-intake-capability-p4-v3.6.0 is superseded and non-authoritative but must remain untouched.
 AFFECTED_TRANSITIONS:
-- RESULT_RECEIVED -> AGENT_TERMINATED -> AUDIT_ROUTE_READY is the required lifecycle ordering for profile-agent completion before audit routing.
+- RESULT_RECEIVED -> ARTIFACT_ACCEPTED -> AGENT_TERMINATED -> AUDIT_ROUTE_READY is the required lifecycle ordering for profile-agent completion before audit routing readiness.
 - runtime sidecar verification -> may require deterministic derived Markdown compatibility views without changing canonical JSON authority.
 - workspace bootstrap validation -> must not be blocked by package-mode checks unless package mode is explicitly valid for the root.
 SCHEMA_TEMPLATE_IMPACT: none
@@ -1571,6 +1571,44 @@ AFFECTED_TRANSITIONS:
 SCHEMA_TEMPLATE_IMPACT: metadata_only
 MIGRATION_REQUIRED: no
 MIGRATION_NOTE: Runtime Schema 3.1.0 is preserved. P5 adds artifact package schema 1.0.0 metadata and package-boundary documentation only; it does not migrate active project-runtime state or redefine the P2/P3 runtime sidecar envelope.
+AUTHORIZED_BY: project_owner
+AUDIT_REQUIRED: yes
+STATUS: proposed
+
+CHANGE_ID: GOV-2026-05-22-004
+CHANGE_TITLE: TASK_ASO_APM5_070_LIFECYCLE_EVENTS_RECEIPTS_AND_REPLAY
+DATE: 2026-05-22
+PACKAGE_VERSION_BEFORE: 3.7.0
+PACKAGE_VERSION_AFTER: 3.7.0
+GOVERNANCE_RULESET_BEFORE: 3.7.0
+GOVERNANCE_RULESET_AFTER: 3.7.0
+RUNTIME_SCHEMA_BEFORE: 3.1.0
+RUNTIME_SCHEMA_AFTER: 3.1.0
+ARTIFACT_PACKAGE_SCHEMA_AFTER: 1.0.0
+CHANGE_TYPE: patch
+CHANGE_SUBTYPE: lifecycle_artifact_receipt_ordering
+AFFECTED_FILES:
+- agent-system/02_runtime/AGENT_LIFECYCLE.md
+- agent-system/02_runtime/ARTIFACT_STORAGE_P5_CONTRACT.md
+- agent-system/02_runtime/PROFILE_AGENT_LIFECYCLE.md
+- agent-system/09_validators/AGENT_LIFECYCLE_VALIDATION_RULES.md
+- agent-system/11_release/ASO_WORKSPACE_BOOTSTRAP_RUNTIME_LIFECYCLE_P4_1_V3_6_1_INCIDENT_REPLAY_NOTES.md
+- agent-system/tools/aso/agent_system_orchestrator_aso/aso_tool/aso.py
+- agent-system/tools/aso/agent_system_orchestrator_aso/aso_tool/commands/artifact.py
+- agent-system/tools/aso/agent_system_orchestrator_aso/aso_tool/commands/lifecycle.py
+- agent-system/tools/aso/tests/test_artifact_cli.py
+- agent-system/tools/aso/tests/test_lifecycle.py
+AFFECTED_INVARIANTS:
+- Lifecycle completion after RESULT requires accepted artifact receipt evidence before termination.
+- Lifecycle events after RESULT receipt reference accepted artifact ids and artifact acceptance receipt refs.
+- AUDIT_ROUTE_READY is a deterministic readiness marker only; it does not dispatch live agents or execute checkpoints.
+- No daemon, live dispatch, checkpoint executor, or product-intake engine is added.
+AFFECTED_TRANSITIONS:
+- RESULT_RECEIVED -> ARTIFACT_ACCEPTED -> AGENT_TERMINATED -> AUDIT_ROUTE_READY is the required lifecycle ordering before audit routing readiness.
+- candidate artifact acceptance -> immutable accepted copy plus artifact acceptance receipt plus ARTIFACT_ACCEPTED lifecycle event.
+SCHEMA_TEMPLATE_IMPACT: none
+MIGRATION_REQUIRED: no
+MIGRATION_NOTE: Runtime Schema 3.1.0 is preserved. This patch adds local lifecycle event/receipt integration for existing P5 artifact acceptance and profile-agent completion paths only; it does not migrate active project-runtime state or redefine sidecar schemas.
 AUTHORIZED_BY: project_owner
 AUDIT_REQUIRED: yes
 STATUS: proposed
