@@ -612,6 +612,15 @@ def build_parser() -> argparse.ArgumentParser:
         help="Expected artifact_type value for the package manifest.",
     )
     artifact_validate_parser.add_argument(
+        "--task-id",
+        help="Expected task_id value for the package manifest.",
+    )
+    artifact_validate_parser.add_argument(
+        "--role",
+        choices=artifact.ALLOWED_ROLES,
+        help="Expected role value for the package manifest.",
+    )
+    artifact_validate_parser.add_argument(
         "--strict",
         action="store_true",
         help="Run validation in strict mode.",

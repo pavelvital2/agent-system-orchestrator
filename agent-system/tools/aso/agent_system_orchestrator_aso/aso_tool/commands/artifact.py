@@ -150,6 +150,48 @@ def _artifact_refs_errors(value: object, field: str) -> list[str]:
     return errors
 
 
+def _existing_package_path_errors(root: Path, value: object, field: str) -> list[str]:
+    errors = _package_path_errors(value, field)
+    if errors:
+        return errors
+    assert isinstance(value, str)
+    resolved = (root / value.strip()).resolve(strict=False)
+    try:
+        resolved.relative_to(root.resolve(strict=False))
+    except ValueError:
+        return [f"{field} resolves outside --root"]
+    if not resolved.is_file():
+        return [f"{field} does not exist under --root: {value.strip()}"]
+    return []
+
+
+def _structured_artifact_content_errors(root: Path, value: object) -> list[str]:
+    if value == "NONE":
+        return []
+    if not isinstance(value, list):
+        return []
+    errors: list[str] = []
+    for index, item in enumerate(value):
+        path_errors = _existing_package_path_errors(root, item, f"structured_artifacts[{index}]")
+        errors.extend(path_errors)
+        if path_errors or not isinstance(item, str) or not item.strip().endswith(".json"):
+            continue
+        path = root / item.strip()
+        try:
+            payload = json.loads(path.read_text(encoding="utf-8"))
+        except OSError as exc:
+            errors.append(f"structured_artifacts[{index}] is unreadable: {exc}")
+            continue
+        except json.JSONDecodeError as exc:
+            errors.append(
+                f"structured_artifacts[{index}] JSON is malformed at line {exc.lineno} column {exc.colno}: {exc.msg}"
+            )
+            continue
+        if not isinstance(payload, dict):
+            errors.append(f"structured_artifacts[{index}] JSON root must be an object")
+    return errors
+
+
 def _validate_manifest_payload(payload: dict[str, Any], root: Path) -> list[dict[str, str]]:
     findings: list[dict[str, str]] = []
     schema = _load_manifest_schema(root)
@@ -182,11 +224,13 @@ def _validate_manifest_payload(payload: dict[str, Any], root: Path) -> list[dict
         findings.append(_finding("ARTIFACT_VALIDATE_SCHEMA_008", "Attempt number is invalid", "attempt_no must be an integer >= 1.", "attempt_no"))
     if payload.get("status") not in ALLOWED_STATUSES:
         findings.append(_finding("ARTIFACT_VALIDATE_SCHEMA_009", "Status is unsupported", f"status must be one of: {', '.join(ALLOWED_STATUSES)}.", "status"))
-    for error in _package_path_errors(payload.get("main_document"), "main_document"):
+    for error in _existing_package_path_errors(root, payload.get("main_document"), "main_document"):
         findings.append(_finding("ARTIFACT_VALIDATE_PATH_001", "Main document path is invalid", error, "main_document"))
     for field in ("structured_artifacts", "evidence_refs"):
         for error in _artifact_refs_errors(payload.get(field), field):
             findings.append(_finding("ARTIFACT_VALIDATE_PATH_002", "Artifact reference path is invalid", error, field))
+    for error in _structured_artifact_content_errors(root, payload.get("structured_artifacts")):
+        findings.append(_finding("ARTIFACT_VALIDATE_JSON_003", "Structured artifact JSON is invalid", error, "structured_artifacts"))
     if not isinstance(payload.get("created_at"), str) or not str(payload.get("created_at", "")).strip():
         findings.append(_finding("ARTIFACT_VALIDATE_SCHEMA_010", "Created timestamp is invalid", "created_at must be a non-empty date-time string.", "created_at"))
 
@@ -203,7 +247,14 @@ def _validate_manifest_payload(payload: dict[str, Any], root: Path) -> list[dict
     return findings
 
 
-def _validate_path(root: Path, artifact_path: Path, expected_type: str | None = None, strict: bool = False) -> dict[str, object]:
+def _validate_path(
+    root: Path,
+    artifact_path: Path,
+    expected_type: str | None = None,
+    expected_task_id: str | None = None,
+    expected_role: str | None = None,
+    strict: bool = False,
+) -> dict[str, object]:
     payload, findings = _read_json_object(artifact_path)
     if payload is not None:
         findings.extend(_validate_manifest_payload(payload, root))
@@ -214,6 +265,24 @@ def _validate_path(root: Path, artifact_path: Path, expected_type: str | None = 
                     "Artifact type does not match requested type",
                     f"artifact_type must be {expected_type}.",
                     "artifact_type",
+                )
+            )
+        if expected_task_id is not None and payload.get("task_id") != expected_task_id:
+            findings.append(
+                _finding(
+                    "ARTIFACT_VALIDATE_TASK_001",
+                    "Task id does not match requested task",
+                    f"task_id must be {expected_task_id}.",
+                    "task_id",
+                )
+            )
+        if expected_role is not None and payload.get("role") != expected_role:
+            findings.append(
+                _finding(
+                    "ARTIFACT_VALIDATE_ROLE_001",
+                    "Role does not match requested role",
+                    f"role must be {expected_role}.",
+                    "role",
                 )
             )
     status = "pass" if not findings else "blocked"
@@ -317,6 +386,8 @@ def run_validate(args: argparse.Namespace) -> int:
         root,
         artifact_path,
         expected_type=getattr(args, "artifact_type", None),
+        expected_task_id=getattr(args, "task_id", None),
+        expected_role=getattr(args, "role", None),
         strict=bool(getattr(args, "strict", False)),
     )
     if args.json_out:

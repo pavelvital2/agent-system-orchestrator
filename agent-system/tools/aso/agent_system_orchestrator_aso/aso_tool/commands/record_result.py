@@ -399,14 +399,14 @@ def _validate_common(path: Path, text: str, fields: dict[str, Any], strict: bool
         errors.append(Rule("RESULT_FORMAT_001", "error", "Result file is empty.", str(path)))
         return errors
     lines = text.splitlines()
-    first_line = lines[0].upper() if lines else ""
-    if "RESULT" not in first_line:
+    first_line = next((line.strip() for line in lines if line.strip()), "")
+    if first_line not in {"RESULT:", "AUDIT_RESULT:"}:
         errors.append(
             Rule(
                 "RESULT_FORMAT_002",
                 "error",
-                "Result file must start with a RESULT or AUDIT_RESULT heading.",
-                str(path),
+                "Result file must start with the canonical RESULT: or AUDIT_RESULT: marker.",
+                first_line or str(path),
             )
         )
     if not strict:

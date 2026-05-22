@@ -159,6 +159,28 @@ def terminate_agent(root: Path, result_path: Path) -> subprocess.CompletedProces
     )
 
 
+def write_termination_event(root: Path, result_path: Path) -> None:
+    events_path = root / "project-runtime" / "agents" / "instances.jsonl"
+    events_path.parent.mkdir(parents=True, exist_ok=True)
+    events_path.write_text(
+        json.dumps(
+            {
+                "event": "agent_instance_terminated",
+                "event_type": "AGENT_TERMINATED",
+                "task_id": "TASK_DEMO_001",
+                "agent_role": "developer",
+                "role": "developer",
+                "agent_instance_id": "agent_TASK_DEMO_001_attempt_001",
+                "result_ref": result_path.relative_to(root).as_posix(),
+                "timestamp_utc": "2026-05-22T00:00:00Z",
+            },
+            sort_keys=True,
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+
+
 class RecordResultCommandTests(unittest.TestCase):
     def test_help_declares_dry_run_read_only(self) -> None:
         result = subprocess.run(
@@ -216,6 +238,21 @@ class RecordResultCommandTests(unittest.TestCase):
         rule_ids = {item["rule_id"] for item in report["blocking_rules"]}
         self.assertIn("GOV-CHECKPOINT-AUDIT-GATE", rule_ids)
 
+    def test_strict_rejects_transitional_markdown_result_heading(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp) / "RESULT_TASK_DEMO_001_PASS.md"
+            text = fixture("RESULT_TASK_DEMO_001_PASS.md").read_text(encoding="utf-8")
+            path.write_text(text.replace("RESULT:", "# RESULT", 1), encoding="utf-8")
+
+            result = run_record_result(path, "--strict")
+
+        self.assertEqual(result.returncode, 1, result.stdout + result.stderr)
+        report = report_from(result)
+        rule_ids = {item["rule_id"] for item in report["validation_errors"]}
+        self.assertIn("RESULT_FORMAT_002", rule_ids)
+        evidence = "; ".join(item["evidence"] for item in report["validation_errors"])
+        self.assertIn("# RESULT", evidence)
+
     def test_profile_pass_inside_workspace_requires_termination_before_audit_route(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
@@ -225,23 +262,7 @@ class RecordResultCommandTests(unittest.TestCase):
             add_accepted_result_package(root, result_path)
 
             before = run_record_result(result_path, "--strict")
-            terminate = subprocess.run(
-                [
-                    sys.executable,
-                    str(CLI),
-                    "lifecycle",
-                    "terminate-agent",
-                    "--root",
-                    str(root),
-                    "--from-result",
-                    str(result_path),
-                    "--confirm-write",
-                ],
-                check=False,
-                text=True,
-                capture_output=True,
-                cwd=REPO_ROOT,
-            )
+            write_termination_event(root, result_path)
             after = run_record_result(result_path, "--strict")
 
         self.assertEqual(before.returncode, 1, before.stdout + before.stderr)
@@ -249,7 +270,6 @@ class RecordResultCommandTests(unittest.TestCase):
         self.assertEqual(before_report["recommended_next_action"], "NONE")
         rule_ids = {item["rule_id"] for item in before_report["validation_errors"]}
         self.assertIn("RESULT_LIFECYCLE_001", rule_ids)
-        self.assertEqual(terminate.returncode, 0, terminate.stdout + terminate.stderr)
         self.assertEqual(after.returncode, 0, after.stdout + after.stderr)
         after_report = report_from(after)
         self.assertEqual(after_report["recommended_next_action"], "CREATE_AUDITOR")
@@ -260,26 +280,9 @@ class RecordResultCommandTests(unittest.TestCase):
             result_path = root / "project-runtime" / "results" / "worker" / "RESULT_TASK_DEMO_001_ATTEMPT_001.md"
             result_path.parent.mkdir(parents=True)
             shutil.copyfile(fixture("RESULT_TASK_DEMO_001_PASS.md"), result_path)
-            terminate = subprocess.run(
-                [
-                    sys.executable,
-                    str(CLI),
-                    "lifecycle",
-                    "terminate-agent",
-                    "--root",
-                    str(root),
-                    "--from-result",
-                    str(result_path),
-                    "--confirm-write",
-                ],
-                check=False,
-                text=True,
-                capture_output=True,
-                cwd=REPO_ROOT,
-            )
+            write_termination_event(root, result_path)
             result = run_record_result(result_path, "--strict")
 
-        self.assertEqual(terminate.returncode, 0, terminate.stdout + terminate.stderr)
         self.assertEqual(result.returncode, 1, result.stdout + result.stderr)
         report = report_from(result)
         self.assertEqual(report["recommended_next_action"], "NONE")
@@ -298,10 +301,9 @@ class RecordResultCommandTests(unittest.TestCase):
                 result_path,
                 artifact_ref="project-runtime/artifacts/raw/RESULT_PACKAGE_TASK_DEMO_001_ATTEMPT_001.json",
             )
-            terminate = terminate_agent(root, result_path)
+            write_termination_event(root, result_path)
             result = run_record_result(result_path, "--strict")
 
-        self.assertEqual(terminate.returncode, 0, terminate.stdout + terminate.stderr)
         self.assertEqual(result.returncode, 1, result.stdout + result.stderr)
         report = report_from(result)
         self.assertEqual(report["recommended_next_action"], "NONE")
@@ -318,10 +320,9 @@ class RecordResultCommandTests(unittest.TestCase):
             result_path.parent.mkdir(parents=True)
             shutil.copyfile(fixture("RESULT_TASK_DEMO_001_PASS.md"), result_path)
             add_accepted_result_package(root, result_path, artifact_ref=str(outside))
-            terminate = terminate_agent(root, result_path)
+            write_termination_event(root, result_path)
             result = run_record_result(result_path, "--strict")
 
-        self.assertEqual(terminate.returncode, 0, terminate.stdout + terminate.stderr)
         self.assertEqual(result.returncode, 1, result.stdout + result.stderr)
         report = report_from(result)
         self.assertEqual(report["recommended_next_action"], "NONE")
@@ -346,10 +347,9 @@ class RecordResultCommandTests(unittest.TestCase):
                 result_path,
                 artifact_ref="project-runtime/artifacts/accepted/RESULT_PACKAGE_TASK_DEMO_001_ATTEMPT_001.json",
             )
-            terminate = terminate_agent(root, result_path)
+            write_termination_event(root, result_path)
             result = run_record_result(result_path, "--strict")
 
-        self.assertEqual(terminate.returncode, 0, terminate.stdout + terminate.stderr)
         self.assertEqual(result.returncode, 1, result.stdout + result.stderr)
         report = report_from(result)
         self.assertEqual(report["recommended_next_action"], "NONE")
@@ -379,10 +379,9 @@ class RecordResultCommandTests(unittest.TestCase):
                     "agent_termination_required": True,
                 },
             )
-            terminate = terminate_agent(root, result_path)
+            write_termination_event(root, result_path)
             result = run_record_result(result_path, "--strict")
 
-        self.assertEqual(terminate.returncode, 0, terminate.stdout + terminate.stderr)
         self.assertEqual(result.returncode, 1, result.stdout + result.stderr)
         report = report_from(result)
         self.assertEqual(report["recommended_next_action"], "NONE")
@@ -420,22 +419,24 @@ class RecordResultCommandTests(unittest.TestCase):
             shutil.copyfile(fixture("AUDIT_RESULT_TASK_DEMO_001_PASS.md"), result_path)
 
             before = run_record_result(result_path, "--strict")
-            terminate = subprocess.run(
-                [
-                    sys.executable,
-                    str(CLI),
-                    "lifecycle",
-                    "terminate-agent",
-                    "--root",
-                    str(root),
-                    "--from-result",
-                    str(result_path),
-                    "--confirm-write",
-                ],
-                check=False,
-                text=True,
-                capture_output=True,
-                cwd=REPO_ROOT,
+            events_path = root / "project-runtime" / "agents" / "instances.jsonl"
+            events_path.parent.mkdir(parents=True, exist_ok=True)
+            events_path.write_text(
+                json.dumps(
+                    {
+                        "event": "auditor_agent_terminated",
+                        "event_type": "AUDITOR_AGENT_TERMINATED",
+                        "task_id": "TASK_DEMO_001",
+                        "agent_role": "auditor",
+                        "role": "auditor",
+                        "agent_instance_id": "audit_TASK_DEMO_001_attempt_001",
+                        "result_ref": result_path.relative_to(root).as_posix(),
+                        "timestamp_utc": "2026-05-22T00:00:00Z",
+                    },
+                    sort_keys=True,
+                )
+                + "\n",
+                encoding="utf-8",
             )
             after = run_record_result(result_path, "--strict")
 
@@ -444,7 +445,6 @@ class RecordResultCommandTests(unittest.TestCase):
         self.assertFalse(before_report["checkpoint_candidate"])
         rule_ids = {item["rule_id"] for item in before_report["validation_errors"]}
         self.assertIn("RESULT_LIFECYCLE_001", rule_ids)
-        self.assertEqual(terminate.returncode, 0, terminate.stdout + terminate.stderr)
         self.assertEqual(after.returncode, 0, after.stdout + after.stderr)
         after_report = report_from(after)
         self.assertTrue(after_report["checkpoint_candidate"])

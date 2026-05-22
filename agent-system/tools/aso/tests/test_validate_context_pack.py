@@ -201,6 +201,45 @@ class ValidateContextPackCommandTests(unittest.TestCase):
         self.assertEqual(result.returncode, 1, result.stdout + result.stderr)
         self.assertIn("CPP-007", result.stdout)
 
+    def test_rejected_packages_are_not_consumable_runtime_context(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp) / "workspace"
+            rejected = root / "project-runtime/artifacts/rejected/TASK_DEMO/manifest.json"
+            rejected.parent.mkdir(parents=True)
+            rejected.write_text('{"status":"rejected"}\n', encoding="utf-8")
+            context_pack = Path(tmp) / "rejected-context.json"
+            context_pack.write_text(
+                json.dumps(
+                    {
+                        "task_id": "TASK_DEMO",
+                        "required_docs": [
+                            {
+                                "path": "project-runtime/artifacts/rejected/TASK_DEMO/manifest.json",
+                                "sections": ["Rejected package"],
+                                "why_needed": "Rejected package should not be consumable.",
+                            }
+                        ],
+                        "forbidden_docs": ["project-runtime/"],
+                        "source_of_truth": ["project-runtime/artifacts/rejected/TASK_DEMO/manifest.json"],
+                        "accepted_artifact_packages": [
+                            "project-runtime/artifacts/rejected/TASK_DEMO/manifest.json"
+                        ],
+                        "context_budget": {
+                            "max_docs": 1,
+                            "max_sections_per_doc": 1,
+                            "max_chars_total": 2000,
+                        },
+                    },
+                    indent=2,
+                ),
+                encoding="utf-8",
+            )
+
+            result = run_validate_context_pack(str(context_pack), "--root", str(root), "--strict")
+
+        self.assertEqual(result.returncode, 1, result.stdout + result.stderr)
+        self.assertIn("CPP-007", result.stdout)
+
     def test_explicitly_forbidden_accepted_and_rendered_paths_fail_validation(self) -> None:
         cases = (
             (

@@ -22,6 +22,11 @@ class ArtifactCliTests(unittest.TestCase):
         self.tmpdir = Path(tempfile.mkdtemp(prefix="aso-artifact-cli-"))
         self.root = self.tmpdir / "workspace"
         self.root.mkdir()
+        self.main_document = self.root / "package" / "RESULT_TASK_DEMO_ATTEMPT_001.md"
+        self.structured_artifact = self.root / "package" / "result_package.json"
+        self.main_document.parent.mkdir(parents=True)
+        self.main_document.write_text("RESULT:\nSTATUS: pass\n", encoding="utf-8")
+        self.structured_artifact.write_text('{"package_id":"RESULT_PACKAGE_TASK_DEMO_ATTEMPT_001"}\n', encoding="utf-8")
         self.manifest = {
             "artifact_package_schema_version": "1.0.0",
             "artifact_type": "RESULT",
@@ -30,9 +35,9 @@ class ArtifactCliTests(unittest.TestCase):
             "role": "developer",
             "attempt_no": 1,
             "status": "pass",
-            "main_document": "agent-system/03_templates/AGENT_RESULT_TEMPLATE.md",
+            "main_document": "package/RESULT_TASK_DEMO_ATTEMPT_001.md",
             "structured_artifacts": [
-                "agent-system/03_templates/result_package.template.json",
+                "package/result_package.json",
             ],
             "evidence_refs": "NONE",
             "created_at": "2026-05-22T00:00:00Z",
@@ -57,6 +62,23 @@ class ArtifactCliTests(unittest.TestCase):
         path.parent.mkdir(parents=True, exist_ok=True)
         path.write_text(json.dumps(self.manifest, indent=2) + "\n", encoding="utf-8")
         return path
+
+    def _validate_candidate(self, candidate: Path, *extra: str) -> dict[str, object]:
+        code, stdout, _stderr = self._run(
+            [
+                "artifact",
+                "validate",
+                "--root",
+                str(self.root),
+                "--artifact",
+                str(candidate),
+                "--format",
+                "json",
+                *extra,
+            ]
+        )
+        self.assertEqual(code, 1)
+        return json.loads(stdout)
 
     def _runtime_snapshot(self) -> dict[str, str]:
         runtime = self.root / "project-runtime"
@@ -88,6 +110,88 @@ class ArtifactCliTests(unittest.TestCase):
         report = json.loads(stdout)
         self.assertEqual(report["status"], "pass")
         self.assertFalse(report["mutations_performed"])
+
+    def test_artifact_validate_negative_manifest_fixture_cases_are_blocked(self) -> None:
+        cases = (
+            (
+                "malformed manifest JSON",
+                lambda candidate: candidate.write_text('{"artifact_type": "RESULT",', encoding="utf-8"),
+                (),
+                "ARTIFACT_VALIDATE_JSON_001",
+            ),
+            (
+                "wrong artifact_type",
+                lambda candidate: candidate.write_text(
+                    json.dumps({**self.manifest, "artifact_type": "TASK_PACKET"}), encoding="utf-8"
+                ),
+                ("--type", "RESULT"),
+                "ARTIFACT_VALIDATE_TYPE_001",
+            ),
+            (
+                "wrong task_id",
+                lambda candidate: candidate.write_text(
+                    json.dumps({**self.manifest, "task_id": "TASK_OTHER"}), encoding="utf-8"
+                ),
+                ("--task-id", "TASK_DEMO"),
+                "ARTIFACT_VALIDATE_TASK_001",
+            ),
+            (
+                "wrong role",
+                lambda candidate: candidate.write_text(
+                    json.dumps({**self.manifest, "role": "tester"}), encoding="utf-8"
+                ),
+                ("--role", "developer"),
+                "ARTIFACT_VALIDATE_ROLE_001",
+            ),
+            (
+                "invalid status",
+                lambda candidate: candidate.write_text(
+                    json.dumps({**self.manifest, "status": "accepted"}), encoding="utf-8"
+                ),
+                (),
+                "ARTIFACT_VALIDATE_SCHEMA_009",
+            ),
+            (
+                "missing main document",
+                lambda candidate: candidate.write_text(
+                    json.dumps({**self.manifest, "main_document": "package/MISSING.md"}), encoding="utf-8"
+                ),
+                (),
+                "ARTIFACT_VALIDATE_PATH_001",
+            ),
+            (
+                "malformed structured JSON",
+                lambda candidate: (
+                    self.structured_artifact.write_text('{"package_id":', encoding="utf-8"),
+                    candidate.write_text(json.dumps(self.manifest), encoding="utf-8"),
+                ),
+                (),
+                "ARTIFACT_VALIDATE_JSON_003",
+            ),
+            (
+                "evidence path escape",
+                lambda candidate: candidate.write_text(
+                    json.dumps({**self.manifest, "evidence_refs": ["package/../secret.txt"]}), encoding="utf-8"
+                ),
+                (),
+                "ARTIFACT_VALIDATE_PATH_002",
+            ),
+        )
+        for _label, mutate, extra, rule_id in cases:
+            with self.subTest(case=_label):
+                candidate = self._write_candidate()
+                mutate(candidate)
+                report = self._validate_candidate(candidate, *extra)
+                self.assertEqual(report["status"], "blocked")
+                self.assertIn(rule_id, {finding["rule_id"] for finding in report["findings"]})
+
+    def test_artifact_validate_missing_manifest_is_blocked(self) -> None:
+        missing = self.root / "project-runtime/artifacts/candidates/TASK_DEMO/manifest.json"
+
+        report = self._validate_candidate(missing)
+
+        self.assertEqual(report["status"], "blocked")
+        self.assertIn("ARTIFACT_VALIDATE_READ_001", {finding["rule_id"] for finding in report["findings"]})
 
     def test_artifact_validate_spec_form_writes_json_out_without_runtime_mutation(self) -> None:
         candidate = self._write_candidate()

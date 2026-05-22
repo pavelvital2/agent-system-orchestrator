@@ -83,6 +83,9 @@ class LifecycleCommandTests(unittest.TestCase):
             result_path = root / "project-runtime" / "results" / "worker" / "RESULT_TASK_DEMO_001_ATTEMPT_001.md"
             result_path.parent.mkdir(parents=True)
             result_path.write_text(RESULT, encoding="utf-8")
+            package_result_path = root / "package" / "RESULT_TASK_DEMO_001_ATTEMPT_001.md"
+            package_result_path.parent.mkdir(parents=True)
+            package_result_path.write_text(RESULT, encoding="utf-8")
             candidate = root / "project-runtime" / "artifacts" / "candidates" / "TASK_DEMO_001" / "manifest.json"
             candidate.parent.mkdir(parents=True)
             candidate.write_text(
@@ -95,7 +98,7 @@ class LifecycleCommandTests(unittest.TestCase):
                         "role": "developer",
                         "attempt_no": 1,
                         "status": "pass",
-                        "main_document": "agent-system/03_templates/AGENT_RESULT_TEMPLATE.md",
+                        "main_document": "package/RESULT_TASK_DEMO_001_ATTEMPT_001.md",
                         "structured_artifacts": "NONE",
                         "evidence_refs": "NONE",
                         "created_at": "2026-05-22T00:00:00Z",
