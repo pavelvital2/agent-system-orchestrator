@@ -9,7 +9,7 @@ import sys
 from dataclasses import dataclass
 from pathlib import Path
 
-from . import mode_guard, package_checks
+from . import mode_guard, package_checks, repair_hints
 
 
 EXIT_OK = 0
@@ -185,9 +185,10 @@ def _push_allowed_line(push_values: dict[str, str]) -> str:
     return ", ".join(f"{name}={value}" for name, value in push_values.items())
 
 
-def _findings(files: dict[str, RuntimeFile], push_values: dict[str, str]) -> list[Finding]:
+def _findings(root: Path, files: dict[str, RuntimeFile], push_values: dict[str, str]) -> list[Finding]:
     findings: list[Finding] = []
 
+    missing_runtime_files: list[RuntimeFile] = []
     for name in RUNTIME_FILES:
         runtime_file = files[name]
         if runtime_file.error:
@@ -202,16 +203,34 @@ def _findings(files: dict[str, RuntimeFile], push_values: dict[str, str]) -> lis
                 )
             )
         elif not runtime_file.exists:
-            findings.append(
-                Finding(
-                    rule_id="STATUS_002",
-                    severity="warning",
-                    title="Runtime file missing",
-                    details=f"{runtime_file.relpath} is not present.",
-                    files=[runtime_file.relpath],
-                    recommendation="Initialize or restore the missing runtime file if this workspace is active.",
-                )
+            missing_runtime_files.append(runtime_file)
+
+    missing_names = [Path(runtime_file.relpath).name for runtime_file in missing_runtime_files]
+    if missing_runtime_files:
+        missing_relpaths = [runtime_file.relpath for runtime_file in missing_runtime_files]
+        materializable = repair_hints.missing_runtime_views_with_valid_sidecars(root, missing_names)
+        findings.append(
+            Finding(
+                rule_id="STATUS_002",
+                severity="error" if materializable else "warning",
+                title=(
+                    repair_hints.MISSING_RUNTIME_VIEWS_TITLE
+                    if materializable
+                    else "Runtime file missing"
+                ),
+                details=(
+                    f"{repair_hints.MISSING_RUNTIME_VIEWS_TITLE} Missing views: {', '.join(missing_relpaths)}."
+                    if materializable
+                    else f"Missing runtime files: {', '.join(missing_relpaths)}."
+                ),
+                files=missing_relpaths,
+                recommendation=(
+                    repair_hints.MISSING_RUNTIME_VIEWS_RECOMMENDATION
+                    if materializable
+                    else "Initialize or restore the missing runtime file if this workspace is active."
+                ),
             )
+        )
 
     known_push_values = {
         source: value
@@ -276,7 +295,7 @@ def _runtime_consistency(findings: list[Finding]) -> str:
 def _report(root: Path) -> dict[str, object]:
     files = {name: _read_runtime_file(root, name) for name in RUNTIME_FILES}
     push_values = _push_allowed_values(files)
-    findings = _findings(files, push_values)
+    findings = _findings(root, files, push_values)
     consistency = _runtime_consistency(findings)
 
     status_by_consistency = {
@@ -378,6 +397,13 @@ def _print_text(report: dict[str, object]) -> None:
     print(f"Push allowed values: {_push_allowed_line(push_values)}")
     print(f"Runtime consistency: {summary['runtime_consistency']}")
     print(f"Findings: {summary['finding_count']}")
+    for finding in report["findings"]:
+        if not isinstance(finding, dict):
+            continue
+        print(f"- {finding['severity']} {finding['rule_id']}: {finding['title']}")
+        recommendation = str(finding.get("recommendation", "")).strip()
+        if recommendation:
+            print(f"  Recommendation: {recommendation}")
 
 
 def _print_package_text(report: dict[str, object]) -> None:
@@ -403,6 +429,9 @@ def _print_package_text(report: dict[str, object]) -> None:
         if not isinstance(finding, dict):
             continue
         print(f"- {finding['severity']} {finding['rule_id']}: {finding['title']}")
+        recommendation = str(finding.get("recommendation", "")).strip()
+        if recommendation:
+            print(f"  Recommendation: {recommendation}")
 
 
 def _write_json(path_text: str, report: dict[str, object]) -> bool:

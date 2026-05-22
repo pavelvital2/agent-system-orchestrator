@@ -11,6 +11,7 @@ from pathlib import Path
 from typing import Iterable
 
 from .. import runtime_schema_contracts
+from . import repair_hints
 
 
 EXIT_OK = 0
@@ -879,11 +880,11 @@ def _validate_markdown_parity(root: Path, spec: SidecarSpec, content: dict[str, 
         return [
             _finding(
                 "SIDECAR_MARKDOWN_COMPATIBILITY_VIEW_MISSING",
-                "Markdown compatibility view is missing",
-                f"{spec.markdown_source} is required while Stage 2 keeps Markdown compatibility views.",
+                repair_hints.MISSING_RUNTIME_VIEWS_TITLE,
+                f"{repair_hints.MISSING_RUNTIME_VIEWS_TITLE} Missing view: {spec.markdown_source}.",
                 spec.markdown_source,
                 "",
-                "Run aso state render --root WORKSPACE --confirm-write to materialize derived Markdown views from project-runtime/state JSON sidecars.",
+                repair_hints.MISSING_RUNTIME_VIEWS_RECOMMENDATION,
             )
         ]
 

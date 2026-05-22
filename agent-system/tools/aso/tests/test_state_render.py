@@ -156,6 +156,7 @@ class StateRenderCommandTests(unittest.TestCase):
         self.assertEqual(init.returncode, 0, init.stdout + init.stderr)
         self.assertEqual(before_lint.returncode, 3, before_lint.stdout + before_lint.stderr)
         self.assertIn("LINT_IO_004", before_lint.stdout)
+        self.assertIn("aso state render --root WORKSPACE --confirm-write", before_lint.stdout)
         self.assertIn(
             "aso state render --root WORKSPACE --confirm-write",
             before_lint_report["findings"][0]["recommendation"],

@@ -5,6 +5,8 @@ from __future__ import annotations
 from dataclasses import dataclass
 from pathlib import Path
 
+from . import repair_hints
+
 try:
     import tomllib
 except ModuleNotFoundError:  # pragma: no cover - Python < 3.11 fallback
@@ -82,21 +84,15 @@ def package_mode_guard(root: Path) -> ModeFinding | None:
     if mode.kind != "workspace":
         return None
 
-    signal_text = ", ".join(mode.workspace_signals) or "workspace runtime signals"
     files = mode.workspace_signals or [str(root)]
-    title = "Package mode was run against a workspace root"
-    details = (
-        f"{root} looks like an ASO workspace ({signal_text}), not an ASO package "
-        "repository root."
-    )
 
     return ModeFinding(
         "MODE_GUARD_001",
         "error",
-        title,
-        details,
+        repair_hints.MODE_GUARD_001_TITLE,
+        repair_hints.MODE_GUARD_001_TITLE,
         files,
-        "Use --mode workspace for generated ASO projects; use --mode package only from the ASO package repository root.",
+        repair_hints.MODE_GUARD_001_RECOMMENDATION,
     )
 
 

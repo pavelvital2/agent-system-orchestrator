@@ -754,6 +754,9 @@ def _print_text(report: dict[str, object]) -> None:
         if not isinstance(finding, dict):
             continue
         print(f"- {finding['severity']} {finding['rule_id']}: {finding['title']}")
+        recommendation = str(finding.get("recommendation", "")).strip()
+        if recommendation:
+            print(f"  Recommendation: {recommendation}")
 
 
 def _write_json(path_text: str, report: dict[str, object]) -> bool:

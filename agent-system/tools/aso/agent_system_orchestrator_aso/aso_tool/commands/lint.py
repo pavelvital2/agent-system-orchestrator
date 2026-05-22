@@ -11,7 +11,7 @@ from datetime import datetime
 from pathlib import Path
 from typing import Iterable
 
-from . import mode_guard, package_checks
+from . import mode_guard, package_checks, repair_hints
 
 
 EXIT_OK = 0
@@ -394,6 +394,7 @@ def _validate_root_and_required_files(root: Path) -> tuple[dict[str, RuntimeFile
         )
         return files, findings, False
 
+    missing_runtime_files: list[RuntimeFile] = []
     for name in REQUIRED_RUNTIME_FILES:
         runtime_file = _read_runtime_file(root, name)
         files[name] = runtime_file
@@ -409,6 +410,23 @@ def _validate_root_and_required_files(root: Path) -> tuple[dict[str, RuntimeFile
                 )
             )
         elif not runtime_file.exists:
+            missing_runtime_files.append(runtime_file)
+
+    missing_names = [runtime_file.name for runtime_file in missing_runtime_files]
+    if repair_hints.missing_runtime_views_with_valid_sidecars(root, missing_names):
+        missing_relpaths = [runtime_file.relpath for runtime_file in missing_runtime_files]
+        findings.append(
+            Finding(
+                "LINT_IO_004",
+                "error",
+                repair_hints.MISSING_RUNTIME_VIEWS_TITLE,
+                f"{repair_hints.MISSING_RUNTIME_VIEWS_TITLE} Missing views: {', '.join(missing_relpaths)}.",
+                missing_relpaths,
+                repair_hints.MISSING_RUNTIME_VIEWS_RECOMMENDATION,
+            )
+        )
+    else:
+        for runtime_file in missing_runtime_files:
             findings.append(
                 Finding(
                     "LINT_IO_004",
@@ -1391,13 +1409,14 @@ def _check_agent_lifecycle(root: Path) -> list[Finding]:
                     Finding(
                         "LINT_AGENT_003",
                         "error",
-                        "Agent termination event is missing or invalid after RESULT",
+                        repair_hints.LINT_AGENT_003_TITLE,
                         (
+                            f"LINT_AGENT_003: {repair_hints.LINT_AGENT_003_TITLE} "
                             f"{relpath} records AGENT_INSTANCE_ID={agent_id} "
                             f"but no matching AGENT_TERMINATED event exists: {termination_issue}."
                         ),
                         [relpath, "project-runtime/agents/instances.jsonl"],
-                        "Run aso lifecycle terminate-agent --root WORKSPACE --from-result RESULT_PATH --confirm-write.",
+                        repair_hints.LINT_AGENT_003_RECOMMENDATION,
                     )
                 )
             if event_record.reuse_violations:
@@ -1714,6 +1733,9 @@ def _print_text(report: dict[str, object]) -> None:
         if not isinstance(finding, dict):
             continue
         print(f"- {finding['severity']} {finding['rule_id']}: {finding['title']}")
+        recommendation = str(finding.get("recommendation", "")).strip()
+        if recommendation:
+            print(f"  Recommendation: {recommendation}")
 
 
 def _write_json(path_text: str, report: dict[str, object]) -> bool:

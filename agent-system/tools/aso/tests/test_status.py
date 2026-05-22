@@ -281,6 +281,7 @@ class StatusCommandTests(unittest.TestCase):
 
             self.assertEqual(result.returncode, 1, result.stdout + result.stderr)
             self.assertIn("MODE_GUARD_001", result.stdout)
+            self.assertIn("Use --mode workspace", result.stdout)
             self.assertNotIn("PACKAGE_LAYOUT_006", result.stdout)
             report = json.loads(json_out.read_text(encoding="utf-8"))
             self.assertEqual(report["status"], "failed")
