@@ -2,7 +2,9 @@
 
 ## Status
 
-Contract/version boundary placeholder for the corrected P4 package.
+Final local release validation completed for the corrected P4 package on
+2026-05-22. The validation report is recorded in
+`agent-system/11_release/ASO_PROJECT_DESIGN_GAP_GOVERNANCE_P4_V3_6_0_VALIDATION_REPORT.md`.
 
 ## Active Tuple
 
@@ -25,10 +27,37 @@ in the project designer or requirements analyst role. ASO must not read TZ by
 meaning, replace designer reasoning, generate product questions from TZ, or ask
 non-engineer owners to make implementation technology choices.
 
+## Release Scope
+
+This release adds the authoritative P4 contract, role and template alignment,
+gap-register and owner-question validation surfaces, design gate verification,
+audited owner-question routing, positive and negative design/gap fixtures,
+Project Factory documentation alignment, and final release evidence for
+corrected P4.
+
+Owner questions are project-designer-authored and auditor-approved. ASO routes
+only existing audited cards, asks one owner question at a time, and blocks only
+when a gap reaches its declared blocking stage without an accepted answer or
+assumption.
+
 ## Runtime Schema Impact
 
 Runtime Schema remains `3.1.0`. This release does not redefine the P2/P3
 runtime sidecar envelope and does not migrate active runtime state.
+
+## Validation Summary
+
+Final local validation passed for baseline tests, smoke tests, editable install,
+installed CLI verification, strict lint/doctor/package-layout/preflight,
+state verification, proposal/apply dry-runs, Project Factory reference smoke,
+design/gap positive checks, required negative design/gap guards, whitespace
+checks, and forbidden-root tracked-file checks.
+
+Validation log directory:
+
+```text
+/tmp/aso-dg4-100-validation-20260522-092743/
+```
 
 ## Superseded Work
 
@@ -36,10 +65,22 @@ The branch `upgrade/product-intake-capability-p4-v3.6.0` is superseded and
 non-authoritative. It must stay untouched and must not be merged as the
 authoritative P4 line.
 
-## Deferred Implementation
+## Publication Boundary
 
-Later P4 tasks may add role docs, templates, schemas, validators, audit
-integration, fixtures, and final validation evidence under their own task
-packets. This boundary task does not add product-intake code, daemon mode, live
-dispatch, checkpoint execution, external workers, product generation, or secret
-collection.
+No forbidden owner/runtime/archive/venv root is tracked for publication:
+
+```text
+git ls-files project-input project-runtime project-archive .venv
+```
+
+returned empty during final validation.
+
+The required `bash install.sh` validation created local untracked `.venv/`.
+Final cleanup removes local package inputs, `.venv/`, Python bytecode caches,
+and egg-info directories before handoff.
+
+## Non-Goals Preserved
+
+This release does not add product-intake code, daemon mode, live dispatch,
+checkpoint execution, external workers, product generation, secret collection,
+or ASO semantic TZ reading.
