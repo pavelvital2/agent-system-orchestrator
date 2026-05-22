@@ -359,6 +359,12 @@ The expected tracked-file result is empty. Stable release or validation
 summaries belong under accepted package paths such as `agent-system/11_release/`.
 Local `.venv` directories are generated user install state and must not be
 staged or published.
+Current P4.1 release evidence is recorded in
+`agent-system/11_release/ASO_WORKSPACE_BOOTSTRAP_RUNTIME_LIFECYCLE_P4_1_V3_6_1_RELEASE_NOTES.md`
+and
+`agent-system/11_release/ASO_WORKSPACE_BOOTSTRAP_RUNTIME_LIFECYCLE_P4_1_V3_6_1_VALIDATION_REPORT.md`.
+Incident replay notes are recorded in
+`agent-system/11_release/ASO_WORKSPACE_BOOTSTRAP_RUNTIME_LIFECYCLE_P4_1_V3_6_1_INCIDENT_REPLAY_NOTES.md`.
 The historical Stage 2 validation report is
 `agent-system/11_release/STAGE2_UPGRADE_VALIDATION_REPORT.md`; it is superseded
 for current acceptance by the Stage 2 state-contract correction. The final

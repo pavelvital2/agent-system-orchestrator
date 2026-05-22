@@ -184,6 +184,10 @@ The P4.1 hotfix boundary is documented in
 `agent-system/02_runtime/WORKSPACE_BOOTSTRAP_RUNTIME_LIFECYCLE_P4_1_HOTFIX_CONTRACT.md`.
 It supersedes the non-authoritative
 `upgrade/product-intake-capability-p4-v3.6.0` branch without deleting it.
+The corrected bootstrap sequence is summarized in
+`agent-system/02_runtime/CORRECTED_BOOTSTRAP_SEQUENCE_P4_1.md`, with release
+validation evidence under
+`agent-system/11_release/ASO_WORKSPACE_BOOTSTRAP_RUNTIME_LIFECYCLE_P4_1_V3_6_1_VALIDATION_REPORT.md`.
 
 The canonical installable ASO package source is:
 
