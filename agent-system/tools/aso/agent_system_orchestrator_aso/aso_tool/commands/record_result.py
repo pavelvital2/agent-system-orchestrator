@@ -194,6 +194,48 @@ def _contains_bypass_claim(actions: list[str]) -> bool:
     return any(marker in joined for marker in BYPASS_ACTION_MARKERS)
 
 
+def _result_root(path: Path) -> Path | None:
+    for parent in path.parents:
+        if parent.name == "project-runtime":
+            return parent.parent
+    return None
+
+
+def _has_matching_termination(root: Path, fields: dict[str, Any], result_path: Path) -> bool:
+    events_path = root / "project-runtime" / "agents" / "instances.jsonl"
+    if not events_path.is_file():
+        return False
+    try:
+        lines = events_path.read_text(encoding="utf-8").splitlines()
+    except OSError:
+        return False
+    try:
+        result_ref = result_path.resolve(strict=False).relative_to(root.resolve(strict=False)).as_posix()
+    except ValueError:
+        result_ref = result_path.as_posix()
+    expected_event_type = "AUDITOR_AGENT_TERMINATED" if _as_string(fields, "ROLE") == "auditor" else "AGENT_TERMINATED"
+    for raw_line in lines:
+        if not raw_line.strip():
+            continue
+        try:
+            payload = json.loads(raw_line)
+        except json.JSONDecodeError:
+            continue
+        if not isinstance(payload, dict):
+            continue
+        event_type = str(payload.get("event_type", payload.get("event", ""))).strip()
+        if event_type not in {expected_event_type, "agent_instance_terminated", "auditor_agent_terminated"}:
+            continue
+        if str(payload.get("agent_instance_id", "")).strip() != _as_string(fields, "AGENT_INSTANCE_ID"):
+            continue
+        if str(payload.get("task_id", "")).strip() != _as_string(fields, "TASK_ID"):
+            continue
+        if str(payload.get("result_ref", "")).strip() != result_ref:
+            continue
+        return True
+    return False
+
+
 def _blocking_rule(rule_id: str, message: str, evidence: str) -> Rule:
     return Rule(rule_id, "error", message, evidence)
 
@@ -285,7 +327,13 @@ def _validate_common(path: Path, text: str, fields: dict[str, Any], strict: bool
     return errors
 
 
-def _route(fields: dict[str, Any], result_type: str, strict: bool) -> tuple[str, bool, list[Rule], list[Rule]]:
+def _route(
+    fields: dict[str, Any],
+    result_type: str,
+    strict: bool,
+    *,
+    terminated: bool,
+) -> tuple[str, bool, list[Rule], list[Rule]]:
     status = _as_string(fields, "STATUS")
     role = _as_string(fields, "ROLE")
     task_id = _as_string(fields, "TASK_ID")
@@ -294,6 +342,16 @@ def _route(fields: dict[str, Any], result_type: str, strict: bool) -> tuple[str,
     validation_errors: list[Rule] = []
 
     if result_type == "audit_result":
+        if strict and not terminated:
+            validation_errors.append(
+                Rule(
+                    "RESULT_LIFECYCLE_001",
+                    "error",
+                    "Audit RESULT cannot route to checkpoint preflight before auditor termination event.",
+                    "Run aso lifecycle terminate-agent --root WORKSPACE --from-result RESULT_PATH --confirm-write before checkpoint preflight.",
+                )
+            )
+            return "NONE", False, blocking_rules, validation_errors
         if status == "pass":
             refs = _source_result_refs(fields)
             if strict and not refs:
@@ -338,6 +396,16 @@ def _route(fields: dict[str, Any], result_type: str, strict: bool) -> tuple[str,
 
     audit_required = role in PROFILE_ROLES
     if status == "pass" and audit_required:
+        if strict and not terminated:
+            validation_errors.append(
+                Rule(
+                    "RESULT_LIFECYCLE_001",
+                    "error",
+                    "Profile RESULT cannot route to audit before agent termination event.",
+                    "Run aso lifecycle terminate-agent --root WORKSPACE --from-result RESULT_PATH --confirm-write before audit route.",
+                )
+            )
+            return "NONE", False, blocking_rules, validation_errors
         if strict and _contains_bypass_claim(claims):
             validation_errors.append(
                 Rule(
@@ -396,10 +464,13 @@ def build_report(result_path: Path, strict: bool) -> tuple[dict[str, Any], int]:
     checkpoint_candidate = False
     blocking_rules: list[Rule] = []
     if not io_errors and not validation_errors:
+        root = _result_root(result_path)
+        terminated = True if root is None else _has_matching_termination(root, fields, result_path)
         recommended_next_action, checkpoint_candidate, blocking_rules, route_errors = _route(
             fields,
             result_type,
             strict,
+            terminated=terminated,
         )
         validation_errors.extend(route_errors)
 

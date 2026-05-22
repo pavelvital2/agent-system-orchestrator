@@ -1,8 +1,10 @@
 from __future__ import annotations
 
 import json
+import shutil
 import subprocess
 import sys
+import tempfile
 import unittest
 from pathlib import Path
 
@@ -96,6 +98,43 @@ class RecordResultCommandTests(unittest.TestCase):
         rule_ids = {item["rule_id"] for item in report["blocking_rules"]}
         self.assertIn("GOV-CHECKPOINT-AUDIT-GATE", rule_ids)
 
+    def test_profile_pass_inside_workspace_requires_termination_before_audit_route(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            result_path = root / "project-runtime" / "results" / "worker" / "RESULT_TASK_DEMO_001_ATTEMPT_001.md"
+            result_path.parent.mkdir(parents=True)
+            shutil.copyfile(fixture("RESULT_TASK_DEMO_001_PASS.md"), result_path)
+
+            before = run_record_result(result_path, "--strict")
+            terminate = subprocess.run(
+                [
+                    sys.executable,
+                    str(CLI),
+                    "lifecycle",
+                    "terminate-agent",
+                    "--root",
+                    str(root),
+                    "--from-result",
+                    str(result_path),
+                    "--confirm-write",
+                ],
+                check=False,
+                text=True,
+                capture_output=True,
+                cwd=REPO_ROOT,
+            )
+            after = run_record_result(result_path, "--strict")
+
+        self.assertEqual(before.returncode, 1, before.stdout + before.stderr)
+        before_report = report_from(before)
+        self.assertEqual(before_report["recommended_next_action"], "NONE")
+        rule_ids = {item["rule_id"] for item in before_report["validation_errors"]}
+        self.assertIn("RESULT_LIFECYCLE_001", rule_ids)
+        self.assertEqual(terminate.returncode, 0, terminate.stdout + terminate.stderr)
+        self.assertEqual(after.returncode, 0, after.stdout + after.stderr)
+        after_report = report_from(after)
+        self.assertEqual(after_report["recommended_next_action"], "CREATE_AUDITOR")
+
     def test_audit_pass_routes_to_checkpoint_preflight_candidate(self) -> None:
         result = run_record_result(fixture("AUDIT_RESULT_TASK_DEMO_001_PASS.md"), "--strict")
 
@@ -115,6 +154,44 @@ class RecordResultCommandTests(unittest.TestCase):
             ["agent-system/tests/fixtures/results/RESULT_TASK_DEMO_001_PASS.md"],
         )
         self.assertEqual(report["blocking_rules"], [])
+
+    def test_audit_pass_inside_workspace_requires_auditor_termination_before_checkpoint_preflight(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            result_path = root / "project-runtime" / "results" / "audit" / "AUDIT_RESULT_TASK_DEMO_001_ATTEMPT_001.md"
+            result_path.parent.mkdir(parents=True)
+            shutil.copyfile(fixture("AUDIT_RESULT_TASK_DEMO_001_PASS.md"), result_path)
+
+            before = run_record_result(result_path, "--strict")
+            terminate = subprocess.run(
+                [
+                    sys.executable,
+                    str(CLI),
+                    "lifecycle",
+                    "terminate-agent",
+                    "--root",
+                    str(root),
+                    "--from-result",
+                    str(result_path),
+                    "--confirm-write",
+                ],
+                check=False,
+                text=True,
+                capture_output=True,
+                cwd=REPO_ROOT,
+            )
+            after = run_record_result(result_path, "--strict")
+
+        self.assertEqual(before.returncode, 1, before.stdout + before.stderr)
+        before_report = report_from(before)
+        self.assertFalse(before_report["checkpoint_candidate"])
+        rule_ids = {item["rule_id"] for item in before_report["validation_errors"]}
+        self.assertIn("RESULT_LIFECYCLE_001", rule_ids)
+        self.assertEqual(terminate.returncode, 0, terminate.stdout + terminate.stderr)
+        self.assertEqual(after.returncode, 0, after.stdout + after.stderr)
+        after_report = report_from(after)
+        self.assertTrue(after_report["checkpoint_candidate"])
+        self.assertEqual(after_report["recommended_next_action"], "CHECKPOINT_PREFLIGHT")
 
     def test_profile_failed_result_never_becomes_checkpoint_ready(self) -> None:
         result = run_record_result(fixture("RESULT_TASK_DEMO_001_FAIL.md"), "--strict")
