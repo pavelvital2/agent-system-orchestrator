@@ -1,0 +1,99 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://agent-system.local/schemas/structured_artifact.schema.json",
+  "title": "STRUCTURED_ARTIFACT",
+  "description": "Shared P5 structured artifact envelope for package-local machine-readable evidence. This is package metadata, not a Runtime Schema sidecar.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "package_version",
+    "governance_ruleset_version",
+    "runtime_schema_version",
+    "artifact_package_schema_version",
+    "artifact_id",
+    "artifact_type",
+    "created_at",
+    "created_by",
+    "source_refs",
+    "content",
+    "validation"
+  ],
+  "properties": {
+    "schema_version": { "type": "string", "const": "1.0.0" },
+    "package_version": { "type": "string", "const": "3.7.0" },
+    "governance_ruleset_version": { "type": "string", "const": "3.7.0" },
+    "runtime_schema_version": { "type": "string", "const": "3.1.0" },
+    "artifact_package_schema_version": { "type": "string", "const": "1.0.0" },
+    "artifact_id": {
+      "type": "string",
+      "pattern": "^[A-Z][A-Z0-9_:-]+$"
+    },
+    "artifact_type": {
+      "type": "string",
+      "enum": [
+        "artifact_package_manifest",
+        "result_package",
+        "audit_result_package",
+        "structured_artifact"
+      ]
+    },
+    "created_at": { "type": "string", "format": "date-time" },
+    "created_by": { "type": "string", "minLength": 1 },
+    "source_refs": {
+      "oneOf": [
+        { "const": "NONE" },
+        {
+          "type": "array",
+          "items": { "$ref": "#/$defs/packagePath" }
+        }
+      ]
+    },
+    "content": {
+      "type": "object",
+      "additionalProperties": true
+    },
+    "validation": { "$ref": "#/$defs/validationSummary" }
+  },
+  "$defs": {
+    "packagePath": {
+      "type": "string",
+      "minLength": 1,
+      "not": {
+        "anyOf": [
+          { "pattern": "^(\\.venv|project-input|project-runtime|project-archive)(/|$)" },
+          { "pattern": "(^|/)\\.\\.(?:/|$)" }
+        ]
+      }
+    },
+    "validationSummary": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["status", "validators", "notes"],
+      "properties": {
+        "status": {
+          "type": "string",
+          "enum": ["not_run", "passed", "failed", "blocked"]
+        },
+        "validators": {
+          "oneOf": [
+            { "const": "NONE" },
+            {
+              "type": "array",
+              "items": { "type": "string", "minLength": 1 }
+            }
+          ]
+        },
+        "notes": {
+          "oneOf": [
+            { "const": "NONE" },
+            {
+              "type": "array",
+              "items": { "type": "string", "minLength": 1 }
+            }
+          ]
+        }
+      }
+    }
+  }
+}

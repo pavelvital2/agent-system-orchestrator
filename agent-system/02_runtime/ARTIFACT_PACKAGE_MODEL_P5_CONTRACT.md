@@ -23,6 +23,12 @@ The artifact package schema is package metadata. It is not a runtime sidecar
 schema and must not be used as the value for Runtime Schema fields. Runtime
 sidecars continue to use Runtime Schema `3.1.0`.
 
+The structured P5 schema files and templates are defined by:
+
+```text
+agent-system/02_runtime/ARTIFACT_PACKAGE_SCHEMA_P5_1_0_CONTRACT.md
+```
+
 ## Publishable Package Artifacts
 
 P5 treats these package-relative roots as publishable package artifacts when

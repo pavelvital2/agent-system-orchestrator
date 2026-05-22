@@ -1,0 +1,104 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://agent-system.local/schemas/artifact_package_manifest.schema.json",
+  "title": "ARTIFACT_PACKAGE_MANIFEST",
+  "description": "P5 canonical artifact package manifest envelope. This is schema/contract metadata only and does not create CLI, storage, or lifecycle integration.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "artifact_package_schema_version",
+    "artifact_type",
+    "artifact_id",
+    "task_id",
+    "role",
+    "attempt_no",
+    "status",
+    "main_document",
+    "structured_artifacts",
+    "evidence_refs",
+    "created_at",
+    "producer"
+  ],
+  "properties": {
+    "artifact_package_schema_version": { "type": "string", "const": "1.0.0" },
+    "artifact_type": { "$ref": "#/$defs/artifactType" },
+    "artifact_id": {
+      "type": "string",
+      "pattern": "^[A-Z][A-Z0-9_:-]+$"
+    },
+    "task_id": { "type": "string", "minLength": 1 },
+    "role": { "$ref": "#/$defs/role" },
+    "attempt_no": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "status": { "$ref": "#/$defs/status" },
+    "main_document": { "$ref": "#/$defs/packagePath" },
+    "structured_artifacts": { "$ref": "#/$defs/artifactRefsOrNone" },
+    "evidence_refs": { "$ref": "#/$defs/artifactRefsOrNone" },
+    "created_at": { "type": "string", "format": "date-time" },
+    "producer": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["agent_instance_id", "role"],
+      "properties": {
+        "agent_instance_id": { "type": "string", "minLength": 1 },
+        "role": { "$ref": "#/$defs/role" }
+      }
+    }
+  },
+  "$defs": {
+    "artifactType": {
+      "type": "string",
+      "enum": [
+        "RESULT",
+        "AUDIT_RESULT",
+        "TASK_PACKET",
+        "GAP_REGISTER",
+        "OWNER_QUESTION_CARD",
+        "OWNER_DECISION",
+        "LIFECYCLE_EVENT",
+        "EVIDENCE_PACK"
+      ]
+    },
+    "role": {
+      "type": "string",
+      "enum": [
+        "requirements_analyst",
+        "solution_architect",
+        "designer",
+        "developer",
+        "auditor",
+        "tester",
+        "technical_writer",
+        "devops_setup_engineer",
+        "release_manager",
+        "orchestrator",
+        "owner"
+      ]
+    },
+    "status": {
+      "type": "string",
+      "enum": ["pass", "fail", "blocked", "gap", "pending"]
+    },
+    "artifactRefsOrNone": {
+      "oneOf": [
+        { "const": "NONE" },
+        {
+          "type": "array",
+          "items": { "$ref": "#/$defs/packagePath" }
+        }
+      ]
+    },
+    "packagePath": {
+      "type": "string",
+      "minLength": 1,
+      "not": {
+        "anyOf": [
+          { "pattern": "^(\\.venv|project-input|project-runtime|project-archive)(/|$)" },
+          { "pattern": "(^|/)\\.\\.(?:/|$)" }
+        ]
+      }
+    }
+  }
+}

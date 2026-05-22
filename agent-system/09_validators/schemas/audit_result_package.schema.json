@@ -1,0 +1,171 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://agent-system.local/schemas/audit_result_package.schema.json",
+  "title": "AUDIT_RESULT_PACKAGE",
+  "description": "P5 structured package envelope for auditor AUDIT_RESULT evidence. This is not checkpoint authorization, storage, or lifecycle integration.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "package_id",
+    "schema_version",
+    "package_version",
+    "governance_ruleset_version",
+    "runtime_schema_version",
+    "artifact_package_schema_version",
+    "audit_result_ref",
+    "audited_result_ref",
+    "task_id",
+    "agent_instance_id",
+    "status",
+    "audit_scope",
+    "mandatory_checks",
+    "findings",
+    "changed_files",
+    "created_files",
+    "deleted_files",
+    "evidence",
+    "scope_verification",
+    "forbidden_changes_check",
+    "risks",
+    "limitations",
+    "blockers",
+    "next_recommended_action",
+    "reuse_allowed",
+    "agent_termination_required",
+    "validation"
+  ],
+  "properties": {
+    "package_id": {
+      "type": "string",
+      "pattern": "^AUDIT_RESULT_PACKAGE_[A-Za-z0-9_:-]+$"
+    },
+    "schema_version": { "type": "string", "const": "1.0.0" },
+    "package_version": { "type": "string", "const": "3.7.0" },
+    "governance_ruleset_version": { "type": "string", "const": "3.7.0" },
+    "runtime_schema_version": { "type": "string", "const": "3.1.0" },
+    "artifact_package_schema_version": { "type": "string", "const": "1.0.0" },
+    "audit_result_ref": {
+      "type": "string",
+      "pattern": "^project-runtime/results/audit/AUDIT_RESULT_[A-Za-z0-9_:-]+_ATTEMPT_[0-9]+\\.md$"
+    },
+    "audited_result_ref": {
+      "type": "string",
+      "pattern": "^project-runtime/results/worker/RESULT_[A-Za-z0-9_:-]+_ATTEMPT_[0-9]+\\.md$"
+    },
+    "task_id": { "type": "string", "minLength": 1 },
+    "agent_instance_id": { "type": "string", "minLength": 1 },
+    "status": { "$ref": "#/$defs/resultStatus" },
+    "audit_scope": {
+      "type": "array",
+      "minItems": 1,
+      "items": { "type": "string", "minLength": 1 }
+    },
+    "mandatory_checks": {
+      "type": "array",
+      "minItems": 9,
+      "items": { "$ref": "#/$defs/auditCheck" },
+      "allOf": [
+        { "contains": { "type": "object", "required": ["check_id"], "properties": { "check_id": { "const": "CHANGED_FILES_SCOPE_STATUS" } } } },
+        { "contains": { "type": "object", "required": ["check_id"], "properties": { "check_id": { "const": "TASK_PACKET_SCHEMA_STATUS" } } } },
+        { "contains": { "type": "object", "required": ["check_id"], "properties": { "check_id": { "const": "REPOSITORY_IDENTITY_STATUS" } } } },
+        { "contains": { "type": "object", "required": ["check_id"], "properties": { "check_id": { "const": "FORBIDDEN_PATH_STATUS" } } } },
+        { "contains": { "type": "object", "required": ["check_id"], "properties": { "check_id": { "const": "RUNTIME_MUTATION_STATUS" } } } },
+        { "contains": { "type": "object", "required": ["check_id"], "properties": { "check_id": { "const": "EVIDENCE_STATUS" } } } },
+        { "contains": { "type": "object", "required": ["check_id"], "properties": { "check_id": { "const": "SECRET_EXPOSURE_STATUS" } } } },
+        { "contains": { "type": "object", "required": ["check_id"], "properties": { "check_id": { "const": "REASONING_LEVEL_COMPLIANCE" } } } },
+        { "contains": { "type": "object", "required": ["check_id"], "properties": { "check_id": { "const": "VALIDATED_TASK_PACKETS" } } } }
+      ]
+    },
+    "findings": {
+      "oneOf": [
+        { "const": "NONE" },
+        {
+          "type": "array",
+          "items": { "$ref": "#/$defs/auditFinding" }
+        }
+      ]
+    },
+    "changed_files": { "$ref": "#/$defs/listOrNone" },
+    "created_files": { "$ref": "#/$defs/listOrNone" },
+    "deleted_files": { "$ref": "#/$defs/listOrNone" },
+    "evidence": { "$ref": "#/$defs/listOrNone" },
+    "scope_verification": { "$ref": "#/$defs/listOrNone" },
+    "forbidden_changes_check": { "$ref": "#/$defs/listOrNone" },
+    "risks": { "$ref": "#/$defs/listOrNone" },
+    "limitations": { "$ref": "#/$defs/listOrNone" },
+    "blockers": { "$ref": "#/$defs/listOrNone" },
+    "next_recommended_action": { "$ref": "#/$defs/listOrNone" },
+    "reuse_allowed": { "const": false },
+    "agent_termination_required": { "const": true },
+    "validation": { "$ref": "#/$defs/validationSummary" }
+  },
+  "$defs": {
+    "resultStatus": {
+      "type": "string",
+      "enum": ["pass", "fail", "blocked", "gap"]
+    },
+    "listOrNone": {
+      "oneOf": [
+        { "const": "NONE" },
+        { "type": "array", "items": { "type": "string", "minLength": 1 } }
+      ]
+    },
+    "auditCheck": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["check_id", "status", "evidence"],
+      "properties": {
+        "check_id": {
+          "type": "string",
+          "enum": [
+            "CHANGED_FILES_SCOPE_STATUS",
+            "TASK_PACKET_SCHEMA_STATUS",
+            "REPOSITORY_IDENTITY_STATUS",
+            "FORBIDDEN_PATH_STATUS",
+            "RUNTIME_MUTATION_STATUS",
+            "EVIDENCE_STATUS",
+            "SECRET_EXPOSURE_STATUS",
+            "REASONING_LEVEL_COMPLIANCE",
+            "VALIDATED_TASK_PACKETS"
+          ]
+        },
+        "status": {
+          "type": "string",
+          "enum": ["passed", "failed", "blocked", "not_applicable"]
+        },
+        "evidence": { "type": "string", "minLength": 1 }
+      }
+    },
+    "auditFinding": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["finding_id", "severity", "message", "evidence"],
+      "properties": {
+        "finding_id": { "type": "string", "minLength": 1 },
+        "severity": { "type": "string", "enum": ["info", "warning", "error", "blocker"] },
+        "message": { "type": "string", "minLength": 1 },
+        "evidence": { "type": "string", "minLength": 1 }
+      }
+    },
+    "validationSummary": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["status", "validators", "notes"],
+      "properties": {
+        "status": { "type": "string", "enum": ["not_run", "passed", "failed", "blocked"] },
+        "validators": {
+          "oneOf": [
+            { "const": "NONE" },
+            { "type": "array", "items": { "type": "string", "minLength": 1 } }
+          ]
+        },
+        "notes": {
+          "oneOf": [
+            { "const": "NONE" },
+            { "type": "array", "items": { "type": "string", "minLength": 1 } }
+          ]
+        }
+      }
+    }
+  }
+}
