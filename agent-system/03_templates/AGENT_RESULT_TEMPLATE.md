@@ -188,6 +188,13 @@ AGENT_TERMINATION_REQUIRED
 
 If a field has no entries, use `NONE`.
 
+Candidate artifact packages are agent-produced proposals. When created, list
+their paths in `CREATED_FILES` and cite them in `EVIDENCE` with the label
+`CANDIDATE_ARTIFACT_PACKAGE`. Candidate packages are not accepted project truth
+and must not be consumed by downstream context packs until a governed
+acceptance step copies them to `project-runtime/artifacts/accepted/`. Rendered
+views intended for downstream context must live under `project-runtime/rendered/`.
+
 `REUSE_ALLOWED` must always be `false`.
 
 `AGENT_TERMINATION_REQUIRED` must always be `true`.

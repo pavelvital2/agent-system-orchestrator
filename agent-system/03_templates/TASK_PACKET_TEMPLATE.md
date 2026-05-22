@@ -487,7 +487,20 @@ READ_INPUTS must not expand scope beyond this task packet.
 ```text
 - updated app.py
 - RESULT according to AGENT_RESULT_TEMPLATE
+- candidate artifact package under project-runtime/artifacts/candidates/<TASK_ID>/
 ```
+
+Rules:
+- when the task creates packageable agent output, EXPECTED_OUTPUTS must ask
+  for a candidate artifact package under
+  `project-runtime/artifacts/candidates/<TASK_ID>/`;
+- profile agents may write candidate artifact packages only when the task
+  packet includes that path in `ALLOWED_FILE_CHANGES`;
+- candidate packages are proposals for later acceptance and must not be used
+  as source-of-truth context for another agent;
+- only accepted packages under `project-runtime/artifacts/accepted/` and
+  rendered views under `project-runtime/rendered/` may be consumed by context
+  packs.
 
 ---
 
@@ -500,12 +513,17 @@ READ_INPUTS must not expand scope beyond this task packet.
 ```text
 - app.py
 - src/tasks/*
+- project-runtime/artifacts/candidates/<TASK_ID>/*
 ```
 
 Правила:
 - список должен быть bounded;
 - wildcard разрешён только если он действительно необходим;
 - изменение файлов вне списка считается workflow violation.
+- candidate artifact package writes must remain under
+  `project-runtime/artifacts/candidates/<TASK_ID>/` and must not create
+  accepted, rejected, rendered, lifecycle, dispatch, checkpoint, commit, or
+  push side effects.
 
 ---
 

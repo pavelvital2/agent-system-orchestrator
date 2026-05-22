@@ -27,6 +27,9 @@ ARCHIVE_PREFIXES = ("project-archive",)
 DEPRECATED_MARKERS = ("deprecated", "superseded")
 GENERATED_PARTS = {"__pycache__"}
 GENERATED_SUFFIXES = (".pyc",)
+ACCEPTED_ARTIFACT_PREFIX = "project-runtime/artifacts/accepted/"
+RENDERED_VIEW_PREFIX = "project-runtime/rendered/"
+ALLOWED_RUNTIME_CONTEXT_PREFIXES = (ACCEPTED_ARTIFACT_PREFIX, RENDERED_VIEW_PREFIX)
 MAX_DIRECTORY_CONTEXT_FILES = 40
 MAX_DIRECTORY_CONTEXT_BYTES = 250_000
 BROAD_DIRECTORY_CONTEXT_PATHS = {
@@ -190,6 +193,18 @@ def _is_deprecated_path(path: str) -> bool:
 
 def _is_generated_artifact(path: Path) -> bool:
     return any(part in GENERATED_PARTS for part in path.parts) or path.name.endswith(GENERATED_SUFFIXES)
+
+
+def _is_allowed_runtime_context(path: str) -> bool:
+    return any(_matches_path_prefix(path, prefix) for prefix in ALLOWED_RUNTIME_CONTEXT_PREFIXES)
+
+
+def _is_runtime_context(path: str) -> bool:
+    return _matches_path_prefix(path, "project-runtime/")
+
+
+def _is_broad_runtime_forbidden_prefix(prefix: str) -> bool:
+    return prefix.rstrip("/") == "project-runtime"
 
 
 def _is_broad_directory_context(path: str) -> bool:
@@ -451,6 +466,20 @@ def _validate_context_path_policy(
     forbidden_prefixes: list[str],
 ) -> list[ContextPackFinding]:
     findings: list[ContextPackFinding] = []
+    if _is_runtime_context(path) and not _is_allowed_runtime_context(path):
+        findings.append(
+            _finding(
+                "CPP-007",
+                "Runtime context is not consumable",
+                (
+                    f"{field} points at runtime material that is not an accepted artifact "
+                    f"package or rendered view: {path}"
+                ),
+                relpath,
+                field,
+                "Use only project-runtime/artifacts/accepted/ or project-runtime/rendered/ paths as runtime context.",
+            )
+        )
     if _is_archive_path(path):
         findings.append(
             _finding(
@@ -474,6 +503,8 @@ def _validate_context_path_policy(
             )
         )
     for forbidden in forbidden_prefixes:
+        if _is_allowed_runtime_context(path) and _is_broad_runtime_forbidden_prefix(forbidden):
+            continue
         if _matches_path_prefix(path, forbidden):
             findings.append(
                 _finding(
@@ -483,6 +514,63 @@ def _validate_context_path_policy(
                     relpath,
                     field,
                     "Remove the forbidden document from required_docs/source_of_truth or narrow forbidden_docs.",
+                )
+            )
+    return findings
+
+
+def _validate_runtime_context_refs(
+    payload: dict[str, object],
+    relpath: str,
+    root: Path,
+    field_name: str,
+    allowed_prefix: str,
+    forbidden_prefixes: list[str],
+) -> list[ContextPackFinding]:
+    values = payload.get(field_name)
+    if values is None:
+        return []
+    if not isinstance(values, list):
+        return [
+            _finding(
+                "CPS-008",
+                "Runtime context references must be a list",
+                f"{field_name} must be a list of repository-relative paths.",
+                relpath,
+                field_name,
+                f"List only paths under {allowed_prefix}.",
+            )
+        ]
+
+    findings: list[ContextPackFinding] = []
+    for index, value in enumerate(values):
+        field = f"{field_name}[{index}]"
+        path, path_finding = _normalize_context_path(value, relpath=relpath, field=field)
+        if path_finding:
+            findings.append(path_finding)
+            continue
+        if not _matches_path_prefix(path, allowed_prefix):
+            findings.append(
+                _finding(
+                    "CPP-007",
+                    "Runtime context is not consumable",
+                    f"{field} must point under {allowed_prefix}: {path}",
+                    relpath,
+                    field,
+                    "Reference accepted artifact packages or rendered views only.",
+                )
+            )
+            continue
+        findings.extend(_validate_context_path_policy(path, relpath, field, forbidden_prefixes))
+        if root.exists() and root.is_dir() and not (root / path).exists():
+            findings.append(
+                _finding(
+                    "CPP-005",
+                    "Runtime context reference is missing",
+                    f"{field} does not exist under --root: {path}",
+                    relpath,
+                    field,
+                    "Reference only existing accepted packages or rendered views.",
                 )
             )
     return findings
@@ -673,6 +761,26 @@ def _validate_payload(payload: dict[str, object], relpath: str, root: Path, raw_
     findings.extend(forbidden_findings)
     findings.extend(_validate_required_docs(payload, relpath, root, forbidden_prefixes))
     findings.extend(_validate_source_of_truth(payload, relpath, root, forbidden_prefixes))
+    findings.extend(
+        _validate_runtime_context_refs(
+            payload,
+            relpath,
+            root,
+            "accepted_artifact_packages",
+            ACCEPTED_ARTIFACT_PREFIX,
+            forbidden_prefixes,
+        )
+    )
+    findings.extend(
+        _validate_runtime_context_refs(
+            payload,
+            relpath,
+            root,
+            "rendered_views",
+            RENDERED_VIEW_PREFIX,
+            forbidden_prefixes,
+        )
+    )
     findings.extend(_validate_budget(payload, relpath, raw_text))
     return sorted(findings, key=lambda item: (item.rule_id, item.field, item.details))
 
@@ -692,6 +800,8 @@ def _context_summary(payload: dict[str, object] | None, raw_text: str) -> dict[s
         "required_docs_count": len(payload.get("required_docs", [])) if isinstance(payload.get("required_docs"), list) else 0,
         "source_of_truth_count": len(payload.get("source_of_truth", [])) if isinstance(payload.get("source_of_truth"), list) else 0,
         "forbidden_docs_count": len(payload.get("forbidden_docs", [])) if isinstance(payload.get("forbidden_docs"), list) else 0,
+        "accepted_artifact_package_count": len(payload.get("accepted_artifact_packages", [])) if isinstance(payload.get("accepted_artifact_packages"), list) else 0,
+        "rendered_view_count": len(payload.get("rendered_views", [])) if isinstance(payload.get("rendered_views"), list) else 0,
         "context_chars_total": len(raw_text),
         "context_budget": payload.get("context_budget", {}) if isinstance(payload.get("context_budget"), dict) else {},
     }

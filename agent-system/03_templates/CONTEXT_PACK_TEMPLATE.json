@@ -18,6 +18,8 @@
   "source_of_truth": [
     "agent-system/README.md"
   ],
+  "accepted_artifact_packages": [],
+  "rendered_views": [],
   "context_budget": {
     "max_docs": 5,
     "max_sections_per_doc": 8,

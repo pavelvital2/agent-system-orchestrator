@@ -25,6 +25,9 @@ DEFAULT_FORBIDDEN_DOCS = (
     ".tmp/",
     "tmp/",
 )
+ACCEPTED_ARTIFACT_PREFIX = "project-runtime/artifacts/accepted/"
+RENDERED_VIEW_PREFIX = "project-runtime/rendered/"
+ALLOWED_RUNTIME_CONTEXT_PREFIXES = (ACCEPTED_ARTIFACT_PREFIX, RENDERED_VIEW_PREFIX)
 ARCHIVE_PREFIXES = ("project-archive",)
 DEPRECATED_MARKERS = ("deprecated", "superseded")
 WHOLE_PROJECT_TOKENS = {"", ".", "./", "/", "*", "**", "<project-root>", "project-root", "repo", "repository"}
@@ -265,6 +268,11 @@ def _parse_allowed_files(text: str) -> list[str]:
     return _extract_path_candidates(body)
 
 
+def _parse_read_inputs(text: str) -> list[str]:
+    body = _section_body(text, ("Read inputs", "READ_INPUTS", "Inputs", "INPUTS"))
+    return _extract_path_candidates(body)
+
+
 def _is_whole_project_reference(path: str) -> bool:
     if path in WHOLE_PROJECT_TOKENS:
         return True
@@ -276,6 +284,18 @@ def _is_whole_project_reference(path: str) -> bool:
 
 def _is_generated_artifact(path: Path) -> bool:
     return any(part in GENERATED_PARTS for part in path.parts) or path.name.endswith(GENERATED_SUFFIXES)
+
+
+def _is_allowed_runtime_context(path: str) -> bool:
+    return any(_matches_path_prefix(path, prefix) for prefix in ALLOWED_RUNTIME_CONTEXT_PREFIXES)
+
+
+def _is_runtime_context(path: str) -> bool:
+    return _matches_path_prefix(path, "project-runtime/")
+
+
+def _is_broad_runtime_forbidden_prefix(prefix: str) -> bool:
+    return prefix.rstrip("/") == "project-runtime"
 
 
 def _file_sha256(path: Path) -> str:
@@ -311,6 +331,21 @@ def _expanded_required_docs(
 
     for index, doc_path in enumerate(required_paths):
         field = f"required_docs[{index}]"
+        if _is_runtime_context(doc_path) and not _is_allowed_runtime_context(doc_path):
+            findings.append(
+                _finding(
+                    "CPB-BUILD-008",
+                    "Runtime context is not consumable",
+                    (
+                        f"{field} references runtime material that is not an accepted artifact "
+                        f"package or rendered view: {doc_path}"
+                    ),
+                    task_relpath,
+                    field,
+                    "Use only project-runtime/artifacts/accepted/ or project-runtime/rendered/ paths as runtime context.",
+                )
+            )
+            continue
         if _is_whole_project_reference(doc_path):
             findings.append(
                 _finding(
@@ -335,7 +370,12 @@ def _expanded_required_docs(
                 )
             )
             continue
-        matched_forbidden = [prefix for prefix in forbidden_prefixes if _matches_path_prefix(doc_path, prefix)]
+        matched_forbidden = [
+            prefix
+            for prefix in forbidden_prefixes
+            if _matches_path_prefix(doc_path, prefix)
+            and not (_is_allowed_runtime_context(doc_path) and _is_broad_runtime_forbidden_prefix(prefix))
+        ]
         if matched_forbidden:
             findings.append(
                 _finding(
@@ -491,6 +531,7 @@ def _build_context_pack(
 
     task_id = _parse_task_id(text)
     required_paths = _parse_required_docs(text)
+    read_input_paths = _parse_read_inputs(text)
     forbidden_docs = _parse_forbidden_docs(text)
     allowed_files = _parse_allowed_files(text)
     source_of_truth = _parse_source_of_truth(text)
@@ -520,7 +561,8 @@ def _build_context_pack(
             )
         )
 
-    docs, doc_findings = _expanded_required_docs(root, task_relpath, required_paths, forbidden_docs, strict)
+    all_context_paths = _dedupe([*required_paths, *read_input_paths])
+    docs, doc_findings = _expanded_required_docs(root, task_relpath, all_context_paths, forbidden_docs, strict)
     findings.extend(doc_findings)
     doc_paths = [str(doc["path"]) for doc in docs]
     if source_of_truth:
@@ -537,6 +579,10 @@ def _build_context_pack(
             "required_docs": docs,
             "forbidden_docs": forbidden_docs,
             "source_of_truth": source_paths,
+            "accepted_artifact_packages": [
+                path for path in doc_paths if _matches_path_prefix(path, ACCEPTED_ARTIFACT_PREFIX)
+            ],
+            "rendered_views": [path for path in doc_paths if _matches_path_prefix(path, RENDERED_VIEW_PREFIX)],
             "required_docs_reason": "Derived from the task packet Required docs section for bounded agent handoff.",
             "section_hints": {str(doc["path"]): doc["sections"] for doc in docs},
             "task_packet": task_relpath,

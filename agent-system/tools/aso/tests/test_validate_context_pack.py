@@ -111,6 +111,201 @@ class ValidateContextPackCommandTests(unittest.TestCase):
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
         self.assertIn("ASO validate-context-pack: PASSED", result.stdout)
 
+    def test_accepted_packages_and_rendered_views_are_consumable_runtime_context(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp) / "workspace"
+            accepted = root / "project-runtime/artifacts/accepted/TASK_DEMO/manifest.json"
+            rendered = root / "project-runtime/rendered/TASK_DEMO/context.md"
+            accepted.parent.mkdir(parents=True)
+            rendered.parent.mkdir(parents=True)
+            accepted.write_text('{"status":"accepted"}\n', encoding="utf-8")
+            rendered.write_text("# Rendered context\n", encoding="utf-8")
+            context_pack = Path(tmp) / "runtime-context.json"
+            context_pack.write_text(
+                json.dumps(
+                    {
+                        "task_id": "TASK_DEMO",
+                        "required_docs": [
+                            {
+                                "path": "project-runtime/artifacts/accepted/TASK_DEMO/manifest.json",
+                                "sections": ["Accepted package"],
+                                "why_needed": "Accepted package evidence for downstream work.",
+                            },
+                            {
+                                "path": "project-runtime/rendered/TASK_DEMO/context.md",
+                                "sections": ["Rendered context"],
+                                "why_needed": "Rendered view for bounded downstream context.",
+                            },
+                        ],
+                        "forbidden_docs": ["project-runtime/"],
+                        "source_of_truth": [
+                            "project-runtime/artifacts/accepted/TASK_DEMO/manifest.json",
+                            "project-runtime/rendered/TASK_DEMO/context.md",
+                        ],
+                        "accepted_artifact_packages": [
+                            "project-runtime/artifacts/accepted/TASK_DEMO/manifest.json"
+                        ],
+                        "rendered_views": ["project-runtime/rendered/TASK_DEMO/context.md"],
+                        "context_budget": {
+                            "max_docs": 2,
+                            "max_sections_per_doc": 1,
+                            "max_chars_total": 2000,
+                        },
+                    },
+                    indent=2,
+                ),
+                encoding="utf-8",
+            )
+
+            result = run_validate_context_pack(str(context_pack), "--root", str(root), "--strict")
+
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        self.assertIn("ASO validate-context-pack: PASSED", result.stdout)
+
+    def test_candidate_packages_are_not_consumable_runtime_context(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp) / "workspace"
+            candidate = root / "project-runtime/artifacts/candidates/TASK_DEMO/manifest.json"
+            candidate.parent.mkdir(parents=True)
+            candidate.write_text('{"status":"candidate"}\n', encoding="utf-8")
+            context_pack = Path(tmp) / "candidate-context.json"
+            context_pack.write_text(
+                json.dumps(
+                    {
+                        "task_id": "TASK_DEMO",
+                        "required_docs": [
+                            {
+                                "path": "project-runtime/artifacts/candidates/TASK_DEMO/manifest.json",
+                                "sections": ["Candidate package"],
+                                "why_needed": "Candidate package should not be consumable.",
+                            }
+                        ],
+                        "forbidden_docs": ["project-runtime/"],
+                        "source_of_truth": ["project-runtime/artifacts/candidates/TASK_DEMO/manifest.json"],
+                        "accepted_artifact_packages": [
+                            "project-runtime/artifacts/candidates/TASK_DEMO/manifest.json"
+                        ],
+                        "context_budget": {
+                            "max_docs": 1,
+                            "max_sections_per_doc": 1,
+                            "max_chars_total": 2000,
+                        },
+                    },
+                    indent=2,
+                ),
+                encoding="utf-8",
+            )
+
+            result = run_validate_context_pack(str(context_pack), "--root", str(root), "--strict")
+
+        self.assertEqual(result.returncode, 1, result.stdout + result.stderr)
+        self.assertIn("CPP-007", result.stdout)
+
+    def test_explicitly_forbidden_accepted_and_rendered_paths_fail_validation(self) -> None:
+        cases = (
+            (
+                "project-runtime/artifacts/accepted/TASK_DEMO/manifest.json",
+                "project-runtime/artifacts/accepted/",
+                "accepted_artifact_packages",
+            ),
+            (
+                "project-runtime/rendered/TASK_DEMO/context.md",
+                "project-runtime/rendered/",
+                "rendered_views",
+            ),
+        )
+        for runtime_path, forbidden_path, runtime_field in cases:
+            with self.subTest(runtime_path=runtime_path), tempfile.TemporaryDirectory() as tmp:
+                root = Path(tmp) / "workspace"
+                runtime_doc = root / runtime_path
+                runtime_doc.parent.mkdir(parents=True)
+                runtime_doc.write_text("# Runtime context\n", encoding="utf-8")
+                context_pack = Path(tmp) / "explicit-runtime-forbidden.json"
+                payload = {
+                    "task_id": "TASK_DEMO",
+                    "required_docs": [
+                        {
+                            "path": runtime_path,
+                            "sections": ["Runtime context"],
+                            "why_needed": "Runtime context explicitly forbidden by this pack.",
+                        }
+                    ],
+                    "forbidden_docs": ["project-runtime/", forbidden_path],
+                    "source_of_truth": [runtime_path],
+                    runtime_field: [runtime_path],
+                    "context_budget": {
+                        "max_docs": 1,
+                        "max_sections_per_doc": 1,
+                        "max_chars_total": 2000,
+                    },
+                }
+                context_pack.write_text(json.dumps(payload, indent=2), encoding="utf-8")
+
+                result = run_validate_context_pack(str(context_pack), "--root", str(root), "--strict")
+
+                self.assertEqual(result.returncode, 1, result.stdout + result.stderr)
+                self.assertIn("ASO validate-context-pack: FAILED", result.stdout)
+                self.assertIn("CPP-004", result.stdout)
+
+    def test_explicitly_forbidden_runtime_fields_fail_even_when_required_docs_are_allowed(self) -> None:
+        cases = (
+            (
+                "project-runtime/artifacts/accepted/TASK_DEMO/manifest.json",
+                "project-runtime/artifacts/accepted/TASK_DEMO/",
+                "accepted_artifact_packages",
+            ),
+            (
+                "project-runtime/rendered/TASK_DEMO/context.md",
+                "project-runtime/rendered/TASK_DEMO/",
+                "rendered_views",
+            ),
+        )
+        for runtime_path, forbidden_path, runtime_field in cases:
+            with self.subTest(runtime_field=runtime_field), tempfile.TemporaryDirectory() as tmp:
+                root = Path(tmp) / "workspace"
+                runtime_doc = root / runtime_path
+                source_doc = root / "docs/source.md"
+                runtime_doc.parent.mkdir(parents=True)
+                source_doc.parent.mkdir(parents=True)
+                runtime_doc.write_text("# Runtime context\n", encoding="utf-8")
+                source_doc.write_text("# Source context\n", encoding="utf-8")
+                context_pack = Path(tmp) / "runtime-field-forbidden.json"
+                payload = {
+                    "task_id": "TASK_DEMO",
+                    "required_docs": [
+                        {
+                            "path": "docs/source.md",
+                            "sections": ["Source context"],
+                            "why_needed": "Allowed source context for this task.",
+                        }
+                    ],
+                    "forbidden_docs": ["project-runtime/", forbidden_path],
+                    "source_of_truth": ["docs/source.md"],
+                    runtime_field: [runtime_path],
+                    "context_budget": {
+                        "max_docs": 1,
+                        "max_sections_per_doc": 1,
+                        "max_chars_total": 2000,
+                    },
+                }
+                context_pack.write_text(json.dumps(payload, indent=2), encoding="utf-8")
+                json_out = Path(tmp) / "runtime-field-forbidden-report.json"
+
+                result = run_validate_context_pack(
+                    str(context_pack),
+                    "--root",
+                    str(root),
+                    "--strict",
+                    "--json-out",
+                    str(json_out),
+                )
+                report = json.loads(json_out.read_text(encoding="utf-8"))
+
+                self.assertEqual(result.returncode, 1, result.stdout + result.stderr)
+                self.assertIn("ASO validate-context-pack: FAILED", result.stdout)
+                self.assertIn("CPP-004", result.stdout)
+                self.assertEqual(report["findings"][0]["field"], f"{runtime_field}[0]")
+
     def test_json_output_is_parseable_and_deterministic(self) -> None:
         fixture = FIXTURE_ROOT / "bad_context_pack_forbidden_doc.json"
         with tempfile.TemporaryDirectory() as tmp:

@@ -104,6 +104,154 @@ class ContextPackBuildCommandTests(unittest.TestCase):
         self.assertEqual(report["status"], "failed")
         self.assertEqual(report["findings"][0]["rule_id"], "CPB-BUILD-005")
 
+    def test_read_inputs_add_only_accepted_packages_and_rendered_views(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp) / "workspace"
+            doc = root / "docs/source.md"
+            accepted = root / "project-runtime/artifacts/accepted/TASK_DEMO/manifest.json"
+            rendered = root / "project-runtime/rendered/TASK_DEMO/context.md"
+            doc.parent.mkdir(parents=True)
+            accepted.parent.mkdir(parents=True)
+            rendered.parent.mkdir(parents=True)
+            doc.write_text("# Source\n", encoding="utf-8")
+            accepted.write_text('{"status":"accepted"}\n', encoding="utf-8")
+            rendered.write_text("# Rendered context\n", encoding="utf-8")
+            task_packet = root / "TASK_DEMO.md"
+            task_packet.write_text(
+                """# TASK PACKET
+
+```text
+TASK_ID: TASK_DEMO
+```
+
+## Required docs
+
+- `docs/source.md`
+
+## Read inputs
+
+- `project-runtime/artifacts/accepted/TASK_DEMO/manifest.json`
+- `project-runtime/rendered/TASK_DEMO/context.md`
+
+## Forbidden write paths
+
+```text
+project-runtime/**
+```
+""",
+                encoding="utf-8",
+            )
+
+            result = run_aso("context-pack", "build", "--task-packet", str(task_packet), "--root", str(root), "--strict")
+
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        proposal = json.loads(result.stdout)
+        paths = {doc["path"] for doc in proposal["required_docs"]}
+        self.assertIn("project-runtime/artifacts/accepted/TASK_DEMO/manifest.json", paths)
+        self.assertIn("project-runtime/rendered/TASK_DEMO/context.md", paths)
+        self.assertEqual(
+            proposal["accepted_artifact_packages"],
+            ["project-runtime/artifacts/accepted/TASK_DEMO/manifest.json"],
+        )
+        self.assertEqual(proposal["rendered_views"], ["project-runtime/rendered/TASK_DEMO/context.md"])
+
+    def test_read_inputs_reject_candidate_packages(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp) / "workspace"
+            doc = root / "docs/source.md"
+            candidate = root / "project-runtime/artifacts/candidates/TASK_DEMO/manifest.json"
+            doc.parent.mkdir(parents=True)
+            candidate.parent.mkdir(parents=True)
+            doc.write_text("# Source\n", encoding="utf-8")
+            candidate.write_text('{"status":"candidate"}\n', encoding="utf-8")
+            task_packet = root / "TASK_DEMO.md"
+            task_packet.write_text(
+                """# TASK PACKET
+
+```text
+TASK_ID: TASK_DEMO
+```
+
+## Required docs
+
+- `docs/source.md`
+
+## Read inputs
+
+- `project-runtime/artifacts/candidates/TASK_DEMO/manifest.json`
+""",
+                encoding="utf-8",
+            )
+
+            result = run_aso("context-pack", "build", "--task-packet", str(task_packet), "--root", str(root), "--strict")
+
+        self.assertEqual(result.returncode, 1, result.stdout + result.stderr)
+        report = json.loads(result.stderr)
+        self.assertEqual(report["status"], "failed")
+        self.assertIn("CPB-BUILD-008", {finding["rule_id"] for finding in report["findings"]})
+
+    def test_read_inputs_reject_explicitly_forbidden_accepted_and_rendered_paths(self) -> None:
+        cases = (
+            (
+                "project-runtime/artifacts/accepted/TASK_DEMO/manifest.json",
+                "project-runtime/artifacts/accepted/",
+            ),
+            (
+                "project-runtime/rendered/TASK_DEMO/context.md",
+                "project-runtime/rendered/",
+            ),
+        )
+        for runtime_path, forbidden_path in cases:
+            with self.subTest(runtime_path=runtime_path), tempfile.TemporaryDirectory() as tmp:
+                root = Path(tmp) / "workspace"
+                doc = root / "docs/source.md"
+                runtime_doc = root / runtime_path
+                doc.parent.mkdir(parents=True)
+                runtime_doc.parent.mkdir(parents=True)
+                doc.write_text("# Source\n", encoding="utf-8")
+                runtime_doc.write_text("# Runtime context\n", encoding="utf-8")
+                task_packet = root / "TASK_DEMO.md"
+                task_packet.write_text(
+                    f"""# TASK PACKET
+
+```text
+TASK_ID: TASK_DEMO
+```
+
+## Required docs
+
+- `docs/source.md`
+
+## Read inputs
+
+- `{runtime_path}`
+
+## Forbidden write paths
+
+```text
+project-runtime/**
+{forbidden_path}
+```
+""",
+                    encoding="utf-8",
+                )
+
+                result = run_aso(
+                    "context-pack",
+                    "build",
+                    "--task-packet",
+                    str(task_packet),
+                    "--root",
+                    str(root),
+                    "--strict",
+                )
+
+                self.assertEqual(result.returncode, 1, result.stdout + result.stderr)
+                self.assertEqual(result.stdout, "")
+                report = json.loads(result.stderr)
+                self.assertEqual(report["status"], "failed")
+                self.assertIn("CPB-BUILD-002", {finding["rule_id"] for finding in report["findings"]})
+
 
 if __name__ == "__main__":
     unittest.main()
