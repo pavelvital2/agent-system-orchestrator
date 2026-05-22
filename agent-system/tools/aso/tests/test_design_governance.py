@@ -12,6 +12,7 @@ from pathlib import Path
 CLI = Path(__file__).resolve().parents[1] / "aso.py"
 REPO_ROOT = Path(__file__).resolve().parents[4]
 FIXTURE_ROOT = REPO_ROOT / "agent-system" / "tests" / "fixtures" / "design_gap"
+NEGATIVE_FIXTURE_ROOT = FIXTURE_ROOT / "negative"
 
 
 def run_aso(*args: str) -> subprocess.CompletedProcess[str]:
@@ -94,6 +95,30 @@ class DesignGovernanceCommandTests(unittest.TestCase):
         self.assertEqual(result.returncode, 1, result.stdout + result.stderr)
         self.assertIn("DG4_GATE_002", result.stdout)
         self.assertIn("GAP-001", result.stdout)
+
+    def test_static_negative_fixtures_fail_with_expected_rules(self) -> None:
+        cases = {
+            "technical_question": ("verify", ("DG4_QUESTION_008",)),
+            "missing_recommendation": ("verify", ("DG4_QUESTION_004",)),
+            "missing_rationale": ("verify", ("DG4_QUESTION_006",)),
+            "missing_blocking_stage": ("verify", ("DG4_QUESTION_007", "DG4_GAP_002")),
+            "unanswered_blocking_gap_crossing_stage": ("gate", ("DG4_GATE_002",)),
+            "unaudited_question_presentation": ("verify", ("DG4_AUDIT_001",)),
+            "orphan_owner_decision": ("verify", ("DG4_ANSWER_004",)),
+        }
+        for name, (command, expected_rules) in cases.items():
+            with self.subTest(name=name):
+                root = NEGATIVE_FIXTURE_ROOT / name
+                explanation = root / "NEGATIVE_CASE.md"
+                self.assertTrue(explanation.exists(), f"missing explanation for {name}")
+                if command == "gate":
+                    result = run_aso("design", "gate", "verify", "--root", str(root), "--stage", "IMPLEMENTATION", "--strict")
+                else:
+                    result = run_aso("design", "verify", "--root", str(root), "--strict")
+
+                self.assertEqual(result.returncode, 1, result.stdout + result.stderr)
+                for rule_id in expected_rules:
+                    self.assertIn(rule_id, result.stdout)
 
     def test_fake_owner_answer_reference_fails_verify_and_gate(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:

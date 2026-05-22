@@ -1,0 +1,17 @@
+{
+  "accepted_source_of_truth_update": "PENDING",
+  "answer_record_id": "ANS-404-A",
+  "answered_at": "2026-05-22T00:00:00Z",
+  "answered_by": "owner",
+  "audit_refs": "NONE",
+  "design_update_ref": "NONE",
+  "design_update_required": true,
+  "gap_id": "GAP-001",
+  "owner_answer_summary": "Owner selected option A for a missing question.",
+  "project_id": "fixture-project",
+  "question_id": "Q-404",
+  "question_ref": "project-docs/design/questions/Q-404.json",
+  "schema_version": "1.0.0",
+  "selected_option": "A",
+  "status": "received"
+}
