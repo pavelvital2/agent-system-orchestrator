@@ -377,6 +377,10 @@ Current P4.1 release evidence is recorded in
 `agent-system/11_release/ASO_WORKSPACE_BOOTSTRAP_RUNTIME_LIFECYCLE_P4_1_V3_6_1_RELEASE_NOTES.md`
 and
 `agent-system/11_release/ASO_WORKSPACE_BOOTSTRAP_RUNTIME_LIFECYCLE_P4_1_V3_6_1_VALIDATION_REPORT.md`.
+Current P5 release evidence is recorded in
+`agent-system/11_release/ASO_ARTIFACT_PACKAGE_MODEL_P5_V3_7_0_RELEASE_NOTES.md`
+and
+`agent-system/11_release/ASO_ARTIFACT_PACKAGE_MODEL_P5_V3_7_0_VALIDATION_REPORT.md`.
 Incident replay notes are recorded in
 `agent-system/11_release/ASO_WORKSPACE_BOOTSTRAP_RUNTIME_LIFECYCLE_P4_1_V3_6_1_INCIDENT_REPLAY_NOTES.md`.
 The historical Stage 2 validation report is
