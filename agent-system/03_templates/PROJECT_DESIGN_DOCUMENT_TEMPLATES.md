@@ -28,6 +28,7 @@ Use these records together for a complete design pass:
 - `DEFERRED_GAPS_REGISTER_TEMPLATE.md`
 - `OWNER_ANSWER_INTEGRATION_TEMPLATE.md`
 - `PROJECT_DESIGN_AUDIT_TEMPLATE.md`
+- `DESIGNER_OWNER_QUESTION_CARD_EXAMPLES.md`
 
 ## Owner-facing content rule
 

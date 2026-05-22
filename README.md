@@ -25,10 +25,10 @@ package metadata as the governed `3.6.0` package/governance tuple with runtime
 schema `3.1.0`. P4 defines designer-led project design, gap blocking policy,
 owner question policy, and audited owner decision flow while preserving the
 P2/P3 Runtime Schema `3.1.0` sidecar envelope. ASO remains a governance and
-control conveyor: it does not semantically read TZ, replace project designer
-reasoning, generate product questions from TZ, install product-intake code,
-run a daemon, dispatch live agents, execute checkpoints, generate products,
-collect secrets, or run external workers.
+control conveyor: it does not interpret raw TZ content, replace project
+designer reasoning, generate product questions from TZ, install product-intake
+code, run a daemon, dispatch live agents, execute checkpoints, generate
+products, collect secrets, or run external workers.
 
 The Runtime Schema `3.1.0` sidecar contract is documented in
 `agent-system/02_runtime/RUNTIME_STATE_P2_CONTRACT.md` and packaged as
@@ -135,6 +135,32 @@ migration receipts under allowed `project-runtime/` report paths. `aso state
 render` is read-only except for explicit output to `/tmp` or workspace
 `project-runtime/reports` or `project-runtime/rendered` paths.
 
+Corrected P4 design governance commands validate and route
+project-designer-authored artifacts. They do not interpret raw TZ content,
+select product capabilities, or generate owner questions:
+
+```text
+python3 agent-system/tools/aso/aso.py design --help
+python3 agent-system/tools/aso/aso.py design verify --root agent-system/tests/fixtures/design_gap/valid_workspace --strict
+python3 agent-system/tools/aso/aso.py design questions next --root agent-system/tests/fixtures/design_gap/valid_workspace --json-out /tmp/aso-dg4-next-question.json
+python3 agent-system/tools/aso/aso.py design gate verify --root agent-system/tests/fixtures/design_gap/valid_workspace --stage DESIGN --strict
+```
+
+`design verify` checks gap records, owner question cards, audit status, answer
+links, one-question-at-a-time routing, and cross-links. `design questions
+next` returns the next existing audited question card and writes only to
+`/tmp` or an allowed runtime report path. `design decision record --dry-run`
+writes nothing; confirmed decision recording writes only ignored local
+owner-decision records under the selected workspace after a question has been
+presented. Example owner-answer validation after presentation:
+
+```text
+python3 agent-system/tools/aso/aso.py design decision record --root /path/to/project --question-id Q-001 --answer A --dry-run
+```
+
+`design gate verify` fails closed when an unanswered gap blocks the requested
+lifecycle stage.
+
 Safe Proposal / Apply P3 adds local guarded proposal and apply commands for
 Runtime Schema `3.1.0` state. Proposal commands do not dispatch agents, do not
 write canonical state sidecars, and do not commit or push. Checkpoint proposal
@@ -232,7 +258,11 @@ environments, caches, logs, secret-like files, local upgrade packages, or ASO
 engine `.git` metadata.
 
 Project Factory P1 does not implement a runtime daemon, dashboard control
-plane, distributed workers, live agent dispatch, or checkpoint executor.
+plane, distributed workers, live agent dispatch, or checkpoint executor. It
+does not replace designer-led intake. Generated workspaces provide the bounded
+filesystem shell for later profile-agent work; the project designer still
+interprets the owner source brief, chooses the documentation template family,
+records gaps, and authors functional owner question cards subject to audit.
 
 For DAG readiness, `audit_passed` is not a completed dependency. Downstream
 work that depends on accepted task output requires `checkpoint_done` with
@@ -275,18 +305,22 @@ The helper supports status, lint, doctor, package-layout verification, design
 validation, context pack validation, rule validation, Runtime Schema `3.1.0`
 state init/migrate/render/verify, dry-run next-action planning, static
 dashboard rendering, checkpoint eligibility preflight, archive verify
-inspection, and Project Factory scoped generated-project helpers. Diagnostic,
-validator, planning, dashboard, archive, and checkpoint-preflight surfaces
+inspection, P4 design governance, and Project Factory scoped generated-project
+helpers. Diagnostic, validator, design-governance, planning, dashboard,
+archive, and checkpoint-preflight surfaces
 remain read-only, dry-run, or proposal-only. State writes are limited to
 explicit `state init --confirm-write`, `state migrate --confirm-write`, and
-generated-project local initialization under ignored workspace roots. Project
+generated-project local initialization under ignored workspace roots. Design
+decision recording is limited to explicit `design decision record
+--confirm-write` under ignored local owner-decision runtime roots. Project
 Factory commands may create generated projects and, when a later publish flow
 is explicitly confirmed, publish only clean generated-project files from
 explicit target paths. Outside the P3 local runtime-state proposal/apply
-boundary, ASO does not provide a runtime daemon, live agent dispatch,
-checkpoint execution, general package/runtime mutation, commit, or push authority. For
-package lint compatibility, this scoped boundary is also stated as: ASO
-diagnostic surfaces do not provide general mutation, dispatch, or checkpoint authority.
+boundary and the P4 owner-decision recording boundary, ASO does not provide a
+runtime daemon, live agent dispatch, checkpoint execution, general
+package/runtime mutation, commit, or push authority. For package lint
+compatibility, this scoped boundary is also stated as: ASO diagnostic surfaces
+do not provide general mutation, dispatch, or checkpoint authority.
 
 ## Publication boundary
 

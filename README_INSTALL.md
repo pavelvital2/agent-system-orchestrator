@@ -17,10 +17,11 @@ and verifies the installed `aso` command. It uses local Python packaging only;
 it does not require secrets, GitHub credentials, remote repository access,
 dispatch authority, checkpoint execution, commit, push, or publication rights.
 
-This install document covers package version `3.5.0` with runtime schema
-`3.1.0`. Safe Proposal / Apply P3 defines bounded local runtime-state
-proposal/apply authority while preserving the Runtime State P2 sidecar schema
-and the Project Factory P1 command boundary.
+This install document covers package version `3.6.0` with runtime schema
+`3.1.0`. Corrected P4 adds designer-led project design, gap governance,
+audited owner question routing, and owner decision recording while preserving
+the Runtime State P2/P3 sidecar schema and the Project Factory P1 command
+boundary.
 
 Both installers accept a Python executable and virtual environment path:
 
@@ -91,6 +92,30 @@ plan for compatible legacy sidecars; confirmed migration requires
 receipts under allowed `project-runtime/` report paths. `aso state render` is
 read-only except for explicit output to `/tmp`, `project-runtime/reports`, or
 `project-runtime/rendered`.
+
+Corrected P4 design governance commands should also be available after
+install:
+
+```text
+aso design --help
+aso design verify --root agent-system/tests/fixtures/design_gap/valid_workspace --strict
+aso design questions next --root agent-system/tests/fixtures/design_gap/valid_workspace --json-out /tmp/aso-dg4-next-question.json
+aso design gate verify --root agent-system/tests/fixtures/design_gap/valid_workspace --stage DESIGN --strict
+```
+
+These commands validate and route existing project-designer-authored artifacts.
+They do not interpret raw TZ content, choose product capabilities, or generate
+owner questions. Owner-facing questions must be functional, workflow, UX,
+interface, visualization, business-rule, reporting, priority, acceptance, or
+operational-behavior questions; they must not ask the owner to choose
+frameworks, databases, queues, schedulers, transports, hosting mechanisms,
+ORMs, or API styles.
+
+Owner-answer validation is used after an audited question has been presented:
+
+```text
+aso design decision record --root /path/to/project --question-id Q-001 --answer A --dry-run
+```
 
 Safe Proposal / Apply P3 command help should also be available after install:
 
@@ -168,13 +193,14 @@ gh auth status
 aso project create --github --confirm-publish --engine-mode reference --target /tmp/demo-github --name "Demo GitHub" --slug demo-github --profile generic --branch main --owner OWNER --repo demo-github --private
 ```
 
-Safe Proposal / Apply P3 does not add a runtime daemon, live dispatch,
-checkpoint executor, commit/push automation, distributed workers, web control
-panel, or multi-project registry. The install and verification commands do not
-grant commit, push, tag, merge, checkpoint, or publication authority for the
-package repository or owner roots. P4 dashboard/control-plane work, P5
-queue/dispatcher work, P6 checkpoint executor work, daemon mode, and
-distributed workers are deferred.
+Safe Proposal / Apply P3, corrected P4 design governance, and Project Factory
+P1 do not add a runtime daemon, live dispatch, checkpoint executor, commit/push
+automation, distributed workers, web control panel, ASO Studio, product
+generation, or multi-project registry. The install and verification commands
+do not grant commit, push, tag, merge, checkpoint, or publication authority for
+the package repository or owner roots. Later control-plane, queue/dispatcher,
+checkpoint executor, daemon, Studio, and distributed-worker work requires a
+separate bounded package upgrade.
 
 ## Dev Container
 

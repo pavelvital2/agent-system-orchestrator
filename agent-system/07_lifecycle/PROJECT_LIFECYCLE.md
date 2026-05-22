@@ -10,9 +10,18 @@ This document defines the universal project lifecycle for the agent-system packa
 
 Audit is a mandatory gate after design and implementation work. Additional audit gates may be required by task packets.
 
+Corrected P4 adds a designer-led intake pass before architecture work when the
+owner source brief needs project type selection, template selection, gap
+records, or owner question cards. In current runtime role values this
+responsibility is dispatched through `requirements_analyst` with
+`PROJECT_DESIGNER` named in the task packet. ASO validates the resulting
+artifacts, routes audited owner questions one at a time, and blocks lifecycle
+stage crossings when unanswered gaps reach their `blocking_stage`.
+
 Design may enter the [Design Research Loop](DESIGN_RESEARCH_LOOP.md) when the
-solution_architect cannot safely continue without factual evidence. Research dependency
-output returns to design continuation only after independent audit pass.
+solution_architect cannot safely continue without factual evidence. Research
+dependency output returns to design continuation only after independent audit
+pass.
 
 ## Stage map
 
@@ -20,7 +29,8 @@ output returns to design continuation only after independent audit pass.
 |---|---|---|
 | Bootstrap | Orchestrator | runtime-ready task context |
 | Requirements | Requirements analyst | requirements baseline or GAP |
-| Design | solution_architect | bounded project docs and task packets |
+| Project design intake | Requirements analyst with PROJECT_DESIGNER responsibility | project type decision, template selection, gap records, and functional owner question cards |
+| Design | solution_architect | bounded architecture docs and task packets from accepted design inputs |
 | Implementation | Developer | scoped implementation result |
 | Audit | Auditor | independent pass/fail/blocked/gap result |
 | Testing | Tester | acceptance evidence |
@@ -37,6 +47,9 @@ A project must not move forward when:
 
 - required source inputs are missing;
 - a GAP blocks the next stage;
+- an unanswered design gap reaches the requested lifecycle stage and has no
+  accepted owner answer or bounded assumption;
+- an owner question required for the next stage has not passed audit;
 - an audit required by the task packet has not passed;
 - testing required by the task packet has not passed;
 - setup or run commands required for launch are unverified;

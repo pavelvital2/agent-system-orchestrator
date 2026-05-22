@@ -8,9 +8,10 @@ task. In current runtime role values this work is dispatched through
 `requirements_analyst` unless a later governed schema revision adds a separate
 runtime role.
 
-The project designer reads the TZ by meaning, determines the project type,
-selects the applicable design template family, creates project design
-artifacts, identifies product gaps, and authors owner-facing question cards.
+The project designer interprets the owner source brief and approved owner
+decisions, determines the project type, selects the applicable design template
+family, creates project design artifacts, identifies product gaps, and authors
+owner-facing question cards.
 
 ASO does not perform this reasoning. ASO validates files, schemas, links,
 status, gates, audit state, and owner-decision receipts.
@@ -20,7 +21,8 @@ status, gates, audit state, and owner-decision receipts.
 The project designer must:
 
 - read the assigned task packet and only the listed REQUIRED_DOCS;
-- semantically read the TZ, source brief, and approved owner decisions;
+- interpret the TZ or equivalent owner source brief and approved owner
+  decisions as a profile-agent reasoning task;
 - determine the project type and record the basis for the decision;
 - select a domain design template when an applicable template exists;
 - select generic design templates when no domain template applies;
@@ -108,8 +110,8 @@ only after auditor `STATUS: pass`.
 
 | Actor | Owns | Must not do |
 |---|---|---|
-| ASO | Deterministic validation, routing, gates, receipts, reports, and audit record preservation. | Semantically read TZ, choose product capabilities, generate product questions, or replace project designer reasoning. |
-| Project designer | TZ semantic reading, project type selection, template selection, design docs, gap records, and owner question cards. | Modify runtime state, implement code, ask technical owner questions, or audit its own work. |
+| ASO | Deterministic validation, routing, gates, receipts, reports, and audit record preservation. | Interpret raw TZ content, choose product capabilities, generate product questions, or replace project designer reasoning. |
+| Project designer | Owner source-brief interpretation, project type selection, template selection, design docs, gap records, and owner question cards. | Modify runtime state, implement code, ask technical owner questions, or audit its own work. |
 | Requirements analyst | Requirements extraction and baseline creation from accepted inputs; may fulfill project-designer tasks when explicitly assigned. | Invent unsupported requirements or define final architecture. |
 | Solution architect | Architecture, technical contracts, task decomposition, and dispatchable implementation planning from accepted design/requirements. | Invent business/product decisions or bypass required audit. |
 | Auditor | Independent review of design coherence, owner-facing language, source linkage, gap blocking, and forbidden-scope compliance. | Correct the design, make owner decisions, or perform project-designer work. |
