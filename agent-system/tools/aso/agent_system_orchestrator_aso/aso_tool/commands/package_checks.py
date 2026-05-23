@@ -49,6 +49,12 @@ README_REQUIRED_TERMS = (
 CANONICAL_PACKAGE_RELPATH = "agent-system/tools/aso/agent_system_orchestrator_aso"
 CANONICAL_TOOL_RELPATH = f"{CANONICAL_PACKAGE_RELPATH}/aso_tool"
 ROOT_PACKAGE_RELPATH = "agent_system_orchestrator_aso"
+LEGACY_TOP_LEVEL_TREE_RELPATHS = (
+    "agent-system/tools/aso/commands",
+    "agent-system/tools/aso/models",
+    "agent-system/tools/aso/parsers",
+    "agent-system/tools/aso/rules",
+)
 PYPROJECT_DISCOVERY_MARKERS = (
     'aso = "agent_system_orchestrator_aso.cli:main"',
     'where = ["agent-system/tools/aso"]',
@@ -213,6 +219,32 @@ def _check_package_layout(
                 f"{ROOT_PACKAGE_RELPATH}/ must be absent from the package repository root.",
                 [ROOT_PACKAGE_RELPATH],
                 "Remove the duplicate root package after moving the canonical package under agent-system/tools/aso/.",
+            )
+        )
+
+    present_legacy_trees: list[str] = []
+    for relpath in LEGACY_TOP_LEVEL_TREE_RELPATHS:
+        path = root / relpath
+        files[relpath] = {
+            "exists": path.exists(),
+            "type": "directory" if path.is_dir() else "file" if path.exists() else "absent",
+        }
+        if path.exists():
+            present_legacy_trees.append(relpath)
+
+    if present_legacy_trees:
+        findings.append(
+            Finding(
+                "PACKAGE_LAYOUT_009",
+                "error",
+                "Legacy top-level ASO Python trees are present",
+                (
+                    "ASO runtime source must live under "
+                    f"{CANONICAL_TOOL_RELPATH}/; remove duplicate top-level tree(s): "
+                    f"{', '.join(present_legacy_trees)}."
+                ),
+                present_legacy_trees,
+                "Remove legacy top-level commands/, models/, parsers/, and rules/ trees from agent-system/tools/aso/.",
             )
         )
 

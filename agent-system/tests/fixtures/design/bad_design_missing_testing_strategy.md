@@ -67,7 +67,7 @@ DEPENDENCIES: NONE
 INPUTS: DESIGN.md
 OUTPUTS: report
 ERROR_HANDLING: finding
-FILES_OR_PATHS: agent-system/tools/aso/commands/validate_design.py
+FILES_OR_PATHS: agent-system/tools/aso/agent_system_orchestrator_aso/aso_tool/commands/validate_design.py
 TASK_REFS: TASK_DEV_001
 SOURCE_REFS: project-docs/requirements.md#REQ-001
 

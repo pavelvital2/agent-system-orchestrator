@@ -16,7 +16,7 @@ REPO_ROOT = Path(__file__).resolve().parents[4]
 if str(ASO_DIR) not in sys.path:
     sys.path.insert(0, str(ASO_DIR))
 
-from commands import validate_rules  # noqa: E402
+from agent_system_orchestrator_aso.aso_tool.commands import validate_rules  # noqa: E402
 
 
 FIXTURE_ROOT = REPO_ROOT / "agent-system" / "tests" / "fixtures" / "rules"

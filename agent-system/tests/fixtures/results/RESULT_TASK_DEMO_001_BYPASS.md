@@ -12,7 +12,7 @@ READ_DOCS:
 READ_INPUTS:
 - NONE
 CHANGED_FILES:
-- agent-system/tools/aso/commands/record_result.py
+- agent-system/tools/aso/agent_system_orchestrator_aso/aso_tool/commands/record_result.py
 CREATED_FILES:
 - NONE
 DELETED_FILES:

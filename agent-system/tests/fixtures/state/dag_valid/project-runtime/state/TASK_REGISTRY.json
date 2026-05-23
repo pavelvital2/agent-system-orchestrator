@@ -55,7 +55,7 @@
         "commit_hash": "0123456789abcdef0123456789abcdef01234567",
         "branch": "upgrade/stage-3-dag-checkpoint-correction",
         "push_status": "pushed",
-        "accepted_files": ["agent-system/tools/aso/commands/dag.py"],
+        "accepted_files": ["agent-system/tools/aso/agent_system_orchestrator_aso/aso_tool/commands/dag.py"],
         "checkpoint_ref": "project-runtime/checkpoints/CHECKPOINT_TASK_DAG_MIDDLE.md",
         "created_at": "2026-01-01T00:00:00Z",
         "updated_at": "2026-01-01T00:00:00Z"

@@ -70,11 +70,11 @@ MODULE_ID: MOD-001
 PURPOSE: ASO validate-design command module.
 OWNED_BEHAVIOR: Read a Markdown design and emit text or JSON findings.
 PUBLIC_INTERFACE: aso validate-design DESIGN.md --root . --strict --json-out PATH
-DEPENDENCIES: agent-system/tools/aso/parsers/markdown_design.py agent-system/tools/aso/rules/design.py
+DEPENDENCIES: agent-system/tools/aso/agent_system_orchestrator_aso/aso_tool/parsers/markdown_design.py agent-system/tools/aso/agent_system_orchestrator_aso/aso_tool/rules/design.py
 INPUTS: DESIGN.md
 OUTPUTS: process exit code, stdout summary, optional JSON report.
 ERROR_HANDLING: Unreadable input returns DESIGN_IO_001.
-FILES_OR_PATHS: agent-system/tools/aso/commands/validate_design.py
+FILES_OR_PATHS: agent-system/tools/aso/agent_system_orchestrator_aso/aso_tool/commands/validate_design.py
 TASK_REFS: TASK_DEV_VALIDATE_DESIGN_001
 SOURCE_REFS: DEC-001
 
@@ -139,7 +139,7 @@ ACCEPTANCE_SUMMARY: AC-006 valid fixture passes, negative fixtures fail, JSON ou
 DEPENDENCIES: design_audit_pass_then_checkpoint
 NEXT_ACTION_ELIGIBLE: yes
 GATE_REQUIRED: design_audit_pass_then_checkpoint
-ALLOWED_FILE_CHANGES: agent-system/tools/aso/commands/** agent-system/tools/aso/parsers/** agent-system/tools/aso/rules/** agent-system/tools/aso/tests/** agent-system/tests/fixtures/design/**
+ALLOWED_FILE_CHANGES: agent-system/tools/aso/agent_system_orchestrator_aso/aso_tool/commands/** agent-system/tools/aso/agent_system_orchestrator_aso/aso_tool/parsers/** agent-system/tools/aso/agent_system_orchestrator_aso/aso_tool/rules/** agent-system/tools/aso/tests/** agent-system/tests/fixtures/design/**
 
 ## AUDIT_PLAN
 

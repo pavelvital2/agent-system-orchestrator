@@ -9,8 +9,8 @@ from . import package_layout
 from . import package_checks
 
 
-SOURCE_TOOL_RELPATH = Path("agent-system/tools/aso/commands")
-BUNDLED_TOOL_RELPATH = Path(package_checks.CANONICAL_TOOL_RELPATH) / "commands"
+SOURCE_TOOL_RELPATH = Path(package_checks.CANONICAL_TOOL_RELPATH) / "commands"
+BUNDLED_TOOL_RELPATH = SOURCE_TOOL_RELPATH
 
 
 def build_report(root: Path, strict: bool, command: str = "package-sync verify") -> tuple[dict[str, object], int]:

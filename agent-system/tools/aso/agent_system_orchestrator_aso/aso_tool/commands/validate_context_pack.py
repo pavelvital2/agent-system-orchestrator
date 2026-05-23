@@ -51,7 +51,7 @@ BROAD_DIRECTORY_CONTEXT_PATHS = {
     "agent-system/tests/fixtures",
     "agent-system/tools",
     "agent-system/tools/aso",
-    "agent-system/tools/aso/commands",
+    "agent-system/tools/aso/agent_system_orchestrator_aso/aso_tool/commands",
     "project-archive",
     "project-input",
     "project-runtime",

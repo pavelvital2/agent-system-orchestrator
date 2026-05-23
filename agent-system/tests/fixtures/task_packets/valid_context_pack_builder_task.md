@@ -12,13 +12,13 @@ TARGET_ROLE: developer
 
 - `agent-system/03_templates/TASK_PACKET_TEMPLATE.md`
 - `agent-system/03_templates/CONTEXT_PACK_TEMPLATE.json`
-- `agent-system/tools/aso/commands/validate_context_pack.py`
+- `agent-system/tools/aso/agent_system_orchestrator_aso/aso_tool/commands/validate_context_pack.py`
 
 ## Source-of-truth docs
 
 - `agent-system/03_templates/TASK_PACKET_TEMPLATE.md`
 - `agent-system/03_templates/CONTEXT_PACK_TEMPLATE.json`
-- `agent-system/tools/aso/commands/validate_context_pack.py`
+- `agent-system/tools/aso/agent_system_orchestrator_aso/aso_tool/commands/validate_context_pack.py`
 
 ## Allowed write paths
 

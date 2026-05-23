@@ -138,6 +138,19 @@ class PackageLayoutTests(unittest.TestCase):
         self.assertEqual(result.returncode, 1, result.stderr)
         self.assertIn("PACKAGE_LAYOUT_004", {finding["rule_id"] for finding in report["findings"]})
 
+    def test_legacy_top_level_python_trees_fail(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            _minimal_layout_fixture(root)
+            _write(root / "agent-system" / "tools" / "aso" / "commands" / "__init__.py", "\n")
+            _write(root / "agent-system" / "tools" / "aso" / "rules" / "__init__.py", "\n")
+
+            result = _run_package_layout(root)
+            report = json.loads(result.stdout)
+
+        self.assertEqual(result.returncode, 1, result.stderr)
+        self.assertIn("PACKAGE_LAYOUT_009", {finding["rule_id"] for finding in report["findings"]})
+
     def test_wrong_pyproject_where_fails(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
