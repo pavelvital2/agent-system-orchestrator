@@ -91,7 +91,22 @@ wait_for_owner route.
 
 Оркестратор не должен держать состояние проекта в памяти.
 
-Источник истины:
+Для P2+ canonical machine-readable runtime state находится в:
+
+```text
+project-runtime/state/*.json
+```
+
+Markdown runtime files are required human-readable/materialized compatibility
+views. They must be present and aligned with the JSON sidecars, but they are
+not the primary source of truth for P2+ runtime state.
+
+Если JSON sidecars и Markdown runtime views disagree, оркестратор не должен
+угадывать корректное состояние. Он обязан route to correction/materialization
+through governed state verification and rendering before dispatch or
+checkpoint routing continues.
+
+Runtime state surfaces:
 
 - `project-runtime/PROJECT_STATE.md`
 - `project-runtime/CURRENT_GATE.md`

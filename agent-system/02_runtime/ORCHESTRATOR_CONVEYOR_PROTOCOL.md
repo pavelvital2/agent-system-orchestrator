@@ -9,7 +9,16 @@ decision can be made from current JSON sidecars and receipts.
 
 ## Normal Context Set
 
-For ordinary operation, the maximum expected context is:
+Context use is split into three explicit modes:
+
+| Mode | Purpose |
+| --- | --- |
+| `BOOTSTRAP_FULL_CONTEXT` | Allowed only for primary bootstrap or recovery when the orchestrator must load start governance documents before first dispatch. |
+| `NORMAL_CONVEYOR_CONTEXT` | Default after bootstrap. The orchestrator should use compact ASO status/next summaries, receipts, artifact manifests, validation reports, accepted context packs, current task packets, and canonical JSON sidecars. |
+| `RECOVERY_OR_CORRECTION_FULL_CONTEXT` | Allowed for failed validators, schema mismatch, state contradiction, incident recovery, package-governance correction, audit/debug work, or stale/missing summaries. |
+
+For ordinary `NORMAL_CONVEYOR_CONTEXT` operation, the maximum expected context
+is:
 
 ```text
 agent-system/00_start/ORCHESTRATOR_START.md
@@ -30,6 +39,11 @@ aso orchestrator next --root . --json-out project-runtime/reports/orchestrator_n
 Equivalent direct reads of `project-runtime/state/*.json`,
 `project-runtime/receipts/**/*.json`, and `project-runtime/reports/**/*.json`
 are allowed when the CLI is unavailable.
+
+Normal conveyor operation must not reread the broad governance package merely
+to compensate for stale conversational context. It should escalate to
+`RECOVERY_OR_CORRECTION_FULL_CONTEXT` only when current summaries, receipts,
+validator output, or sidecars are missing, malformed, stale, or contradictory.
 
 ## Bootstrap Reconciliation
 

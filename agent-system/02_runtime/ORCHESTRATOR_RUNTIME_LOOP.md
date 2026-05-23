@@ -6,6 +6,18 @@ reports, and artifact receipts before rereading broad governance documents.
 Full governance documents remain authoritative for debug, recovery, audit, and
 correction routing.
 
+## Context Modes
+
+The orchestrator must choose one context mode before each route. Context mode
+controls how much governance material is loaded; it does not change runtime
+semantics, transition rules, or validation requirements.
+
+| Mode | When Allowed | Context Rule |
+| --- | --- | --- |
+| `BOOTSTRAP_FULL_CONTEXT` | Primary bootstrap or bootstrap recovery when start governance documents must be loaded. | Read the bootstrap governance package listed in `ORCHESTRATOR_START.md` and initialize or reconcile runtime state before first profile-agent dispatch. |
+| `NORMAL_CONVEYOR_CONTEXT` | Normal route after bootstrap. | Prefer ASO summaries, receipts, artifact manifests, validation reports, accepted context packs, current task packets, and canonical JSON sidecars. Do not reread the broad governance package without a concrete contradiction, validator finding, or recovery reason. |
+| `RECOVERY_OR_CORRECTION_FULL_CONTEXT` | Failed validators, schema mismatch, state contradiction, incident recovery, package-governance correction, or audit/debug work. | Load the relevant full governance documents and route through governed recovery or correction before normal conveyor resumes. |
+
 ## Назначение
 
 Этот файл должен перечитываться оркестратором перед каждым новым действием.
@@ -249,20 +261,29 @@ Ordinary task packets outside `ACTIVE_DOC_ROOT` remain invalid.
 
 6. Проверить mandatory workflow transitions.
 
-Оркестратор обязан валидировать:
+Authoritative transition rules are defined in:
 
-profile_agent(pass) → auditor when `AUDIT_REQUIREMENTS` makes audit mandatory
-requirements_analyst(pass) → auditor when audit mandatory
-solution_architect(pass) → auditor when audit mandatory
-developer(pass) → auditor when audit mandatory
-tester(pass) → auditor when audit mandatory
-technical_writer(pass) → auditor when audit mandatory
-devops_setup_engineer(pass) → auditor when audit mandatory
-release_manager(pass) → auditor when audit mandatory
-tester(pass) → technical_writer (если required)
-tester(fail) → developer
-tester(blocked) → orchestrator
-tester(gap) → orchestrator
+```text
+agent-system/02_runtime/STATE_TRANSITION_RULES.md
+```
+
+This runtime loop repeats the mandatory high-signal transitions for
+operational readability only; it does not introduce additional transitions.
+
+| Source result | Required route |
+| --- | --- |
+| `profile_agent(pass)` | `auditor` when `AUDIT_REQUIREMENTS` makes audit mandatory |
+| `requirements_analyst(pass)` | `auditor` when audit is mandatory |
+| `solution_architect(pass)` | `auditor` when audit is mandatory |
+| `developer(pass)` | `auditor` when audit is mandatory |
+| `tester(pass)` | `auditor` when audit is mandatory |
+| `technical_writer(pass)` | `auditor` when audit is mandatory |
+| `devops_setup_engineer(pass)` | `auditor` when audit is mandatory |
+| `release_manager(pass)` | `auditor` when audit is mandatory |
+| `tester(pass)` | `technical_writer` when technical writing is required |
+| `tester(fail)` | `developer` |
+| `tester(blocked)` | `orchestrator` |
+| `tester(gap)` | `orchestrator` |
 
 When audit is mandatory, a profile-agent `STATUS: pass` must not route directly
 to another profile role, another lifecycle phase, terminal completion, or Git
