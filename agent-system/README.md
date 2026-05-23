@@ -155,14 +155,14 @@ The package includes a filesystem-governed ASO helper CLI at
 dry-run proposals, while Project Factory commands may create generated
 projects only within explicit target paths.
 
-This P5.4 package records the active package metadata as the governed `3.7.4`
-package/governance tuple with runtime schema `3.1.1` and artifact package
-schema `1.1.0`. It preserves the Project Factory P1 command boundary, Runtime
-Schema `3.1.1`, and Artifact Package Schema `1.1.0` while defining the
-planner Dispatchability Gate. `plan-next` may recommend `CREATE_AGENT` only
-after proving the current next action can dispatch a profile agent with a
-valid role, task id, task packet, task registry entry, gate state, and
-workspace/repository baseline.
+This P5.5 stabilization package records the active package metadata as the
+governed `3.7.5` package/governance tuple with runtime schema `3.1.1` and
+artifact package schema `1.1.0`. It preserves the Project Factory P1 command
+boundary, Runtime Schema `3.1.1`, and Artifact Package Schema `1.1.0` while
+retaining the P5.4 planner Dispatchability Gate. `plan-next` may recommend
+`CREATE_AGENT` only after proving the current next action can dispatch a
+profile agent with a valid role, task id, task packet, task registry entry,
+gate state, and workspace/repository baseline.
 
 ASO remains a deterministic governance/control conveyor. It validates and
 gates artifacts produced by profile agents and detects contradictory bootstrap
@@ -278,7 +278,7 @@ forbidden document checks, and required document existence under `--root`.
 Runtime State P2 command surfaces are local and offline. JSON sidecars under
 `project-runtime/state/` are canonical for P2+ runtime state. Markdown and
 report outputs are compatibility views generated from JSON, not the canonical
-state source. The active package version is `3.7.4` and the active runtime
+state source. The active package version is `3.7.5` and the active runtime
 schema version is `3.1.1`.
 
 ```text
@@ -322,7 +322,7 @@ may use the canonical next action value `CREATE_AGENT` only for a dispatchable
 route and does not dispatch an agent.
 
 Safe Proposal / Apply P3 command surfaces are local and guarded. They run
-under the current package/governance `3.7.4` tuple with Runtime Schema `3.1.1`
+under the current package/governance `3.7.5` tuple with Runtime Schema `3.1.1`
 and preserve the P3 contract; they do not
 dispatch agents, do not commit or push, and do not publish runtime artifacts.
 Proposal commands default to dry-run. `--confirm-write` may write only proposal
@@ -424,10 +424,10 @@ agents or execute checkpoints.
 ## Project Factory P1
 
 Project Factory P1 supports local vendored creation, local reference creation,
-GitHub dry-run planning, confirmed GitHub publish, and a guided
-wizard. It remains available in package version `3.7.4`; existing P1/P0
-generated-project lockfiles remain compatible when they satisfy the accepted
-publication-boundary and engine-mode rules.
+GitHub dry-run planning, confirmed GitHub publish, and a guided wizard. It
+remains available in package version `3.7.5`; existing P1/P0 generated-project
+lockfiles remain compatible when they satisfy the accepted publication-boundary
+and engine-mode rules.
 
 Local vendored mode preserves the P0 behavior of copying safe `agent-system/`
 package content into the generated project:
@@ -667,8 +667,8 @@ agent-system/GOVERNANCE_CHANGELOG.md
 Current active tuple and package markers:
 
 ```text
-CURRENT_PACKAGE_VERSION: 3.7.4
-CURRENT_GOVERNANCE_RULESET_VERSION: 3.7.4
+CURRENT_PACKAGE_VERSION: 3.7.5
+CURRENT_GOVERNANCE_RULESET_VERSION: 3.7.5
 CURRENT_RUNTIME_SCHEMA_VERSION: 3.1.1
 PROJECT_FACTORY_RELEASE_MARKER: project-factory-p1
 RUNTIME_STATE_RELEASE_MARKER: artifact-package-model-p5

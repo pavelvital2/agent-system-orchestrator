@@ -1790,3 +1790,45 @@ AUTHORIZED_BY: project_owner
 AUDIT_REQUIRED: yes
 STATUS: accepted
 ```
+
+```text
+CHANGE_ID: GOV-2026-05-23-005
+CHANGE_TITLE: ASO_WORKING_STATE_STABILIZATION_P5_5_VERSION_CROSSLINK_GOVERNANCE_RULES
+DATE: 2026-05-23
+PACKAGE_VERSION_BEFORE: 3.7.4
+PACKAGE_VERSION_AFTER: 3.7.5
+GOVERNANCE_RULESET_BEFORE: 3.7.4
+GOVERNANCE_RULESET_AFTER: 3.7.5
+RUNTIME_SCHEMA_BEFORE: 3.1.1
+RUNTIME_SCHEMA_AFTER: 3.1.1
+ARTIFACT_PACKAGE_SCHEMA_BEFORE: 1.1.0
+ARTIFACT_PACKAGE_SCHEMA_AFTER: 1.1.0
+CHANGE_TYPE: patch
+CHANGE_SUBTYPE: p5_5_version_crosslink_governance_stabilization
+AFFECTED_FILES:
+- README.md
+- README_INSTALL.md
+- pyproject.toml
+- agent-system/PACKAGE_VERSIONING.md
+- agent-system/GOVERNANCE_CHANGELOG.md
+- agent-system/09_validators/CROSS_LINK_VALIDATION_RULES.md
+- agent-system/09_validators/rules/governance_rules.json
+- agent-system/tools/aso/agent_system_orchestrator_aso/__init__.py
+- agent-system/tools/aso/agent_system_orchestrator_aso/aso_tool/runtime_schema_contracts.py
+- agent-system/11_release/ASO_WORKING_STATE_STABILIZATION_P5_5_V3_7_5_RELEASE_NOTES.md
+AFFECTED_INVARIANTS:
+- Active package/governance/runtime tuple is 3.7.5 / 3.7.5 / 3.1.1.
+- Artifact package schema version remains 1.1.0.
+- Cross-link readiness checks must use the active P5.5 tuple, not stale v3.0.1 package/governance or v3.0.0 runtime constants.
+- Governance registry includes the P5.4/P5.5 planner dispatchability gate as an active critical rule.
+AFFECTED_TRANSITIONS:
+- dispatch-capable action plus valid profile role/task id/task packet/task registry/gate/baseline -> `CREATE_AGENT` may be recommended.
+- failed P5.4/P5.5 dispatchability gate -> non-dispatch recommendation such as `CORRECTION_REQUIRED`, `UPDATE_STATE`, `ASK_OWNER`, `FREEZE`, `BOOTSTRAP_PREP`, or `STOP`.
+- control role such as `orchestrator` or `owner` -> non-dispatch route.
+SCHEMA_TEMPLATE_IMPACT: none; Runtime Schema 3.1.1 and Artifact Package Schema 1.1.0 are preserved.
+MIGRATION_REQUIRED: no
+MIGRATION_NOTE: Runtime Schema 3.1.1 and Artifact Package Schema 1.1.0 are preserved. P5.5 stabilizes active version metadata, cross-link readiness documentation, and governance registry coverage only; it does not migrate active project-runtime state, change planner implementation, change runtime sidecar envelopes, change artifact package schema, add live dispatch, add checkpoint execution, or redefine artifact package storage.
+AUTHORIZED_BY: project_owner
+AUDIT_REQUIRED: yes
+STATUS: accepted
+```

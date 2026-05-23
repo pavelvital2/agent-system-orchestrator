@@ -19,8 +19,8 @@ RUNTIME_SCHEMA_VERSION:
 ## Active version constants
 
 ```text
-CURRENT_PACKAGE_VERSION: 3.7.4
-CURRENT_GOVERNANCE_RULESET_VERSION: 3.7.4
+CURRENT_PACKAGE_VERSION: 3.7.5
+CURRENT_GOVERNANCE_RULESET_VERSION: 3.7.5
 CURRENT_RUNTIME_SCHEMA_VERSION: 3.1.1
 ARTIFACT_PACKAGE_SCHEMA_VERSION: 1.1.0
 ```
@@ -427,6 +427,24 @@ and any current gate state that forbids dispatch. When the gate fails,
 `3.1.1` and Artifact Package Schema `1.1.0` are preserved. P5.4 does not add a
 daemon, live dispatch executor, checkpoint executor, ASO Studio, distributed
 workers, or automatic task execution.
+
+The ASO Working State Stabilization P5.5 correction installs:
+
+```text
+CURRENT_PACKAGE_VERSION: 3.7.5
+CURRENT_GOVERNANCE_RULESET_VERSION: 3.7.5
+CURRENT_RUNTIME_SCHEMA_VERSION: 3.1.1
+ARTIFACT_PACKAGE_SCHEMA_VERSION: 1.1.0
+DESIGN_GAP_GOVERNANCE_SCHEMA_VERSION: 1.0.0
+```
+
+This patch aligns active package/governance version metadata, cross-link
+readiness documentation, and the governance rule registry with the accepted
+P5.4/P5.5 planner dispatchability boundary. Runtime Schema `3.1.1` and
+Artifact Package Schema `1.1.0` are preserved. P5.5 does not change planner
+implementation, runtime sidecar envelopes, artifact package schema, live
+dispatch authority, checkpoint execution, daemon behavior, or artifact package
+storage semantics.
 
 ## Version semantics
 

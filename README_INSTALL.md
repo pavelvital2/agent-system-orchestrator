@@ -17,12 +17,13 @@ and verifies the installed `aso` command. It uses local Python packaging only;
 it does not require secrets, GitHub credentials, remote repository access,
 dispatch authority, checkpoint execution, commit, push, or publication rights.
 
-This install document covers package version `3.7.4` with runtime schema
-`3.1.1` and artifact package schema `1.1.0`. P5.4 adds the planner
-dispatchability gate while preserving the Runtime State sidecar schema, the
-artifact package schema, and the Project Factory P1 command boundary. It does
-not add semantic TZ reading, product-intake automation, daemon mode, live
-dispatch, or checkpoint execution.
+This install document covers package version `3.7.5` with runtime schema
+`3.1.1` and artifact package schema `1.1.0`. P5.5 stabilizes active version
+and governance readiness around the P5.4 planner dispatchability gate while
+preserving the Runtime State sidecar schema, the artifact package schema, and
+the Project Factory P1 command boundary. It does not add semantic TZ reading,
+product-intake automation, daemon mode, live dispatch, or checkpoint
+execution.
 
 Both installers accept a Python executable and virtual environment path:
 

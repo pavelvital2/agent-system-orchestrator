@@ -126,6 +126,24 @@
       "rationale": "Action semantics must match the runtime tuple: owner waits require owner-facing blocked state, pause requires a blocker and resume path, and terminal stop requires completed invariants."
     },
     {
+      "id": "GOV-PLANNER-DISPATCHABILITY-GATE",
+      "severity": "critical",
+      "source_docs": [
+        "agent-system/02_runtime/PLANNER_DISPATCHABILITY_GATE_P5_4_CONTRACT.md",
+        "agent-system/09_validators/CROSS_LINK_VALIDATION_RULES.md"
+      ],
+      "check_target": "planner_dispatchability_gate",
+      "trigger": "plan-next recommends CREATE_AGENT or evaluates a P5.4/P5.5 dispatch route",
+      "expected_action": [
+        "block",
+        "validate_schema",
+        "validate_transition",
+        "require_identity_pass",
+        "require_repository_lock"
+      ],
+      "rationale": "CREATE_AGENT is allowed only when the P5.4/P5.5 dispatchability gate proves a dispatch-capable action, profile execution role, concrete task id and task packet, compatible task registry entry, permissive current gate, no blocking rules, accepted workspace identity, accepted repository lock, baseline readiness, and runtime schema compatibility."
+    },
+    {
       "id": "GOV-PROPOSAL-APPLY-P3-BOUNDARY",
       "severity": "critical",
       "source_docs": [

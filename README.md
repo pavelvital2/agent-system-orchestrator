@@ -20,9 +20,10 @@ filesystem-governed ASO helper CLI at `agent-system/tools/aso/aso.py`: most
 commands are read-only diagnostics or dry-run proposals, while Project Factory
 commands may create generated projects only within explicit target paths.
 
-This P5.4 package records the active package metadata as the governed `3.7.4`
-package/governance tuple with runtime schema `3.1.1` and artifact package
-schema `1.1.0`. P5.4 defines the planner Dispatchability Gate: `plan-next`
+This P5.5 stabilization package records the active package metadata as the
+governed `3.7.5` package/governance tuple with runtime schema `3.1.1` and
+artifact package schema `1.1.0`. The P5.4/P5.5 planner Dispatchability Gate
+remains active: `plan-next`
 may recommend `CREATE_AGENT` only after proving the current next action can
 dispatch a profile agent with a valid role, task id, task packet, task
 registry entry, gate state, and workspace/repository baseline. ASO remains a
@@ -49,7 +50,7 @@ The P5 artifact package model boundary is documented in
 `agent-system/02_runtime/ARTIFACT_PACKAGE_MODEL_P5_CONTRACT.md`.
 The P5.2 bootstrap state reconciliation correction is documented in
 `agent-system/02_runtime/BOOTSTRAP_STATE_RECONCILIATION_P5_2_CONTRACT.md`.
-The P5.4 planner Dispatchability Gate correction is documented in
+The P5.4/P5.5 planner Dispatchability Gate correction is documented in
 `agent-system/02_runtime/PLANNER_DISPATCHABILITY_GATE_P5_4_CONTRACT.md`.
 It supersedes the non-authoritative
 `upgrade/product-intake-capability-p4-v3.6.0` branch without deleting it.
@@ -140,7 +141,7 @@ python3 agent-system/tools/aso/aso.py validate-context-pack agent-system/tests/f
 Runtime State P2 command surfaces formalize JSON sidecars under
 `project-runtime/state/`. JSON sidecars are canonical for P2+ runtime state;
 Markdown or report outputs are compatibility views generated from JSON. The
-active package version is `3.7.4` and the active runtime schema version is
+active package version is `3.7.5` and the active runtime schema version is
 `3.1.1`.
 
 ```text
