@@ -1816,6 +1816,7 @@ AFFECTED_FILES:
 - agent-system/tools/aso/agent_system_orchestrator_aso/__init__.py
 - agent-system/tools/aso/agent_system_orchestrator_aso/aso_tool/runtime_schema_contracts.py
 - agent-system/11_release/ASO_WORKING_STATE_STABILIZATION_P5_5_V3_7_5_RELEASE_NOTES.md
+- agent-system/11_release/ASO_WORKING_STATE_STABILIZATION_P5_5_V3_7_5_VALIDATION_REPORT.md
 AFFECTED_INVARIANTS:
 - Active package/governance/runtime tuple is 3.7.5 / 3.7.5 / 3.1.1.
 - Artifact package schema version remains 1.1.0.

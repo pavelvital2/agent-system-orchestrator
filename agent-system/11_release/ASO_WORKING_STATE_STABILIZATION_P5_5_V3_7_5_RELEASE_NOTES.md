@@ -26,6 +26,8 @@ remains `1.1.0`.
 - Governance registry includes a critical P5.4/P5.5 planner dispatchability
   gate rule.
 - Governance changelog records the P5.5 stabilization as accepted.
+- Final package verification evidence is recorded in
+  `agent-system/11_release/ASO_WORKING_STATE_STABILIZATION_P5_5_V3_7_5_VALIDATION_REPORT.md`.
 
 ## Not Included
 
@@ -40,3 +42,10 @@ remains `1.1.0`.
 - product-intake engine
 - distributed workers
 - automatic task execution
+
+## Validation
+
+Local final validation evidence is recorded in
+`agent-system/11_release/ASO_WORKING_STATE_STABILIZATION_P5_5_V3_7_5_VALIDATION_REPORT.md`.
+Remote GitHub Actions evidence remains a post-push observation and is not
+claimed by these uncommitted release evidence edits.
