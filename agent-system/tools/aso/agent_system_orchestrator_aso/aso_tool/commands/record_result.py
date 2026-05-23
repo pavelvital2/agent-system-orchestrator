@@ -9,6 +9,8 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
+from .. import runtime_schema_contracts
+
 
 EXIT_OK = 0
 EXIT_FINDINGS = 1
@@ -101,10 +103,10 @@ REQUIRED_RESULT_PACKAGE_FIELDS = (
 )
 RESULT_PACKAGE_CONSTANTS = {
     "schema_version": "1.0.0",
-    "package_version": "3.7.3",
-    "governance_ruleset_version": "3.7.3",
-    "runtime_schema_version": "3.1.1",
-    "artifact_package_schema_version": "1.1.0",
+    "package_version": runtime_schema_contracts.ACTIVE_PACKAGE_VERSION,
+    "governance_ruleset_version": runtime_schema_contracts.ACTIVE_GOVERNANCE_RULESET_VERSION,
+    "runtime_schema_version": runtime_schema_contracts.ACTIVE_RUNTIME_SCHEMA_VERSION,
+    "artifact_package_schema_version": runtime_schema_contracts.ACTIVE_ARTIFACT_PACKAGE_SCHEMA_VERSION,
     "acceptance_status": "accepted",
     "reuse_allowed": False,
     "agent_termination_required": True,

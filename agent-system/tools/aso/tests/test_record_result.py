@@ -13,6 +13,10 @@ CLI = Path(__file__).resolve().parents[1] / "aso.py"
 REPO_ROOT = Path(__file__).resolve().parents[4]
 FIXTURE_ROOT = REPO_ROOT / "agent-system" / "tests" / "fixtures" / "results"
 
+sys.path.insert(0, str(CLI.parents[0]))
+
+from agent_system_orchestrator_aso.aso_tool.commands import record_result  # noqa: E402
+
 
 def fixture(name: str) -> Path:
     return FIXTURE_ROOT / name
@@ -53,10 +57,10 @@ def add_accepted_result_package(
     default_payload: dict[str, object] = {
         "package_id": "RESULT_PACKAGE_TASK_DEMO_001_ATTEMPT_001",
         "schema_version": "1.0.0",
-        "package_version": "3.7.3",
-        "governance_ruleset_version": "3.7.3",
-        "runtime_schema_version": "3.1.1",
-        "artifact_package_schema_version": "1.1.0",
+        "package_version": record_result.RESULT_PACKAGE_CONSTANTS["package_version"],
+        "governance_ruleset_version": record_result.RESULT_PACKAGE_CONSTANTS["governance_ruleset_version"],
+        "runtime_schema_version": record_result.RESULT_PACKAGE_CONSTANTS["runtime_schema_version"],
+        "artifact_package_schema_version": record_result.RESULT_PACKAGE_CONSTANTS["artifact_package_schema_version"],
         "result_ref": result_ref,
         "task_id": "TASK_DEMO_001",
         "agent_instance_id": "agent_TASK_DEMO_001_attempt_001",

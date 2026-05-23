@@ -11,11 +11,17 @@ from pathlib import Path
 
 CLI = Path(__file__).resolve().parents[1] / "aso.py"
 REPO_ROOT = Path(__file__).resolve().parents[4]
+ASO_TOOL_ROOT = REPO_ROOT / "agent-system" / "tools" / "aso"
 FIXTURE_ROOT = REPO_ROOT / "agent-system" / "tests" / "fixtures" / "state"
 VALID_WORKSPACE = FIXTURE_ROOT / "valid_workspace"
 P2_VALID_WORKSPACE = FIXTURE_ROOT / "p2_valid_workspace"
-ACTIVE_PACKAGE_VERSION = "3.7.3"
-ACTIVE_RUNTIME_SCHEMA_VERSION = "3.1.1"
+
+sys.path.insert(0, str(ASO_TOOL_ROOT))
+
+from agent_system_orchestrator_aso.aso_tool import runtime_schema_contracts  # noqa: E402
+
+ACTIVE_PACKAGE_VERSION = runtime_schema_contracts.ACTIVE_PACKAGE_VERSION
+ACTIVE_RUNTIME_SCHEMA_VERSION = runtime_schema_contracts.ACTIVE_RUNTIME_SCHEMA_VERSION
 
 
 def run_state_verify(root: Path, *extra: str) -> subprocess.CompletedProcess[str]:

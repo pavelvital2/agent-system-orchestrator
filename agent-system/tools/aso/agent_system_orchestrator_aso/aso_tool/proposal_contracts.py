@@ -6,6 +6,8 @@ import re
 from dataclasses import dataclass
 from typing import Any
 
+from . import runtime_schema_contracts
+
 
 PROPOSAL_SCHEMA_RELATIVE_PATH = "agent-system/09_validators/schemas/proposal_artifact.schema.json"
 APPLY_RECEIPT_SCHEMA_RELATIVE_PATH = "agent-system/09_validators/schemas/apply_receipt.schema.json"
@@ -13,8 +15,8 @@ PROPOSAL_TEMPLATE_RELATIVE_PATH = "agent-system/03_templates/proposal_artifact.t
 APPLY_RECEIPT_TEMPLATE_RELATIVE_PATH = "agent-system/03_templates/apply_receipt.template.json"
 
 CONTRACT_SCHEMA_VERSION = "1.0.0"
-PACKAGE_VERSION = "3.7.3"
-RUNTIME_SCHEMA_VERSION = "3.1.1"
+PACKAGE_VERSION = runtime_schema_contracts.ACTIVE_PACKAGE_VERSION
+RUNTIME_SCHEMA_VERSION = runtime_schema_contracts.ACTIVE_RUNTIME_SCHEMA_VERSION
 
 PROPOSAL_TYPES = ("next_task", "transition", "checkpoint")
 PROPOSAL_SAFETY_CLASSES = ("read_only_plan", "runtime_state_only", "checkpoint_proposal_only")

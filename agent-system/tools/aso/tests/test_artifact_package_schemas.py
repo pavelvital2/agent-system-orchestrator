@@ -84,9 +84,10 @@ class ArtifactPackageSchemaTests(unittest.TestCase):
             with self.subTest(path=template_path):
                 self._load_json(template_path)
 
-    def test_templates_keep_p5_version_tuple(self) -> None:
-        for _, template_path in SCHEMA_TEMPLATE_PAIRS:
+    def test_templates_keep_schema_version_tuple(self) -> None:
+        for schema_path, template_path in SCHEMA_TEMPLATE_PAIRS:
             with self.subTest(path=template_path):
+                schema = self._load_json(schema_path)
                 template = self._load_json(template_path)
 
                 self.assertEqual(template["artifact_package_schema_version"], "1.1.0")
@@ -94,8 +95,11 @@ class ArtifactPackageSchemaTests(unittest.TestCase):
                     continue
 
                 self.assertEqual(template["schema_version"], "1.0.0")
-                self.assertEqual(template["package_version"], "3.7.3")
-                self.assertEqual(template["governance_ruleset_version"], "3.7.3")
+                self.assertEqual(template["package_version"], schema["properties"]["package_version"]["const"])
+                self.assertEqual(
+                    template["governance_ruleset_version"],
+                    schema["properties"]["governance_ruleset_version"]["const"],
+                )
                 self.assertEqual(template["runtime_schema_version"], "3.1.1")
 
     def test_contract_document_references_all_new_schemas_and_templates(self) -> None:

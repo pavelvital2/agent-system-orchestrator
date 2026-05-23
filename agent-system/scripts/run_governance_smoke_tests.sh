@@ -55,6 +55,25 @@ fixture_value() {
   sed -n '/^[[:space:]]*$/d; /^[[:space:]]*#/d; { p; q; }' "$path"
 }
 
+active_version_constant() {
+  local field="$1"
+  awk -v field="$field" '
+    /^## Active version constants$/ { in_section=1; section_seen=1; next }
+    section_seen && in_section && /^## / { in_section=0 }
+    in_section && $0 ~ "^" field ": " {
+      value=$0
+      sub("^" field ": ", "", value)
+      found=1
+    }
+    END {
+      if (!section_seen || !found || value == "") {
+        exit 1
+      }
+      print value
+    }
+  ' "$PACKAGE_VERSIONING"
+}
+
 init_local_git_repo() {
   local repo_dir="$1"
   mkdir -p "$repo_dir"
@@ -761,20 +780,21 @@ assert_coverage_matrix() {
 }
 
 assert_version_changelog_coherence() {
-  awk -v pkg="CURRENT_PACKAGE_VERSION: 3.7.3" \
-    -v governance="CURRENT_GOVERNANCE_RULESET_VERSION: 3.7.3" \
-    -v runtime="CURRENT_RUNTIME_SCHEMA_VERSION: 3.1.1" '
-    /^## Active version constants$/ { in_section=1; section_seen=1; next }
-    section_seen && in_section && /^## / { in_section=0 }
-    in_section && $0 == pkg { pkg_found=1 }
-    in_section && $0 == governance { governance_found=1 }
-    in_section && $0 == runtime { runtime_found=1 }
-    END { exit(section_seen && pkg_found && governance_found && runtime_found ? 0 : 1) }
-  ' "$PACKAGE_VERSIONING" || die "PACKAGE_VERSIONING active version constants missing 3.7.3 / 3.7.3 / 3.1.1"
+  local package_version governance_version runtime_schema_version artifact_package_schema_version
 
-  awk -v pkg="CURRENT_PACKAGE_VERSION: 3.7.3" \
-    -v governance="CURRENT_GOVERNANCE_RULESET_VERSION: 3.7.3" \
-    -v runtime="CURRENT_RUNTIME_SCHEMA_VERSION: 3.1.1" \
+  package_version="$(active_version_constant "CURRENT_PACKAGE_VERSION")" ||
+    die "PACKAGE_VERSIONING active version constants missing CURRENT_PACKAGE_VERSION"
+  governance_version="$(active_version_constant "CURRENT_GOVERNANCE_RULESET_VERSION")" ||
+    die "PACKAGE_VERSIONING active version constants missing CURRENT_GOVERNANCE_RULESET_VERSION"
+  runtime_schema_version="$(active_version_constant "CURRENT_RUNTIME_SCHEMA_VERSION")" ||
+    die "PACKAGE_VERSIONING active version constants missing CURRENT_RUNTIME_SCHEMA_VERSION"
+  artifact_package_schema_version="$(active_version_constant "ARTIFACT_PACKAGE_SCHEMA_VERSION")" ||
+    die "PACKAGE_VERSIONING active version constants missing ARTIFACT_PACKAGE_SCHEMA_VERSION"
+
+  awk -v pkg="CURRENT_PACKAGE_VERSION: ${package_version}" \
+    -v governance="CURRENT_GOVERNANCE_RULESET_VERSION: ${governance_version}" \
+    -v runtime="CURRENT_RUNTIME_SCHEMA_VERSION: ${runtime_schema_version}" \
+    -v artifact_package_schema="ARTIFACT_PACKAGE_SCHEMA_VERSION: ${artifact_package_schema_version}" \
     -v marker="PROJECT_FACTORY_RELEASE_MARKER: project-factory-p1" \
     -v runtime_marker="RUNTIME_STATE_RELEASE_MARKER: artifact-package-model-p5" '
     /^Current active tuple and package markers:$/ { in_section=1; section_seen=1; next }
@@ -782,10 +802,12 @@ assert_version_changelog_coherence() {
     in_section && $0 == pkg { pkg_found=1 }
     in_section && $0 == governance { governance_found=1 }
     in_section && $0 == runtime { runtime_found=1 }
+    in_section && $0 == artifact_package_schema { artifact_package_schema_found=1 }
     in_section && $0 == marker { marker_found=1 }
     in_section && $0 == runtime_marker { runtime_marker_found=1 }
-    END { exit(section_seen && pkg_found && governance_found && runtime_found && marker_found && runtime_marker_found ? 0 : 1) }
-  ' "$PACKAGE_README" || die "README current active tuple missing 3.7.3 / 3.7.3 / 3.1.1 Artifact Package Model P5 marker"
+    END { exit(section_seen && pkg_found && governance_found && runtime_found && artifact_package_schema_found && marker_found && runtime_marker_found ? 0 : 1) }
+  ' "$PACKAGE_README" ||
+    die "README current active tuple missing ${package_version} / ${governance_version} / ${runtime_schema_version} artifact package schema ${artifact_package_schema_version} Artifact Package Model P5 marker"
 
   awk -v change_id="CHANGE_ID: GOV-2026-05-21-003" '
     $0 == change_id { in_entry=1; entry_seen=1 }
@@ -804,7 +826,8 @@ assert_version_changelog_coherence() {
     }
   ' "$GOVERNANCE_CHANGELOG" || die "GOVERNANCE_CHANGELOG GOV-2026-05-21-003 must exist with exactly one accepted status and no proposed status within entry boundary"
 
-  printf 'PASS: version coherence asserts active 3.7.3 package/governance with runtime schema 3.1.1\n'
+  printf 'PASS: version coherence asserts active %s package/governance %s with runtime schema %s and artifact package schema %s\n' \
+    "$package_version" "$governance_version" "$runtime_schema_version" "$artifact_package_schema_version"
   PASS_COUNT=$((PASS_COUNT + 1))
 }
 

@@ -8,6 +8,7 @@ import sys
 from pathlib import Path
 
 from . import artifact_storage
+from . import runtime_schema_contracts
 from .commands import (
     apply,
     archive_verify,
@@ -1143,8 +1144,8 @@ def build_parser() -> argparse.ArgumentParser:
     )
     state_init_parser.add_argument(
         "--package-version",
-        default="3.7.3",
-        help="Package version to record (default: 3.7.3).",
+        default=runtime_schema_contracts.ACTIVE_PACKAGE_VERSION,
+        help=f"Package version to record (default: {runtime_schema_contracts.ACTIVE_PACKAGE_VERSION}).",
     )
     state_init_parser.add_argument(
         "--runtime-schema-version",

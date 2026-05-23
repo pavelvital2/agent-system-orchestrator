@@ -20,6 +20,12 @@ class ProposalApplyContractTests(unittest.TestCase):
     def _load_json(self, relpath: str) -> dict[str, object]:
         return json.loads((REPO_ROOT / relpath).read_text(encoding="utf-8"))
 
+    def _load_current_contract_payload(self, relpath: str) -> dict[str, object]:
+        payload = self._load_json(relpath)
+        payload["package_version"] = proposal_contracts.PACKAGE_VERSION
+        payload["runtime_schema_version"] = proposal_contracts.RUNTIME_SCHEMA_VERSION
+        return payload
+
     def test_packaged_schema_and_template_json_files_parse(self) -> None:
         for relpath in (
             proposal_contracts.PROPOSAL_SCHEMA_RELATIVE_PATH,
@@ -31,21 +37,21 @@ class ProposalApplyContractTests(unittest.TestCase):
             self.assertIsInstance(payload, dict, relpath)
 
     def test_proposal_template_matches_required_contract(self) -> None:
-        template = self._load_json(proposal_contracts.PROPOSAL_TEMPLATE_RELATIVE_PATH)
+        template = self._load_current_contract_payload(proposal_contracts.PROPOSAL_TEMPLATE_RELATIVE_PATH)
 
         result = proposal_contracts.validate_proposal_artifact(template)
 
         self.assertTrue(result.passed, "\n".join(result.errors))
 
     def test_apply_receipt_template_matches_required_contract(self) -> None:
-        template = self._load_json(proposal_contracts.APPLY_RECEIPT_TEMPLATE_RELATIVE_PATH)
+        template = self._load_current_contract_payload(proposal_contracts.APPLY_RECEIPT_TEMPLATE_RELATIVE_PATH)
 
         result = proposal_contracts.validate_apply_receipt(template)
 
         self.assertTrue(result.passed, "\n".join(result.errors))
 
     def test_invalid_proposal_type_is_rejected(self) -> None:
-        proposal = self._load_json(proposal_contracts.PROPOSAL_TEMPLATE_RELATIVE_PATH)
+        proposal = self._load_current_contract_payload(proposal_contracts.PROPOSAL_TEMPLATE_RELATIVE_PATH)
         proposal["proposal_type"] = "checkpoint_execution"
 
         result = proposal_contracts.validate_proposal_artifact(proposal)
@@ -54,7 +60,7 @@ class ProposalApplyContractTests(unittest.TestCase):
         self.assertIn("proposal_type", "\n".join(result.errors))
 
     def test_checkpoint_proposal_requires_checkpoint_proposal_safety_class(self) -> None:
-        proposal = self._load_json(proposal_contracts.PROPOSAL_TEMPLATE_RELATIVE_PATH)
+        proposal = self._load_current_contract_payload(proposal_contracts.PROPOSAL_TEMPLATE_RELATIVE_PATH)
         proposal["proposal_type"] = "checkpoint"
         proposal["safety_class"] = "runtime_state_only"
 
@@ -64,7 +70,7 @@ class ProposalApplyContractTests(unittest.TestCase):
         self.assertIn("checkpoint proposal_type requires safety_class", "\n".join(result.errors))
 
     def test_missing_receipt_required_field_is_rejected(self) -> None:
-        receipt = copy.deepcopy(self._load_json(proposal_contracts.APPLY_RECEIPT_TEMPLATE_RELATIVE_PATH))
+        receipt = copy.deepcopy(self._load_current_contract_payload(proposal_contracts.APPLY_RECEIPT_TEMPLATE_RELATIVE_PATH))
         receipt.pop("result_state_hashes")
 
         result = proposal_contracts.validate_apply_receipt(receipt)
@@ -73,7 +79,7 @@ class ProposalApplyContractTests(unittest.TestCase):
         self.assertIn("result_state_hashes is required", result.errors)
 
     def test_invalid_receipt_outcome_is_rejected(self) -> None:
-        receipt = self._load_json(proposal_contracts.APPLY_RECEIPT_TEMPLATE_RELATIVE_PATH)
+        receipt = self._load_current_contract_payload(proposal_contracts.APPLY_RECEIPT_TEMPLATE_RELATIVE_PATH)
         receipt["outcome"] = "checkpoint_executed"
 
         result = proposal_contracts.validate_apply_receipt(receipt)

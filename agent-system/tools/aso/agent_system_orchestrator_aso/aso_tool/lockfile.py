@@ -6,14 +6,17 @@ import json
 from dataclasses import dataclass
 from pathlib import Path
 
+from . import runtime_schema_contracts
+
 
 LOCKFILE_NAME = "aso.lock"
 LOCKFILE_VERSION = "1.0"
 PACKAGE_NAME = "agent-system-orchestrator"
-PACKAGE_VERSION = "3.7.3"
-RUNTIME_SCHEMA_VERSION = "3.1.1"
+PACKAGE_VERSION = runtime_schema_contracts.ACTIVE_PACKAGE_VERSION
+RUNTIME_SCHEMA_VERSION = runtime_schema_contracts.ACTIVE_RUNTIME_SCHEMA_VERSION
 COMPATIBLE_ENGINE_VERSION_TUPLES = (
     (PACKAGE_VERSION, RUNTIME_SCHEMA_VERSION),
+    ("3.7.3", "3.1.1"),
     ("3.7.2", "3.1.0"),
     ("3.7.1", "3.1.0"),
     ("3.6.1", "3.1.0"),
