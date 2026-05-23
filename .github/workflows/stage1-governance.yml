@@ -6,6 +6,7 @@ on:
       - main
       - hotfix/**
       - upgrade/**
+      - correction/**
       - merge/**
   pull_request:
     branches:
