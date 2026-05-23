@@ -149,7 +149,8 @@ def _build_proposal(root: Path, strict: bool, now: datetime) -> tuple[dict[str, 
     plan_report = plan_next._plan(root, strict, verify_report, verify_exit_code, sidecars, rules, rules_evidence)
     workspace_identity = _content(sidecars, "WORKSPACE_IDENTITY")
     reasons = _blocked_reasons(plan_report, verify_report)
-    status = "blocked" if verify_exit_code != 0 or plan_report.get("status") != "ready" else "proposed"
+    plan_status = str(plan_report.get("status") or "")
+    status = "blocked" if verify_exit_code != 0 or plan_status == "blocked" else "proposed"
     created_at = _timestamp(now)
     task_id = str(plan_report.get("task_id") or "NONE")
     proposal_id = f"PROPOSAL-{now.strftime('%Y%m%dT%H%M%SZ')}-next-task-{_proposal_id_part(task_id)}"

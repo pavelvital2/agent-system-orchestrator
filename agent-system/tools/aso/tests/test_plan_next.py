@@ -73,6 +73,7 @@ def set_next_action(root: Path, **updates: object) -> None:
         "action_type": "ACTION_TYPE",
         "target_role": "TARGET_ROLE",
         "task_id": "TASK_ID",
+        "task_packet": "TASK_PACKET",
         "dependency_status": "DEPENDENCY_STATUS",
         "action_semantic": "ACTION_SEMANTIC",
         "checkpoint_policy": "CHECKPOINT_POLICY",
@@ -173,10 +174,62 @@ class PlanNextCommandTests(unittest.TestCase):
             self.assertTrue(report["read_only"])
             self.assertFalse(report["mutations_performed"])
             self.assertEqual(report["recommended_next_action"], "CREATE_AGENT")
+            self.assertTrue(report["dispatchable"])
+            self.assertTrue(report["dispatchability"]["dispatchable"])
+            self.assertEqual(report["dispatchability"]["verdict"], "dispatchable")
+            self.assertEqual(report["dispatchability"]["recommended_next_action"], "CREATE_AGENT")
+            self.assertEqual(report["dispatchability"]["reasons"], [])
             self.assertEqual(report["target_role"], "developer")
             self.assertEqual(report["task_packet"], "project-runtime/tasks/active/TASK_FIXTURE_STATE_001.md")
             self.assertEqual(report["blocking_rules"], [])
             self.assertEqual(mtimes_before, {path: path.stat().st_mtime_ns for path in tracked})
+
+    def test_correction_orchestrator_none_is_not_dispatchable(self) -> None:
+        root = FIXTURE_ROOT / "p2_valid_workspace"
+        with tempfile.TemporaryDirectory() as tmp:
+            json_out = Path(tmp) / "plan-next.json"
+
+            result = run_plan_next(root, "--strict", "--json-out", str(json_out))
+
+            self.assertEqual(result.returncode, 1, result.stdout + result.stderr)
+            report = json.loads(json_out.read_text(encoding="utf-8"))
+            self.assertEqual(report["status"], "correction_required")
+            self.assertEqual(report["recommended_next_action"], "CORRECTION_REQUIRED")
+            self.assertNotEqual(report["recommended_next_action"], "CREATE_AGENT")
+            self.assertFalse(report["dispatchable"])
+            dispatchability = report["dispatchability"]
+            self.assertFalse(dispatchability["dispatchable"])
+            self.assertEqual(dispatchability["verdict"], "not_dispatchable")
+            self.assertEqual(dispatchability["status"], "correction_required")
+            self.assertEqual(dispatchability["target_role"], "orchestrator")
+            self.assertEqual(dispatchability["role_class"], "control_or_pseudo")
+            reason_codes = {reason["reason_code"] for reason in dispatchability["reasons"]}
+            self.assertTrue(
+                {
+                    "action_type_not_dispatch_capable",
+                    "target_role_not_profile_execution",
+                    "target_role_control_or_pseudo",
+                    "task_id_none",
+                    "task_packet_none",
+                }.issubset(reason_codes)
+            )
+
+    def test_create_agent_missing_task_packet_is_blocked_by_dispatchability_gate(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = copy_valid_workspace(tmp)
+            make_tz_valid(root)
+            set_next_action(root, task_packet="project-runtime/tasks/active/MISSING_TASK.md")
+            json_out = Path(tmp) / "plan-next.json"
+
+            result = run_plan_next(root, "--strict", "--json-out", str(json_out))
+
+            self.assertEqual(result.returncode, 1, result.stdout + result.stderr)
+            report = json.loads(json_out.read_text(encoding="utf-8"))
+            self.assertEqual(report["status"], "blocked")
+            self.assertEqual(report["recommended_next_action"], "CORRECTION_REQUIRED")
+            self.assertFalse(report["dispatchable"])
+            reason_codes = {reason["reason_code"] for reason in report["dispatchability"]["reasons"]}
+            self.assertIn("task_packet_missing", reason_codes)
 
     def test_checkpoint_with_audit_pass_evidence_recommends_preflight(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
@@ -226,6 +279,9 @@ class PlanNextCommandTests(unittest.TestCase):
             self.assertEqual(report["status"], "blocked")
             self.assertEqual(report["recommended_next_action"], "CREATE_AUDITOR")
             self.assertEqual(report["target_role"], "auditor")
+            self.assertTrue(report["dispatchability"]["dispatchable"])
+            self.assertEqual(report["dispatchability"]["recommended_next_action"], "CREATE_AUDITOR")
+            self.assertEqual(report["dispatchability"]["target_role"], "auditor")
             rule_ids = {item["rule_id"] for item in report["blocking_rules"]}
             self.assertIn("GOV-CHECKPOINT-AUDIT-GATE", rule_ids)
             self.assertFalse(report["evidence"]["audit_pass_evidence"]["present"])
