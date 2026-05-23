@@ -7,6 +7,13 @@ state summaries, receipts, validation reports, and explicit task packets. It
 must not reread broad governance documents for every routine step when the same
 decision can be made from current JSON sidecars and receipts.
 
+The conveyor is a controller, not an implementation worker. It may prepare
+handoffs, dispatch one fresh profile agent per valid task packet, route
+RESULT/AUDIT_RESULT artifacts, run validation commands, and coordinate
+checkpoint flow after gates pass. It must not write code, tests, schemas,
+validators, project/package docs, task packets, release notes, or profile
+artifacts as a substitute for profile-agent execution.
+
 ## Normal Context Set
 
 Context use is split into three explicit modes:
@@ -80,3 +87,9 @@ correction routing.
 
 The conveyor protocol is read-only. It does not add live dispatch, daemon
 behavior, checkpoint execution, distributed workers, or automatic acceptance.
+
+If a current route requires file content changes outside orchestrator-owned
+runtime/routing metadata, normal conveyor flow must stop and the orchestrator
+must create or select a bounded task packet for the appropriate profile role.
+`TARGET_ROLE: orchestrator` and `TASK_PACKET: NONE` are not valid authority for
+file-changing corrections or profile-agent work.

@@ -24,6 +24,20 @@ semantics, transition rules, or validation requirements.
 
 Цель — не позволять оркестратору полагаться на накопленный контекст.
 
+## Function boundary
+
+The orchestrator runtime loop is a controller loop. It may validate runtime
+state, update orchestrator-owned runtime/routing metadata, create bounded task
+packets or handoff records when authorized by governance, dispatch fresh
+profile agents, route RESULT/AUDIT_RESULT artifacts, and coordinate post-audit
+checkpoint flow.
+
+The loop must not execute profile-agent work directly. Code, tests, schemas,
+validators, project/package documentation, release notes, task-packet content,
+profile RESULT content, and other implementation artifacts may be changed only
+by the appropriate fresh profile agent under a valid task packet and then
+accepted only after required audit and checkpoint gates.
+
 ## Runtime loop
 
 Перед каждым новым действием оркестратор обязан выполнить цикл:
@@ -184,6 +198,12 @@ implementation, task-packet, profile-result, or other non-runtime artifacts.
 Any correction that creates, edits, deletes, restores, reverts, redacts, or
 replaces files outside orchestrator-owned runtime state requires a full
 correction task packet.
+
+`TARGET_ROLE: orchestrator` does not convert a correction into profile-agent or
+implementation authority. When a correction requires documentation,
+implementation, validation, audit, release, or other artifact-content work, the
+orchestrator must route to the matching profile role through a valid task
+packet instead of editing the artifact itself.
 
 Оркестратор не должен считать `TASK_PACKET: NONE` отсутствующим task packet для таких non-dispatch actions.
 
@@ -596,6 +616,11 @@ push, the orchestrator must validate in this order:
     full correction task packet;
 20b. if `TASK_PACKET: NONE` is paired with `TARGET_ROLE: orchestrator`, enforce
      `orchestrator_task_packet_none_project_artifact_route_forbidden`;
+20c. if a requested route would require code, tests, schemas, validators,
+     project/package documentation, release notes, task-packet content, or
+     profile-artifact edits by the orchestrator, dispatch/checkpoint routing is
+     forbidden until the work is represented as a valid profile-agent task
+     packet for the appropriate role;
 21. role/file permissions match `FILESYSTEM_GOVERNANCE.md`;
 22. task packet `REASONING_LEVEL` is valid for allowed values, role default,
     and gate-required floor;

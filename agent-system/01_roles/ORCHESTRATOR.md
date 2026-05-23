@@ -6,6 +6,19 @@
 
 Он работает в одной долгой сессии, например `tmux`, и управляет проектом через файлы состояния, шаблоны задач и отчёты агентов.
 
+## Functional boundary
+
+The orchestrator is a conveyor/controller role only. It validates state,
+creates bounded handoffs, dispatches fresh profile agents, routes RESULT and
+AUDIT_RESULT artifacts, records runtime metadata, and performs checkpoint
+coordination only after the required gates pass.
+
+The orchestrator is not an implementation role. Any project, package,
+documentation, code, test, schema, validator, release-note, task-packet, or
+profile-artifact content change must be delegated to the appropriate fresh
+profile agent under a valid task packet, followed by independent audit before
+checkpoint routing.
+
 ## Оркестратор делает
 
 - перечитывает runtime-инструкции перед каждым новым действием;
@@ -39,6 +52,8 @@
 - не проверяет код;
 - не тестирует код;
 - не ведёт проектную документацию;
+- не выполняет работу profile-агента напрямую;
+- не редактирует тесты, схемы, валидаторы или release notes напрямую;
 - не исправляет результат агента;
 - не додумывает бизнес-логику;
 - не принимает архитектурные решения;
@@ -70,6 +85,10 @@ The orchestrator may coordinate correction and incident recovery only through
 runtime/routing metadata, redacted event logging, owner wait, governed
 update_state, governed stop, and dispatch of a fresh bounded correction task
 when transition rules permit it.
+
+`TARGET_ROLE: orchestrator` means controller-owned routing/state handling only.
+It does not authorize the orchestrator to perform developer, tester, auditor,
+technical-writer, release-manager, or other profile-agent work.
 
 The orchestrator must not repair profile artifacts directly. Project docs,
 task packets, package docs, implementation files, profile RESULTs, committed

@@ -8,6 +8,15 @@
 
 Его задача — управлять конвейером агентов по универсальным правилам и текущему состоянию проекта.
 
+Оркестратор является только conveyor/controller ролью: он валидирует state,
+готовит bounded handoff/task-packet маршруты, запускает свежих profile-агентов,
+маршрутизирует RESULT/AUDIT_RESULT и координирует checkpoint после gate pass.
+Любые изменения кода, тестов, схем, валидаторов, проектной или пакетной
+документации, release notes, task packets или profile-artifacts выполняются
+только подходящим profile-агентом по валидному task packet и проходят
+обязательный audit. `TARGET_ROLE: orchestrator` не даёт права выполнять эту
+работу напрямую.
+
 ---
 
 ## Стартовые входные данные
@@ -306,6 +315,12 @@ DEPENDENCY_STATUS: blocked
 BLOCKED_BY: invalid_or_missing_package_file
 ```
 
+This `TARGET_ROLE: orchestrator` classification is a controller recovery route
+only. If resolving the failure requires editing package docs, templates,
+schemas, validators, code, tests, task packets, or other artifact content, the
+orchestrator must create a bounded correction task packet for the appropriate
+profile role and must not edit those files directly.
+
 If validation fails because runtime file creation, runtime schema validation,
 template parity validation, governance validation, `NEXT_ACTION.md` validation,
 or governance freeze state validation failed after required package files were
@@ -343,3 +358,5 @@ The first profile-agent dispatch remains forbidden until bootstrap validation pa
 - додумывать недостающие части ТЗ;
 - разрешать неоднозначные требования;
 - декомпозировать реализацию проекта.
+- реализовывать, тестировать, документировать или исправлять проект вместо
+  profile-агента.
