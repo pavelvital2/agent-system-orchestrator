@@ -9,6 +9,8 @@ from pathlib import Path
 from typing import Any
 
 from . import output_policy
+from . import plan_next
+from . import state_verify
 
 
 EXIT_OK = 0
@@ -33,6 +35,52 @@ def _sidecar_content(root: Path, name: str) -> dict[str, Any] | None:
     return content if isinstance(content, dict) else payload
 
 
+def _plan_next_report(root: Path) -> dict[str, object]:
+    verify_report, verify_exit_code = state_verify._report(root, strict=False)
+    sidecars = plan_next._load_sidecars(root)
+    rules, rules_evidence = plan_next._load_governance_rules(root)
+    return plan_next._plan(
+        root,
+        False,
+        verify_report,
+        verify_exit_code,
+        sidecars,
+        rules,
+        rules_evidence,
+    )
+
+
+def _dispatchability_from_plan(report: dict[str, object]) -> dict[str, object]:
+    dispatchability = report.get("dispatchability")
+    return dispatchability if isinstance(dispatchability, dict) else {}
+
+
+def _reason_codes(dispatchability: dict[str, object]) -> list[str]:
+    reasons = dispatchability.get("reasons")
+    if not isinstance(reasons, list):
+        return []
+    codes: list[str] = []
+    for reason in reasons:
+        if isinstance(reason, dict) and isinstance(reason.get("reason_code"), str):
+            codes.append(reason["reason_code"])
+    return codes
+
+
+def _next_route_summary(plan_report: dict[str, object]) -> dict[str, object]:
+    dispatchability = _dispatchability_from_plan(plan_report)
+    return {
+        "source_command": "plan-next",
+        "plan_next_status": plan_report.get("status"),
+        "recommended_next_action": plan_report.get("recommended_next_action"),
+        "dispatchable": bool(dispatchability.get("dispatchable")),
+        "verdict": dispatchability.get("verdict"),
+        "reason_codes": _reason_codes(dispatchability),
+        "reasons": dispatchability.get("reasons", []),
+        "blocking_rules": plan_report.get("blocking_rules", []),
+        "live_dispatch_performed": bool(dispatchability.get("live_dispatch_performed")),
+    }
+
+
 def _write_json_out(root: Path, path_text: str, payload: dict[str, object]) -> tuple[bool, str]:
     path = output_policy.resolve_output_path(path_text)
     error = output_policy.validate_generated_output_path(
@@ -54,6 +102,9 @@ def _status_report(root: Path) -> dict[str, object]:
     project_state = _sidecar_content(root, "PROJECT_STATE") or {}
     current_gate = _sidecar_content(root, "CURRENT_GATE") or {}
     next_action = _sidecar_content(root, "NEXT_ACTION") or {}
+    plan_report = _plan_next_report(root)
+    dispatchability = _dispatchability_from_plan(plan_report)
+    next_route = _next_route_summary(plan_report)
     return {
         "tool": "aso",
         "command": "orchestrator status",
@@ -61,14 +112,27 @@ def _status_report(root: Path) -> dict[str, object]:
         "status": "pass",
         "read_only": True,
         "mutations_performed": False,
+        "recommended_next_action": plan_report.get("recommended_next_action"),
+        "dispatchable": bool(dispatchability.get("dispatchable")),
+        "dispatchability": dispatchability,
+        "next_route": next_route,
         "summary": {
             "current_phase": project_state.get("current_phase") or project_state.get("CURRENT_PHASE"),
             "project_status": project_state.get("project_status") or project_state.get("PROJECT_STATUS"),
             "gate_type": current_gate.get("gate_type") or current_gate.get("GATE_TYPE"),
-            "gate_status": current_gate.get("gate_status") or current_gate.get("GATE_STATUS"),
+            "gate_status": current_gate.get("status")
+            or current_gate.get("gate_status")
+            or current_gate.get("GATE_STATUS"),
             "next_action_type": next_action.get("action_type") or next_action.get("ACTION_TYPE"),
-            "next_role": next_action.get("next_role") or next_action.get("NEXT_ROLE"),
+            "next_role": next_action.get("target_role")
+            or next_action.get("TARGET_ROLE")
+            or next_action.get("next_role")
+            or next_action.get("NEXT_ROLE"),
             "task_packet": next_action.get("task_packet") or next_action.get("TASK_PACKET"),
+            "next_recommended_action": plan_report.get("recommended_next_action"),
+            "next_dispatchable": bool(dispatchability.get("dispatchable")),
+            "next_dispatchability_verdict": dispatchability.get("verdict"),
+            "next_dispatchability_reason_codes": next_route["reason_codes"],
         },
         "context_budget": {
             "normal_flow_docs": [
@@ -86,6 +150,8 @@ def _status_report(root: Path) -> dict[str, object]:
 
 def _next_report(root: Path) -> dict[str, object]:
     next_action = _sidecar_content(root, "NEXT_ACTION") or {}
+    plan_report = _plan_next_report(root)
+    dispatchability = _dispatchability_from_plan(plan_report)
     return {
         "tool": "aso",
         "command": "orchestrator next",
@@ -93,12 +159,20 @@ def _next_report(root: Path) -> dict[str, object]:
         "status": "pass",
         "read_only": True,
         "mutations_performed": False,
+        "recommended_next_action": plan_report.get("recommended_next_action"),
+        "dispatchable": bool(dispatchability.get("dispatchable")),
+        "dispatchability": dispatchability,
+        "next_route": _next_route_summary(plan_report),
         "next_action": next_action,
         "summary": {
             "action_type": next_action.get("action_type") or next_action.get("ACTION_TYPE"),
             "target_role": next_action.get("target_role") or next_action.get("TARGET_ROLE"),
             "task_id": next_action.get("task_id") or next_action.get("TASK_ID"),
             "task_packet": next_action.get("task_packet") or next_action.get("TASK_PACKET"),
+            "recommended_next_action": plan_report.get("recommended_next_action"),
+            "dispatchable": bool(dispatchability.get("dispatchable")),
+            "dispatchability_verdict": dispatchability.get("verdict"),
+            "dispatchability_reason_codes": _reason_codes(dispatchability),
         },
     }
 

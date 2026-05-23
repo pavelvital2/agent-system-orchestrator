@@ -11,6 +11,8 @@ from pathlib import Path
 
 
 ASO_DIR = Path(__file__).resolve().parents[1]
+REPO_ROOT = Path(__file__).resolve().parents[4]
+FIXTURE_ROOT = REPO_ROOT / "agent-system" / "tests" / "fixtures" / "state"
 if str(ASO_DIR) not in sys.path:
     sys.path.insert(0, str(ASO_DIR))
 
@@ -69,6 +71,78 @@ class OrchestratorConveyorTests(unittest.TestCase):
         self.assertEqual(stdout, "")
         report = json.loads(out.read_text(encoding="utf-8"))
         self.assertEqual(report["summary"]["target_role"], "developer")
+        self.assertFalse(report["dispatchable"])
+        self.assertFalse(report["dispatchability"]["dispatchable"])
+        self.assertFalse(report["dispatchability"]["live_dispatch_performed"])
+
+    def test_orchestrator_next_surfaces_blocked_dispatchability_reasons(self) -> None:
+        root = self.tmpdir / "blocked-workspace"
+        shutil.copytree(FIXTURE_ROOT / "p2_valid_workspace", root)
+        out = root / "project-runtime" / "reports" / "next.json"
+
+        code, stdout, stderr = self._run(
+            ["orchestrator", "next", "--root", str(root), "--json-out", str(out)]
+        )
+
+        self.assertEqual(code, 0, stderr)
+        self.assertEqual(stdout, "")
+        report = json.loads(out.read_text(encoding="utf-8"))
+        self.assertTrue(report["read_only"])
+        self.assertFalse(report["mutations_performed"])
+        self.assertEqual(report["recommended_next_action"], "CORRECTION_REQUIRED")
+        self.assertNotEqual(report["recommended_next_action"], "CREATE_AGENT")
+        self.assertFalse(report["dispatchable"])
+        self.assertFalse(report["dispatchability"]["dispatchable"])
+        self.assertFalse(report["dispatchability"]["live_dispatch_performed"])
+        reason_codes = {reason["reason_code"] for reason in report["dispatchability"]["reasons"]}
+        self.assertTrue(
+            {
+                "action_type_not_dispatch_capable",
+                "target_role_not_profile_execution",
+                "target_role_control_or_pseudo",
+                "task_id_none",
+                "task_packet_none",
+            }.issubset(reason_codes)
+        )
+        self.assertEqual(set(report["summary"]["dispatchability_reason_codes"]), reason_codes)
+
+    def test_orchestrator_status_summarizes_blocked_next_route(self) -> None:
+        root = self.tmpdir / "blocked-status-workspace"
+        shutil.copytree(FIXTURE_ROOT / "p2_valid_workspace", root)
+
+        code, stdout, stderr = self._run(
+            ["orchestrator", "status", "--root", str(root), "--format", "json"]
+        )
+
+        self.assertEqual(code, 0, stderr)
+        report = json.loads(stdout)
+        self.assertEqual(report["status"], "pass")
+        self.assertTrue(report["read_only"])
+        self.assertFalse(report["mutations_performed"])
+        self.assertEqual(report["recommended_next_action"], "CORRECTION_REQUIRED")
+        self.assertFalse(report["dispatchable"])
+        self.assertFalse(report["next_route"]["dispatchable"])
+        self.assertFalse(report["next_route"]["live_dispatch_performed"])
+        self.assertIn("task_packet_none", report["summary"]["next_dispatchability_reason_codes"])
+
+    def test_orchestrator_next_preserves_valid_dispatchable_plan_next_verdict(self) -> None:
+        root = self.tmpdir / "valid-workspace"
+        shutil.copytree(FIXTURE_ROOT / "valid_workspace", root)
+
+        code, stdout, stderr = self._run(
+            ["orchestrator", "next", "--root", str(root), "--format", "json"]
+        )
+
+        self.assertEqual(code, 0, stderr)
+        report = json.loads(stdout)
+        self.assertTrue(report["read_only"])
+        self.assertFalse(report["mutations_performed"])
+        self.assertEqual(report["recommended_next_action"], "CREATE_AGENT")
+        self.assertTrue(report["dispatchable"])
+        self.assertTrue(report["dispatchability"]["dispatchable"])
+        self.assertEqual(report["dispatchability"]["verdict"], "dispatchable")
+        self.assertEqual(report["dispatchability"]["reasons"], [])
+        self.assertFalse(report["dispatchability"]["live_dispatch_performed"])
 
 
 if __name__ == "__main__":
