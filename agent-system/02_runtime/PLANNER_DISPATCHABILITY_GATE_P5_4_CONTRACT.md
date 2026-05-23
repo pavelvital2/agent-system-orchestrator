@@ -21,6 +21,11 @@ AUDIT_RESULT packages.
 `CREATE_AGENT` is a dispatch recommendation. `plan-next` may return it only
 when `can_dispatch_agent()` proves the current action is dispatchable.
 
+This gate is a planning contract only. Passing the gate means the orchestrator
+may create a fresh profile-agent context through the governed conveyor flow; it
+does not execute a daemon, run a live queue worker, perform checkpoint work, or
+mutate project artifacts.
+
 `can_dispatch_agent()` must require all of the following:
 
 - `NEXT_ACTION.ACTION_TYPE` is dispatch-capable.
@@ -38,6 +43,329 @@ when `can_dispatch_agent()` proves the current action is dispatchable.
 - Workspace identity, repository lock, baseline tracking, and runtime schema
   checks pass, unless an explicit first-bootstrap exception is documented by
   the active runtime contract.
+
+## Machine Contract
+
+Validators and command tests may parse the following JSON block as the P5.4
+dispatchability contract. The block is intentionally small and deterministic;
+it defines role classes, action classes, required inputs, required checks,
+reason codes, and the canonical invalid tuple.
+
+```json
+{
+  "contract_id": "ASO_PLANNER_DISPATCHABILITY_GATE_P5_4",
+  "contract_version": "1.0.0",
+  "report_schema_ref": "agent-system/09_validators/schemas/dispatchability_gate.schema.json",
+  "output_object": "dispatchability",
+  "profile_execution_roles": [
+    "requirements_analyst",
+    "solution_architect",
+    "designer",
+    "developer",
+    "auditor",
+    "tester",
+    "technical_writer",
+    "devops_setup_engineer",
+    "release_manager"
+  ],
+  "control_or_pseudo_roles": [
+    "orchestrator",
+    "project_owner",
+    "owner",
+    "none"
+  ],
+  "none_values": [
+    "",
+    "NONE",
+    "none",
+    "null",
+    "UNKNOWN"
+  ],
+  "dispatch_capable_action_types": [
+    "create_agent"
+  ],
+  "non_dispatch_action_types": {
+    "correction": "CORRECTION_REQUIRED",
+    "update_state": "UPDATE_STATE",
+    "wait_for_owner": "ASK_OWNER",
+    "finalize": "FINALIZE",
+    "stop": "STOP",
+    "route_result": "ROUTE_RESULT"
+  },
+  "dispatch_recommendations": {
+    "non_auditor_profile_role": "CREATE_AGENT",
+    "auditor_profile_role": "CREATE_AUDITOR"
+  },
+  "non_dispatch_recommendations": [
+    "CORRECTION_REQUIRED",
+    "UPDATE_STATE",
+    "ASK_OWNER",
+    "FREEZE",
+    "BOOTSTRAP_PREP",
+    "STOP",
+    "ROUTE_RESULT",
+    "FINALIZE",
+    "CHECKPOINT_PREFLIGHT",
+    "NONE"
+  ],
+  "required_inputs": [
+    {
+      "name": "action_type",
+      "source": "NEXT_ACTION.content.action_type"
+    },
+    {
+      "name": "target_role",
+      "source": "NEXT_ACTION.content.target_role"
+    },
+    {
+      "name": "task_id",
+      "source": "NEXT_ACTION.content.task_id"
+    },
+    {
+      "name": "task_packet",
+      "source": "NEXT_ACTION.content.task_packet"
+    },
+    {
+      "name": "dependency_status",
+      "source": "NEXT_ACTION.content.dependency_status"
+    },
+    {
+      "name": "current_gate_status",
+      "source": "CURRENT_GATE.content.status"
+    },
+    {
+      "name": "blocking_rules",
+      "source": "plan-next.blocking_rules"
+    },
+    {
+      "name": "task_registry_entry",
+      "source": "TASK_REGISTRY.content.tasks[task_id]"
+    },
+    {
+      "name": "workspace_identity_status",
+      "source": "PROJECT_STATE.content.identity_validation_status"
+    },
+    {
+      "name": "repository_lock_status",
+      "source": "PROJECT_STATE.content.repository_lock_status"
+    },
+    {
+      "name": "baseline_tracking_status",
+      "source": "PROJECT_STATE.content.baseline_tracking_status"
+    }
+  ],
+  "required_checks": [
+    {
+      "check_id": "DG54_ACTION_TYPE_DISPATCH_CAPABLE",
+      "reason_code_on_fail": "action_type_not_dispatch_capable"
+    },
+    {
+      "check_id": "DG54_TARGET_ROLE_PROFILE_EXECUTION",
+      "reason_code_on_fail": "target_role_not_profile_execution"
+    },
+    {
+      "check_id": "DG54_TARGET_ROLE_NOT_CONTROL",
+      "reason_code_on_fail": "target_role_control_or_pseudo"
+    },
+    {
+      "check_id": "DG54_TASK_ID_PRESENT",
+      "reason_code_on_fail": "task_id_none"
+    },
+    {
+      "check_id": "DG54_TASK_PACKET_PRESENT",
+      "reason_code_on_fail": "task_packet_none"
+    },
+    {
+      "check_id": "DG54_TASK_PACKET_EXISTS",
+      "reason_code_on_fail": "task_packet_missing"
+    },
+    {
+      "check_id": "DG54_TASK_PACKET_DISPATCH_VALID",
+      "reason_code_on_fail": "task_packet_not_dispatch_valid"
+    },
+    {
+      "check_id": "DG54_TASK_REGISTRY_COMPATIBLE",
+      "reason_code_on_fail": "task_registry_incompatible"
+    },
+    {
+      "check_id": "DG54_CURRENT_GATE_PERMITS_DISPATCH",
+      "reason_code_on_fail": "current_gate_blocks_dispatch"
+    },
+    {
+      "check_id": "DG54_NO_BLOCKING_RULES",
+      "reason_code_on_fail": "blocking_rules_present"
+    },
+    {
+      "check_id": "DG54_WORKSPACE_IDENTITY_READY",
+      "reason_code_on_fail": "workspace_identity_not_ready"
+    },
+    {
+      "check_id": "DG54_REPOSITORY_LOCK_READY",
+      "reason_code_on_fail": "repository_lock_not_ready"
+    },
+    {
+      "check_id": "DG54_BASELINE_READY_OR_BOOTSTRAP_EXCEPTION",
+      "reason_code_on_fail": "baseline_not_ready"
+    }
+  ],
+  "reason_codes": [
+    "action_type_not_dispatch_capable",
+    "target_role_not_profile_execution",
+    "target_role_control_or_pseudo",
+    "task_id_none",
+    "task_packet_none",
+    "task_packet_missing",
+    "task_packet_not_dispatch_valid",
+    "task_registry_incompatible",
+    "current_gate_blocks_dispatch",
+    "blocking_rules_present",
+    "workspace_identity_not_ready",
+    "repository_lock_not_ready",
+    "baseline_not_ready"
+  ],
+  "create_agent_invariants": [
+    "recommended_next_action_CREATE_AGENT_requires_dispatchable_true",
+    "recommended_next_action_CREATE_AGENT_requires_action_type_create_agent",
+    "recommended_next_action_CREATE_AGENT_requires_non_auditor_profile_role",
+    "recommended_next_action_CREATE_AGENT_requires_task_id_present",
+    "recommended_next_action_CREATE_AGENT_requires_task_packet_present_and_dispatch_valid",
+    "recommended_next_action_CREATE_AGENT_requires_no_failed_required_checks",
+    "recommended_next_action_CREATE_AGENT_must_not_perform_live_dispatch"
+  ],
+  "canonical_invalid_tuple": {
+    "input": {
+      "action_type": "correction",
+      "target_role": "orchestrator",
+      "task_id": "NONE",
+      "task_packet": "NONE"
+    },
+    "expected": {
+      "dispatchable": false,
+      "verdict": "not_dispatchable",
+      "recommended_next_action": "CORRECTION_REQUIRED",
+      "status": "correction_required",
+      "required_reason_codes": [
+        "action_type_not_dispatch_capable",
+        "target_role_not_profile_execution",
+        "target_role_control_or_pseudo",
+        "task_id_none",
+        "task_packet_none"
+      ],
+      "forbidden_recommended_next_actions": [
+        "CREATE_AGENT"
+      ]
+    }
+  }
+}
+```
+
+## Role And Action Classes
+
+Profile execution roles are exactly:
+
+```text
+requirements_analyst
+solution_architect
+designer
+developer
+auditor
+tester
+technical_writer
+devops_setup_engineer
+release_manager
+```
+
+Control and routing pseudo-roles include:
+
+```text
+orchestrator
+project_owner
+owner
+none
+```
+
+Control and routing pseudo-roles are valid runtime routing targets in some
+states, but they are never dispatchable profile execution roles. A
+`TARGET_ROLE` of `orchestrator`, `project_owner`, `owner`, or `none` must make
+`can_dispatch_agent()` fail.
+
+The only dispatch-capable `NEXT_ACTION.ACTION_TYPE` for profile-agent creation
+is:
+
+```text
+create_agent
+```
+
+`correction` is not a dispatch action. It is an internal recovery/correction
+route until a governed state update selects a concrete dispatchable correction
+task packet with `ACTION_TYPE: create_agent`, a profile `TARGET_ROLE`, a real
+`TASK_ID`, and a real `TASK_PACKET`.
+
+The following action types are non-dispatch routes:
+
+| `NEXT_ACTION.ACTION_TYPE` | Required recommendation class |
+| --- | --- |
+| `correction` | `CORRECTION_REQUIRED` or `UPDATE_STATE` |
+| `update_state` | `UPDATE_STATE` |
+| `wait_for_owner` | `ASK_OWNER` |
+| `route_result` | `ROUTE_RESULT` |
+| `finalize` | `FINALIZE` |
+| `stop` | `STOP` |
+
+Incident, owner/GAP blocker, bootstrap, and invalid-state handling may return
+`FREEZE`, `ASK_OWNER`, `BOOTSTRAP_PREP`, `CORRECTION_REQUIRED`, `UPDATE_STATE`,
+`STOP`, or `NONE`, but not `CREATE_AGENT`.
+
+## Command Output Contract
+
+`aso plan-next --json-out ...` must expose either:
+
+- a top-level `dispatchability` object that conforms to
+  `agent-system/09_validators/schemas/dispatchability_gate.schema.json`; or
+- equivalent top-level fields with the same semantics until the command output
+  is migrated to the nested object.
+
+The dispatchability evidence must include:
+
+- `dispatchable`: boolean verdict;
+- `verdict`: `dispatchable` or `not_dispatchable`;
+- `recommended_next_action`;
+- `status`;
+- `target_role`;
+- `role_class`;
+- `action_type`;
+- `action_class`;
+- `task_id`;
+- `task_packet`;
+- `checks[]` with stable `check_id`, `passed`, `severity`, `reason_code`, and
+  `evidence`;
+- `reasons[]` with stable `reason_code`, `message`, and `input_ref`;
+- `live_dispatch_performed: false`.
+
+If `recommended_next_action` is `CREATE_AGENT`, all required checks must pass,
+`dispatchable` must be `true`, `verdict` must be `dispatchable`, `role_class`
+must be `profile_execution`, `action_class` must be `dispatch`, `target_role`
+must be a non-auditor profile execution role, `task_id` and `task_packet` must
+not be a none value, and `live_dispatch_performed` must be `false`.
+The JSON Schema rejects CREATE_AGENT reports that violate those report-level
+invariants. Implementation validators remain responsible for proving filesystem
+facts and runtime facts behind those checks, including task packet existence,
+dispatch-valid task packet content, registry compatibility, current gate state,
+blocking rules, workspace identity, repository lock, and baseline readiness.
+
+If `target_role` is `auditor` and the route is dispatchable, the recommendation
+must be `CREATE_AUDITOR`, not `CREATE_AGENT`. `CREATE_AUDITOR` is still a
+profile-agent dispatch recommendation and must satisfy the same dispatchability
+checks.
+
+`aso orchestrator next --json-out ...` must surface the same dispatchability
+verdict or a directly nested copy of the latest `plan-next` verdict. It must
+not transform a non-dispatchable `NEXT_ACTION` tuple into `CREATE_AGENT`.
+
+`aso orchestrator status --json-out ...` must summarize dispatchability without
+weakening it. If the current tuple is non-dispatchable, status may report normal
+conveyor health as pass, but its next-route summary must still identify the
+route as non-dispatchable and include or reference the reason codes.
 
 ## Required Failure Route
 
@@ -68,8 +396,9 @@ NEXT_ACTION.TASK_ID: NONE
 NEXT_ACTION.TASK_PACKET: NONE
 ```
 
-`plan-next` must return a non-dispatch recommendation. It must not recommend
-`CREATE_AGENT`.
+`plan-next`, `orchestrator next`, and any `orchestrator status` next-route
+summary must return or preserve a non-dispatch recommendation. They must not
+recommend `CREATE_AGENT`.
 
 ## Non-Goals
 
