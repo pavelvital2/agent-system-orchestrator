@@ -19,8 +19,8 @@ RUNTIME_SCHEMA_VERSION:
 ## Active version constants
 
 ```text
-CURRENT_PACKAGE_VERSION: 3.7.3
-CURRENT_GOVERNANCE_RULESET_VERSION: 3.7.3
+CURRENT_PACKAGE_VERSION: 3.7.4
+CURRENT_GOVERNANCE_RULESET_VERSION: 3.7.4
 CURRENT_RUNTIME_SCHEMA_VERSION: 3.1.1
 ARTIFACT_PACKAGE_SCHEMA_VERSION: 1.1.0
 ```
@@ -403,6 +403,30 @@ remain forbidden. Artifact Package Schema `1.1.0` is preserved, and P5.3 does
 not change artifact package storage semantics, dispatch live agents, execute
 checkpoints, publish generated workspaces, or broaden proposal/apply mutation
 authority.
+
+The ASO Planner Dispatchability Gate P5.4 correction installs:
+
+```text
+CURRENT_PACKAGE_VERSION: 3.7.4
+CURRENT_GOVERNANCE_RULESET_VERSION: 3.7.4
+CURRENT_RUNTIME_SCHEMA_VERSION: 3.1.1
+ARTIFACT_PACKAGE_SCHEMA_VERSION: 1.1.0
+DESIGN_GAP_GOVERNANCE_SCHEMA_VERSION: 1.0.0
+```
+
+This patch defines the planner dispatchability boundary: `CREATE_AGENT` is
+valid only when a dispatchability gate proves the current next action can
+dispatch a profile agent. The gate must reject control roles such as
+`orchestrator` or `owner`, missing or `NONE` task ids, missing or `NONE` task
+packets, invalid or absent task packet files, incompatible task registry
+entries, blocking rules, failed workspace identity or repository lock checks,
+and any current gate state that forbids dispatch. When the gate fails,
+`plan-next` must return a documented non-dispatch route such as
+`CORRECTION_REQUIRED`, `UPDATE_STATE`, `ASK_OWNER`, `FREEZE`,
+`BOOTSTRAP_PREP`, or `STOP` with machine-readable reasons. Runtime Schema
+`3.1.1` and Artifact Package Schema `1.1.0` are preserved. P5.4 does not add a
+daemon, live dispatch executor, checkpoint executor, ASO Studio, distributed
+workers, or automatic task execution.
 
 ## Version semantics
 

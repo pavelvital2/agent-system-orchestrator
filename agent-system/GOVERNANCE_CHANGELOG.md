@@ -1751,3 +1751,42 @@ AUTHORIZED_BY: project_owner
 AUDIT_REQUIRED: yes
 STATUS: accepted
 ```
+
+```text
+CHANGE_ID: GOV-2026-05-23-004
+CHANGE_TITLE: ASO_PLANNER_DISPATCHABILITY_GATE_P5_4_CONTRACT
+DATE: 2026-05-23
+PACKAGE_VERSION_BEFORE: 3.7.3
+PACKAGE_VERSION_AFTER: 3.7.4
+GOVERNANCE_RULESET_BEFORE: 3.7.3
+GOVERNANCE_RULESET_AFTER: 3.7.4
+RUNTIME_SCHEMA_BEFORE: 3.1.1
+RUNTIME_SCHEMA_AFTER: 3.1.1
+ARTIFACT_PACKAGE_SCHEMA_BEFORE: 1.1.0
+ARTIFACT_PACKAGE_SCHEMA_AFTER: 1.1.0
+CHANGE_TYPE: patch
+CHANGE_SUBTYPE: planner_dispatchability_gate_p5_4_contract
+AFFECTED_FILES:
+- README.md
+- agent-system/README.md
+- agent-system/PACKAGE_VERSIONING.md
+- agent-system/02_runtime/PLANNER_DISPATCHABILITY_GATE_P5_4_CONTRACT.md
+- agent-system/GOVERNANCE_CHANGELOG.md
+- agent-system/11_release/ASO_PLANNER_DISPATCHABILITY_GATE_P5_4_V3_7_4_RELEASE_NOTES.md
+- agent-system/11_release/ASO_PLANNER_DISPATCHABILITY_GATE_P5_4_V3_7_4_VALIDATION_REPORT.md
+AFFECTED_INVARIANTS:
+- Active package/governance/runtime tuple is 3.7.4 / 3.7.4 / 3.1.1.
+- Artifact package schema version remains 1.1.0.
+- `CREATE_AGENT` is permitted only when the planner dispatchability gate proves the current action is dispatchable.
+- `ACTION_TYPE: correction`, `TARGET_ROLE: orchestrator`, `TASK_ID: NONE`, and `TASK_PACKET: NONE` is a non-dispatch route and must not produce `CREATE_AGENT`.
+AFFECTED_TRANSITIONS:
+- dispatch-capable action plus valid profile role/task id/task packet/task registry/gate/baseline -> `CREATE_AGENT` may be recommended.
+- failed dispatchability gate -> non-dispatch recommendation such as `CORRECTION_REQUIRED`, `UPDATE_STATE`, `ASK_OWNER`, `FREEZE`, `BOOTSTRAP_PREP`, or `STOP`.
+- control role such as `orchestrator` or `owner` -> non-dispatch route.
+SCHEMA_TEMPLATE_IMPACT: none; Runtime Schema 3.1.1 and Artifact Package Schema 1.1.0 are preserved.
+MIGRATION_REQUIRED: no
+MIGRATION_NOTE: Runtime Schema 3.1.1 and Artifact Package Schema 1.1.0 are preserved. P5.4 defines the planner Dispatchability Gate contract and non-goals only; it does not migrate active project-runtime state, change runtime sidecar envelopes, change artifact package schema, add live dispatch, add checkpoint execution, or redefine the artifact package storage model.
+AUTHORIZED_BY: project_owner
+AUDIT_REQUIRED: yes
+STATUS: accepted
+```

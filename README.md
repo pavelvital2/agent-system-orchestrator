@@ -20,15 +20,18 @@ filesystem-governed ASO helper CLI at `agent-system/tools/aso/aso.py`: most
 commands are read-only diagnostics or dry-run proposals, while Project Factory
 commands may create generated projects only within explicit target paths.
 
-This P5.3 package records the active package metadata as the governed `3.7.3`
+This P5.4 package records the active package metadata as the governed `3.7.4`
 package/governance tuple with runtime schema `3.1.1` and artifact package
-schema `1.1.0`. P5.3 aligns bootstrap TASK_REGISTRY task-kind governance while
-preserving Artifact Package Schema `1.1.0`. ASO remains a governance
-and control conveyor: it validates bootstrap state consistency and repair
-routes, but it does not interpret raw TZ content, replace project designer
-reasoning, generate product questions from TZ, install product-intake code or
-a product-intake engine, run a daemon, dispatch live agents, execute
-checkpoints, generate products, collect secrets, or run external workers.
+schema `1.1.0`. P5.4 defines the planner Dispatchability Gate: `plan-next`
+may recommend `CREATE_AGENT` only after proving the current next action can
+dispatch a profile agent with a valid role, task id, task packet, task
+registry entry, gate state, and workspace/repository baseline. ASO remains a
+governance and control conveyor: it validates bootstrap state consistency and
+repair routes, but it does not interpret raw TZ content, replace project
+designer reasoning, generate product questions from TZ, install
+product-intake code or a product-intake engine, run a daemon, dispatch live
+agents, execute checkpoints, generate products, collect secrets, or run
+external workers.
 
 The Runtime Schema sidecar contract is documented in
 `agent-system/02_runtime/RUNTIME_STATE_P2_CONTRACT.md` and packaged as
@@ -46,6 +49,8 @@ The P5 artifact package model boundary is documented in
 `agent-system/02_runtime/ARTIFACT_PACKAGE_MODEL_P5_CONTRACT.md`.
 The P5.2 bootstrap state reconciliation correction is documented in
 `agent-system/02_runtime/BOOTSTRAP_STATE_RECONCILIATION_P5_2_CONTRACT.md`.
+The P5.4 planner Dispatchability Gate correction is documented in
+`agent-system/02_runtime/PLANNER_DISPATCHABILITY_GATE_P5_4_CONTRACT.md`.
 It supersedes the non-authoritative
 `upgrade/product-intake-capability-p4-v3.6.0` branch without deleting it.
 
@@ -135,7 +140,7 @@ python3 agent-system/tools/aso/aso.py validate-context-pack agent-system/tests/f
 Runtime State P2 command surfaces formalize JSON sidecars under
 `project-runtime/state/`. JSON sidecars are canonical for P2+ runtime state;
 Markdown or report outputs are compatibility views generated from JSON. The
-active package version is `3.7.3` and the active runtime schema version is
+active package version is `3.7.4` and the active runtime schema version is
 `3.1.1`.
 
 ```text
@@ -189,7 +194,7 @@ python3 agent-system/tools/aso/aso.py design decision record --root /path/to/pro
 lifecycle stage.
 
 Safe Proposal / Apply P3 adds local guarded proposal and apply commands for
-Runtime Schema `3.1.0` state. Proposal commands do not dispatch agents, do not
+Runtime Schema `3.1.1` state. Proposal commands do not dispatch agents, do not
 write canonical state sidecars, and do not commit or push. Checkpoint proposal
 is checkpoint eligibility evidence only; it is not checkpoint execution.
 Confirmed apply requires `--confirm-apply`, re-runs guards, and may write only
@@ -333,11 +338,11 @@ not require `.venv`; direct script checks remain the compatibility baseline.
 
 Stage 2 state-contract examples use the corrected valid workspace fixture at
 `agent-system/tests/fixtures/state/valid_workspace`. The dry-run plan example
-reports the canonical next action value `CREATE_AGENT`; it is evidence only and
-does not dispatch an agent.
+may report the canonical next action value `CREATE_AGENT` only for a
+dispatchable route; it is evidence only and does not dispatch an agent.
 
 The helper supports status, lint, doctor, package-layout verification, design
-validation, context pack validation, rule validation, Runtime Schema `3.1.0`
+validation, context pack validation, rule validation, Runtime Schema `3.1.1`
 state init/migrate/render/verify, dry-run next-action planning, static
 dashboard rendering, checkpoint eligibility preflight, archive verify
 inspection, P4 design governance, and Project Factory scoped generated-project

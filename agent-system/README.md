@@ -155,11 +155,14 @@ The package includes a filesystem-governed ASO helper CLI at
 dry-run proposals, while Project Factory commands may create generated
 projects only within explicit target paths.
 
-This P5.3 package records the active package metadata as the governed `3.7.3`
+This P5.4 package records the active package metadata as the governed `3.7.4`
 package/governance tuple with runtime schema `3.1.1` and artifact package
-schema `1.1.0`. It preserves the Project Factory P1 command boundary and
-Artifact Package Schema `1.1.0` while aligning bootstrap TASK_REGISTRY
-task-kind governance.
+schema `1.1.0`. It preserves the Project Factory P1 command boundary, Runtime
+Schema `3.1.1`, and Artifact Package Schema `1.1.0` while defining the
+planner Dispatchability Gate. `plan-next` may recommend `CREATE_AGENT` only
+after proving the current next action can dispatch a profile agent with a
+valid role, task id, task packet, task registry entry, gate state, and
+workspace/repository baseline.
 
 ASO remains a deterministic governance/control conveyor. It validates and
 gates artifacts produced by profile agents and detects contradictory bootstrap
@@ -189,6 +192,8 @@ validation evidence under
 `agent-system/11_release/ASO_WORKSPACE_BOOTSTRAP_RUNTIME_LIFECYCLE_P4_1_V3_6_1_VALIDATION_REPORT.md`.
 The P5.2 bootstrap state reconciliation contract is documented in
 `agent-system/02_runtime/BOOTSTRAP_STATE_RECONCILIATION_P5_2_CONTRACT.md`.
+The P5.4 planner Dispatchability Gate contract is documented in
+`agent-system/02_runtime/PLANNER_DISPATCHABILITY_GATE_P5_4_CONTRACT.md`.
 
 The canonical installable ASO package source is:
 
@@ -273,7 +278,7 @@ forbidden document checks, and required document existence under `--root`.
 Runtime State P2 command surfaces are local and offline. JSON sidecars under
 `project-runtime/state/` are canonical for P2+ runtime state. Markdown and
 report outputs are compatibility views generated from JSON, not the canonical
-state source. The active package version is `3.7.3` and the active runtime
+state source. The active package version is `3.7.4` and the active runtime
 schema version is `3.1.1`.
 
 ```text
@@ -313,11 +318,11 @@ checkpoint eligibility without staging, committing, pushing, or changing
 runtime state.
 The corrected state examples use
 `agent-system/tests/fixtures/state/valid_workspace`; the dry-run plan evidence
-uses the canonical next action value `CREATE_AGENT` without dispatching an
-agent.
+may use the canonical next action value `CREATE_AGENT` only for a dispatchable
+route and does not dispatch an agent.
 
 Safe Proposal / Apply P3 command surfaces are local and guarded. They run
-under the current package/governance `3.7.3` tuple with Runtime Schema `3.1.1`
+under the current package/governance `3.7.4` tuple with Runtime Schema `3.1.1`
 and preserve the P3 contract; they do not
 dispatch agents, do not commit or push, and do not publish runtime artifacts.
 Proposal commands default to dry-run. `--confirm-write` may write only proposal
@@ -382,7 +387,7 @@ uses the installed `.venv/bin/aso` command for package status, strict lint,
 strict doctor, and strict package-layout verification.
 
 The helper supports status, lint, doctor, package-layout verification, design
-validation, context pack validation, rule validation, Runtime Schema `3.1.0`
+validation, context pack validation, rule validation, Runtime Schema `3.1.1`
 state init/migrate/render/verify, dry-run next-action planning, static
 dashboard rendering, checkpoint eligibility preflight, archive verify
 inspection, P5 artifact package validation and classification, lifecycle
@@ -420,7 +425,7 @@ agents or execute checkpoints.
 
 Project Factory P1 supports local vendored creation, local reference creation,
 GitHub dry-run planning, confirmed GitHub publish, and a guided
-wizard. It remains available in package version `3.7.3`; existing P1/P0
+wizard. It remains available in package version `3.7.4`; existing P1/P0
 generated-project lockfiles remain compatible when they satisfy the accepted
 publication-boundary and engine-mode rules.
 
@@ -662,8 +667,8 @@ agent-system/GOVERNANCE_CHANGELOG.md
 Current active tuple and package markers:
 
 ```text
-CURRENT_PACKAGE_VERSION: 3.7.3
-CURRENT_GOVERNANCE_RULESET_VERSION: 3.7.3
+CURRENT_PACKAGE_VERSION: 3.7.4
+CURRENT_GOVERNANCE_RULESET_VERSION: 3.7.4
 CURRENT_RUNTIME_SCHEMA_VERSION: 3.1.1
 PROJECT_FACTORY_RELEASE_MARKER: project-factory-p1
 RUNTIME_STATE_RELEASE_MARKER: artifact-package-model-p5
