@@ -16,6 +16,12 @@ The installer creates `.venv`, installs this checkout as an editable package,
 and verifies the installed `aso` command. It uses local Python packaging only;
 it does not require secrets, GitHub credentials, remote repository access,
 dispatch authority, checkpoint execution, commit, push, or publication rights.
+On POSIX systems, `install.sh` creates the virtual environment with
+`--system-site-packages` so existing environment-provided packaging tools such
+as `setuptools` can satisfy the editable install bootstrap. ASO runtime
+validation remains stdlib-only for its packaged schema/contract checks; the
+installer must still verify the canonical package from this checkout, not a
+root-level duplicate Python tree.
 
 This install document covers package version `3.7.5` with runtime schema
 `3.1.1` and artifact package schema `1.1.0`. P5.5 stabilizes active version

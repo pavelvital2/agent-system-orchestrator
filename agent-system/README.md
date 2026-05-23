@@ -206,9 +206,9 @@ agent-system/tools/aso/agent_system_orchestrator_aso/
 ```
 
 The former root-level duplicate package path
-`agent_system_orchestrator_aso/` is not canonical package source and must remain
-absent from tracked files. `pyproject.toml` package discovery points to
-`agent-system/tools/aso`.
+`agent_system_orchestrator_aso/` is not canonical package source or runtime
+source and must remain absent from tracked files. `pyproject.toml` package
+discovery points to `agent-system/tools/aso`.
 
 Install the local console command from the repository root with:
 

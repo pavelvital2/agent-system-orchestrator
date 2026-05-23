@@ -22,16 +22,16 @@ commands may create generated projects only within explicit target paths.
 
 This P5.5 stabilization package records the active package metadata as the
 governed `3.7.5` package/governance tuple with runtime schema `3.1.1` and
-artifact package schema `1.1.0`. The P5.4/P5.5 planner Dispatchability Gate
-remains active: `plan-next`
-may recommend `CREATE_AGENT` only after proving the current next action can
-dispatch a profile agent with a valid role, task id, task packet, task
-registry entry, gate state, and workspace/repository baseline. ASO remains a
-governance and control conveyor: it validates bootstrap state consistency and
-repair routes, but it does not interpret raw TZ content, replace project
-designer reasoning, generate product questions from TZ, install
-product-intake code or a product-intake engine, run a daemon, dispatch live
-agents, execute checkpoints, generate products, collect secrets, or run
+artifact package schema `1.1.0`. P5.5 stabilizes package/readiness metadata;
+the P5.4 planner Dispatchability Gate remains the active authority:
+`plan-next` may recommend `CREATE_AGENT` only after proving the current next
+action can dispatch a profile agent with a valid role, task id, task packet,
+task registry entry, gate state, and workspace/repository baseline. ASO
+remains a governance and control conveyor: it validates bootstrap state
+consistency and repair routes, but it does not interpret raw TZ content,
+replace project designer reasoning, generate product questions from TZ,
+install product-intake code or a product-intake engine, run a daemon, dispatch
+live agents, execute checkpoints, generate products, collect secrets, or run
 external workers.
 
 The Runtime Schema sidecar contract is documented in
@@ -54,7 +54,7 @@ The P5 artifact package model boundary is documented in
 `agent-system/02_runtime/ARTIFACT_PACKAGE_MODEL_P5_CONTRACT.md`.
 The P5.2 bootstrap state reconciliation correction is documented in
 `agent-system/02_runtime/BOOTSTRAP_STATE_RECONCILIATION_P5_2_CONTRACT.md`.
-The P5.4/P5.5 planner Dispatchability Gate correction is documented in
+The P5.4 planner Dispatchability Gate correction is documented in
 `agent-system/02_runtime/PLANNER_DISPATCHABILITY_GATE_P5_4_CONTRACT.md`.
 It supersedes the non-authoritative
 `upgrade/product-intake-capability-p4-v3.6.0` branch without deleting it.
@@ -66,9 +66,9 @@ agent-system/tools/aso/agent_system_orchestrator_aso/
 ```
 
 The former root-level duplicate package path
-`agent_system_orchestrator_aso/` is not a package source and must remain absent
-from tracked files before merge. Package-layout verification replaces duplicate
-copy synchronization checks for this cleanup.
+`agent_system_orchestrator_aso/` is not a package source or runtime source and
+must remain absent from tracked files before merge. Package-layout verification
+replaces duplicate copy synchronization checks for this cleanup.
 
 ## Local install and command surface
 
