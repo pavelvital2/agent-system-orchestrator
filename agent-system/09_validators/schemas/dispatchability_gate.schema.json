@@ -126,7 +126,6 @@
             "enum": [
               "requirements_analyst",
               "solution_architect",
-              "designer",
               "developer",
               "tester",
               "technical_writer",
@@ -146,6 +145,22 @@
           "role_class": { "const": "profile_execution" },
           "action_type": { "const": "create_agent" },
           "action_class": { "const": "audit_dispatch" },
+          "task_id": { "$ref": "#/$defs/realDispatchValue" },
+          "task_packet": { "$ref": "#/$defs/realDispatchValue" },
+          "checks": {
+            "allOf": [
+              { "$ref": "#/$defs/createAgentRequiredPassedChecks" },
+              {
+                "not": {
+                  "contains": {
+                    "type": "object",
+                    "required": ["passed"],
+                    "properties": { "passed": { "const": false } }
+                  }
+                }
+              }
+            ]
+          },
           "target_role": { "const": "auditor" }
         }
       }
@@ -156,7 +171,7 @@
         "properties": {
           "verdict": { "const": "not_dispatchable" },
           "recommended_next_action": {
-            "not": { "const": "CREATE_AGENT" }
+            "not": { "enum": ["CREATE_AGENT", "CREATE_AUDITOR"] }
           }
         },
         "required": ["reasons"]

@@ -29,6 +29,7 @@ PROFILE_EXECUTION_ROLES = {
     "devops_setup_engineer",
     "release_manager",
 }
+DEPRECATED_PROFILE_ROLE_ALIASES = {"designer": "solution_architect"}
 CONTROL_OR_PSEUDO_ROLES = {"orchestrator", "project_owner", "owner", "none"}
 NON_DISPATCH_ACTION_TYPES = {
     "correction": "CORRECTION_REQUIRED",
@@ -312,12 +313,17 @@ def _gate_check(
 
 
 def _role_class(target_role: str) -> str:
-    role = target_role.lower()
+    role = _normalize_profile_role(target_role).lower()
     if role in CONTROL_OR_PSEUDO_ROLES or _is_none(role):
         return "control_or_pseudo"
     if role in PROFILE_EXECUTION_ROLES:
         return "profile_execution"
     return "unknown"
+
+
+def _normalize_profile_role(role: str) -> str:
+    normalized = role.strip()
+    return DEPRECATED_PROFILE_ROLE_ALIASES.get(normalized, normalized)
 
 
 def _action_class(action_type: str, target_role: str) -> str:
@@ -397,10 +403,14 @@ def _task_packet_dispatch_valid(
     if fields.get("TASK_ID") != task_id:
         return False, f"TASK_ID={fields.get('TASK_ID', '') or 'NONE'} does not match NEXT_ACTION task_id={task_id}"
     packet_role = fields.get("TARGET_ROLE", "")
-    if target_role != "auditor" and packet_role != target_role:
-        return False, f"TARGET_ROLE={packet_role or 'NONE'} does not match NEXT_ACTION target_role={target_role}"
     if packet_role not in PROFILE_EXECUTION_ROLES:
         return False, f"TARGET_ROLE={packet_role or 'NONE'} is not a profile execution role"
+    target_role = _normalize_profile_role(target_role)
+    packet_role = _normalize_profile_role(packet_role)
+    if packet_role != target_role:
+        return False, f"TARGET_ROLE={fields.get('TARGET_ROLE', '') or 'NONE'} does not match normalized target_role={target_role}"
+    if target_role == "auditor" and fields.get("TASK_KIND") != "audit":
+        return False, f"TASK_KIND={fields.get('TASK_KIND', '') or 'NONE'} is not an audit task packet"
     return True, "task packet has dispatch identity fields"
 
 
@@ -423,18 +433,42 @@ def _task_registry_compatible(
         packet_kind = packet_fields.get("TASK_KIND", "")
         if registry_kind and packet_kind and registry_kind != packet_kind:
             return False, f"registry task_kind={registry_kind} does not match packet TASK_KIND={packet_kind}"
-    if target_role != "auditor":
-        compatible_roles = {_as_text(task.get("task_type")), _as_text(task.get("owner_role"))}
-        if target_role not in compatible_roles:
-            return False, f"registry roles={sorted(role for role in compatible_roles if role)} do not include target_role={target_role}"
+    compatible_roles = {
+        _normalize_profile_role(_as_text(task.get("task_type"))),
+        _normalize_profile_role(_as_text(task.get("owner_role"))),
+    }
+    target_role = _normalize_profile_role(target_role)
+    if target_role not in compatible_roles:
+        return False, f"registry roles={sorted(role for role in compatible_roles if role)} do not include normalized target_role={target_role}"
     return True, "registry entry matches NEXT_ACTION and task packet"
 
 
-def _current_gate_permits_dispatch(current_gate: dict[str, object]) -> tuple[bool, str]:
+def _current_gate_permits_dispatch(
+    current_gate: dict[str, object],
+    task_id: str,
+    task_packet: str,
+    target_role: str,
+    audit_route_required: bool,
+) -> tuple[bool, str]:
     status = _as_text(current_gate.get("status"))
-    if status in {"open", "passed"}:
-        return True, f"CURRENT_GATE.content.status={status}"
-    return False, f"CURRENT_GATE.content.status={status or 'NONE'}"
+    if status not in {"open", "passed"}:
+        return False, f"CURRENT_GATE.content.status={status or 'NONE'}"
+    gate_task_id = _as_text(current_gate.get("task_id"))
+    if not _is_none(gate_task_id) and gate_task_id != task_id:
+        return False, f"CURRENT_GATE.content.task_id={gate_task_id} does not match NEXT_ACTION task_id={task_id}"
+    gate_task_packet = _as_text(current_gate.get("task_packet"))
+    if not _is_none(gate_task_packet) and gate_task_packet != task_packet:
+        return False, f"CURRENT_GATE.content.task_packet={gate_task_packet} does not match NEXT_ACTION task_packet={task_packet}"
+    required_next_role = _normalize_profile_role(_as_text(current_gate.get("required_next_role")))
+    target_role = _normalize_profile_role(target_role)
+    if (
+        not _is_none(required_next_role)
+        and required_next_role != target_role
+    ):
+        return False, f"CURRENT_GATE.content.required_next_role={required_next_role} does not match target_role={target_role}"
+    if target_role == "auditor" and not audit_route_required:
+        return False, "auditor dispatch recommendation is only valid when an audit route is required"
+    return True, f"CURRENT_GATE.content.status={status}; task and role are compatible"
 
 
 def _workspace_identity_ready(project_state: dict[str, object], next_action: dict[str, object]) -> tuple[bool, str]:
@@ -480,6 +514,7 @@ def can_dispatch_agent(
 ) -> dict[str, object]:
     """Evaluate the single P5.4 dry-run dispatchability gate."""
 
+    target_role = _normalize_profile_role(target_role)
     checks: list[dict[str, object]] = []
     reasons: list[dict[str, object]] = []
 
@@ -581,7 +616,13 @@ def can_dispatch_agent(
         "TASK_REGISTRY.content.tasks[task_id]",
     )
 
-    gate_permits, gate_evidence = _current_gate_permits_dispatch(current_gate)
+    gate_permits, gate_evidence = _current_gate_permits_dispatch(
+        current_gate,
+        task_id,
+        task_packet,
+        target_role,
+        _is_checkpoint_attempt(next_action),
+    )
     _gate_check(
         checks,
         reasons,
@@ -867,6 +908,7 @@ def _plan(
                 [],
             )
             recommended_next_action = str(dispatchability["recommended_next_action"])
+            target_role = str(dispatchability["target_role"])
             blocking_rules.append(
                 _rule(
                     rules,
@@ -875,7 +917,7 @@ def _plan(
                     f"task_id={task_id or 'NONE'}",
                 )
             )
-    elif verify_exit_code != 0:
+    elif verify_exit_code != 0 and action_type != "create_agent":
         recommended_next_action = "NONE"
         dispatchability = _non_dispatchability(
             action_type,
@@ -917,6 +959,7 @@ def _plan(
             blocking_rules,
         )
         recommended_next_action = str(dispatchability["recommended_next_action"])
+        target_role = str(dispatchability["target_role"])
 
     blocking_rules = _dedupe_rules(blocking_rules)
     if blocking_rules:

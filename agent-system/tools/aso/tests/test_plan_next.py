@@ -119,6 +119,7 @@ def set_current_gate(root: Path, **updates: object) -> None:
         "task_packet": "TASK_PACKET",
         "action_semantic": "ACTION_SEMANTIC",
         "baseline_tracking_status": "BASELINE_TRACKING_STATUS",
+        "required_next_role": "REQUIRED_NEXT_ROLE",
     }
     for key, field in markdown_fields.items():
         if key in updates and isinstance(updates[key], str):
@@ -288,14 +289,57 @@ class PlanNextCommandTests(unittest.TestCase):
         def wait_owner(root: Path) -> None:
             set_next_action(root, action_type="wait_for_owner", dependency_status="ready")
 
+        def create_agent_missing_registry_entry(root: Path) -> None:
+            missing_task_id = "TASK_UNREGISTERED_001"
+            missing_packet = "project-runtime/tasks/active/TASK_UNREGISTERED_001.md"
+            source = root / packet
+            target = root / missing_packet
+            target.write_text(
+                source.read_text(encoding="utf-8").replace("TASK_FIXTURE_STATE_001", missing_task_id),
+                encoding="utf-8",
+            )
+            set_next_action(root, task_id=missing_task_id, task_packet=missing_packet)
+            set_current_gate(root, task_id=missing_task_id, task_packet=missing_packet)
+
+        def task_registry_owner_role_mismatch(root: Path) -> None:
+            set_task(root, task_type="tester", owner_role="tester")
+
+        def current_gate_task_id_mismatch(root: Path) -> None:
+            set_current_gate(root, task_id="TASK_OTHER_001")
+
+        def identity_not_passed(root: Path) -> None:
+            set_project_state(root, identity_validation_status="failed")
+
+        def repository_lock_not_passed(root: Path) -> None:
+            set_project_state(root, repository_lock_status="revoked")
+
+        def gate_status_forbids_dispatch(root: Path) -> None:
+            set_current_gate(root, status="blocked")
+
+        def auditor_route_not_required(root: Path) -> None:
+            set_next_action(root, target_role="auditor")
+
+        def designer_alias_compatibility(root: Path) -> None:
+            set_next_action(root, target_role="designer")
+            set_current_gate(root, required_next_role="solution_architect")
+            set_task(root, task_type="solution_architect", owner_role="solution_architect")
+            update_task_packet_field(root, packet, "TASK_TYPE", "solution_architect")
+            update_task_packet_field(root, packet, "TARGET_ROLE", "designer")
+
         def bootstrap_valid_packet(root: Path) -> None:
             set_project_state(root, current_phase="bootstrap", baseline_tracking_status="not_checked")
-            set_current_gate(root, gate_type="bootstrap", baseline_tracking_status="not_checked")
+            set_current_gate(root, gate_type="bootstrap", baseline_tracking_status="not_checked", required_next_role="tester")
             set_next_action(root, target_role="tester")
             set_task(root, task_type="tester", task_kind="bootstrap", owner_role="tester")
             update_task_packet_field(root, packet, "TASK_KIND", "bootstrap")
             update_task_packet_field(root, packet, "TASK_TYPE", "tester")
             update_task_packet_field(root, packet, "TARGET_ROLE", "tester")
+
+        def bootstrap_after_first_dispatch(root: Path) -> None:
+            bootstrap_valid_packet(root)
+            instances = root / "project-runtime" / "agents" / "instances.jsonl"
+            instances.parent.mkdir(parents=True, exist_ok=True)
+            instances.write_text('{"event_type":"agent_task_dispatched"}\n', encoding="utf-8")
 
         def unknown_role(root: Path) -> None:
             set_next_action(root, target_role="wizard")
@@ -356,6 +400,94 @@ class PlanNextCommandTests(unittest.TestCase):
                 },
             },
             {
+                "name": "create_agent/profile/valid_packet/missing_registry_entry",
+                "configure": create_agent_missing_registry_entry,
+                "returncode": 1,
+                "status": "blocked",
+                "recommended": "CORRECTION_REQUIRED",
+                "dispatchable": False,
+                "role_class": "profile_execution",
+                "target_role": "developer",
+                "reason_codes": {"task_registry_incompatible"},
+            },
+            {
+                "name": "create_agent/profile/task_registry_owner_role_mismatch",
+                "configure": task_registry_owner_role_mismatch,
+                "returncode": 1,
+                "status": "blocked",
+                "recommended": "CORRECTION_REQUIRED",
+                "dispatchable": False,
+                "role_class": "profile_execution",
+                "target_role": "developer",
+                "reason_codes": {"task_registry_incompatible"},
+            },
+            {
+                "name": "create_agent/profile/current_gate_task_id_mismatch",
+                "configure": current_gate_task_id_mismatch,
+                "returncode": 1,
+                "status": "blocked",
+                "recommended": "CORRECTION_REQUIRED",
+                "dispatchable": False,
+                "role_class": "profile_execution",
+                "target_role": "developer",
+                "reason_codes": {"current_gate_blocks_dispatch"},
+            },
+            {
+                "name": "create_agent/profile/identity_not_passed",
+                "configure": identity_not_passed,
+                "returncode": 1,
+                "status": "blocked",
+                "recommended": "CORRECTION_REQUIRED",
+                "dispatchable": False,
+                "role_class": "profile_execution",
+                "target_role": "developer",
+                "reason_codes": {"workspace_identity_not_ready"},
+            },
+            {
+                "name": "create_agent/profile/repository_lock_not_passed",
+                "configure": repository_lock_not_passed,
+                "returncode": 1,
+                "status": "blocked",
+                "recommended": "CORRECTION_REQUIRED",
+                "dispatchable": False,
+                "role_class": "profile_execution",
+                "target_role": "developer",
+                "reason_codes": {"repository_lock_not_ready"},
+            },
+            {
+                "name": "create_agent/profile/current_gate_status_forbids_dispatch",
+                "configure": gate_status_forbids_dispatch,
+                "returncode": 1,
+                "status": "blocked",
+                "recommended": "CORRECTION_REQUIRED",
+                "dispatchable": False,
+                "role_class": "profile_execution",
+                "target_role": "developer",
+                "reason_codes": {"current_gate_blocks_dispatch"},
+            },
+            {
+                "name": "create_agent/auditor/audit_route_not_required",
+                "configure": auditor_route_not_required,
+                "returncode": 1,
+                "status": "blocked",
+                "recommended": "CORRECTION_REQUIRED",
+                "dispatchable": False,
+                "role_class": "profile_execution",
+                "target_role": "auditor",
+                "reason_codes": {"current_gate_blocks_dispatch"},
+            },
+            {
+                "name": "create_agent/designer_alias/compatibility",
+                "configure": designer_alias_compatibility,
+                "returncode": 0,
+                "status": "ready",
+                "recommended": "CREATE_AGENT",
+                "dispatchable": True,
+                "role_class": "profile_execution",
+                "target_role": "solution_architect",
+                "reason_codes": set(),
+            },
+            {
                 "name": "stop",
                 "configure": stop_none,
                 "returncode": 0,
@@ -392,15 +524,26 @@ class PlanNextCommandTests(unittest.TestCase):
                 "required_check_evidence": "first-bootstrap exception",
             },
             {
+                "name": "bootstrap exception after first dispatch is blocked",
+                "configure": bootstrap_after_first_dispatch,
+                "returncode": 1,
+                "status": "blocked",
+                "recommended": "CORRECTION_REQUIRED",
+                "dispatchable": False,
+                "role_class": "profile_execution",
+                "target_role": "tester",
+                "reason_codes": {"baseline_not_ready"},
+            },
+            {
                 "name": "unknown roles",
                 "configure": unknown_role,
                 "returncode": 1,
                 "status": "blocked",
-                "recommended": "NONE",
+                "recommended": "CORRECTION_REQUIRED",
                 "dispatchable": False,
                 "role_class": "unknown",
                 "target_role": "wizard",
-                "reason_codes": {"action_type_not_dispatch_capable"},
+                "reason_codes": {"target_role_not_profile_execution"},
                 "blocking_rule_ids": {"GOV-ACTION-SEMANTICS"},
             },
         ]
@@ -501,11 +644,49 @@ class PlanNextCommandTests(unittest.TestCase):
             self.assertEqual(result.returncode, 1, result.stdout + result.stderr)
             report = json.loads(json_out.read_text(encoding="utf-8"))
             self.assertEqual(report["status"], "blocked")
+            self.assertEqual(report["recommended_next_action"], "CORRECTION_REQUIRED")
+            self.assertEqual(report["target_role"], "auditor")
+            self.assertFalse(report["dispatchability"]["dispatchable"])
+            self.assertEqual(report["dispatchability"]["recommended_next_action"], "CORRECTION_REQUIRED")
+            self.assertEqual(report["dispatchability"]["target_role"], "auditor")
+            reason_codes = {reason["reason_code"] for reason in report["dispatchability"]["reasons"]}
+            self.assertIn("task_packet_not_dispatch_valid", reason_codes)
+            self.assertIn("task_registry_incompatible", reason_codes)
+            rule_ids = {item["rule_id"] for item in report["blocking_rules"]}
+            self.assertIn("GOV-CHECKPOINT-AUDIT-GATE", rule_ids)
+            self.assertFalse(report["evidence"]["audit_pass_evidence"]["present"])
+
+    def test_checkpoint_without_audit_pass_evidence_recommends_auditor_for_valid_audit_packet(self) -> None:
+        packet = "project-runtime/tasks/active/TASK_FIXTURE_STATE_001.md"
+        with tempfile.TemporaryDirectory() as tmp:
+            root = copy_valid_workspace(tmp)
+            make_tz_valid(root)
+            set_next_action(
+                root,
+                action_type="update_state",
+                action_semantic="normal",
+                checkpoint_policy="local_only",
+                checkpoint_preflight_required=True,
+                checkpoint_receipt_required=True,
+            )
+            set_current_gate(root, gate_type="audit", required_next_role="auditor")
+            set_task(root, task_type="auditor", task_kind="audit", owner_role="auditor")
+            update_task_packet_field(root, packet, "TASK_KIND", "audit")
+            update_task_packet_field(root, packet, "TASK_TYPE", "auditor")
+            update_task_packet_field(root, packet, "TARGET_ROLE", "auditor")
+            json_out = Path(tmp) / "plan-next.json"
+
+            result = run_plan_next(root, "--strict", "--json-out", str(json_out))
+
+            self.assertEqual(result.returncode, 1, result.stdout + result.stderr)
+            report = json.loads(json_out.read_text(encoding="utf-8"))
+            self.assertEqual(report["status"], "blocked")
             self.assertEqual(report["recommended_next_action"], "CREATE_AUDITOR")
             self.assertEqual(report["target_role"], "auditor")
             self.assertTrue(report["dispatchability"]["dispatchable"])
             self.assertEqual(report["dispatchability"]["recommended_next_action"], "CREATE_AUDITOR")
             self.assertEqual(report["dispatchability"]["target_role"], "auditor")
+            self.assertEqual(report["dispatchability"]["reasons"], [])
             rule_ids = {item["rule_id"] for item in report["blocking_rules"]}
             self.assertIn("GOV-CHECKPOINT-AUDIT-GATE", rule_ids)
             self.assertFalse(report["evidence"]["audit_pass_evidence"]["present"])
@@ -531,7 +712,8 @@ class PlanNextCommandTests(unittest.TestCase):
                 self.assertEqual(result.returncode, 1, result.stdout + result.stderr)
                 report = json.loads(json_out.read_text(encoding="utf-8"))
                 self.assertEqual(report["status"], "blocked")
-                self.assertEqual(report["recommended_next_action"], "CREATE_AUDITOR")
+                self.assertEqual(report["recommended_next_action"], "CORRECTION_REQUIRED")
+                self.assertFalse(report["dispatchability"]["dispatchable"])
                 rule_ids = {item["rule_id"] for item in report["blocking_rules"]}
                 self.assertIn("GOV-CHECKPOINT-AUDIT-GATE", rule_ids)
                 audit_evidence = report["evidence"]["audit_pass_evidence"]

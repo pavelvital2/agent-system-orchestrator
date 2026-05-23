@@ -68,6 +68,9 @@ reason codes, and the canonical invalid tuple.
     "devops_setup_engineer",
     "release_manager"
   ],
+  "deprecated_profile_role_aliases": {
+    "designer": "solution_architect"
+  },
   "control_or_pseudo_roles": [
     "orchestrator",
     "project_owner",
@@ -95,6 +98,17 @@ reason codes, and the canonical invalid tuple.
   "dispatch_recommendations": {
     "non_auditor_profile_role": "CREATE_AGENT",
     "auditor_profile_role": "CREATE_AUDITOR"
+  },
+  "create_auditor_contract": {
+    "action_type": "create_agent",
+    "recommended_next_action": "CREATE_AUDITOR",
+    "canonical_action_type": false,
+    "valid_only_when": [
+      "target_role_is_auditor",
+      "audit_route_is_required",
+      "audit_task_packet_exists_and_is_dispatch_valid",
+      "all_dispatchability_checks_pass"
+    ]
   },
   "non_dispatch_recommendations": [
     "CORRECTION_REQUIRED",
@@ -252,7 +266,8 @@ reason codes, and the canonical invalid tuple.
         "task_packet_none"
       ],
       "forbidden_recommended_next_actions": [
-        "CREATE_AGENT"
+        "CREATE_AGENT",
+        "CREATE_AUDITOR"
       ]
     }
   }
@@ -261,7 +276,7 @@ reason codes, and the canonical invalid tuple.
 
 ## Role And Action Classes
 
-Profile execution roles are exactly:
+Profile execution roles accepted by historical task packet schemas are:
 
 ```text
 requirements_analyst
@@ -274,6 +289,12 @@ technical_writer
 devops_setup_engineer
 release_manager
 ```
+
+`designer` is a deprecated compatibility alias. The dispatchability gate must
+normalize `TARGET_ROLE: designer` and task-packet `TARGET_ROLE: designer` to
+`solution_architect` for planner output and compatibility checks. A
+`CREATE_AGENT` dispatchability report must use `target_role: solution_architect`;
+it must not expose direct `target_role: designer` dispatch.
 
 Control and routing pseudo-roles include:
 
@@ -356,7 +377,15 @@ blocking rules, workspace identity, repository lock, and baseline readiness.
 If `target_role` is `auditor` and the route is dispatchable, the recommendation
 must be `CREATE_AUDITOR`, not `CREATE_AGENT`. `CREATE_AUDITOR` is still a
 profile-agent dispatch recommendation and must satisfy the same dispatchability
-checks.
+checks, including task packet role/kind compatibility, task registry role/kind
+compatibility, and current gate task/packet/role compatibility.
+
+`CREATE_AUDITOR` is a recommendation label under the dispatchable
+`ACTION_TYPE: create_agent` flow. It is not an independent canonical
+`ACTION_TYPE`. The tuple is valid only when `TARGET_ROLE` is `auditor`, an audit
+route is required by the planner, a valid audit task packet exists, and all
+dispatchability checks pass. A non-dispatchable report must not recommend
+`CREATE_AUDITOR`.
 
 `aso orchestrator next --json-out ...` must surface the same dispatchability
 verdict or a directly nested copy of the latest `plan-next` verdict. It must

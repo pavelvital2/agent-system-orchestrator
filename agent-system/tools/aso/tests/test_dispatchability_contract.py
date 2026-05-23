@@ -74,6 +74,16 @@ def valid_create_agent_report(schema: dict[str, object]) -> dict[str, object]:
     }
 
 
+def valid_create_auditor_report(schema: dict[str, object]) -> dict[str, object]:
+    report = valid_create_agent_report(schema)
+    report["recommended_next_action"] = "CREATE_AUDITOR"
+    report["target_role"] = "auditor"
+    report["action_class"] = "audit_dispatch"
+    report["task_id"] = "TASK_AUDIT_001"
+    report["task_packet"] = "project-runtime/tasks/active/TASK_AUDIT_001.md"
+    return report
+
+
 def load_dispatchability_schema() -> dict[str, object]:
     schema = json.loads(SCHEMA_PATH.read_text(encoding="utf-8"))
     if not isinstance(schema, dict):
@@ -150,6 +160,7 @@ class DispatchabilityContractTests(unittest.TestCase):
 
         self.assertEqual(profile_roles, task_packet_schema["properties"]["TARGET_ROLE"]["enum"])
         self.assertIn("auditor", profile_roles)
+        self.assertEqual(contract["deprecated_profile_role_aliases"], {"designer": "solution_architect"})
         self.assertIn("orchestrator", control_roles)
         self.assertIn("project_owner", control_roles)
         self.assertIn("owner", control_roles)
@@ -182,6 +193,7 @@ class DispatchabilityContractTests(unittest.TestCase):
         self.assertEqual(expected["verdict"], "not_dispatchable")
         self.assertEqual(expected["recommended_next_action"], "CORRECTION_REQUIRED")
         self.assertIn("CREATE_AGENT", expected["forbidden_recommended_next_actions"])
+        self.assertIn("CREATE_AUDITOR", expected["forbidden_recommended_next_actions"])
         self.assertEqual(
             expected["required_reason_codes"],
             [
@@ -244,7 +256,6 @@ class DispatchabilityContractTests(unittest.TestCase):
             [
                 "requirements_analyst",
                 "solution_architect",
-                "designer",
                 "developer",
                 "tester",
                 "technical_writer",
@@ -252,6 +263,25 @@ class DispatchabilityContractTests(unittest.TestCase):
                 "release_manager",
             ],
         )
+
+    def test_dispatchability_schema_stdlib_preserves_create_auditor_constraints(self) -> None:
+        schema = load_dispatchability_schema()
+        then = find_then_for_const(schema, "recommended_next_action", "CREATE_AUDITOR")
+        properties = object_at(then, "properties", "CREATE_AUDITOR.then")
+
+        self.assertEqual(object_at(properties, "dispatchable", "CREATE_AUDITOR.then.properties")["const"], True)
+        self.assertEqual(object_at(properties, "verdict", "CREATE_AUDITOR.then.properties")["const"], "dispatchable")
+        self.assertEqual(object_at(properties, "role_class", "CREATE_AUDITOR.then.properties")["const"], "profile_execution")
+        self.assertEqual(object_at(properties, "action_type", "CREATE_AUDITOR.then.properties")["const"], "create_agent")
+        self.assertEqual(object_at(properties, "action_class", "CREATE_AUDITOR.then.properties")["const"], "audit_dispatch")
+        self.assertEqual(object_at(properties, "target_role", "CREATE_AUDITOR.then.properties")["const"], "auditor")
+        self.assertEqual(object_at(properties, "task_id", "CREATE_AUDITOR.then.properties")["$ref"], "#/$defs/realDispatchValue")
+        self.assertEqual(object_at(properties, "task_packet", "CREATE_AUDITOR.then.properties")["$ref"], "#/$defs/realDispatchValue")
+        checks = object_at(properties, "checks", "CREATE_AUDITOR.then.properties")
+        check_rules = list_at(checks, "allOf", "CREATE_AUDITOR.then.properties.checks")
+        self.assertEqual(check_rules[0], {"$ref": "#/$defs/createAgentRequiredPassedChecks"})
+        no_failed_checks = object_at(check_rules[1], "not", "CREATE_AUDITOR.then.properties.checks.allOf[1]")
+        self.assertIn("contains", no_failed_checks)
 
     def test_dispatchability_schema_stdlib_preserves_required_passed_checks(self) -> None:
         schema = load_dispatchability_schema()
@@ -286,8 +316,8 @@ class DispatchabilityContractTests(unittest.TestCase):
         non_dispatch_properties = object_at(non_dispatch_then, "properties", "dispatchable_false.then")
         self.assertEqual(object_at(non_dispatch_properties, "verdict", "dispatchable_false.then.properties")["const"], "not_dispatchable")
         self.assertEqual(
-            object_at(object_at(non_dispatch_properties, "recommended_next_action", "dispatchable_false.then.properties"), "not", "recommended_next_action")["const"],
-            "CREATE_AGENT",
+            list_at(object_at(object_at(non_dispatch_properties, "recommended_next_action", "dispatchable_false.then.properties"), "not", "recommended_next_action"), "enum", "recommended_next_action.not"),
+            ["CREATE_AGENT", "CREATE_AUDITOR"],
         )
         self.assertEqual(list_at(non_dispatch_then, "required", "dispatchable_false.then"), ["reasons"])
 
@@ -343,7 +373,10 @@ class DispatchabilityContractTests(unittest.TestCase):
             "live_dispatch_performed": False,
         }
 
+        dispatchable_auditor = valid_create_auditor_report(schema)
+
         self.assertEqual(list(validator.iter_errors(dispatchable)), [])
+        self.assertEqual(list(validator.iter_errors(dispatchable_auditor)), [])
         self.assertEqual(list(validator.iter_errors(canonical_invalid)), [])
 
     @unittest.skipIf(Draft202012Validator is None, "jsonschema is not installed")
@@ -430,6 +463,14 @@ class DispatchabilityContractTests(unittest.TestCase):
         self.assertIn("'dispatch' was expected", messages)
         self.assertIn("'orchestrator' is not one of", messages)
         self.assertIn("'CREATE_AGENT' should not be valid under", messages)
+
+        auditor_report = valid_create_auditor_report(schema)
+        auditor_report["dispatchable"] = False
+        auditor_report["verdict"] = "not_dispatchable"
+        auditor_errors = sorted(validator.iter_errors(auditor_report), key=lambda error: list(error.path))
+        auditor_messages = "\n".join(error.message for error in auditor_errors)
+
+        self.assertIn("'CREATE_AUDITOR' should not be valid under", auditor_messages)
 
 
 if __name__ == "__main__":
