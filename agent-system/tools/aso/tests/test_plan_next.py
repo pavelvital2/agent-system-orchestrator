@@ -99,6 +99,7 @@ def set_project_state(root: Path, **updates: object) -> None:
         "project_status": "PROJECT_STATUS",
         "identity_validation_status": "IDENTITY_VALIDATION_STATUS",
         "repository_lock_status": "REPOSITORY_LOCK_STATUS",
+        "baseline_tracking_status": "BASELINE_TRACKING_STATUS",
         "checkpoint_eligibility": "CHECKPOINT_ELIGIBILITY",
     }
     for key, field in markdown_fields.items():
@@ -117,6 +118,7 @@ def set_current_gate(root: Path, **updates: object) -> None:
         "task_id": "TASK_ID",
         "task_packet": "TASK_PACKET",
         "action_semantic": "ACTION_SEMANTIC",
+        "baseline_tracking_status": "BASELINE_TRACKING_STATUS",
     }
     for key, field in markdown_fields.items():
         if key in updates and isinstance(updates[key], str):
@@ -139,8 +141,30 @@ def set_task(root: Path, **updates: object) -> None:
         raise AssertionError("fixture task registry must contain one task")
     tasks[0].update(updates)
     write_sidecar(root, "TASK_REGISTRY.json", payload)
-    if "status" in updates and isinstance(updates["status"], str):
-        update_markdown_field(root, "TASK_REGISTRY.md", "STATUS", str(updates["status"]))
+    markdown_fields = {
+        "task_id": "TASK_ID",
+        "task_title": "TASK_TITLE",
+        "task_type": "TASK_TYPE",
+        "task_kind": "TASK_KIND",
+        "owner_role": "OWNER_ROLE",
+        "status": "STATUS",
+        "task_packet": "TASK_PACKET",
+    }
+    for key, field in markdown_fields.items():
+        if key in updates and isinstance(updates[key], str):
+            update_markdown_field(root, "TASK_REGISTRY.md", field, str(updates[key]))
+
+
+def update_task_packet_field(root: Path, task_packet: str, field: str, value: str) -> None:
+    path = root / task_packet
+    lines = path.read_text(encoding="utf-8").splitlines()
+    prefix = f"{field}:"
+    for index, line in enumerate(lines):
+        if line.startswith(prefix):
+            lines[index] = f"{field}: {value}"
+            path.write_text("\n".join(lines) + "\n", encoding="utf-8")
+            return
+    raise AssertionError(f"{field} was not found in {task_packet}")
 
 
 class PlanNextCommandTests(unittest.TestCase):
@@ -230,6 +254,206 @@ class PlanNextCommandTests(unittest.TestCase):
             self.assertFalse(report["dispatchable"])
             reason_codes = {reason["reason_code"] for reason in report["dispatchability"]["reasons"]}
             self.assertIn("task_packet_missing", reason_codes)
+
+    def test_dispatchability_gate_matrix_across_actions_roles_and_packets(self) -> None:
+        packet = "project-runtime/tasks/active/TASK_FIXTURE_STATE_001.md"
+
+        def correction_orchestrator_none(root: Path) -> None:
+            set_next_action(
+                root,
+                action_type="correction",
+                target_role="orchestrator",
+                task_id="NONE",
+                task_packet="NONE",
+            )
+
+        def create_agent_profile_none(root: Path) -> None:
+            set_next_action(root, task_packet="NONE")
+
+        def create_agent_orchestrator_packet(root: Path) -> None:
+            set_next_action(root, target_role="orchestrator")
+
+        def stop_none(root: Path) -> None:
+            set_next_action(
+                root,
+                action_type="stop",
+                target_role="none",
+                task_id="NONE",
+                task_packet="NONE",
+                dependency_status="not_applicable",
+                action_semantic="stop_terminal",
+                checkpoint_policy="no_checkpoint",
+            )
+
+        def wait_owner(root: Path) -> None:
+            set_next_action(root, action_type="wait_for_owner", dependency_status="ready")
+
+        def bootstrap_valid_packet(root: Path) -> None:
+            set_project_state(root, current_phase="bootstrap", baseline_tracking_status="not_checked")
+            set_current_gate(root, gate_type="bootstrap", baseline_tracking_status="not_checked")
+            set_next_action(root, target_role="tester")
+            set_task(root, task_type="tester", task_kind="bootstrap", owner_role="tester")
+            update_task_packet_field(root, packet, "TASK_KIND", "bootstrap")
+            update_task_packet_field(root, packet, "TASK_TYPE", "tester")
+            update_task_packet_field(root, packet, "TARGET_ROLE", "tester")
+
+        def unknown_role(root: Path) -> None:
+            set_next_action(root, target_role="wizard")
+
+        cases = [
+            {
+                "name": "correction/orchestrator/NONE",
+                "configure": correction_orchestrator_none,
+                "returncode": 1,
+                "status": "correction_required",
+                "recommended": "CORRECTION_REQUIRED",
+                "dispatchable": False,
+                "role_class": "control_or_pseudo",
+                "target_role": "orchestrator",
+                "reason_codes": {
+                    "action_type_not_dispatch_capable",
+                    "target_role_not_profile_execution",
+                    "target_role_control_or_pseudo",
+                    "task_id_none",
+                    "task_packet_none",
+                },
+            },
+            {
+                "name": "create_agent/profile/valid_packet",
+                "configure": lambda root: None,
+                "returncode": 0,
+                "status": "ready",
+                "recommended": "CREATE_AGENT",
+                "dispatchable": True,
+                "role_class": "profile_execution",
+                "target_role": "developer",
+                "reason_codes": set(),
+            },
+            {
+                "name": "create_agent/profile/NONE",
+                "configure": create_agent_profile_none,
+                "returncode": 1,
+                "status": "blocked",
+                "recommended": "CORRECTION_REQUIRED",
+                "dispatchable": False,
+                "role_class": "profile_execution",
+                "target_role": "developer",
+                "reason_codes": {"task_packet_none", "task_packet_missing", "task_packet_not_dispatch_valid"},
+            },
+            {
+                "name": "create_agent/orchestrator/packet",
+                "configure": create_agent_orchestrator_packet,
+                "returncode": 1,
+                "status": "blocked",
+                "recommended": "CORRECTION_REQUIRED",
+                "dispatchable": False,
+                "role_class": "control_or_pseudo",
+                "target_role": "orchestrator",
+                "reason_codes": {
+                    "target_role_not_profile_execution",
+                    "target_role_control_or_pseudo",
+                    "task_packet_not_dispatch_valid",
+                },
+            },
+            {
+                "name": "stop",
+                "configure": stop_none,
+                "returncode": 0,
+                "status": "ready",
+                "recommended": "STOP",
+                "dispatchable": False,
+                "role_class": "control_or_pseudo",
+                "target_role": "none",
+                "reason_codes": {"action_type_not_dispatch_capable", "task_id_none", "task_packet_none"},
+            },
+            {
+                "name": "wait_owner",
+                "configure": wait_owner,
+                "returncode": 1,
+                "status": "blocked",
+                "recommended": "ASK_OWNER",
+                "dispatchable": False,
+                "role_class": "profile_execution",
+                "target_role": "developer",
+                "reason_codes": {"action_type_not_dispatch_capable"},
+                "blocking_rule_ids": {"GOV-ACTION-SEMANTICS"},
+            },
+            {
+                "name": "bootstrap valid packet",
+                "configure": bootstrap_valid_packet,
+                "returncode": 0,
+                "status": "ready",
+                "recommended": "CREATE_AGENT",
+                "dispatchable": True,
+                "role_class": "profile_execution",
+                "target_role": "tester",
+                "reason_codes": set(),
+                "required_check": "DG54_BASELINE_READY_OR_BOOTSTRAP_EXCEPTION",
+                "required_check_evidence": "first-bootstrap exception",
+            },
+            {
+                "name": "unknown roles",
+                "configure": unknown_role,
+                "returncode": 1,
+                "status": "blocked",
+                "recommended": "NONE",
+                "dispatchable": False,
+                "role_class": "unknown",
+                "target_role": "wizard",
+                "reason_codes": {"action_type_not_dispatch_capable"},
+                "blocking_rule_ids": {"GOV-ACTION-SEMANTICS"},
+            },
+        ]
+
+        for case in cases:
+            with self.subTest(case=case["name"]), tempfile.TemporaryDirectory() as tmp:
+                root = copy_valid_workspace(tmp)
+                make_tz_valid(root)
+                case["configure"](root)
+                json_out = Path(tmp) / "plan-next.json"
+
+                result = run_plan_next(root, "--strict", "--json-out", str(json_out))
+
+                self.assertEqual(result.returncode, case["returncode"], result.stdout + result.stderr)
+                report = json.loads(json_out.read_text(encoding="utf-8"))
+                self.assertTrue(report["dry_run"])
+                self.assertTrue(report["read_only"])
+                self.assertFalse(report["mutations_performed"])
+                self.assertEqual(report["status"], case["status"])
+                self.assertEqual(report["recommended_next_action"], case["recommended"])
+                self.assertEqual(report["target_role"], case["target_role"])
+                self.assertEqual(report["dispatchable"], case["dispatchable"])
+                self.assertNotEqual(report["recommended_next_action"], "CREATE_AUDITOR")
+                if not case["dispatchable"]:
+                    self.assertNotEqual(report["recommended_next_action"], "CREATE_AGENT")
+
+                dispatchability = report["dispatchability"]
+                self.assertFalse(dispatchability["live_dispatch_performed"])
+                self.assertEqual(dispatchability["dispatchable"], case["dispatchable"])
+                self.assertEqual(dispatchability["target_role"], case["target_role"])
+                self.assertEqual(dispatchability["role_class"], case["role_class"])
+                reason_codes = {reason["reason_code"] for reason in dispatchability["reasons"]}
+                self.assertTrue(case["reason_codes"].issubset(reason_codes))
+                if case["dispatchable"]:
+                    self.assertEqual(reason_codes, set())
+                    self.assertEqual(dispatchability["verdict"], "dispatchable")
+                else:
+                    self.assertEqual(dispatchability["verdict"], "not_dispatchable")
+
+                expected_rule_ids = case.get("blocking_rule_ids", set())
+                rule_ids = {rule["rule_id"] for rule in report["blocking_rules"]}
+                self.assertTrue(expected_rule_ids.issubset(rule_ids))
+
+                required_check = case.get("required_check")
+                if required_check:
+                    checks = {
+                        check["check_id"]: check
+                        for check in dispatchability["checks"]
+                        if isinstance(check, dict)
+                    }
+                    self.assertIn(required_check, checks)
+                    self.assertTrue(checks[required_check]["passed"])
+                    self.assertIn(case["required_check_evidence"], checks[required_check]["evidence"])
 
     def test_checkpoint_with_audit_pass_evidence_recommends_preflight(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
