@@ -14,6 +14,8 @@ REPO_ROOT = Path(__file__).resolve().parents[4]
 FIXTURE_ROOT = REPO_ROOT / "agent-system" / "tests" / "fixtures" / "state"
 VALID_WORKSPACE = FIXTURE_ROOT / "valid_workspace"
 P2_VALID_WORKSPACE = FIXTURE_ROOT / "p2_valid_workspace"
+ACTIVE_PACKAGE_VERSION = "3.7.3"
+ACTIVE_RUNTIME_SCHEMA_VERSION = "3.1.1"
 
 
 def run_state_verify(root: Path, *extra: str) -> subprocess.CompletedProcess[str]:
@@ -47,6 +49,50 @@ def write_sidecar(root: Path, name: str, payload: dict[str, object]) -> None:
         json.dumps(payload, indent=2, sort_keys=True) + "\n",
         encoding="utf-8",
     )
+    subprocess.run(
+        [sys.executable, str(CLI), "state", "render", "--root", str(root), "--confirm-write"],
+        check=False,
+        text=True,
+        capture_output=True,
+        cwd=REPO_ROOT,
+    )
+
+
+def normalize_current_p2_fixture(root: Path) -> None:
+    state_root = root / "project-runtime" / "state"
+    for path in sorted(state_root.glob("*.json")):
+        payload = json.loads(path.read_text(encoding="utf-8"))
+        if not isinstance(payload, dict):
+            continue
+        payload["schema_version"] = ACTIVE_RUNTIME_SCHEMA_VERSION
+        payload["runtime_schema_version"] = ACTIVE_RUNTIME_SCHEMA_VERSION
+        content = payload.get("content")
+        if isinstance(content, dict):
+            if "runtime_schema_version" in content:
+                content["runtime_schema_version"] = ACTIVE_RUNTIME_SCHEMA_VERSION
+            if "package_version" in content:
+                content["package_version"] = ACTIVE_PACKAGE_VERSION
+            if "governance_ruleset_version" in content:
+                content["governance_ruleset_version"] = ACTIVE_PACKAGE_VERSION
+            if payload.get("sidecar_type") == "PROJECT_STATE":
+                content["semantic_reason"] = "Current Runtime Schema 3.1.1 test fixture."
+            if payload.get("sidecar_type") == "SCHEMA_MANIFEST":
+                entries = content.get("sidecars")
+                if isinstance(entries, list):
+                    for entry in entries:
+                        if isinstance(entry, dict):
+                            entry["runtime_schema_version"] = ACTIVE_RUNTIME_SCHEMA_VERSION
+        path.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+
+    render_result = subprocess.run(
+        [sys.executable, str(CLI), "state", "render", "--root", str(root), "--confirm-write"],
+        check=False,
+        text=True,
+        capture_output=True,
+        cwd=REPO_ROOT,
+    )
+    if render_result.returncode != 0:
+        raise AssertionError(render_result.stdout + render_result.stderr)
 
 
 def write_tz_file(root: Path) -> None:
@@ -94,12 +140,20 @@ def copy_valid_workspace_with_valid_tz(tmp: str) -> Path:
 
 def copy_p2_valid_workspace_with_valid_bootstrap_state(tmp: str) -> Path:
     root = copy_p2_valid_workspace(tmp)
+    normalize_current_p2_fixture(root)
     make_valid_tz_path(root)
     make_bootstrap_next_action_non_terminal(root)
     return root
 
 
-def fixture_task(task_id: str) -> dict[str, object]:
+def fixture_task(
+    task_id: str,
+    *,
+    task_kind: str = "normal",
+    task_type: str = "developer",
+    owner_role: str = "developer",
+    task_packet: str | None = None,
+) -> dict[str, object]:
     return {
         "accepted_files": [],
         "audit_refs": [],
@@ -109,7 +163,7 @@ def fixture_task(task_id: str) -> dict[str, object]:
         "correction_links": [],
         "created_at": "2026-05-21T00:00:00Z",
         "dependencies": [],
-        "owner_role": "developer",
+        "owner_role": owner_role,
         "push_status": "not_required",
         "requested_by_role": "NONE",
         "requested_by_task": "NONE",
@@ -120,10 +174,10 @@ def fixture_task(task_id: str) -> dict[str, object]:
         "return_to_role_after_audit_pass": "none",
         "status": "ready",
         "task_id": task_id,
-        "task_kind": "normal",
-        "task_packet": f"project-runtime/tasks/active/{task_id}.md",
+        "task_kind": task_kind,
+        "task_packet": task_packet or f"project-runtime/tasks/active/{task_id}.md",
         "task_title": "Fixture task",
-        "task_type": "developer",
+        "task_type": task_type,
         "updated_at": "2026-05-21T00:00:00Z",
     }
 
@@ -172,7 +226,7 @@ class StateVerifyCommandTests(unittest.TestCase):
             self.assertTrue(report["state"]["runtime_schema_current_p2"])
             self.assertEqual(report["state"]["required_sidecars_missing"], [])
             self.assertEqual(report["state"]["optional_sidecars_missing"], [])
-            self.assertEqual(report["runtime_schema_contract"]["runtime_schema_version"], "3.1.0")
+            self.assertEqual(report["runtime_schema_contract"]["runtime_schema_version"], "3.1.1")
 
     def test_existing_negative_fixtures_fail_with_stable_rule_ids(self) -> None:
         cases = {
@@ -265,6 +319,59 @@ class StateVerifyCommandTests(unittest.TestCase):
 
             self.assertEqual(result.returncode, 1, result.stdout + result.stderr)
             self.assertIn("SIDECAR_TASK_REFERENCE_UNKNOWN", result.stdout)
+
+    def test_task_registry_bootstrap_task_kind_passes_pre_dispatch_reference_check(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = copy_p2_valid_workspace_with_valid_bootstrap_state(tmp)
+            task_id = "TASK_BOOTSTRAP_REQUIREMENTS_ANALYST_001"
+            task_packet = "project-runtime/bootstrap/TASK_BOOTSTRAP_REQUIREMENTS_ANALYST_001.md"
+            registry = load_sidecar(root, "TASK_REGISTRY.json")
+            registry_content = registry["content"]
+            self.assertIsInstance(registry_content, dict)
+            registry_content["tasks"] = [
+                fixture_task(
+                    task_id,
+                    task_kind="bootstrap",
+                    task_type="requirements_analyst",
+                    owner_role="requirements_analyst",
+                    task_packet=task_packet,
+                )
+            ]
+            write_sidecar(root, "TASK_REGISTRY.json", registry)
+
+            next_action = load_sidecar(root, "NEXT_ACTION.json")
+            next_content = next_action["content"]
+            self.assertIsInstance(next_content, dict)
+            next_content["action_id"] = "ACTION-BOOTSTRAP-DISPATCH-001"
+            next_content["action_type"] = "create_agent"
+            next_content["target_role"] = "requirements_analyst"
+            next_content["task_id"] = task_id
+            next_content["task_packet"] = task_packet
+            next_content["dependency_status"] = "ready"
+            next_content["action_semantic"] = "normal"
+            next_content["checkpoint_policy"] = "no_checkpoint"
+            next_content["checkpoint_preflight_required"] = False
+            next_content["checkpoint_receipt_required"] = False
+            write_sidecar(root, "NEXT_ACTION.json", next_action)
+
+            result = run_state_verify(root, "--strict")
+
+            self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+            self.assertIn("ASO state verify: PASSED", result.stdout)
+
+    def test_task_registry_unknown_task_kind_fails(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = copy_p2_valid_workspace_with_valid_bootstrap_state(tmp)
+            registry = load_sidecar(root, "TASK_REGISTRY.json")
+            registry_content = registry["content"]
+            self.assertIsInstance(registry_content, dict)
+            registry_content["tasks"] = [fixture_task("TASK_FIXTURE_UNKNOWN_KIND", task_kind="surprising")]
+            write_sidecar(root, "TASK_REGISTRY.json", registry)
+
+            result = run_state_verify(root, "--strict")
+
+            self.assertEqual(result.returncode, 1, result.stdout + result.stderr)
+            self.assertIn("SIDECAR_ENUM_VALUE_INVALID", result.stdout)
 
     def test_invalid_status_value_fails(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:

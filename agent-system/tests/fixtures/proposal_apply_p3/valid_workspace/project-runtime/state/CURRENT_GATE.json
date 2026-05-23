@@ -22,8 +22,8 @@
     "workspace_identity_status": "not_checked"
   },
   "markdown_source": "project-runtime/CURRENT_GATE.md",
-  "runtime_schema_version": "3.1.0",
-  "schema_version": "3.1.0",
+  "runtime_schema_version": "3.1.1",
+  "schema_version": "3.1.1",
   "sidecar_type": "CURRENT_GATE",
   "state_revision": 1,
   "updated_at": "2026-05-21T00:00:00Z",

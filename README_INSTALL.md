@@ -17,9 +17,9 @@ and verifies the installed `aso` command. It uses local Python packaging only;
 it does not require secrets, GitHub credentials, remote repository access,
 dispatch authority, checkpoint execution, commit, push, or publication rights.
 
-This install document covers package version `3.7.2` with runtime schema
-`3.1.0` and artifact package schema `1.1.0`. P5.2 corrects bootstrap state
-reconciliation while preserving the Runtime State P2/P3 sidecar schema, the
+This install document covers package version `3.7.3` with runtime schema
+`3.1.1` and artifact package schema `1.1.0`. P5.3 aligns bootstrap
+TASK_REGISTRY task-kind governance while preserving the Runtime State sidecar schema, the
 artifact package schema, and the Project Factory P1 command boundary. It does
 not add semantic TZ reading, product-intake automation, daemon mode, live
 dispatch, or checkpoint execution.
@@ -110,7 +110,7 @@ aso state init --root /tmp/aso-state-demo --project-name "State Demo" --project-
 aso state init --root /tmp/aso-state-demo --project-name "State Demo" --project-slug state-demo --profile generic --repo-url none --branch main --confirm-write --json-out /tmp/aso-state-init-receipt.json
 aso state verify --root /tmp/aso-state-demo --strict --json-out /tmp/aso-state-verify.json
 aso state render --root /tmp/aso-state-demo --format markdown --out /tmp/aso-state-render.md
-aso state migrate --root agent-system/tests/fixtures/state/valid_workspace --to 3.1.0 --dry-run --json-out /tmp/aso-state-migrate-plan.json
+aso state migrate --root agent-system/tests/fixtures/state/valid_workspace --to 3.1.1 --dry-run --json-out /tmp/aso-state-migrate-plan.json
 ```
 
 `aso state init --dry-run` writes no files. Confirmed initialization requires
@@ -200,7 +200,7 @@ aso lint --root /tmp/demo-reference --mode workspace --strict
 aso doctor --root /tmp/demo-reference --mode workspace --strict
 ```
 
-Local generated projects may initialize Runtime Schema `3.1.0` JSON sidecars
+Local generated projects may initialize Runtime Schema `3.1.1` JSON sidecars
 under their ignored `project-runtime/state/` root. Those files are local
 runtime state and must not be tracked or published by generated-project
 publication flows.

@@ -50,7 +50,7 @@ class StateMigrateCommandTests(unittest.TestCase):
             self.assertTrue(plan["dry_run"])
             self.assertEqual(plan["status"], "planned")
             self.assertEqual(plan["from_schema_version"], "2.0.0")
-            self.assertEqual(plan["to_schema_version"], "3.1.0")
+            self.assertEqual(plan["to_schema_version"], "3.1.1")
             self.assertEqual(len(plan["writes"]), 9)
             self.assertFalse((root / "project-runtime" / "reports").exists())
             self.assertEqual(mtimes_before, {path: path.stat().st_mtime_ns for path in tracked})
@@ -76,8 +76,8 @@ class StateMigrateCommandTests(unittest.TestCase):
                 "SCHEMA_MANIFEST.json",
             ):
                 payload = json.loads((root / "project-runtime" / "state" / filename).read_text(encoding="utf-8"))
-                self.assertEqual(payload["schema_version"], "3.1.0")
-                self.assertEqual(payload["runtime_schema_version"], "3.1.0")
+                self.assertEqual(payload["schema_version"], "3.1.1")
+                self.assertEqual(payload["runtime_schema_version"], "3.1.1")
                 self.assertEqual(payload["migration_source_schema"], "2.0.0")
 
     def test_negative_fixture_fails_closed(self) -> None:

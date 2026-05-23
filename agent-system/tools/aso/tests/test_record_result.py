@@ -53,9 +53,9 @@ def add_accepted_result_package(
     default_payload: dict[str, object] = {
         "package_id": "RESULT_PACKAGE_TASK_DEMO_001_ATTEMPT_001",
         "schema_version": "1.0.0",
-        "package_version": "3.7.2",
-        "governance_ruleset_version": "3.7.2",
-        "runtime_schema_version": "3.1.0",
+        "package_version": "3.7.3",
+        "governance_ruleset_version": "3.7.3",
+        "runtime_schema_version": "3.1.1",
         "artifact_package_schema_version": "1.1.0",
         "result_ref": result_ref,
         "task_id": "TASK_DEMO_001",

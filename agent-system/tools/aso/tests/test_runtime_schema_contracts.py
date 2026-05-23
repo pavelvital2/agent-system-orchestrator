@@ -26,10 +26,10 @@ class RuntimeSchemaContractTests(unittest.TestCase):
 
         self.assertTrue(result.passed, "\n".join(result.errors))
 
-    def test_contract_summary_exposes_runtime_schema_3_1_0_sidecars(self) -> None:
+    def test_contract_summary_exposes_runtime_schema_3_1_1_sidecars(self) -> None:
         summary = runtime_schema_contracts.contract_summary()
 
-        self.assertEqual(summary["runtime_schema_version"], "3.1.0")
+        self.assertEqual(summary["runtime_schema_version"], "3.1.1")
         self.assertEqual(summary["state_root"], "project-runtime/state")
         self.assertIn("SCHEMA_MANIFEST", summary["required_sidecars"])
         self.assertIn("REPOSITORY_LOCK", summary["optional_sidecars"])
@@ -44,7 +44,11 @@ class RuntimeSchemaContractTests(unittest.TestCase):
             runtime_schema_contracts.compatibility_status("3.0.0"),
             "compatible_migration_available",
         )
-        self.assertEqual(runtime_schema_contracts.compatibility_status("3.1.0"), "current")
+        self.assertEqual(
+            runtime_schema_contracts.compatibility_status("3.1.0"),
+            "compatible_migration_available",
+        )
+        self.assertEqual(runtime_schema_contracts.compatibility_status("3.1.1"), "current")
         self.assertEqual(runtime_schema_contracts.compatibility_status("9.9.9"), "unsupported")
 
 

@@ -6,9 +6,9 @@ from dataclasses import dataclass
 from typing import Any
 
 
-ACTIVE_RUNTIME_SCHEMA_VERSION = "3.1.0"
-ACTIVE_PACKAGE_VERSION = "3.7.2"
-ACTIVE_GOVERNANCE_RULESET_VERSION = "3.7.2"
+ACTIVE_RUNTIME_SCHEMA_VERSION = "3.1.1"
+ACTIVE_PACKAGE_VERSION = "3.7.3"
+ACTIVE_GOVERNANCE_RULESET_VERSION = "3.7.3"
 ACTIVE_ARTIFACT_PACKAGE_SCHEMA_VERSION = "1.1.0"
 
 STATE_ROOT = "project-runtime/state"
@@ -108,6 +108,7 @@ COMPATIBILITY_STATUSES = (
 LEGACY_COMPATIBILITY = {
     "2.0.0": "compatible_migration_available",
     "3.0.0": "compatible_migration_available",
+    "3.1.0": "compatible_migration_available",
     ACTIVE_RUNTIME_SCHEMA_VERSION: "current",
 }
 
@@ -152,7 +153,7 @@ def validate_contract_document(contract: dict[str, Any]) -> ContractValidationRe
 
     errors: list[str] = []
     if contract.get("runtime_schema_version") != ACTIVE_RUNTIME_SCHEMA_VERSION:
-        errors.append("runtime_schema_version must be 3.1.0")
+        errors.append("runtime_schema_version must be 3.1.1")
     if contract.get("state_root") != STATE_ROOT:
         errors.append("state_root must be project-runtime/state")
 
@@ -207,8 +208,8 @@ def validate_contract_document(contract: dict[str, Any]) -> ContractValidationRe
         errors.append("migration_compatibility must be an object")
     else:
         supported = compatibility.get("supported_source_schema_versions")
-        if supported != ["2.0.0", "3.0.0"]:
-            errors.append("migration_compatibility.supported_source_schema_versions must be ['2.0.0', '3.0.0']")
+        if supported != ["2.0.0", "3.0.0", "3.1.0"]:
+            errors.append("migration_compatibility.supported_source_schema_versions must be ['2.0.0', '3.0.0', '3.1.0']")
         default_status = compatibility.get("default_unsupported_status")
         if default_status != "unsupported":
             errors.append("migration_compatibility.default_unsupported_status must be unsupported")

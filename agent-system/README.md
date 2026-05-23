@@ -155,11 +155,11 @@ The package includes a filesystem-governed ASO helper CLI at
 dry-run proposals, while Project Factory commands may create generated
 projects only within explicit target paths.
 
-This P5.2 package records the active package metadata as the governed `3.7.2`
-package/governance tuple with runtime schema `3.1.0` and artifact package
-schema `1.1.0`. It preserves the Project Factory P1 command boundary, the
-P2/P3 Runtime Schema `3.1.0` sidecar envelope, and the artifact package schema
-while correcting bootstrap state reconciliation.
+This P5.3 package records the active package metadata as the governed `3.7.3`
+package/governance tuple with runtime schema `3.1.1` and artifact package
+schema `1.1.0`. It preserves the Project Factory P1 command boundary and
+Artifact Package Schema `1.1.0` while aligning bootstrap TASK_REGISTRY
+task-kind governance.
 
 ASO remains a deterministic governance/control conveyor. It validates and
 gates artifacts produced by profile agents and detects contradictory bootstrap
@@ -168,7 +168,7 @@ generate product questions from TZ, install product-intake code or a
 product-intake engine, run a daemon, dispatch live agents, execute
 checkpoints, generate products, collect secrets, or run external workers.
 
-The Runtime Schema `3.1.0` contract is documented in
+The Runtime Schema `3.1.1` contract is documented in
 `agent-system/02_runtime/RUNTIME_STATE_P2_CONTRACT.md` and packaged as
 `agent-system/09_validators/schemas/runtime_state_3_1_0.contract.json`.
 It defines the sidecar envelope, required and optional sidecars, allowed
@@ -273,8 +273,8 @@ forbidden document checks, and required document existence under `--root`.
 Runtime State P2 command surfaces are local and offline. JSON sidecars under
 `project-runtime/state/` are canonical for P2+ runtime state. Markdown and
 report outputs are compatibility views generated from JSON, not the canonical
-state source. The active package version is `3.7.2` and the active runtime
-schema version is `3.1.0`.
+state source. The active package version is `3.7.3` and the active runtime
+schema version is `3.1.1`.
 
 ```text
 python3 agent-system/tools/aso/aso.py validate-rules --root . --strict
@@ -285,7 +285,7 @@ python3 agent-system/tools/aso/aso.py state render --root /tmp/aso-state-demo --
 python3 agent-system/tools/aso/aso.py state verify --root /tmp/aso-state-demo --strict --json-out /tmp/aso-state-verify.json
 python3 agent-system/tools/aso/aso.py state render --root /tmp/aso-state-demo --format markdown --out /tmp/aso-state-render.md
 python3 agent-system/tools/aso/aso.py lifecycle terminate-agent --root /tmp/aso-state-demo --from-result project-runtime/results/worker/RESULT_TASK_ID_ATTEMPT_001.md --confirm-write
-python3 agent-system/tools/aso/aso.py state migrate --root agent-system/tests/fixtures/state/valid_workspace --to 3.1.0 --dry-run --json-out /tmp/aso-state-migrate-plan.json
+python3 agent-system/tools/aso/aso.py state migrate --root agent-system/tests/fixtures/state/valid_workspace --to 3.1.1 --dry-run --json-out /tmp/aso-state-migrate-plan.json
 python3 agent-system/tools/aso/aso.py plan-next --root agent-system/tests/fixtures/state/valid_workspace --strict --json-out /tmp/aso-stage2-plan.json
 python3 agent-system/tools/aso/aso.py dashboard --root agent-system/tests/fixtures/state/valid_workspace --out /tmp/aso-stage2-dashboard.html
 python3 agent-system/tools/aso/aso.py checkpoint-preflight --root . --mode package --strict --json-out /tmp/aso-stage2-checkpoint-preflight.json
@@ -300,7 +300,7 @@ requires `--confirm-write`, fails closed on malformed or ambiguous state, and
 writes migration receipts under allowed runtime report paths. `aso state
 render` is read-only except for explicit output to `/tmp`,
 `project-runtime/reports`, or `project-runtime/rendered`. `aso state verify`
-validates Runtime Schema `3.1.0` envelopes, sidecar types, required fields,
+validates Runtime Schema `3.1.1` envelopes, sidecar types, required fields,
 schema alignment, task references, and compatibility diagnostics, then emits
 optional JSON evidence. `aso plan-next` recommends the next orchestrator action
 as a dry-run report only. `aso dashboard` renders escaped static HTML to
@@ -317,7 +317,7 @@ uses the canonical next action value `CREATE_AGENT` without dispatching an
 agent.
 
 Safe Proposal / Apply P3 command surfaces are local and guarded. They run
-under the current package/governance `3.7.2` tuple with Runtime Schema `3.1.0`
+under the current package/governance `3.7.3` tuple with Runtime Schema `3.1.1`
 and preserve the P3 contract; they do not
 dispatch agents, do not commit or push, and do not publish runtime artifacts.
 Proposal commands default to dry-run. `--confirm-write` may write only proposal
@@ -420,7 +420,7 @@ agents or execute checkpoints.
 
 Project Factory P1 supports local vendored creation, local reference creation,
 GitHub dry-run planning, confirmed GitHub publish, and a guided
-wizard. It remains available in package version `3.7.2`; existing P1/P0
+wizard. It remains available in package version `3.7.3`; existing P1/P0
 generated-project lockfiles remain compatible when they satisfy the accepted
 publication-boundary and engine-mode rules.
 
@@ -473,7 +473,7 @@ python3 agent-system/tools/aso/aso.py wizard
 python3 agent-system/tools/aso/aso.py wizard --answers path/to/answers.json --dry-run --json-out /tmp/aso-wizard-plan.json
 ```
 
-Generated projects may initialize Runtime Schema `3.1.0` JSON sidecars under
+Generated projects may initialize Runtime Schema `3.1.1` JSON sidecars under
 their ignored local `project-runtime/state/` root. Those sidecars are local
 runtime state for the generated workspace and are not package or
 generated-project publication artifacts. Generated projects must not track or
@@ -662,9 +662,9 @@ agent-system/GOVERNANCE_CHANGELOG.md
 Current active tuple and package markers:
 
 ```text
-CURRENT_PACKAGE_VERSION: 3.7.2
-CURRENT_GOVERNANCE_RULESET_VERSION: 3.7.2
-CURRENT_RUNTIME_SCHEMA_VERSION: 3.1.0
+CURRENT_PACKAGE_VERSION: 3.7.3
+CURRENT_GOVERNANCE_RULESET_VERSION: 3.7.3
+CURRENT_RUNTIME_SCHEMA_VERSION: 3.1.1
 PROJECT_FACTORY_RELEASE_MARKER: project-factory-p1
 RUNTIME_STATE_RELEASE_MARKER: artifact-package-model-p5
 DESIGN_GAP_GOVERNANCE_SCHEMA_VERSION: 1.0.0

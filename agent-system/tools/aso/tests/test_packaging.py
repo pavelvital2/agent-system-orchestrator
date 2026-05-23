@@ -74,8 +74,30 @@ class PackagingCommandTests(unittest.TestCase):
         init_file = (ASO_TOOL_ROOT / "agent_system_orchestrator_aso" / "__init__.py").read_text(encoding="utf-8")
         package_version = pyproject["project"]["version"]
 
-        self.assertEqual(package_version, "3.7.2")
+        self.assertEqual(package_version, "3.7.3")
         self.assertIn(f'__version__ = "{package_version}"', init_file)
+
+    def test_package_layout_verify_accepts_package_mode(self) -> None:
+        result = subprocess.run(
+            [
+                sys.executable,
+                str(ASO_TOOL_ROOT / "aso.py"),
+                "package-layout",
+                "verify",
+                "--root",
+                ".",
+                "--mode",
+                "package",
+            ],
+            cwd=REPO_ROOT,
+            check=False,
+            text=True,
+            capture_output=True,
+            env={"PYTHONDONTWRITEBYTECODE": "1"},
+        )
+
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        self.assertIn("ASO package-layout verify: PASSED", result.stdout)
 
 
 if __name__ == "__main__":

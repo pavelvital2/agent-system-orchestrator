@@ -1,10 +1,10 @@
 {
-  "contract_id": "ASO_RUNTIME_STATE_SCHEMA_3_1_0",
-  "description": "JSON-first runtime state sidecar contract for ASO Runtime Schema 3.1.0. This contract is validated with Python stdlib checks; it is not an external jsonschema dependency.",
-  "governance_ruleset_version": "3.7.2",
-  "package_version": "3.7.2",
+  "contract_id": "ASO_RUNTIME_STATE_SCHEMA_3_1_1",
+  "description": "JSON-first runtime state sidecar contract for ASO Runtime Schema 3.1.1. This contract is validated with Python stdlib checks; it is not an external jsonschema dependency.",
+  "governance_ruleset_version": "3.7.3",
+  "package_version": "3.7.3",
   "artifact_package_schema_version": "1.1.0",
-  "runtime_schema_version": "3.1.0",
+  "runtime_schema_version": "3.1.1",
   "state_root": "project-runtime/state",
   "sidecar_envelope": {
     "required_fields": [
@@ -23,7 +23,7 @@
       "migration_source_schema"
     ],
     "rules": [
-      "schema_version and runtime_schema_version must both be 3.1.0 for current P2 sidecars.",
+      "schema_version and runtime_schema_version must both be 3.1.1 for current sidecars.",
       "sidecar_type must match the filename stem.",
       "state_revision must be a positive integer.",
       "updated_at must be an RFC 3339 UTC timestamp ending in Z.",
@@ -170,8 +170,8 @@
     "A sidecar root must be a JSON object.",
     "Required envelope fields must exist and have governed types.",
     "Unknown sidecar types fail.",
-    "schema_version and runtime_schema_version must match each other for current 3.1.0 sidecars.",
-    "Current P2 sidecars using schema_version other than 3.1.0 are not silently current; validators must report compatibility or migration status.",
+    "schema_version and runtime_schema_version must match each other for current 3.1.1 sidecars.",
+    "Current sidecars using schema_version other than 3.1.1 are not silently current; validators must report compatibility or migration status.",
     "NEXT_ACTION task_id must refer to TASK_REGISTRY unless explicitly NONE.",
     "CURRENT_GATE task_id must refer to TASK_REGISTRY unless explicitly NONE.",
     "PROJECT_STATE active branch current_task references must refer to TASK_REGISTRY unless explicitly NONE.",
@@ -182,15 +182,16 @@
   "migration_compatibility": {
     "supported_source_schema_versions": [
       "2.0.0",
-      "3.0.0"
+      "3.0.0",
+      "3.1.0"
     ],
-    "current_schema_version": "3.1.0",
+    "current_schema_version": "3.1.1",
     "compatible_source_status": "compatible_migration_available",
     "default_unsupported_status": "unsupported",
     "rules": [
       "Compatible legacy sidecars may be read for diagnostics and deterministic migration planning.",
       "Legacy sidecars must not be treated as current P2 state without migration.",
-      "Migration to 3.1.0 must add runtime_schema_version, preserve state_revision where valid, set migration_source_schema, and produce deterministic JSON.",
+      "Migration to 3.1.1 must add runtime_schema_version, preserve state_revision where valid, set migration_source_schema, and produce deterministic JSON.",
       "Malformed, ambiguous, or unsupported source state fails closed and must not be rewritten."
     ]
   },
@@ -198,12 +199,12 @@
     "valid_current_fixture": [
       "Includes all required sidecars.",
       "May omit optional sidecars only when SCHEMA_MANIFEST records the reason.",
-      "All current sidecars use schema_version and runtime_schema_version 3.1.0.",
+      "All current sidecars use schema_version and runtime_schema_version 3.1.1.",
       "All task references resolve through TASK_REGISTRY.",
       "SCHEMA_MANIFEST points to this contract document."
     ],
     "legacy_compatibility_fixture": [
-      "Existing schema_version 2.0.0 fixtures remain compatibility fixtures.",
+      "Existing schema_version 2.0.0, 3.0.0, and 3.1.0 fixtures remain compatibility fixtures.",
       "Validators report migration compatibility diagnostics instead of silently treating them as current P2 state.",
       "Strict current-schema fixtures should be added separately from legacy Stage 2 fixtures."
     ],

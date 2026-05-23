@@ -403,6 +403,7 @@ ENUM_FIELDS = {
     ("NEXT_ACTION", "blocking_or_resume_context.blocker_type"): BLOCKER_TYPES,
     ("TASK_REGISTRY", "tasks[].task_type"): PROFILE_ROLES,
     ("TASK_REGISTRY", "tasks[].task_kind"): {
+        "bootstrap",
         "normal",
         "research_dependency",
         "design_continuation",

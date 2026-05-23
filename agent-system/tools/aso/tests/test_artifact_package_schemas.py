@@ -94,9 +94,9 @@ class ArtifactPackageSchemaTests(unittest.TestCase):
                     continue
 
                 self.assertEqual(template["schema_version"], "1.0.0")
-                self.assertEqual(template["package_version"], "3.7.2")
-                self.assertEqual(template["governance_ruleset_version"], "3.7.2")
-                self.assertEqual(template["runtime_schema_version"], "3.1.0")
+                self.assertEqual(template["package_version"], "3.7.3")
+                self.assertEqual(template["governance_ruleset_version"], "3.7.3")
+                self.assertEqual(template["runtime_schema_version"], "3.1.1")
 
     def test_contract_document_references_all_new_schemas_and_templates(self) -> None:
         contract = (

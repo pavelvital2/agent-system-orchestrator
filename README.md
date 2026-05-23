@@ -20,17 +20,17 @@ filesystem-governed ASO helper CLI at `agent-system/tools/aso/aso.py`: most
 commands are read-only diagnostics or dry-run proposals, while Project Factory
 commands may create generated projects only within explicit target paths.
 
-This P5.2 package records the active package metadata as the governed `3.7.2`
-package/governance tuple with runtime schema `3.1.0` and artifact package
-schema `1.1.0`. P5.2 corrects bootstrap state reconciliation while preserving
-the P2/P3 Runtime Schema `3.1.0` sidecar envelope. ASO remains a governance
+This P5.3 package records the active package metadata as the governed `3.7.3`
+package/governance tuple with runtime schema `3.1.1` and artifact package
+schema `1.1.0`. P5.3 aligns bootstrap TASK_REGISTRY task-kind governance while
+preserving Artifact Package Schema `1.1.0`. ASO remains a governance
 and control conveyor: it validates bootstrap state consistency and repair
 routes, but it does not interpret raw TZ content, replace project designer
 reasoning, generate product questions from TZ, install product-intake code or
 a product-intake engine, run a daemon, dispatch live agents, execute
 checkpoints, generate products, collect secrets, or run external workers.
 
-The Runtime Schema `3.1.0` sidecar contract is documented in
+The Runtime Schema sidecar contract is documented in
 `agent-system/02_runtime/RUNTIME_STATE_P2_CONTRACT.md` and packaged as
 `agent-system/09_validators/schemas/runtime_state_3_1_0.contract.json`.
 It defines required and optional sidecars, the P2 envelope, allowed
@@ -135,8 +135,8 @@ python3 agent-system/tools/aso/aso.py validate-context-pack agent-system/tests/f
 Runtime State P2 command surfaces formalize JSON sidecars under
 `project-runtime/state/`. JSON sidecars are canonical for P2+ runtime state;
 Markdown or report outputs are compatibility views generated from JSON. The
-active package version is `3.7.2` and the active runtime schema version is
-`3.1.0`.
+active package version is `3.7.3` and the active runtime schema version is
+`3.1.1`.
 
 ```text
 python3 agent-system/tools/aso/aso.py validate-rules --root . --strict
@@ -147,7 +147,7 @@ python3 agent-system/tools/aso/aso.py state render --root /tmp/aso-state-demo --
 python3 agent-system/tools/aso/aso.py state verify --root /tmp/aso-state-demo --strict --json-out /tmp/aso-state-verify.json
 python3 agent-system/tools/aso/aso.py state render --root /tmp/aso-state-demo --format markdown --out /tmp/aso-state-render.md
 python3 agent-system/tools/aso/aso.py lifecycle terminate-agent --root /tmp/aso-state-demo --from-result project-runtime/results/worker/RESULT_TASK_ID_ATTEMPT_001.md --confirm-write
-python3 agent-system/tools/aso/aso.py state migrate --root agent-system/tests/fixtures/state/valid_workspace --to 3.1.0 --dry-run --json-out /tmp/aso-state-migrate-plan.json
+python3 agent-system/tools/aso/aso.py state migrate --root agent-system/tests/fixtures/state/valid_workspace --to 3.1.1 --dry-run --json-out /tmp/aso-state-migrate-plan.json
 python3 agent-system/tools/aso/aso.py plan-next --root agent-system/tests/fixtures/state/valid_workspace --strict --json-out /tmp/aso-stage2-plan.json
 python3 agent-system/tools/aso/aso.py dashboard --root agent-system/tests/fixtures/state/valid_workspace --out /tmp/aso-stage2-dashboard.html
 python3 agent-system/tools/aso/aso.py checkpoint-preflight --root . --mode package --strict --json-out /tmp/aso-stage2-checkpoint-preflight.json
@@ -283,7 +283,7 @@ python3 agent-system/tools/aso/aso.py wizard --answers path/to/answers.json --dr
 
 Generated projects contain `aso.lock`, `.gitignore`, a minimal README, and
 local ignored ASO working roots when needed. Local Project Factory creation may
-initialize Runtime Schema `3.1.0` sidecars under the generated project's
+initialize Runtime Schema `3.1.1` sidecars under the generated project's
 ignored `project-runtime/state/` root; those sidecars are local runtime state,
 not package publication artifacts. Vendored mode may copy safe `agent-system/`
 content. Reference mode records the external ASO engine in `aso.lock` and must

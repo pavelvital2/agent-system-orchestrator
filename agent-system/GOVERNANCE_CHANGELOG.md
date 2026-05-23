@@ -1706,3 +1706,44 @@ MIGRATION_NOTE: Runtime Schema 3.1.0 and Artifact Package Schema 1.1.0 are prese
 AUTHORIZED_BY: project_owner
 AUDIT_REQUIRED: yes
 STATUS: accepted
+
+CHANGE_ID: GOV-2026-05-23-003
+CHANGE_TITLE: ASO_BOOTSTRAP_TASK_REGISTRY_ALIGNMENT_P5_3_CORRECTION
+DATE: 2026-05-23
+PACKAGE_VERSION_BEFORE: 3.7.2
+PACKAGE_VERSION_AFTER: 3.7.3
+GOVERNANCE_RULESET_BEFORE: 3.7.2
+GOVERNANCE_RULESET_AFTER: 3.7.3
+RUNTIME_SCHEMA_BEFORE: 3.1.0
+RUNTIME_SCHEMA_AFTER: 3.1.1
+ARTIFACT_PACKAGE_SCHEMA_BEFORE: 1.1.0
+ARTIFACT_PACKAGE_SCHEMA_AFTER: 1.1.0
+CHANGE_TYPE: patch
+CHANGE_SUBTYPE: bootstrap_task_registry_alignment_p5_3_correction
+AFFECTED_FILES:
+- README.md
+- README_INSTALL.md
+- pyproject.toml
+- agent-system/README.md
+- agent-system/PACKAGE_VERSIONING.md
+- agent-system/GOVERNANCE_CHANGELOG.md
+- agent-system/04_state/TASK_REGISTRY_TEMPLATE.md
+- agent-system/09_validators/schemas/runtime_state_3_1_0.contract.json
+- agent-system/09_validators/schemas/schema_manifest.schema.json
+- agent-system/11_release/ASO_BOOTSTRAP_TASK_REGISTRY_ALIGNMENT_P5_3_V3_7_3_RELEASE_NOTES.md
+- agent-system/11_release/ASO_BOOTSTRAP_TASK_REGISTRY_ALIGNMENT_P5_3_V3_7_3_VALIDATION_REPORT.md
+AFFECTED_INVARIANTS:
+- Active package/governance/runtime tuple is 3.7.3 / 3.7.3 / 3.1.1.
+- Artifact package schema version remains 1.1.0.
+- TASK_REGISTRY task_kind allows bootstrap for the first bootstrap route and governed bootstrap correction/preparation.
+- Unknown task_kind values remain forbidden.
+AFFECTED_TRANSITIONS:
+- first bootstrap route -> TASK_REGISTRY task_kind bootstrap allowed.
+- governed bootstrap correction/preparation -> TASK_REGISTRY task_kind bootstrap allowed.
+- unknown task_kind -> forbidden validation/review blocker.
+SCHEMA_TEMPLATE_IMPACT: TASK_REGISTRY task-kind documentation and runtime schema manifest metadata aligned; artifact package schema unchanged.
+MIGRATION_REQUIRED: no
+MIGRATION_NOTE: Runtime Schema metadata advances to 3.1.1 for TASK_REGISTRY task-kind alignment. Artifact Package Schema 1.1.0 is preserved. P5.3 does not migrate active project-runtime state, change artifact package storage semantics, or redefine the orchestrator runtime protocol beyond the governed task-kind contract alignment.
+AUTHORIZED_BY: project_owner
+AUDIT_REQUIRED: yes
+STATUS: accepted

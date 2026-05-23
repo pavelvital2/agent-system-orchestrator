@@ -113,8 +113,8 @@ class StateInitCommandTests(unittest.TestCase):
             self.assertEqual(len(sidecars), 9)
             for path in sidecars:
                 payload = json.loads(path.read_text(encoding="utf-8"))
-                self.assertEqual(payload["schema_version"], "3.1.0")
-                self.assertEqual(payload["runtime_schema_version"], "3.1.0")
+                self.assertEqual(payload["schema_version"], "3.1.1")
+                self.assertEqual(payload["runtime_schema_version"], "3.1.1")
 
     def test_confirmed_current_state_requires_schema_manifest_for_strict_verify(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:

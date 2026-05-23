@@ -1056,6 +1056,12 @@ def build_parser() -> argparse.ArgumentParser:
     )
     _add_root_argument(package_layout_verify_parser, validate=False)
     package_layout_verify_parser.add_argument(
+        "--mode",
+        choices=("package",),
+        default="package",
+        help="Verification mode (only package is supported).",
+    )
+    package_layout_verify_parser.add_argument(
         "--strict",
         action="store_true",
         help="Treat warnings as a failing package-layout result.",
@@ -1102,9 +1108,9 @@ def build_parser() -> argparse.ArgumentParser:
     state_subparsers = state_parser.add_subparsers(dest="state_command", metavar="COMMAND")
     state_init_parser = state_subparsers.add_parser(
         "init",
-        help="Initialize Runtime Schema 3.1.0 JSON state sidecars.",
+        help="Initialize Runtime Schema 3.1.1 JSON state sidecars.",
         description=(
-            "Plan or create deterministic Runtime Schema 3.1.0 JSON sidecars under "
+            "Plan or create deterministic Runtime Schema 3.1.1 JSON sidecars under "
             "project-runtime/state. Dry-run writes nothing; writes require --confirm-write."
         ),
     )
@@ -1137,13 +1143,13 @@ def build_parser() -> argparse.ArgumentParser:
     )
     state_init_parser.add_argument(
         "--package-version",
-        default="3.7.2",
-        help="Package version to record (default: 3.7.2).",
+        default="3.7.3",
+        help="Package version to record (default: 3.7.3).",
     )
     state_init_parser.add_argument(
         "--runtime-schema-version",
-        default="3.1.0",
-        help="Runtime schema version to initialize (default: 3.1.0).",
+        default="3.1.1",
+        help="Runtime schema version to initialize (default: 3.1.1).",
     )
     state_init_parser.add_argument(
         "--dry-run",
@@ -1164,18 +1170,18 @@ def build_parser() -> argparse.ArgumentParser:
 
     state_migrate_parser = state_subparsers.add_parser(
         "migrate",
-        help="Migrate compatible legacy JSON state sidecars to Runtime Schema 3.1.0.",
+        help="Migrate compatible legacy JSON state sidecars to Runtime Schema 3.1.1.",
         description=(
             "Plan or perform a deterministic migration from compatible Runtime Schema "
-            "2.0.0 sidecars to Runtime Schema 3.1.0 envelopes. Dry-run writes nothing; "
+            "2.0.0 sidecars to Runtime Schema 3.1.1 envelopes. Dry-run writes nothing; "
             "writes require --confirm-write and produce a governed migration receipt."
         ),
     )
     _add_root_argument(state_migrate_parser, validate=False)
     state_migrate_parser.add_argument(
         "--to",
-        default="3.1.0",
-        help="Target runtime schema version (default: 3.1.0).",
+        default="3.1.1",
+        help="Target runtime schema version (default: 3.1.1).",
     )
     state_migrate_parser.add_argument(
         "--dry-run",

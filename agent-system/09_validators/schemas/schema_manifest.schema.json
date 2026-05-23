@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://agent-system.local/schemas/schema_manifest.schema.json",
   "title": "SCHEMA_MANIFEST",
-  "description": "Runtime Schema 3.1.0 envelope sidecar for discovering active runtime state contracts.",
+  "description": "Runtime Schema 3.1.1 envelope sidecar for discovering active runtime state contracts.",
   "type": "object",
   "additionalProperties": false,
   "required": [
@@ -15,9 +15,9 @@
     "content"
   ],
   "properties": {
-    "schema_version": { "type": "string", "const": "3.1.0" },
+    "schema_version": { "type": "string", "const": "3.1.1" },
     "sidecar_type": { "type": "string", "const": "SCHEMA_MANIFEST" },
-    "runtime_schema_version": { "type": "string", "const": "3.1.0" },
+    "runtime_schema_version": { "type": "string", "const": "3.1.1" },
     "state_revision": { "type": "integer", "minimum": 1 },
     "updated_at": { "type": "string", "format": "date-time" },
     "updated_by": { "type": "string" },
@@ -40,9 +40,9 @@
         "fixture_expectations"
       ],
       "properties": {
-        "runtime_schema_version": { "type": "string", "const": "3.1.0" },
-        "package_version": { "type": "string", "const": "3.7.2" },
-        "governance_ruleset_version": { "type": "string", "const": "3.7.2" },
+        "runtime_schema_version": { "type": "string", "const": "3.1.1" },
+        "package_version": { "type": "string", "const": "3.7.3" },
+        "governance_ruleset_version": { "type": "string", "const": "3.7.3" },
         "state_root": { "type": "string", "const": "project-runtime/state" },
         "contract_ref": {
           "type": "string",

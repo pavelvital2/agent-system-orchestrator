@@ -205,7 +205,7 @@ class ProjectCommandTests(unittest.TestCase):
         self.assertEqual(lint_result.returncode, 0, lint_result.stdout + lint_result.stderr)
         self.assertEqual(doctor_result.returncode, 0, doctor_result.stdout + doctor_result.stderr)
         self.assertIn("Engine mode: vendored", create_result.stdout)
-        self.assertIn("Runtime schema: 3.1.0", create_result.stdout)
+        self.assertIn("Runtime schema: 3.1.1", create_result.stdout)
         self.assertIn("Runtime state: initialized", create_result.stdout)
         self.assertIn("--mode workspace", create_result.stdout)
         self.assertNotIn("--mode package", create_result.stdout)
@@ -214,8 +214,8 @@ class ProjectCommandTests(unittest.TestCase):
         self.assertIn("doctor --root . --mode workspace --strict", readme)
         self.assertIn("lifecycle terminate-agent", readme)
         self.assertNotIn("--mode package", readme)
-        self.assertEqual(lock["aso_engine"]["version"], "3.7.2")
-        self.assertEqual(lock["aso_engine"]["runtime_schema"], "3.1.0")
+        self.assertEqual(lock["aso_engine"]["version"], "3.7.3")
+        self.assertEqual(lock["aso_engine"]["runtime_schema"], "3.1.1")
         self.assertEqual(lock["project"]["repo_url"], "https://github.com/example/demo-project.git")
 
     def test_create_local_reference_smoke(self) -> None:
@@ -275,8 +275,8 @@ class ProjectCommandTests(unittest.TestCase):
         self.assertIn("aso lint --root . --mode workspace --strict", readme)
         self.assertIn("aso doctor --root . --mode workspace --strict", readme)
         self.assertIn("aso lifecycle terminate-agent", readme)
-        self.assertEqual(lock["aso_engine"]["version"], "3.7.2")
-        self.assertEqual(lock["aso_engine"]["runtime_schema"], "3.1.0")
+        self.assertEqual(lock["aso_engine"]["version"], "3.7.3")
+        self.assertEqual(lock["aso_engine"]["runtime_schema"], "3.1.1")
         self.assertEqual(lock["aso_engine"]["engine_mode"], "reference")
         self.assertIsNone(lock["project"]["repo_url"])
 
@@ -434,7 +434,7 @@ class ProjectCommandTests(unittest.TestCase):
         self.assertEqual(plan["repo_name"], "demo")
         self.assertEqual(plan["engine_mode"], "reference")
         self.assertIn("planned_state_init", plan)
-        self.assertEqual(plan["planned_state_init"]["runtime_schema_version"], "3.1.0")
+        self.assertEqual(plan["planned_state_init"]["runtime_schema_version"], "3.1.1")
         self.assertEqual(unsafe_owner.returncode, 1)
         self.assertIn("repo owner contains unsafe characters", unsafe_owner.stderr)
         self.assertEqual(unsafe_repo.returncode, 1)
@@ -976,12 +976,12 @@ class ProjectCommandTests(unittest.TestCase):
         self.assertEqual(result.returncode, 0, result.stderr)
         self.assertIn("ASO project verify-clean: PASS", result.stdout)
         self.assertIn("Violations: 0", result.stdout)
-        self.assertIn("Package drift: 3.2.0 is compatible with current package 3.7.2", result.stdout)
+        self.assertIn("Package drift: 3.2.0 is compatible with current package 3.7.3", result.stdout)
 
     def test_verify_clean_accepts_p1_reference_and_p0_lock_compatibility_fixtures(self) -> None:
         cases = (
-            ("reference_valid", "Engine mode: reference", "Package drift: 3.3.0 is compatible with current package 3.7.2"),
-            ("p0_lock_compatible", "Engine mode: vendored", "Package drift: 3.2.0 is compatible with current package 3.7.2"),
+            ("reference_valid", "Engine mode: reference", "Package drift: 3.3.0 is compatible with current package 3.7.3"),
+            ("p0_lock_compatible", "Engine mode: vendored", "Package drift: 3.2.0 is compatible with current package 3.7.3"),
         )
 
         for fixture_name, engine_text, package_text in cases:

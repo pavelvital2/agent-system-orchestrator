@@ -22,8 +22,8 @@
     "workspace_identity_required": false
   },
   "markdown_source": "project-runtime/NEXT_ACTION.md",
-  "runtime_schema_version": "3.1.0",
-  "schema_version": "3.1.0",
+  "runtime_schema_version": "3.1.1",
+  "schema_version": "3.1.1",
   "sidecar_type": "NEXT_ACTION",
   "state_revision": 1,
   "updated_at": "2026-05-21T00:00:00Z",

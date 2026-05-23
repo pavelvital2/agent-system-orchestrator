@@ -19,9 +19,9 @@ RUNTIME_SCHEMA_VERSION:
 ## Active version constants
 
 ```text
-CURRENT_PACKAGE_VERSION: 3.7.2
-CURRENT_GOVERNANCE_RULESET_VERSION: 3.7.2
-CURRENT_RUNTIME_SCHEMA_VERSION: 3.1.0
+CURRENT_PACKAGE_VERSION: 3.7.3
+CURRENT_GOVERNANCE_RULESET_VERSION: 3.7.3
+CURRENT_RUNTIME_SCHEMA_VERSION: 3.1.1
 ARTIFACT_PACKAGE_SCHEMA_VERSION: 1.1.0
 ```
 
@@ -385,6 +385,24 @@ readiness. It does not redefine the P2/P3 sidecar envelope, semantically read
 raw TZ content, replace project designer or requirements analyst reasoning,
 install a daemon, dispatch live agents, execute checkpoints, publish generated
 workspaces, or broaden proposal/apply mutation authority.
+
+The ASO Bootstrap TASK_REGISTRY Alignment P5.3 correction installs:
+
+```text
+CURRENT_PACKAGE_VERSION: 3.7.3
+CURRENT_GOVERNANCE_RULESET_VERSION: 3.7.3
+CURRENT_RUNTIME_SCHEMA_VERSION: 3.1.1
+ARTIFACT_PACKAGE_SCHEMA_VERSION: 1.1.0
+DESIGN_GAP_GOVERNANCE_SCHEMA_VERSION: 1.0.0
+```
+
+This patch aligns TASK_REGISTRY task-kind documentation and runtime schema
+metadata so `bootstrap` is an allowed governed task kind for the first
+bootstrap route and governed bootstrap correction tasks. Unknown task kinds
+remain forbidden. Artifact Package Schema `1.1.0` is preserved, and P5.3 does
+not change artifact package storage semantics, dispatch live agents, execute
+checkpoints, publish generated workspaces, or broaden proposal/apply mutation
+authority.
 
 ## Version semantics
 

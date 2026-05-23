@@ -62,7 +62,7 @@ class StateRenderCommandTests(unittest.TestCase):
         self.assertEqual(second.returncode, 0, second.stdout + second.stderr)
         self.assertEqual(first_text, second_text)
         self.assertTrue(first_text.startswith("# ASO Runtime State Report\n"))
-        self.assertIn("Runtime schema: 3.1.0", first_text)
+        self.assertIn("Runtime schema: 3.1.1", first_text)
 
     def test_json_render_reports_schema_health(self) -> None:
         with tempfile.TemporaryDirectory(dir="/tmp") as tmp:
@@ -80,7 +80,7 @@ class StateRenderCommandTests(unittest.TestCase):
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
         self.assertEqual(report["command"], "state render")
         self.assertTrue(report["read_only"])
-        self.assertEqual(report["runtime_schema"]["active_version"], "3.1.0")
+        self.assertEqual(report["runtime_schema"]["active_version"], "3.1.1")
         self.assertEqual(report["runtime_schema"]["required_sidecars_missing"], [])
         self.assertIn("SCHEMA_MANIFEST", report["sidecars"])
 
@@ -88,6 +88,14 @@ class StateRenderCommandTests(unittest.TestCase):
         with tempfile.TemporaryDirectory(dir="/tmp") as tmp:
             root = Path(tmp) / "p2-workspace"
             shutil.copytree(P2_VALID_WORKSPACE, root)
+            for sidecar in (root / "project-runtime" / "state").glob("*.json"):
+                sidecar_payload = json.loads(sidecar.read_text(encoding="utf-8"))
+                sidecar_payload["schema_version"] = "3.1.1"
+                sidecar_payload["runtime_schema_version"] = "3.1.1"
+                content = sidecar_payload.get("content")
+                if isinstance(content, dict) and "runtime_schema_version" in content:
+                    content["runtime_schema_version"] = "3.1.1"
+                sidecar.write_text(json.dumps(sidecar_payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
             (root / "project-input").mkdir(exist_ok=True)
             (root / "project-input" / "TZ.md").write_text("# TZ\n\nTIMEZONE: Europe/Moscow\n", encoding="utf-8")
             project_state = root / "project-runtime" / "state" / "PROJECT_STATE.json"

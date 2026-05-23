@@ -1,4 +1,4 @@
-"""Guarded Runtime Schema 3.1.0 state sidecar migration."""
+"""Guarded Runtime Schema 3.1.1 state sidecar migration."""
 
 from __future__ import annotations
 
@@ -186,7 +186,7 @@ def _load_legacy_sidecars(root: Path) -> tuple[dict[str, dict[str, Any]], list[d
                 "State root contains an unsupported file",
                 f"{runtime_schema_contracts.STATE_ROOT}/{filename} makes migration ambiguous.",
                 path=f"{runtime_schema_contracts.STATE_ROOT}/{filename}",
-                recommendation="Remove unsupported state files or initialize a clean Runtime Schema 3.1.0 workspace.",
+                recommendation="Remove unsupported state files or initialize a clean Runtime Schema 3.1.1 workspace.",
             )
         )
     if findings:

@@ -49,6 +49,10 @@ NONE
 - `STATUS` must reflect the governed lifecycle state, not an agent recommendation alone.
 - `DEPENDENCIES` must list prerequisite task ids or `NONE`.
 - `TASK_KIND` must classify the task without adding a second execution role.
+- `TASK_KIND: bootstrap` is allowed only for the first bootstrap route or a
+  governed bootstrap correction/preparation task.
+- Unknown `TASK_KIND` values are forbidden; validators and reviewers must not
+  silently treat unknown task kinds as `normal`.
 - Requester return metadata must be populated for `research_dependency`,
   `design_continuation`, and `task_continuation`; otherwise use `NONE` for
   role/task/question fields and `RETURN_TO_REQUESTER_AFTER_AUDIT_PASS: no`.
