@@ -31,6 +31,41 @@ For that route, `plan-next` must return a non-dispatch recommendation such as
 `CORRECTION_REQUIRED` or `UPDATE_STATE` with machine-readable evidence. It
 must not return `CREATE_AGENT`.
 
+## Root Cause
+
+The planner mapped `ACTION_TYPE: correction` to `CREATE_AGENT` through the
+action-type recommendation path without first proving that the current action
+could dispatch a profile agent. That allowed a control-role correction with no
+task packet to look dispatchable.
+
+## Correction
+
+P5.4 centralizes the dispatchability boundary. `CREATE_AGENT` is valid only
+when the dispatchability gate proves all required dispatch evidence is present:
+dispatch-capable action type, profile execution role, non-`NONE` task id,
+non-`NONE` task packet, existing and valid task packet file, compatible task
+registry entry, current gate permission, no blocking rules, workspace identity,
+repository lock, baseline, and runtime schema compatibility.
+
+When any dispatchability requirement fails, `plan-next` must return a
+documented non-dispatch route such as `CORRECTION_REQUIRED`, `UPDATE_STATE`,
+`ASK_OWNER`, `FREEZE`, `BOOTSTRAP_PREP`, or `STOP` with machine-readable
+reasons.
+
+## Observed Regression
+
+The regression route was:
+
+```text
+ACTION_TYPE: correction
+TARGET_ROLE: orchestrator
+TASK_ID: NONE
+TASK_PACKET: NONE
+```
+
+This route is not dispatchable because `orchestrator` is a control role and no
+task packet exists. It must not produce `CREATE_AGENT`.
+
 ## Changed
 
 - Package and governance metadata advance to `3.7.4`.
@@ -54,3 +89,11 @@ must not return `CREATE_AGENT`.
 - distributed workers
 - semantic raw-TZ interpretation
 - automatic task execution
+
+## Validation And CI
+
+Local validation evidence is recorded in
+`agent-system/11_release/ASO_PLANNER_DISPATCHABILITY_GATE_P5_4_V3_7_4_VALIDATION_REPORT.md`.
+The final remote CI run for the documentation report commit remains an
+orchestrator-owned post-audit checkpoint after commit and push; these release
+notes do not claim final CI for an unpushed report commit.
