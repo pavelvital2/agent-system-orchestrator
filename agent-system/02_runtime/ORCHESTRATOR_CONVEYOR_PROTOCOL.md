@@ -31,6 +31,29 @@ Equivalent direct reads of `project-runtime/state/*.json`,
 `project-runtime/receipts/**/*.json`, and `project-runtime/reports/**/*.json`
 are allowed when the CLI is unavailable.
 
+## Bootstrap Reconciliation
+
+During bootstrap, the conveyor must treat ASO summaries as inconsistent when
+they report terminal STOP for an active/open workspace that still has mandatory
+bootstrap inputs and has not completed first profile-agent dispatch. In that
+case normal conveyor flow stops and the next route is bootstrap preparation or
+governed correction, not terminal completion.
+
+The reconciled bootstrap signals are:
+
+```text
+CURRENT_PHASE: bootstrap
+PROJECT_STATUS: active
+CURRENT_GATE.STATUS: open
+NEXT_ACTION.ACTION_SEMANTIC: stop_terminal
+```
+
+That tuple is invalid unless a separate documented terminal bootstrap
+invariant is present. Missing derived Markdown runtime views are repairable
+materialization blockers, and `PROJECT_STATE.TZ_PATH` must reference a project
+TZ file such as `project-input/TZ.md`; an IANA timezone string is not a valid
+path value.
+
 ## Debug And Recovery
 
 Full governance documents remain authoritative for debug, audit, recovery,

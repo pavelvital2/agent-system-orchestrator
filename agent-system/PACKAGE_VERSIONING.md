@@ -19,8 +19,8 @@ RUNTIME_SCHEMA_VERSION:
 ## Active version constants
 
 ```text
-CURRENT_PACKAGE_VERSION: 3.7.1
-CURRENT_GOVERNANCE_RULESET_VERSION: 3.7.1
+CURRENT_PACKAGE_VERSION: 3.7.2
+CURRENT_GOVERNANCE_RULESET_VERSION: 3.7.2
 CURRENT_RUNTIME_SCHEMA_VERSION: 3.1.0
 ARTIFACT_PACKAGE_SCHEMA_VERSION: 1.1.0
 ```
@@ -363,6 +363,28 @@ artifacts. It does not migrate active `project-runtime/` state, redefine the
 P2/P3 runtime sidecar envelope, install a daemon, dispatch live agents,
 execute checkpoints, publish generated workspaces, or broaden proposal/apply
 mutation authority.
+
+The ASO Bootstrap State Reconciliation P5.2 correction installs:
+
+```text
+CURRENT_PACKAGE_VERSION: 3.7.2
+CURRENT_GOVERNANCE_RULESET_VERSION: 3.7.2
+CURRENT_RUNTIME_SCHEMA_VERSION: 3.1.0
+ARTIFACT_PACKAGE_SCHEMA_VERSION: 1.1.0
+DESIGN_GAP_GOVERNANCE_SCHEMA_VERSION: 1.0.0
+```
+
+This patch corrects bootstrap state reconciliation while preserving Runtime
+Schema `3.1.0` and Artifact Package Schema `1.1.0`. P5.2 makes active/open
+bootstrap state incompatible with terminal STOP when mandatory bootstrap inputs
+exist, requires `PROJECT_STATE.TZ_PATH` to reference a project TZ file rather
+than an IANA timezone string, treats missing derived Markdown runtime views as
+materialization or repair blockers, and keeps `plan-next` on a bootstrap
+preparation/correction route instead of reporting misleading terminal
+readiness. It does not redefine the P2/P3 sidecar envelope, semantically read
+raw TZ content, replace project designer or requirements analyst reasoning,
+install a daemon, dispatch live agents, execute checkpoints, publish generated
+workspaces, or broaden proposal/apply mutation authority.
 
 ## Version semantics
 

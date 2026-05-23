@@ -293,6 +293,15 @@ def run_doctor(root: Path, *extra: str) -> subprocess.CompletedProcess[str]:
     )
 
 
+def run_aso(*args: str) -> subprocess.CompletedProcess[str]:
+    return subprocess.run(
+        [sys.executable, str(CLI), *args],
+        check=False,
+        text=True,
+        capture_output=True,
+    )
+
+
 class DoctorCommandTests(unittest.TestCase):
     def test_package_doctor_writes_json_and_does_not_mutate_forbidden_roots(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
@@ -378,6 +387,42 @@ PUSH_ALLOWED: false
             self.assertIn("LINT_IO_002", result.stdout)
             after = sorted(path.relative_to(root).as_posix() for path in root.rglob("*"))
             self.assertEqual(before, after)
+
+    def test_workspace_doctor_reports_bootstrap_repair_hints(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            init = run_aso("state", "init", "--root", str(root), "--project-slug", "doctor-bsr", "--confirm-write")
+            (root / "project-input").mkdir(exist_ok=True)
+            (root / "project-input" / "TZ.md").write_text("# TZ\n\nTIMEZONE: Europe/Moscow\n", encoding="utf-8")
+            render = run_aso("state", "render", "--root", str(root), "--confirm-write")
+            project_state = root / "project-runtime" / "state" / "PROJECT_STATE.json"
+            project_payload = json.loads(project_state.read_text(encoding="utf-8"))
+            project_content = project_payload["content"]
+            self.assertIsInstance(project_content, dict)
+            project_content["tz_path"] = "Europe/Moscow"
+            project_state.write_text(json.dumps(project_payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+            next_action = root / "project-runtime" / "state" / "NEXT_ACTION.json"
+            next_payload = json.loads(next_action.read_text(encoding="utf-8"))
+            next_content = next_payload["content"]
+            self.assertIsInstance(next_content, dict)
+            next_content["action_type"] = "stop"
+            next_content["action_semantic"] = "stop_terminal"
+            next_action.write_text(json.dumps(next_payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+            json_out = root / "doctor.json"
+
+            result = run_doctor(root, "--mode", "workspace", "--strict", "--json-out", str(json_out))
+
+            self.assertEqual(init.returncode, 0, init.stdout + init.stderr)
+            self.assertEqual(render.returncode, 0, render.stdout + render.stderr)
+            self.assertEqual(result.returncode, 1, result.stdout + result.stderr)
+            self.assertIn("BSR_TZ_PATH_TIMEZONE_VALUE", result.stdout)
+            self.assertIn("BSR_BOOTSTRAP_STOP_TERMINAL_INVALID", result.stdout)
+            self.assertIn("Repair PROJECT_STATE.content.tz_path", result.stdout)
+            self.assertIn("bootstrap reconciliation", result.stdout)
+            report = json.loads(json_out.read_text(encoding="utf-8"))
+            by_rule = {finding["rule_id"]: finding for finding in report["findings"]}
+            self.assertIn("project-input/TZ.md", by_rule["BSR_TZ_PATH_TIMEZONE_VALUE"]["recommendation"])
+            self.assertIn("aso plan-next --root WORKSPACE --strict", by_rule["BSR_BOOTSTRAP_STOP_TERMINAL_INVALID"]["recommendation"])
 
     def test_package_doctor_rejects_workspace_root_with_mode_guard(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:

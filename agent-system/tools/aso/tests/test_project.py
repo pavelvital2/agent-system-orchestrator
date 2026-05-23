@@ -190,6 +190,7 @@ class ProjectCommandTests(unittest.TestCase):
             readme = (target / "README.md").read_text(encoding="utf-8")
             self.assertTrue((target / "agent-system" / "tools" / "aso" / "aso.py").is_file())
             self.assertTrue((target / "project-input").is_dir())
+            self.assertTrue((target / "project-input" / "TZ.md").is_file())
             self.assertTrue((target / "project-runtime").is_dir())
             self.assertEqual(len(list((target / "project-runtime" / "state").glob("*.json"))), 9)
             self.assertTrue((target / "project-runtime" / "PROJECT_STATE.md").is_file())
@@ -213,7 +214,7 @@ class ProjectCommandTests(unittest.TestCase):
         self.assertIn("doctor --root . --mode workspace --strict", readme)
         self.assertIn("lifecycle terminate-agent", readme)
         self.assertNotIn("--mode package", readme)
-        self.assertEqual(lock["aso_engine"]["version"], "3.7.1")
+        self.assertEqual(lock["aso_engine"]["version"], "3.7.2")
         self.assertEqual(lock["aso_engine"]["runtime_schema"], "3.1.0")
         self.assertEqual(lock["project"]["repo_url"], "https://github.com/example/demo-project.git")
 
@@ -249,6 +250,7 @@ class ProjectCommandTests(unittest.TestCase):
             self.assertTrue((target / ".gitignore").is_file())
             self.assertTrue((target / "README.md").is_file())
             self.assertTrue((target / "project-input").is_dir())
+            self.assertTrue((target / "project-input" / "TZ.md").is_file())
             self.assertTrue((target / "project-runtime").is_dir())
             self.assertEqual(len(list((target / "project-runtime" / "state").glob("*.json"))), 9)
             self.assertTrue((target / "project-runtime" / "PROJECT_STATE.md").is_file())
@@ -273,7 +275,7 @@ class ProjectCommandTests(unittest.TestCase):
         self.assertIn("aso lint --root . --mode workspace --strict", readme)
         self.assertIn("aso doctor --root . --mode workspace --strict", readme)
         self.assertIn("aso lifecycle terminate-agent", readme)
-        self.assertEqual(lock["aso_engine"]["version"], "3.7.1")
+        self.assertEqual(lock["aso_engine"]["version"], "3.7.2")
         self.assertEqual(lock["aso_engine"]["runtime_schema"], "3.1.0")
         self.assertEqual(lock["aso_engine"]["engine_mode"], "reference")
         self.assertIsNone(lock["project"]["repo_url"])
@@ -974,12 +976,12 @@ class ProjectCommandTests(unittest.TestCase):
         self.assertEqual(result.returncode, 0, result.stderr)
         self.assertIn("ASO project verify-clean: PASS", result.stdout)
         self.assertIn("Violations: 0", result.stdout)
-        self.assertIn("Package drift: 3.2.0 is compatible with current package 3.7.1", result.stdout)
+        self.assertIn("Package drift: 3.2.0 is compatible with current package 3.7.2", result.stdout)
 
     def test_verify_clean_accepts_p1_reference_and_p0_lock_compatibility_fixtures(self) -> None:
         cases = (
-            ("reference_valid", "Engine mode: reference", "Package drift: 3.3.0 is compatible with current package 3.7.1"),
-            ("p0_lock_compatible", "Engine mode: vendored", "Package drift: 3.2.0 is compatible with current package 3.7.1"),
+            ("reference_valid", "Engine mode: reference", "Package drift: 3.3.0 is compatible with current package 3.7.2"),
+            ("p0_lock_compatible", "Engine mode: vendored", "Package drift: 3.2.0 is compatible with current package 3.7.2"),
         )
 
         for fixture_name, engine_text, package_text in cases:

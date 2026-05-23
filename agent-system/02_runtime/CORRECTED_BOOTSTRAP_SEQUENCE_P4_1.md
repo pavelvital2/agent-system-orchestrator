@@ -29,6 +29,7 @@ Generated or initialized project workspaces are checked in workspace mode:
 
 ```bash
 aso state render --root /path/to/project --confirm-write
+aso state verify --root /path/to/project --strict
 aso status --root /path/to/project --mode workspace
 aso lint --root /path/to/project --mode workspace --strict
 aso doctor --root /path/to/project --mode workspace --strict
@@ -52,6 +53,26 @@ aso state render --root /path/to/project --confirm-write
 
 Derived views must declare their source JSON sidecar and must not be edited as
 canonical state.
+
+## Bootstrap Reconciliation
+
+P5.2 keeps Runtime Schema `3.1.0` unchanged but strengthens the bootstrap
+consistency checks around existing sidecars and derived views. The following
+state is contradictory and must not be reported as clean terminal readiness:
+
+```text
+CURRENT_PHASE: bootstrap
+PROJECT_STATUS: active
+CURRENT_GATE.STATUS: open
+NEXT_ACTION.ACTION_SEMANTIC: stop_terminal
+```
+
+If mandatory bootstrap inputs exist and first profile-agent dispatch has not
+occurred, `plan-next` must recommend bootstrap preparation or governed
+correction. Missing derived Markdown runtime views must be materialized or
+reported as repairable blockers. `PROJECT_STATE.TZ_PATH` must reference a
+project TZ file such as `project-input/TZ.md`; it must not contain an IANA
+timezone value such as `Europe/Moscow`.
 
 ## First Bootstrap Dispatch
 
@@ -82,7 +103,7 @@ project-runtime/bootstrap/TASK_BOOTSTRAP_SOLUTION_ARCHITECT_001.md
 ## RESULT To Audit Route
 
 After a profile-agent RESULT is recorded, the orchestrator must record logical
-agent termination before audit routing:
+artifact acceptance and logical agent termination before audit routing:
 
 ```bash
 aso lifecycle terminate-agent \
@@ -95,6 +116,7 @@ The required order is:
 
 ```text
 RESULT_RECEIVED
+ARTIFACT_ACCEPTED
 AGENT_TERMINATED
 AUDIT_ROUTE_READY
 ```

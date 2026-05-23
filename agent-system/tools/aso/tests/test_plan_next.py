@@ -105,6 +105,31 @@ def set_project_state(root: Path, **updates: object) -> None:
             update_markdown_field(root, "PROJECT_STATE.md", field, str(updates[key]))
 
 
+def set_current_gate(root: Path, **updates: object) -> None:
+    payload = load_sidecar(root, "CURRENT_GATE.json")
+    body = content(payload)
+    body.update(updates)
+    write_sidecar(root, "CURRENT_GATE.json", payload)
+    markdown_fields = {
+        "status": "STATUS",
+        "gate_type": "GATE_TYPE",
+        "task_id": "TASK_ID",
+        "task_packet": "TASK_PACKET",
+        "action_semantic": "ACTION_SEMANTIC",
+    }
+    for key, field in markdown_fields.items():
+        if key in updates and isinstance(updates[key], str):
+            update_markdown_field(root, "CURRENT_GATE.md", field, str(updates[key]))
+
+
+def make_tz_valid(root: Path) -> None:
+    tz_dir = root / "project-input"
+    tz_dir.mkdir(exist_ok=True)
+    (tz_dir / "TZ.md").write_text("# TZ\n\nTIMEZONE: Europe/Moscow\n", encoding="utf-8")
+    set_project_state(root, tz_path="project-input/TZ.md")
+    update_markdown_field(root, "PROJECT_STATE.md", "TZ_PATH", "project-input/TZ.md")
+
+
 def set_task(root: Path, **updates: object) -> None:
     payload = load_sidecar(root, "TASK_REGISTRY.json")
     body = content(payload)
@@ -132,12 +157,14 @@ class PlanNextCommandTests(unittest.TestCase):
         self.assertIn("mutating state", result.stdout)
 
     def test_valid_workspace_recommends_create_agent_and_does_not_edit_state(self) -> None:
-        tracked = [path for path in VALID_WORKSPACE.rglob("*") if path.is_file()]
-        mtimes_before = {path: path.stat().st_mtime_ns for path in tracked}
         with tempfile.TemporaryDirectory() as tmp:
+            root = copy_valid_workspace(tmp)
+            make_tz_valid(root)
+            tracked = [path for path in root.rglob("*") if path.is_file()]
+            mtimes_before = {path: path.stat().st_mtime_ns for path in tracked}
             json_out = Path(tmp) / "plan-next.json"
 
-            result = run_plan_next(VALID_WORKSPACE, "--strict", "--json-out", str(json_out))
+            result = run_plan_next(root, "--strict", "--json-out", str(json_out))
 
             self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
             self.assertIn("ASO plan-next: READY", result.stdout)
@@ -149,11 +176,12 @@ class PlanNextCommandTests(unittest.TestCase):
             self.assertEqual(report["target_role"], "developer")
             self.assertEqual(report["task_packet"], "project-runtime/tasks/active/TASK_FIXTURE_STATE_001.md")
             self.assertEqual(report["blocking_rules"], [])
-        self.assertEqual(mtimes_before, {path: path.stat().st_mtime_ns for path in tracked})
+            self.assertEqual(mtimes_before, {path: path.stat().st_mtime_ns for path in tracked})
 
     def test_checkpoint_with_audit_pass_evidence_recommends_preflight(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             root = copy_valid_workspace(tmp)
+            make_tz_valid(root)
             set_next_action(
                 root,
                 action_type="update_state",
@@ -180,6 +208,7 @@ class PlanNextCommandTests(unittest.TestCase):
     def test_checkpoint_without_audit_pass_evidence_is_blocked(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             root = copy_valid_workspace(tmp)
+            make_tz_valid(root)
             set_next_action(
                 root,
                 action_type="update_state",
@@ -205,6 +234,7 @@ class PlanNextCommandTests(unittest.TestCase):
         for status in ("completed", "checkpoint_done"):
             with self.subTest(status=status), tempfile.TemporaryDirectory() as tmp:
                 root = copy_valid_workspace(tmp)
+                make_tz_valid(root)
                 set_next_action(
                     root,
                     action_type="update_state",
@@ -232,6 +262,7 @@ class PlanNextCommandTests(unittest.TestCase):
     def test_stop_action_recommends_stop(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             root = copy_valid_workspace(tmp)
+            make_tz_valid(root)
             set_next_action(
                 root,
                 action_type="stop",
@@ -248,6 +279,35 @@ class PlanNextCommandTests(unittest.TestCase):
             report = json.loads(json_out.read_text(encoding="utf-8"))
             self.assertEqual(report["recommended_next_action"], "STOP")
             self.assertEqual(report["blocking_rules"], [])
+
+    def test_active_bootstrap_with_inputs_does_not_recommend_ready_stop(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = copy_valid_workspace(tmp)
+            make_tz_valid(root)
+            set_project_state(root, current_phase="bootstrap", project_status="active")
+            set_current_gate(root, gate_type="bootstrap", status="open", task_id="NONE", task_packet="NONE")
+            set_next_action(
+                root,
+                action_type="stop",
+                target_role="none",
+                task_id="NONE",
+                task_packet="NONE",
+                dependency_status="not_applicable",
+                action_semantic="stop_terminal",
+                checkpoint_policy="no_checkpoint",
+            )
+            json_out = Path(tmp) / "plan-next.json"
+
+            result = run_plan_next(root, "--strict", "--json-out", str(json_out))
+
+            self.assertEqual(result.returncode, 1, result.stdout + result.stderr)
+            report = json.loads(json_out.read_text(encoding="utf-8"))
+            self.assertEqual(report["status"], "blocked")
+            self.assertEqual(report["recommended_next_action"], "BOOTSTRAP_PREP")
+            self.assertNotEqual(report["recommended_next_action"], "STOP")
+            self.assertEqual(report["target_role"], "orchestrator")
+            messages = " ".join(str(rule.get("message", "")) for rule in report["blocking_rules"])
+            self.assertIn("bootstrap", messages.lower())
 
     def test_blocked_gap_owner_decision_recommends_ask_owner(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:

@@ -101,8 +101,8 @@ REQUIRED_RESULT_PACKAGE_FIELDS = (
 )
 RESULT_PACKAGE_CONSTANTS = {
     "schema_version": "1.0.0",
-    "package_version": "3.7.1",
-    "governance_ruleset_version": "3.7.1",
+    "package_version": "3.7.2",
+    "governance_ruleset_version": "3.7.2",
     "runtime_schema_version": "3.1.0",
     "artifact_package_schema_version": "1.1.0",
     "acceptance_status": "accepted",

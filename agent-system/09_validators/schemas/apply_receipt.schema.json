@@ -40,7 +40,7 @@
     },
     "package_version": {
       "type": "string",
-      "const": "3.7.1"
+      "const": "3.7.2"
     },
     "runtime_schema_version": {
       "type": "string",

@@ -9,7 +9,7 @@
     "project_name": "State Sidecar Fixture",
     "project_slug": "state-sidecar-fixture",
     "project_root": "/tmp/state-sidecar-fixture",
-    "tz_path": "Europe/Moscow",
+    "tz_path": "project-input/TZ.md",
     "active_doc_root": "project-docs",
     "package_version": "stage-2",
     "governance_ruleset_version": "stage-2",

@@ -22,6 +22,12 @@ def run_aso(*args: str) -> subprocess.CompletedProcess[str]:
     )
 
 
+def write_tz_file(root: Path) -> None:
+    tz_file = root / "project-input" / "TZ.md"
+    tz_file.parent.mkdir(parents=True, exist_ok=True)
+    tz_file.write_text("Europe/Moscow\n", encoding="utf-8")
+
+
 class StateInitCommandTests(unittest.TestCase):
     def test_dry_run_prints_plan_and_writes_no_files(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
@@ -43,7 +49,7 @@ class StateInitCommandTests(unittest.TestCase):
             plan = json.loads(result.stdout)
             self.assertTrue(plan["dry_run"])
             self.assertEqual(plan["status"], "planned")
-            self.assertEqual(len(plan["writes"]), 9)
+            self.assertEqual(len(plan["writes"]), 10)
             self.assertEqual(list(root.iterdir()), [])
 
     def test_dry_run_json_out_writes_valid_plan_without_target_state_files(self) -> None:
@@ -92,6 +98,17 @@ class StateInitCommandTests(unittest.TestCase):
 
             self.assertEqual(init.returncode, 0, init.stdout + init.stderr)
             self.assertEqual(verify.returncode, 0, verify.stdout + verify.stderr)
+            project_state = json.loads(
+                (root / "project-runtime" / "state" / "PROJECT_STATE.json").read_text(encoding="utf-8")
+            )
+            tz_file = root / "project-input" / "TZ.md"
+            next_action = json.loads(
+                (root / "project-runtime" / "state" / "NEXT_ACTION.json").read_text(encoding="utf-8")
+            )
+            self.assertEqual(project_state["content"]["tz_path"], "project-input/TZ.md")
+            self.assertEqual(tz_file.read_text(encoding="utf-8"), "# TZ\n\nTIMEZONE: UTC\n")
+            self.assertEqual(next_action["content"]["action_semantic"], "normal")
+            self.assertNotEqual(next_action["content"]["action_type"], "stop")
             sidecars = sorted((root / "project-runtime" / "state").glob("*.json"))
             self.assertEqual(len(sidecars), 9)
             for path in sidecars:
@@ -102,6 +119,7 @@ class StateInitCommandTests(unittest.TestCase):
     def test_confirmed_current_state_requires_schema_manifest_for_strict_verify(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
+            write_tz_file(root)
 
             init = run_aso(
                 "state",
@@ -158,8 +176,30 @@ class StateInitCommandTests(unittest.TestCase):
             receipt = json.loads(json_out.read_text(encoding="utf-8"))
             self.assertFalse(receipt["dry_run"])
             self.assertEqual(receipt["status"], "written")
-            self.assertEqual(receipt["write_result"], "wrote state sidecars")
+            self.assertEqual(receipt["write_result"], "wrote default TZ document; wrote state sidecars")
             self.assertEqual(json.loads(init.stdout), receipt)
+
+    def test_confirm_write_preserves_existing_tz_document(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            write_tz_file(root)
+
+            init = run_aso(
+                "state",
+                "init",
+                "--root",
+                str(root),
+                "--project-name",
+                "Existing TZ",
+                "--project-slug",
+                "existing-tz",
+                "--confirm-write",
+            )
+            verify = run_aso("state", "verify", "--root", str(root), "--strict")
+
+            self.assertEqual(init.returncode, 0, init.stdout + init.stderr)
+            self.assertEqual(verify.returncode, 0, verify.stdout + verify.stderr)
+            self.assertEqual((root / "project-input" / "TZ.md").read_text(encoding="utf-8"), "Europe/Moscow\n")
 
     def test_package_root_is_refused(self) -> None:
         result = run_aso("state", "init", "--root", str(REPO_ROOT), "--dry-run")

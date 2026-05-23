@@ -187,6 +187,20 @@ class ApplyDryRunCommandTests(unittest.TestCase):
             self.assertFalse(plan["would_apply"])
             self.assertIn("forbidden_execution_guard", "\n".join(plan["blocked_reasons"]))
 
+    def test_structured_create_agent_execution_request_is_rejected(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = copy_p2_workspace(tmp)
+            proposal_path = self._proposal(root, tmp)
+            proposal = json.loads(proposal_path.read_text(encoding="utf-8"))
+            proposal["operations"][0]["metadata"] = {"action_type": "create_agent"}
+            write_json(proposal_path, proposal)
+
+            result, plan = self._apply_plan(root, proposal_path, tmp)
+
+            self.assertEqual(result.returncode, 1, result.stdout + result.stderr)
+            self.assertFalse(plan["would_apply"])
+            self.assertIn("forbidden_execution_guard", "\n".join(plan["blocked_reasons"]))
+
     def test_checkpoint_execution_request_is_rejected(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             root = copy_p2_workspace(tmp)

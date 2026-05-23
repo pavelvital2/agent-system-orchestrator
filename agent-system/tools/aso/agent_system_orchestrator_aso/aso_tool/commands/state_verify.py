@@ -39,6 +39,22 @@ AUDIT_RESULT_PACKAGE_REF_RE = re.compile(r"^project-runtime/artifacts/accepted/A
 WORKER_RESULT_REF_RE = re.compile(r"^project-runtime/results/worker/RESULT_[A-Za-z0-9_:-]+_ATTEMPT_[0-9]+\.md$")
 AUDIT_RESULT_REF_RE = re.compile(r"^project-runtime/results/audit/AUDIT_RESULT_[A-Za-z0-9_:-]+_ATTEMPT_[0-9]+\.md$")
 NONE_VALUES = {"", "NONE", "none", "null", "UNKNOWN"}
+IANA_TIMEZONE_RE = re.compile(r"^[A-Za-z_]+/[A-Za-z0-9_.+-]+(?:/[A-Za-z0-9_.+-]+)?$")
+IANA_SINGLETON_TIMEZONES = {
+    "CET",
+    "CST6CDT",
+    "EET",
+    "EST",
+    "EST5EDT",
+    "Factory",
+    "GMT",
+    "HST",
+    "MET",
+    "MST",
+    "MST7MDT",
+    "UTC",
+    "WET",
+}
 PROFILE_ROLES = {
     "requirements_analyst",
     "solution_architect",
@@ -529,6 +545,10 @@ def _rel(root: Path, path: Path) -> str:
         return path.resolve(strict=False).relative_to(root.resolve(strict=False)).as_posix()
     except ValueError:
         return path.as_posix()
+
+
+def _is_inside_workspace(root: Path, path: Path) -> bool:
+    return path.resolve(strict=False).is_relative_to(root.resolve(strict=False))
 
 
 def _finding(
@@ -1317,6 +1337,115 @@ def _checkpoint_findings(sidecars: dict[str, dict[str, object]]) -> list[Finding
     ]
 
 
+def _bootstrap_semantic_findings(root: Path, sidecars: dict[str, dict[str, object]]) -> list[Finding]:
+    project_state = _content(sidecars, "PROJECT_STATE")
+    current_gate = _content(sidecars, "CURRENT_GATE")
+    next_action = _content(sidecars, "NEXT_ACTION")
+    findings: list[Finding] = []
+
+    if (
+        project_state.get("current_phase") == "bootstrap"
+        and project_state.get("project_status") == "active"
+        and current_gate.get("status") == "open"
+        and (
+            next_action.get("action_semantic") == "stop_terminal"
+            or next_action.get("action_type") == "stop"
+        )
+    ):
+        findings.append(
+            _finding(
+                "BSR_BOOTSTRAP_STOP_TERMINAL_INVALID",
+                "Active bootstrap state cannot use terminal stop",
+                (
+                    "PROJECT_STATE is bootstrap/active and CURRENT_GATE is open, "
+                    "but NEXT_ACTION is terminal stop. Reconcile bootstrap state "
+                    "or route a bootstrap correction/preparation action."
+                ),
+                "project-runtime/state/NEXT_ACTION.json",
+                "content.action_semantic",
+                (
+                    "Use a bootstrap preparation/correction action, or close the gate and mark the project "
+                    "terminal with evidence."
+                ),
+            )
+        )
+
+    tz_path = project_state.get("tz_path")
+    tz_path_text = tz_path.strip() if isinstance(tz_path, str) else ""
+    tz_path_valid = False
+    if not tz_path_text or tz_path_text in NONE_VALUES:
+        findings.append(
+            _finding(
+                "BSR_TZ_PATH_MISSING",
+                "PROJECT_STATE tz_path is missing",
+                "PROJECT_STATE.content.tz_path must reference a project TZ file path, not a timezone value.",
+                "project-runtime/state/PROJECT_STATE.json",
+                "content.tz_path",
+                "Set tz_path to project-input/TZ.md or another existing workspace-local TZ file.",
+            )
+        )
+    elif IANA_TIMEZONE_RE.fullmatch(tz_path_text) or tz_path_text in IANA_SINGLETON_TIMEZONES:
+        findings.append(
+            _finding(
+                "BSR_TZ_PATH_TIMEZONE_VALUE",
+                "PROJECT_STATE tz_path contains a timezone value",
+                f"PROJECT_STATE.content.tz_path={tz_path_text!r} looks like an IANA timezone, not a file path.",
+                "project-runtime/state/PROJECT_STATE.json",
+                "content.tz_path",
+                "Set tz_path to project-input/TZ.md; keep timezone values inside the TZ document.",
+            )
+        )
+    elif Path(tz_path_text).is_absolute():
+        findings.append(
+            _finding(
+                "BSR_TZ_PATH_ABSOLUTE",
+                "PROJECT_STATE tz_path is absolute",
+                f"PROJECT_STATE.content.tz_path={tz_path_text!r} must be workspace-relative.",
+                "project-runtime/state/PROJECT_STATE.json",
+                "content.tz_path",
+                "Use a workspace-relative TZ document path such as project-input/TZ.md.",
+            )
+        )
+    elif not _is_inside_workspace(root, root / tz_path_text):
+        findings.append(
+            _finding(
+                "BSR_TZ_PATH_OUTSIDE_WORKSPACE",
+                "PROJECT_STATE tz_path escapes workspace root",
+                f"PROJECT_STATE.content.tz_path={tz_path_text!r} must stay inside the workspace.",
+                "project-runtime/state/PROJECT_STATE.json",
+                "content.tz_path",
+                "Use a workspace-relative TZ document path such as project-input/TZ.md.",
+            )
+        )
+    elif not (root / tz_path_text).is_file():
+        findings.append(
+            _finding(
+                "BSR_TZ_PATH_TARGET_MISSING",
+                "PROJECT_STATE tz_path target is missing",
+                f"PROJECT_STATE.content.tz_path={tz_path_text!r} does not point to an existing file.",
+                "project-runtime/state/PROJECT_STATE.json",
+                "content.tz_path",
+                "Create the TZ document or update tz_path to an existing workspace-local TZ file.",
+            )
+        )
+    else:
+        tz_path_valid = True
+
+    canonical_tz = root / "project-input" / "TZ.md"
+    if canonical_tz.is_file() and tz_path_valid and tz_path_text != "project-input/TZ.md":
+        findings.append(
+            _finding(
+                "BSR_TZ_PATH_CANONICAL_MISMATCH",
+                "PROJECT_STATE tz_path does not reference project-input/TZ.md",
+                "project-input/TZ.md exists, so PROJECT_STATE.content.tz_path must reference project-input/TZ.md.",
+                "project-runtime/state/PROJECT_STATE.json",
+                "content.tz_path",
+                "Set tz_path to project-input/TZ.md.",
+            )
+        )
+    return findings
+
+
 def _is_current_p2_state(sidecars: dict[str, dict[str, object]], root: Path) -> bool:
     if (root / runtime_schema_contracts.STATE_ROOT / "SCHEMA_MANIFEST.json").is_file():
         return True
@@ -1423,6 +1552,7 @@ def _report(root: Path, strict: bool) -> tuple[dict[str, object], int]:
     findings.extend(_reference_findings(loaded_sidecars))
     findings.extend(_artifact_package_findings(loaded_sidecars))
     findings.extend(_checkpoint_findings(loaded_sidecars))
+    findings.extend(_bootstrap_semantic_findings(root, loaded_sidecars))
     findings = sorted(findings, key=lambda item: (item.severity != "error", item.rule_id, item.path, item.field, item.details))
     summary = _summary(findings)
     status, exit_code = _status(summary, strict)

@@ -17,12 +17,12 @@ and verifies the installed `aso` command. It uses local Python packaging only;
 it does not require secrets, GitHub credentials, remote repository access,
 dispatch authority, checkpoint execution, commit, push, or publication rights.
 
-This install document covers package version `3.7.1` with runtime schema
-`3.1.0` and artifact package schema `1.1.0`. P5.1 defines the artifact package
-model boundary while preserving the Runtime State P2/P3 sidecar schema and the
-Project Factory P1 command boundary. It does not add semantic TZ reading,
-product-intake automation, daemon mode, live dispatch, or checkpoint
-execution.
+This install document covers package version `3.7.2` with runtime schema
+`3.1.0` and artifact package schema `1.1.0`. P5.2 corrects bootstrap state
+reconciliation while preserving the Runtime State P2/P3 sidecar schema, the
+artifact package schema, and the Project Factory P1 command boundary. It does
+not add semantic TZ reading, product-intake automation, daemon mode, live
+dispatch, or checkpoint execution.
 
 Both installers accept a Python executable and virtual environment path:
 
@@ -66,11 +66,12 @@ strict package-layout verification. Package validation still works without
 PYTHONDONTWRITEBYTECODE=1 python3 agent-system/tools/aso/aso.py lint --root . --mode package --strict
 ```
 
-Initialized project workspaces use explicit workspace mode and materialized
-runtime views:
+Initialized project workspaces use explicit workspace mode, materialized
+runtime views, and bootstrap reconciliation checks:
 
 ```text
 aso state render --root /path/to/project --confirm-write
+aso state verify --root /path/to/project --strict
 aso status --root /path/to/project --mode workspace
 aso lint --root /path/to/project --mode workspace --strict
 aso doctor --root /path/to/project --mode workspace --strict
@@ -119,7 +120,10 @@ plan for compatible legacy sidecars; confirmed migration requires
 `--confirm-write`, fails closed on malformed or ambiguous input, and records
 receipts under allowed `project-runtime/` report paths. `aso state render` is
 read-only except for explicit output to `/tmp`, `project-runtime/reports`, or
-`project-runtime/rendered`.
+`project-runtime/rendered`. In strict workspace mode, an active/open bootstrap
+state with mandatory inputs must not be treated as terminal STOP-ready; an
+IANA timezone string such as `Europe/Moscow` is not a valid `TZ_PATH` value
+when `project-input/TZ.md` or another project TZ file should be referenced.
 
 Corrected P4 design governance commands should also be available after
 install:

@@ -11,7 +11,7 @@ from datetime import datetime
 from pathlib import Path
 from typing import Iterable
 
-from . import mode_guard, package_checks, repair_hints
+from . import mode_guard, package_checks, repair_hints, state_verify
 
 
 EXIT_OK = 0
@@ -1589,6 +1589,35 @@ def _check_skeleton_product_pass(root: Path, files: dict[str, RuntimeFile]) -> l
     return findings
 
 
+def _check_bootstrap_state_semantics(root: Path) -> list[Finding]:
+    state_root = root / "project-runtime" / "state"
+    if not state_root.is_dir():
+        return []
+    verify_report, _exit_code = state_verify._report(root, strict=False)
+    raw_findings = verify_report.get("findings", [])
+    if not isinstance(raw_findings, list):
+        return []
+
+    findings: list[Finding] = []
+    for item in raw_findings:
+        if not isinstance(item, dict):
+            continue
+        rule_id = str(item.get("rule_id", ""))
+        if not rule_id.startswith("BSR_"):
+            continue
+        findings.append(
+            Finding(
+                rule_id,
+                str(item.get("severity", "error")),
+                str(item.get("title", item.get("message", "Bootstrap state semantic finding"))),
+                str(item.get("details", item.get("message", ""))),
+                [str(item.get("path", ""))] if item.get("path") else [],
+                str(item.get("recommendation", "Run aso state verify --root WORKSPACE --strict and repair bootstrap state.")),
+            )
+        )
+    return findings
+
+
 def _all_lint_findings(root: Path, files: dict[str, RuntimeFile]) -> list[Finding]:
     findings: list[Finding] = []
     findings.extend(_check_duplicate_field_mismatch(files))
@@ -1606,6 +1635,7 @@ def _all_lint_findings(root: Path, files: dict[str, RuntimeFile]) -> list[Findin
     findings.extend(_check_agent_lifecycle(root))
     findings.extend(_check_reasoning_and_designer(root, files))
     findings.extend(_check_skeleton_product_pass(root, files))
+    findings.extend(_check_bootstrap_state_semantics(root))
     return findings
 
 

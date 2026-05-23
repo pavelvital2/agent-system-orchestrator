@@ -30,6 +30,7 @@ INCIDENT_MARKERS = {
     "AUDIT_FALSE_PASS_DETECTED",
 }
 CHECKPOINT_PREFLIGHT_POLICIES = {"local_only", "commit_and_push"}
+BOOTSTRAP_INPUTS = (Path("project-input/TZ.md"),)
 
 
 def _is_none(value: object) -> bool:
@@ -257,6 +258,39 @@ def _is_checkpoint_attempt(next_action: dict[str, object]) -> bool:
     return next_action.get("checkpoint_policy") in CHECKPOINT_PREFLIGHT_POLICIES
 
 
+def _bootstrap_inputs_present(root: Path) -> bool:
+    return any((root / relpath).is_file() for relpath in BOOTSTRAP_INPUTS)
+
+
+def _first_dispatch_recorded(root: Path) -> bool:
+    instances_path = root / "project-runtime" / "agents" / "instances.jsonl"
+    try:
+        text = instances_path.read_text(encoding="utf-8")
+    except OSError:
+        return False
+    return "agent_task_dispatched" in text
+
+
+def _needs_bootstrap_reconciliation(
+    root: Path,
+    project_state: dict[str, object],
+    current_gate: dict[str, object],
+    next_action: dict[str, object],
+) -> bool:
+    terminal_next_action = (
+        next_action.get("action_semantic") == "stop_terminal"
+        or next_action.get("action_type") == "stop"
+    )
+    return (
+        project_state.get("current_phase") == "bootstrap"
+        and project_state.get("project_status") == "active"
+        and current_gate.get("status") == "open"
+        and terminal_next_action
+        and _bootstrap_inputs_present(root)
+        and not _first_dispatch_recorded(root)
+    )
+
+
 def _recommended_for_action_type(action_type: str, target_role: str, blockers: list[str]) -> str:
     if action_type == "create_agent":
         return "CREATE_AUDITOR" if target_role == "auditor" else "CREATE_AGENT"
@@ -285,6 +319,7 @@ def _plan(
     rules_evidence: dict[str, object],
 ) -> dict[str, object]:
     project_state = _content(sidecars, "PROJECT_STATE")
+    current_gate = _content(sidecars, "CURRENT_GATE")
     next_action = _content(sidecars, "NEXT_ACTION")
     tasks = _tasks_by_id(sidecars)
     task_id = _as_text(next_action.get("task_id"))
@@ -327,6 +362,17 @@ def _plan(
                 "GOV-ACTION-SEMANTICS",
                 "Blocked owner/GAP state requires owner-facing routing before dependent work continues.",
                 ", ".join(blockers) or dependency_status,
+            )
+        )
+    elif _needs_bootstrap_reconciliation(root, project_state, current_gate, next_action):
+        recommended_next_action = "BOOTSTRAP_PREP"
+        target_role = "orchestrator"
+        blocking_rules.append(
+            _rule(
+                rules,
+                "GOV-ACTION-SEMANTICS",
+                "Active/open bootstrap with mandatory inputs cannot route to terminal STOP before first dispatch.",
+                "route=repair_bootstrap_state/create_or_reference_bootstrap_task_packet",
             )
         )
     elif _is_checkpoint_attempt(next_action):

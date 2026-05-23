@@ -11,7 +11,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Iterable
 
-from . import lint, mode_guard, package_checks
+from . import lint, mode_guard, package_checks, state_verify
 
 
 EXIT_OK = 0
@@ -118,14 +118,71 @@ def _from_lint_finding(finding: dict[str, object]) -> Diagnostic:
     files = finding.get("files", [])
     if not isinstance(files, list):
         files = []
+    rule_id = str(finding.get("rule_id", "DOCTOR_LINT_UNKNOWN"))
     return Diagnostic(
-        str(finding.get("rule_id", "DOCTOR_LINT_UNKNOWN")),
+        rule_id,
         str(finding.get("severity", "error")),
         str(finding.get("title", "Lint finding")),
         str(finding.get("details", finding.get("message", ""))),
         [str(item) for item in files],
-        str(finding.get("recommendation", "Resolve the reported lint finding.")),
+        _recommendation_for_state_verify(finding)
+        if rule_id.startswith("BSR_")
+        else str(finding.get("recommendation", "Resolve the reported lint finding.")),
     )
+
+
+def _recommendation_for_state_verify(finding: dict[str, object]) -> str:
+    rule_id = str(finding.get("rule_id", ""))
+    if rule_id.startswith("BSR_TZ_PATH"):
+        return (
+            "Repair PROJECT_STATE.content.tz_path to project-input/TZ.md, ensure that file exists, "
+            "then rerun aso state verify --root WORKSPACE --strict."
+        )
+    if rule_id == "BSR_BOOTSTRAP_STOP_TERMINAL_INVALID":
+        return (
+            "Run aso plan-next --root WORKSPACE --strict to route bootstrap reconciliation, then repair "
+            "NEXT_ACTION to bootstrap preparation/correction before first dispatch."
+        )
+    recommendation = str(finding.get("recommendation", "")).strip()
+    return recommendation or "Repair the reported state semantic finding and rerun aso state verify --root WORKSPACE --strict."
+
+
+def _from_state_verify_finding(finding: dict[str, object]) -> Diagnostic:
+    return Diagnostic(
+        str(finding.get("rule_id", "DOCTOR_STATE_VERIFY_UNKNOWN")),
+        str(finding.get("severity", "error")),
+        str(finding.get("title", finding.get("message", "State verify finding"))),
+        str(finding.get("details", finding.get("message", ""))),
+        [str(finding.get("path", ""))] if finding.get("path") else [],
+        _recommendation_for_state_verify(finding),
+    )
+
+
+def _state_verify_bsr_diagnostics(root: Path) -> list[Diagnostic]:
+    state_root = root / "project-runtime" / "state"
+    if not state_root.is_dir():
+        return []
+    report, _exit_code = state_verify._report(root, strict=False)
+    raw_findings = report.get("findings", [])
+    if not isinstance(raw_findings, list):
+        return []
+    return [
+        _from_state_verify_finding(finding)
+        for finding in raw_findings
+        if isinstance(finding, dict) and str(finding.get("rule_id", "")).startswith("BSR_")
+    ]
+
+
+def _dedupe_diagnostics(findings: list[Diagnostic]) -> list[Diagnostic]:
+    seen: set[tuple[str, str, tuple[str, ...]]] = set()
+    deduped: list[Diagnostic] = []
+    for finding in findings:
+        key = (finding.check_id, finding.details, tuple(finding.files))
+        if key in seen:
+            continue
+        seen.add(key)
+        deduped.append(finding)
+    return deduped
 
 
 def _active_version_tuple(root: Path) -> tuple[dict[str, str], list[Diagnostic]]:
@@ -709,6 +766,7 @@ def _workspace_report(root: Path, strict: bool) -> tuple[dict[str, object], int]
     lint_findings = lint_report.get("findings", [])
     if isinstance(lint_findings, list):
         findings.extend(_from_lint_finding(finding) for finding in lint_findings if isinstance(finding, dict))
+    findings.extend(_state_verify_bsr_diagnostics(root))
 
     files = _runtime_files(root) if states.get("project-runtime") == "present" else {}
     if files:
@@ -717,6 +775,7 @@ def _workspace_report(root: Path, strict: bool) -> tuple[dict[str, object], int]
         findings.extend(_check_branch_remote(root, files))
         findings.extend(_check_checkpoint_readiness(files))
 
+    findings = _dedupe_diagnostics(findings)
     summary = _summary(findings)
     io_error = any(finding.check_id.startswith(("DOCTOR_WS_IO_", "LINT_IO_")) for finding in findings)
     status, exit_code = _status(summary, strict, io_error=io_error)

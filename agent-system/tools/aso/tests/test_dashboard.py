@@ -148,6 +148,8 @@ class DashboardCommandTests(unittest.TestCase):
         with tempfile.TemporaryDirectory(dir="/tmp") as tmp:
             root = Path(tmp) / "workspace"
             root.mkdir()
+            (root / "project-input").mkdir()
+            (root / "project-input" / "TZ.md").write_text("# TZ\n\nTIMEZONE: Europe/Moscow\n", encoding="utf-8")
             init = subprocess.run(
                 [
                     sys.executable,

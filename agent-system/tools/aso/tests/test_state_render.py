@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import shutil
 import subprocess
 import sys
 import tempfile
@@ -47,6 +48,8 @@ class StateRenderCommandTests(unittest.TestCase):
                 "render-test",
                 "--confirm-write",
             )
+            (root / "project-input").mkdir(exist_ok=True)
+            (root / "project-input" / "TZ.md").write_text("# TZ\n\nTIMEZONE: Europe/Moscow\n", encoding="utf-8")
             out = Path(tmp) / "state-report.md"
 
             first = run_aso("state", "render", "--root", str(root), "--format", "markdown", "--out", str(out))
@@ -66,6 +69,8 @@ class StateRenderCommandTests(unittest.TestCase):
             root = Path(tmp) / "workspace"
             root.mkdir()
             init = run_aso("state", "init", "--root", str(root), "--project-slug", "json-render", "--confirm-write")
+            (root / "project-input").mkdir(exist_ok=True)
+            (root / "project-input" / "TZ.md").write_text("# TZ\n\nTIMEZONE: Europe/Moscow\n", encoding="utf-8")
             out = root / "project-runtime" / "rendered" / "state-report.json"
 
             result = run_aso("state", "render", "--root", str(root), "--format", "json", "--out", str(out))
@@ -80,16 +85,34 @@ class StateRenderCommandTests(unittest.TestCase):
         self.assertIn("SCHEMA_MANIFEST", report["sidecars"])
 
     def test_p2_fixture_render_reports_current_schema_without_mutating_state(self) -> None:
-        tracked = [path for path in P2_VALID_WORKSPACE.rglob("*") if path.is_file()]
-        mtimes_before = {path: path.stat().st_mtime_ns for path in tracked}
         with tempfile.TemporaryDirectory(dir="/tmp") as tmp:
+            root = Path(tmp) / "p2-workspace"
+            shutil.copytree(P2_VALID_WORKSPACE, root)
+            (root / "project-input").mkdir(exist_ok=True)
+            (root / "project-input" / "TZ.md").write_text("# TZ\n\nTIMEZONE: Europe/Moscow\n", encoding="utf-8")
+            project_state = root / "project-runtime" / "state" / "PROJECT_STATE.json"
+            payload = json.loads(project_state.read_text(encoding="utf-8"))
+            content = payload["content"]
+            self.assertIsInstance(content, dict)
+            content["tz_path"] = "project-input/TZ.md"
+            project_state.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+            next_action = root / "project-runtime" / "state" / "NEXT_ACTION.json"
+            next_payload = json.loads(next_action.read_text(encoding="utf-8"))
+            next_content = next_payload["content"]
+            self.assertIsInstance(next_content, dict)
+            next_content["action_type"] = "correction"
+            next_content["action_semantic"] = "normal"
+            next_content["dependency_status"] = "ready"
+            next_action.write_text(json.dumps(next_payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+            tracked = [path for path in root.rglob("*") if path.is_file()]
+            mtimes_before = {path: path.stat().st_mtime_ns for path in tracked}
             out = Path(tmp) / "p2-state-report.json"
 
             result = run_aso(
                 "state",
                 "render",
                 "--root",
-                str(P2_VALID_WORKSPACE),
+                str(root),
                 "--format",
                 "json",
                 "--out",
@@ -97,11 +120,11 @@ class StateRenderCommandTests(unittest.TestCase):
             )
             report = json.loads(out.read_text(encoding="utf-8"))
 
-        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
-        self.assertTrue(report["runtime_schema"]["current_p2_state"])
-        self.assertEqual(report["runtime_schema"]["migration_available_sidecars"], [])
-        self.assertEqual(report["runtime_schema"]["unsupported_sidecars"], [])
-        self.assertEqual(mtimes_before, {path: path.stat().st_mtime_ns for path in tracked})
+            self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+            self.assertTrue(report["runtime_schema"]["current_p2_state"])
+            self.assertEqual(report["runtime_schema"]["migration_available_sidecars"], [])
+            self.assertEqual(report["runtime_schema"]["unsupported_sidecars"], [])
+            self.assertEqual(mtimes_before, {path: path.stat().st_mtime_ns for path in tracked})
 
     def test_forbidden_output_path_is_rejected(self) -> None:
         with tempfile.TemporaryDirectory(dir="/tmp") as tmp:
@@ -131,6 +154,8 @@ class StateRenderCommandTests(unittest.TestCase):
                 "materialize-test",
                 "--confirm-write",
             )
+            (root / "project-input").mkdir(exist_ok=True)
+            (root / "project-input" / "TZ.md").write_text("# TZ\n\nTIMEZONE: Europe/Moscow\n", encoding="utf-8")
             lint_json = Path(tmp) / "lint-before.json"
             before_lint = run_aso(
                 "lint",

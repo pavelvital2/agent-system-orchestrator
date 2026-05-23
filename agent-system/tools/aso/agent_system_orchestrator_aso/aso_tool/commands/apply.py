@@ -42,7 +42,6 @@ FORBIDDEN_EXECUTION_PATTERNS = (
         "agent dispatch execution",
         re.compile(r"\bagent\s+(?:dispatch|launch|reuse|start|execution|execute|run)\b"),
     ),
-    ("agent dispatch execution", re.compile(r"\bcreate_agent\b")),
     (
         "checkpoint execution",
         re.compile(r"\b(?:execute|run|perform|prepare|apply)\s+(?:the\s+)?checkpoint\b"),
@@ -60,6 +59,19 @@ NEGATED_EXECUTION_PHRASES = (
     re.compile(r"\bdoes not reuse (?:an?\s+)?agent\b"),
     re.compile(r"\bno agent dispatch\b"),
 )
+AGENT_DISPATCH_INTENT_KEYS = {
+    "action",
+    "action_type",
+    "command",
+    "dispatch",
+    "dispatch_action",
+    "execution",
+    "next",
+    "operation",
+    "operation_type",
+    "request",
+    "requested_action",
+}
 DRY_RUN_VALIDATORS = (
     "proposal_json_parse",
     "proposal_schema",
@@ -241,6 +253,21 @@ def _target_is_under(root: Path, rel_target: str, allowed_roots: tuple[str, ...]
     return False
 
 
+def _requests_create_agent(value: object, parent_key: str = "") -> bool:
+    if isinstance(value, dict):
+        for key, child in value.items():
+            if _requests_create_agent(child, str(key).lower()):
+                return True
+        return False
+    if isinstance(value, list):
+        return any(_requests_create_agent(child, parent_key) for child in value)
+    if not isinstance(value, str):
+        return False
+    if parent_key not in AGENT_DISPATCH_INTENT_KEYS:
+        return False
+    return bool(re.fullmatch(r"\s*create_agent\s*", value, flags=re.IGNORECASE))
+
+
 def _operation_reasons(proposal: dict[str, Any], root: Path) -> list[str]:
     operations = proposal.get("operations")
     if not isinstance(operations, list):
@@ -267,6 +294,9 @@ def _operation_reasons(proposal: dict[str, Any], root: Path) -> list[str]:
         elif operation_type == "report_write":
             if not _target_is_under(root, target, ("project-runtime/reports",)):
                 reasons.append(f"operation_path_guard: {target} is outside project-runtime/reports")
+        if _requests_create_agent(operation):
+            reasons.append(f"forbidden_execution_guard: {location} requests agent dispatch execution")
+            continue
         text = json.dumps(operation, sort_keys=True).lower()
         for negated_pattern in NEGATED_EXECUTION_PHRASES:
             text = negated_pattern.sub("", text)

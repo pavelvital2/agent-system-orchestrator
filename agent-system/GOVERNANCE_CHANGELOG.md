@@ -1661,3 +1661,48 @@ AUTHORIZED_BY: project_owner
 AUDIT_REQUIRED: yes
 STATUS: accepted
 ```
+
+CHANGE_ID: GOV-2026-05-23-002
+CHANGE_TITLE: ASO_BOOTSTRAP_STATE_RECONCILIATION_P5_2_CORRECTION
+DATE: 2026-05-23
+PACKAGE_VERSION_BEFORE: 3.7.1
+PACKAGE_VERSION_AFTER: 3.7.2
+GOVERNANCE_RULESET_BEFORE: 3.7.1
+GOVERNANCE_RULESET_AFTER: 3.7.2
+RUNTIME_SCHEMA_BEFORE: 3.1.0
+RUNTIME_SCHEMA_AFTER: 3.1.0
+ARTIFACT_PACKAGE_SCHEMA_BEFORE: 1.1.0
+ARTIFACT_PACKAGE_SCHEMA_AFTER: 1.1.0
+CHANGE_TYPE: patch
+CHANGE_SUBTYPE: bootstrap_state_reconciliation_p5_2_correction
+AFFECTED_FILES:
+- README.md
+- README_INSTALL.md
+- pyproject.toml
+- agent-system/README.md
+- agent-system/PACKAGE_VERSIONING.md
+- agent-system/GOVERNANCE_CHANGELOG.md
+- agent-system/02_runtime/BOOTSTRAP_STATE_RECONCILIATION_P5_2_CONTRACT.md
+- agent-system/02_runtime/CORRECTED_BOOTSTRAP_SEQUENCE_P4_1.md
+- agent-system/02_runtime/ORCHESTRATOR_CONVEYOR_PROTOCOL.md
+- agent-system/02_runtime/ORCHESTRATOR_RUNTIME_LOOP.md
+- agent-system/11_release/ASO_BOOTSTRAP_STATE_RECONCILIATION_P5_2_V3_7_2_RELEASE_NOTES.md
+- agent-system/11_release/ASO_BOOTSTRAP_STATE_RECONCILIATION_P5_2_V3_7_2_VALIDATION_REPORT.md
+AFFECTED_INVARIANTS:
+- Active package/governance/runtime tuple is 3.7.2 / 3.7.2 / 3.1.0.
+- Artifact package schema version remains 1.1.0.
+- Runtime Schema 3.1.0 remains the canonical sidecar schema for current runtime state.
+- Active/open bootstrap state with mandatory inputs and no completed first dispatch must not route to terminal STOP.
+- PROJECT_STATE.TZ_PATH is a project TZ file path and must not be populated with an IANA timezone string.
+- Missing derived Markdown runtime views are materialization or repair blockers, not clean PASS evidence.
+- Normal orchestrator conveyor flow may consume ASO status/next summaries, but summary contradictions route to recovery or correction.
+AFFECTED_TRANSITIONS:
+- active/open bootstrap plus terminal stop_terminal -> bootstrap preparation or governed correction.
+- missing derived runtime views -> state render/materialization or repairable blocker.
+- invalid TZ_PATH -> semantic validation blocker until corrected.
+SCHEMA_TEMPLATE_IMPACT: none
+MIGRATION_REQUIRED: no
+MIGRATION_NOTE: Runtime Schema 3.1.0 and Artifact Package Schema 1.1.0 are preserved. P5.2 changes bootstrap semantic validation, planning, and documentation alignment only; it does not migrate active project-runtime state or redefine the P2/P3 runtime sidecar envelope.
+AUTHORIZED_BY: project_owner
+AUDIT_REQUIRED: yes
+STATUS: accepted

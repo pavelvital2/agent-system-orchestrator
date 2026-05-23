@@ -49,7 +49,7 @@
     "repository_lock_status": "draft",
     "runtime_schema_version": "3.1.0",
     "semantic_reason": "Initial Runtime Schema 3.1.0 state created by aso state init.",
-    "tz_path": "Europe/Moscow",
+    "tz_path": "project-input/TZ.md",
     "workspace_identity_ref": "project-runtime/state/WORKSPACE_IDENTITY.json",
     "workspace_type": "project_workspace"
   },

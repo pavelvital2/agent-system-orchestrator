@@ -34,6 +34,9 @@ SIDECAR_FILENAMES = (
     "SCHEMA_MANIFEST.json",
 )
 
+CANONICAL_TZ_PATH = Path("project-input") / "TZ.md"
+DEFAULT_TZ_TEXT = "# TZ\n\nTIMEZONE: UTC\n"
+
 MARKDOWN_SOURCES = {
     "PROJECT_STATE": "project-runtime/PROJECT_STATE.md",
     "TASK_REGISTRY": "project-runtime/TASK_REGISTRY.md",
@@ -128,7 +131,7 @@ def _initial_sidecars(
                 "project_name": project_name,
                 "project_slug": project_slug,
                 "project_root": root_text,
-                "tz_path": "Europe/Moscow",
+                "tz_path": CANONICAL_TZ_PATH.as_posix(),
                 "active_doc_root": "project-docs",
                 "package_version": package_version,
                 "governance_ruleset_version": runtime_schema_contracts.ACTIVE_GOVERNANCE_RULESET_VERSION,
@@ -183,14 +186,14 @@ def _initial_sidecars(
         "NEXT_ACTION.json": _envelope(
             "NEXT_ACTION",
             {
-                "action_id": "ACTION-STATE-INIT-001",
-                "action_type": "stop",
+                "action_id": "ACTION-BOOTSTRAP-PREP-001",
+                "action_type": "correction",
                 "target_role": "orchestrator",
                 "task_id": NONE,
                 "task_packet": NONE,
-                "dependency_status": "not_applicable",
+                "dependency_status": "ready",
                 "blocked_by": [],
-                "action_semantic": "stop_terminal",
+                "action_semantic": "normal",
                 "workspace_identity_required": False,
                 "repository_lock_required": False,
                 "checkpoint_policy": "no_checkpoint",
@@ -202,7 +205,7 @@ def _initial_sidecars(
                 "required_universal_docs": [],
                 "required_project_docs": [],
                 "expected_result": [],
-                "instruction_for_orchestrator": "Runtime state is initialized; no agent dispatch is implied.",
+                "instruction_for_orchestrator": "Runtime state is initialized; materialize Markdown views, verify bootstrap inputs, then create exactly one valid bootstrap task packet before first profile-agent dispatch.",
             },
         ),
         "CURRENT_GATE.json": _envelope(
@@ -286,6 +289,24 @@ def _json_bytes(payload: dict[str, Any]) -> str:
 
 def _build_plan(root: Path, sidecars: dict[str, dict[str, Any]], dry_run: bool) -> dict[str, Any]:
     state_root = root / "project-runtime" / "state"
+    tz_path = root / CANONICAL_TZ_PATH
+    writes = []
+    if not tz_path.exists():
+        writes.append(
+            {
+                "path": str(tz_path),
+                "sidecar_type": NONE,
+                "state_revision": NONE,
+            }
+        )
+    writes.extend(
+        {
+            "path": str(state_root / filename),
+            "sidecar_type": payload["sidecar_type"],
+            "state_revision": payload["state_revision"],
+        }
+        for filename, payload in sorted(sidecars.items())
+    )
     return {
         "command": "state init",
         "dry_run": dry_run,
@@ -294,14 +315,7 @@ def _build_plan(root: Path, sidecars: dict[str, dict[str, Any]], dry_run: bool) 
         "runtime_schema_version": runtime_schema_contracts.ACTIVE_RUNTIME_SCHEMA_VERSION,
         "state_root": str(state_root),
         "status": "planned",
-        "writes": [
-            {
-                "path": str(state_root / filename),
-                "sidecar_type": payload["sidecar_type"],
-                "state_revision": payload["state_revision"],
-            }
-            for filename, payload in sorted(sidecars.items())
-        ],
+        "writes": writes,
     }
 
 
@@ -338,6 +352,20 @@ def _validate_existing_state(state_root: Path, sidecars: dict[str, dict[str, Any
         if existing != _json_bytes(sidecars[filename]):
             return False, f"existing {filename} is not the deterministic init payload"
     return True, "existing state already matches deterministic init payload"
+
+
+def _write_tz_document(root: Path) -> tuple[bool, str]:
+    path = root / CANONICAL_TZ_PATH
+    if path.exists():
+        if not path.is_file():
+            return False, f"{CANONICAL_TZ_PATH.as_posix()} exists but is not a file"
+        return True, "existing TZ document preserved"
+    try:
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(DEFAULT_TZ_TEXT, encoding="utf-8")
+    except OSError as exc:
+        return False, str(exc)
+    return True, "wrote default TZ document"
 
 
 def _write_sidecars(state_root: Path, sidecars: dict[str, dict[str, Any]]) -> tuple[bool, str]:
@@ -416,12 +444,15 @@ def run(args: argparse.Namespace) -> int:
         print(_json_bytes(plan), end="")
         return EXIT_OK
 
+    wrote_tz, tz_detail = _write_tz_document(root)
+    if not wrote_tz:
+        return _fail(f"failed to write TZ document: {tz_detail}", EXIT_WRITE_ERROR)
     wrote, write_detail = _write_sidecars(state_root, sidecars)
     if not wrote:
         return _fail(f"failed to write sidecars: {write_detail}", EXIT_WRITE_ERROR)
     plan["dry_run"] = False
     plan["status"] = "written"
-    plan["write_result"] = write_detail
+    plan["write_result"] = f"{tz_detail}; {write_detail}"
     if args.json_out and not _write_json(args.json_out, plan):
         return EXIT_WRITE_ERROR
     print(_json_bytes(plan), end="")

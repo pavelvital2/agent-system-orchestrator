@@ -49,6 +49,56 @@ def write_sidecar(root: Path, name: str, payload: dict[str, object]) -> None:
     )
 
 
+def write_tz_file(root: Path) -> None:
+    tz_file = root / "project-input" / "TZ.md"
+    tz_file.parent.mkdir(parents=True, exist_ok=True)
+    tz_file.write_text("Europe/Moscow\n", encoding="utf-8")
+
+
+def set_tz_path(root: Path, value: str) -> None:
+    payload = load_sidecar(root, "PROJECT_STATE.json")
+    content = payload["content"]
+    assert isinstance(content, dict)
+    content["tz_path"] = value
+    write_sidecar(root, "PROJECT_STATE.json", payload)
+
+    markdown = root / "project-runtime" / "PROJECT_STATE.md"
+    if markdown.is_file():
+        text = markdown.read_text(encoding="utf-8")
+        text = text.replace("TZ_PATH: Europe/Moscow", f"TZ_PATH: {value}")
+        markdown.write_text(text, encoding="utf-8")
+
+
+def make_valid_tz_path(root: Path) -> None:
+    write_tz_file(root)
+    set_tz_path(root, "project-input/TZ.md")
+
+
+def make_bootstrap_next_action_non_terminal(root: Path) -> None:
+    payload = load_sidecar(root, "NEXT_ACTION.json")
+    content = payload["content"]
+    assert isinstance(content, dict)
+    content["action_id"] = "ACTION-BOOTSTRAP-PREP-001"
+    content["action_type"] = "correction"
+    content["action_semantic"] = "normal"
+    content["dependency_status"] = "ready"
+    content["instruction_for_orchestrator"] = "Prepare bootstrap inputs before first profile-agent dispatch."
+    write_sidecar(root, "NEXT_ACTION.json", payload)
+
+
+def copy_valid_workspace_with_valid_tz(tmp: str) -> Path:
+    root = copy_valid_workspace(tmp)
+    make_valid_tz_path(root)
+    return root
+
+
+def copy_p2_valid_workspace_with_valid_bootstrap_state(tmp: str) -> Path:
+    root = copy_p2_valid_workspace(tmp)
+    make_valid_tz_path(root)
+    make_bootstrap_next_action_non_terminal(root)
+    return root
+
+
 def fixture_task(task_id: str) -> dict[str, object]:
     return {
         "accepted_files": [],
@@ -94,12 +144,11 @@ class StateVerifyCommandTests(unittest.TestCase):
                 self.assertIn(command, result.stdout)
 
     def test_valid_workspace_passes_strict_and_writes_json_report(self) -> None:
-        tracked = [path for path in VALID_WORKSPACE.rglob("*") if path.is_file()]
-        mtimes_before = {path: path.stat().st_mtime_ns for path in tracked}
         with tempfile.TemporaryDirectory() as tmp:
+            root = copy_valid_workspace_with_valid_tz(tmp)
             json_out = Path(tmp) / "state-verify.json"
 
-            result = run_state_verify(VALID_WORKSPACE, "--strict", "--json-out", str(json_out))
+            result = run_state_verify(root, "--strict", "--json-out", str(json_out))
 
             self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
             self.assertIn("ASO state verify: PASSED", result.stdout)
@@ -109,13 +158,13 @@ class StateVerifyCommandTests(unittest.TestCase):
             self.assertEqual(report["summary"], {"errors": 0, "warnings": 0, "info": 0})
             self.assertEqual(report["state"]["sidecars_missing"], [])
             self.assertTrue(report["read_only"])
-        self.assertEqual(mtimes_before, {path: path.stat().st_mtime_ns for path in tracked})
 
     def test_current_p2_fixture_passes_strict_with_all_expected_sidecars(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
+            root = copy_p2_valid_workspace_with_valid_bootstrap_state(tmp)
             json_out = Path(tmp) / "p2-state-verify.json"
 
-            result = run_state_verify(P2_VALID_WORKSPACE, "--strict", "--json-out", str(json_out))
+            result = run_state_verify(root, "--strict", "--json-out", str(json_out))
 
             self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
             self.assertIn("ASO state verify: PASSED", result.stdout)
@@ -145,7 +194,7 @@ class StateVerifyCommandTests(unittest.TestCase):
 
     def test_invalid_json_fails_with_parse_rule(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
-            root = copy_valid_workspace(tmp)
+            root = copy_valid_workspace_with_valid_tz(tmp)
             path = root / "project-runtime" / "state" / "NEXT_ACTION.json"
             path.write_text("{not valid json\n", encoding="utf-8")
 
@@ -156,7 +205,7 @@ class StateVerifyCommandTests(unittest.TestCase):
 
     def test_missing_sidecar_uses_markdown_fallback_warning_and_strict_fails(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
-            root = copy_valid_workspace(tmp)
+            root = copy_valid_workspace_with_valid_tz(tmp)
             (root / "project-runtime" / "state" / "NEXT_ACTION.json").unlink()
 
             non_strict = run_state_verify(root)
@@ -170,7 +219,7 @@ class StateVerifyCommandTests(unittest.TestCase):
 
     def test_current_p2_missing_required_sidecar_fails_strict(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
-            root = copy_p2_valid_workspace(tmp)
+            root = copy_p2_valid_workspace_with_valid_bootstrap_state(tmp)
             (root / "project-runtime" / "state" / "SCHEMA_MANIFEST.json").unlink()
 
             result = run_state_verify(root, "--strict")
@@ -180,7 +229,7 @@ class StateVerifyCommandTests(unittest.TestCase):
 
     def test_current_p2_mismatched_schema_versions_fail(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
-            root = copy_p2_valid_workspace(tmp)
+            root = copy_p2_valid_workspace_with_valid_bootstrap_state(tmp)
             payload = load_sidecar(root, "PROJECT_STATE.json")
             payload["runtime_schema_version"] = "3.0.0"
             write_sidecar(root, "PROJECT_STATE.json", payload)
@@ -192,7 +241,7 @@ class StateVerifyCommandTests(unittest.TestCase):
 
     def test_current_p2_next_action_unknown_task_reference_fails(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
-            root = copy_p2_valid_workspace(tmp)
+            root = copy_p2_valid_workspace_with_valid_bootstrap_state(tmp)
             registry = load_sidecar(root, "TASK_REGISTRY.json")
             registry_content = registry["content"]
             self.assertIsInstance(registry_content, dict)
@@ -219,7 +268,7 @@ class StateVerifyCommandTests(unittest.TestCase):
 
     def test_invalid_status_value_fails(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
-            root = copy_valid_workspace(tmp)
+            root = copy_valid_workspace_with_valid_tz(tmp)
             payload = load_sidecar(root, "CURRENT_GATE.json")
             content = payload["content"]
             self.assertIsInstance(content, dict)
@@ -234,7 +283,7 @@ class StateVerifyCommandTests(unittest.TestCase):
     def test_stale_next_action_action_types_fail(self) -> None:
         for action_type in ("run_audit", "checkpoint", "return_to_requester", "manual", "none"):
             with self.subTest(action_type=action_type), tempfile.TemporaryDirectory() as tmp:
-                root = copy_valid_workspace(tmp)
+                root = copy_valid_workspace_with_valid_tz(tmp)
                 payload = load_sidecar(root, "NEXT_ACTION.json")
                 content = payload["content"]
                 self.assertIsInstance(content, dict)
@@ -248,7 +297,7 @@ class StateVerifyCommandTests(unittest.TestCase):
 
     def test_active_task_reference_must_exist_in_task_registry(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
-            root = copy_valid_workspace(tmp)
+            root = copy_valid_workspace_with_valid_tz(tmp)
             payload = load_sidecar(root, "PROJECT_STATE.json")
             content = payload["content"]
             self.assertIsInstance(content, dict)
@@ -266,7 +315,7 @@ class StateVerifyCommandTests(unittest.TestCase):
 
     def test_next_action_checkpoint_requires_audit_pass_evidence(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
-            root = copy_valid_workspace(tmp)
+            root = copy_valid_workspace_with_valid_tz(tmp)
             payload = load_sidecar(root, "NEXT_ACTION.json")
             content = payload["content"]
             self.assertIsInstance(content, dict)
@@ -280,6 +329,45 @@ class StateVerifyCommandTests(unittest.TestCase):
 
             self.assertEqual(result.returncode, 1, result.stdout + result.stderr)
             self.assertIn("SIDECAR_CHECKPOINT_POLICY_INVALID", result.stdout)
+
+    def test_active_open_bootstrap_with_terminal_stop_fails(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = copy_p2_valid_workspace(tmp)
+            make_valid_tz_path(root)
+            payload = load_sidecar(root, "NEXT_ACTION.json")
+            content = payload["content"]
+            self.assertIsInstance(content, dict)
+            content["action_type"] = "stop"
+            content["action_semantic"] = "stop_terminal"
+            write_sidecar(root, "NEXT_ACTION.json", payload)
+
+            result = run_state_verify(root, "--strict")
+
+            self.assertEqual(result.returncode, 1, result.stdout + result.stderr)
+            self.assertIn("BSR_BOOTSTRAP_STOP_TERMINAL_INVALID", result.stdout)
+
+    def test_tz_path_timezone_value_fails(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = copy_valid_workspace(tmp)
+            set_tz_path(root, "Europe/Moscow")
+
+            result = run_state_verify(root, "--strict")
+
+            self.assertEqual(result.returncode, 1, result.stdout + result.stderr)
+            self.assertIn("BSR_TZ_PATH_TIMEZONE_VALUE", result.stdout)
+
+    def test_tz_path_must_use_project_input_tz_when_present(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = copy_valid_workspace(tmp)
+            write_tz_file(root)
+            other_tz = root / "project-input" / "ALT_TZ.md"
+            other_tz.write_text("Europe/Moscow\n", encoding="utf-8")
+            set_tz_path(root, "project-input/ALT_TZ.md")
+
+            result = run_state_verify(root, "--strict")
+
+            self.assertEqual(result.returncode, 1, result.stdout + result.stderr)
+            self.assertIn("BSR_TZ_PATH_CANONICAL_MISMATCH", result.stdout)
 
 
 if __name__ == "__main__":

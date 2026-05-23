@@ -298,6 +298,15 @@ def run_lint(root: Path, *extra: str) -> subprocess.CompletedProcess[str]:
     )
 
 
+def run_aso(*args: str) -> subprocess.CompletedProcess[str]:
+    return subprocess.run(
+        [sys.executable, str(CLI), *args],
+        check=False,
+        text=True,
+        capture_output=True,
+    )
+
+
 class LintCommandTests(unittest.TestCase):
     def test_lint_passes_clean_runtime_and_does_not_mutate_files(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
@@ -340,6 +349,32 @@ class LintCommandTests(unittest.TestCase):
             self.assertEqual(result.returncode, 3, result.stdout + result.stderr)
             self.assertIn("ASO lint: IO_ERROR", result.stdout)
             self.assertIn("LINT_IO_004", result.stdout)
+
+    def test_lint_strict_reports_invalid_tz_path_from_state_sidecar(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            init = run_aso("state", "init", "--root", str(root), "--project-slug", "bad-tz", "--confirm-write")
+            (root / "project-input").mkdir(exist_ok=True)
+            (root / "project-input" / "TZ.md").write_text("# TZ\n\nTIMEZONE: Europe/Moscow\n", encoding="utf-8")
+            render = run_aso("state", "render", "--root", str(root), "--confirm-write")
+            project_state = root / "project-runtime" / "state" / "PROJECT_STATE.json"
+            payload = json.loads(project_state.read_text(encoding="utf-8"))
+            content = payload["content"]
+            self.assertIsInstance(content, dict)
+            content["tz_path"] = "Europe/Moscow"
+            project_state.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+            json_out = root / "lint.json"
+
+            result = run_lint(root, "--mode", "workspace", "--strict", "--json-out", str(json_out))
+
+            self.assertEqual(init.returncode, 0, init.stdout + init.stderr)
+            self.assertEqual(render.returncode, 0, render.stdout + render.stderr)
+            self.assertEqual(result.returncode, 1, result.stdout + result.stderr)
+            self.assertIn("BSR_TZ_PATH_TIMEZONE_VALUE", result.stdout)
+            report = json.loads(json_out.read_text(encoding="utf-8"))
+            by_rule = {finding["rule_id"]: finding for finding in report["findings"]}
+            self.assertIn("BSR_TZ_PATH_TIMEZONE_VALUE", by_rule)
+            self.assertIn("project-input/TZ.md", by_rule["BSR_TZ_PATH_TIMEZONE_VALUE"]["recommendation"])
 
     def test_lint_workspace_mode_still_requires_project_runtime(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:

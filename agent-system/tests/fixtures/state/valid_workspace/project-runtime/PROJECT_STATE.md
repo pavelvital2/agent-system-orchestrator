@@ -3,7 +3,7 @@
 PROJECT_NAME: State Sidecar Fixture
 PROJECT_SLUG: state-sidecar-fixture
 PROJECT_ROOT: /tmp/state-sidecar-fixture
-TZ_PATH: Europe/Moscow
+TZ_PATH: project-input/TZ.md
 ACTIVE_DOC_ROOT: project-docs
 PACKAGE_VERSION: stage-2
 GOVERNANCE_RULESET_VERSION: stage-2

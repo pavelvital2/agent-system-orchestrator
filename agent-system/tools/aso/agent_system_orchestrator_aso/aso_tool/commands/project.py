@@ -461,6 +461,7 @@ def create_project(
     )
     for root_name in LOCAL_ROOTS:
         (target / root_name).mkdir()
+    _write_bootstrap_inputs(target)
 
     copied_files = 0
     skipped_paths: tuple[str, ...] = ()
@@ -494,6 +495,10 @@ def create_project(
         runtime_state_files=runtime_state_files,
         runtime_markdown_views=runtime_markdown_views,
     )
+
+
+def _write_bootstrap_inputs(root: Path) -> None:
+    (root / "project-input" / "TZ.md").write_text("# TZ\n\nTIMEZONE: Europe/Moscow\n", encoding="utf-8")
 
 
 def build_github_dry_run_plan(

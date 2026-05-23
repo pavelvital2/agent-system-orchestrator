@@ -116,6 +116,17 @@ remote or branch, and creates or requires `WORKSPACE_IDENTITY` and
 
 2. Определить следующий шаг только из `NEXT_ACTION.md`.
 
+For normal conveyor operation, the orchestrator may consume current ASO
+status/next summaries and receipts first, as defined in
+`agent-system/02_runtime/ORCHESTRATOR_CONVEYOR_PROTOCOL.md`. A summary cannot
+override runtime state semantics. If `NEXT_ACTION` or an ASO summary recommends
+terminal STOP while the workspace is still `CURRENT_PHASE: bootstrap`,
+`PROJECT_STATUS: active`, and `CURRENT_GATE.STATUS: open`, the orchestrator
+must verify whether a documented terminal bootstrap invariant exists. If
+mandatory bootstrap inputs exist or first profile-agent dispatch has not
+completed, terminal STOP is invalid and the route must become bootstrap
+preparation or governed correction.
+
 3. Проверить, что действие входит в whitelist из `ALLOWED_ORCHESTRATOR_ACTIONS.md`.
 
 4. Проверить filesystem governance.
@@ -224,6 +235,11 @@ Ordinary task packets outside `ACTIVE_DOC_ROOT` remain invalid.
 - workflow transitions не нарушены;
 - runtime state не содержит deprecated references;
 - terminal state не выставлен преждевременно.
+- `PROJECT_STATE.TZ_PATH`, when present for a workspace with
+  `project-input/TZ.md` or another project TZ file, references that file path
+  and is not an IANA timezone string such as `Europe/Moscow`;
+- required Markdown runtime views derived from JSON sidecars are present or
+  the state is routed to materialization/repair instead of clean PASS.
 
 Если runtime state нарушает schema:
 - dispatch новых агентов запрещён;

@@ -3,7 +3,7 @@
 ## Purpose
 
 This contract defines the Artifact Package Schema `1.1.0` structured
-contracts for ASO package version `3.7.1`, governance ruleset version `3.7.1`,
+contracts for ASO package version `3.7.2`, governance ruleset version `3.7.2`,
 and Runtime Schema version `3.1.0`.
 
 Artifact Package Schema `1.1.0` is package metadata. It does not redefine the
@@ -51,8 +51,8 @@ require:
 
 ```text
 schema_version: 1.1.0
-package_version: 3.7.1
-governance_ruleset_version: 3.7.1
+package_version: 3.7.2
+governance_ruleset_version: 3.7.2
 runtime_schema_version: 3.1.0
 artifact_package_schema_version: 1.1.0
 ```
