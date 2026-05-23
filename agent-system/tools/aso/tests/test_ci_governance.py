@@ -41,6 +41,11 @@ REQUIRED_MAKEFILE_COMMANDS = (
     "dashboard --root agent-system/tests/fixtures/state/valid_workspace --out /tmp/aso-stage2-dashboard-smoke.html",
     "checkpoint-preflight --root . --mode package --strict",
     "./agent-system/scripts/run_governance_smoke_tests.sh",
+    "python\" -m pip install -e .",
+    "bin/aso\" --help >/dev/null",
+    "bin/aso\" status --root . --mode package",
+    "bin/aso\" package-layout verify --root . --mode package --strict",
+    "agent_system_orchestrator_aso.cli",
     "git diff --check",
 )
 
@@ -66,11 +71,12 @@ class Stage2CIGovernanceTests(unittest.TestCase):
     def test_makefile_ci_target_runs_offline_governance_surface(self) -> None:
         makefile = MAKEFILE.read_text(encoding="utf-8")
 
-        self.assertRegex(makefile, r"(?m)^ci:\s+test\s+smoke\s+doctor\s+lint$")
+        self.assertRegex(makefile, r"(?m)^ci:\s+test\s+smoke\s+doctor\s+lint\s+install-smoke$")
         self.assertRegex(makefile, r"(?m)^test:")
         self.assertRegex(makefile, r"(?m)^smoke:")
         self.assertRegex(makefile, r"(?m)^doctor:")
         self.assertRegex(makefile, r"(?m)^lint:")
+        self.assertRegex(makefile, r"(?m)^install-smoke:")
         self.assertNotIn("pytest", makefile)
         for command in REQUIRED_MAKEFILE_COMMANDS:
             with self.subTest(command=command):

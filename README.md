@@ -37,9 +37,13 @@ external workers.
 The Runtime Schema sidecar contract is documented in
 `agent-system/02_runtime/RUNTIME_STATE_P2_CONTRACT.md` and packaged as
 `agent-system/09_validators/schemas/runtime_state_3_1_0.contract.json`.
-It defines required and optional sidecars, the P2 envelope, allowed
-lifecycle/checkpoint/action/compatibility statuses, legacy `2.0.0` and
-`3.0.0` migration compatibility behavior, and fixture expectations. The
+The historical `3_1_0` filename remains the active base envelope contract for
+Runtime Schema `3.1.1`; no duplicate `3_1_1` contract file is authoritative.
+The P5-family authority chain and override map are documented in
+`agent-system/02_runtime/CONTRACT_AUTHORITY_MAP.md`. The contract defines
+required and optional sidecars, the P2 envelope, allowed
+lifecycle/checkpoint/action/compatibility statuses, legacy `2.0.0`, `3.0.0`,
+and `3.1.0` migration compatibility behavior, and fixture expectations. The
 validator contract checks use Python stdlib JSON/data validation only.
 
 The corrected P4 governance boundary is documented in
@@ -82,6 +86,17 @@ credentials, remote repository access, dispatch authority, checkpoint
 execution, commit, push, or publication rights. See
 `README_INSTALL.md` for activation, verification, update, and cleanup
 commands.
+
+CI also runs the reproducible clean install smoke path:
+
+```text
+make install-smoke
+```
+
+That target creates a temporary virtual environment, installs this checkout in
+editable mode, verifies `aso --help`, `aso status --root . --mode package`,
+strict package-layout verification, and imports the canonical
+`agent_system_orchestrator_aso` package from `agent-system/tools/aso`.
 
 For local console-script use from this repository:
 

@@ -67,6 +67,17 @@ strict package-layout verification. Package validation still works without
 PYTHONDONTWRITEBYTECODE=1 python3 agent-system/tools/aso/aso.py lint --root . --mode package --strict
 ```
 
+CI uses the same reproducible clean install smoke path locally available as:
+
+```text
+make install-smoke
+```
+
+The target creates a temporary virtual environment, runs `python -m pip install
+-e .`, verifies `aso --help`, `aso status --root . --mode package`, strict
+package-layout verification, and confirms the canonical import path resolves
+to `agent-system/tools/aso/agent_system_orchestrator_aso/`.
+
 Initialized project workspaces use explicit workspace mode, materialized
 runtime views, and bootstrap reconciliation checks:
 

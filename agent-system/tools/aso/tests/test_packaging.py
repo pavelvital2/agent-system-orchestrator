@@ -99,6 +99,18 @@ class PackagingCommandTests(unittest.TestCase):
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
         self.assertIn("ASO package-layout verify: PASSED", result.stdout)
 
+    def test_install_smoke_target_covers_clean_console_import_path(self) -> None:
+        makefile = (REPO_ROOT / "Makefile").read_text(encoding="utf-8")
+
+        self.assertIn("install-smoke:", makefile)
+        self.assertIn("python\" -m pip install -e .", makefile)
+        self.assertIn("bin/aso\" --help >/dev/null", makefile)
+        self.assertIn("bin/aso\" status --root . --mode package", makefile)
+        self.assertIn("bin/aso\" package-layout verify --root . --mode package --strict", makefile)
+        self.assertIn("agent_system_orchestrator_aso.cli", makefile)
+        self.assertIn("/agent-system/tools/aso/agent_system_orchestrator_aso/__init__.py", makefile)
+        self.assertIn("ci: test smoke doctor lint install-smoke", makefile)
+
 
 if __name__ == "__main__":
     unittest.main()

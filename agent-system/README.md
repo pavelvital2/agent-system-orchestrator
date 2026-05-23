@@ -174,11 +174,15 @@ checkpoints, generate products, collect secrets, or run external workers.
 The Runtime Schema `3.1.1` contract is documented in
 `agent-system/02_runtime/RUNTIME_STATE_P2_CONTRACT.md` and packaged as
 `agent-system/09_validators/schemas/runtime_state_3_1_0.contract.json`.
-It defines the sidecar envelope, required and optional sidecars, allowed
+The historical `3_1_0` filename remains the active base envelope contract for
+Runtime Schema `3.1.1`; no duplicate `3_1_1` contract file is authoritative.
+The P5-family authority chain and override map are documented in
+`agent-system/02_runtime/CONTRACT_AUTHORITY_MAP.md`. The contract defines the
+sidecar envelope, required and optional sidecars, allowed
 lifecycle/checkpoint/action/compatibility statuses, migration compatibility
-for legacy `2.0.0` and `3.0.0` sidecars, and fixture expectations. Contract
-validation is Python stdlib only and does not add a runtime `jsonschema`
-dependency.
+for legacy `2.0.0`, `3.0.0`, and `3.1.0` sidecars, and fixture expectations.
+Contract validation is Python stdlib only and does not add a runtime
+`jsonschema` dependency.
 
 The corrected P4 governance boundary is documented in
 `agent-system/02_runtime/PROJECT_DESIGN_GAP_GOVERNANCE_P4_CONTRACT.md`.
