@@ -9,13 +9,13 @@ using the selected engine mode.
 The target package tuple is:
 
 ```text
-active package version: 3.7.0
+active package version: 3.7.1
 active runtime schema: 3.1.0
-artifact package schema: 1.0.0
+artifact package schema: 1.1.0
 ```
 
 Project Factory P1 was introduced for the `3.3.0 / 3.0.0` package tuple and
-remains available in the active P5 `3.7.0 / 3.1.0` tuple. P5 preserves the
+remains available in the active P5 `3.7.1 / 3.1.0` tuple. P5 preserves the
 Project Factory P1 command boundary while adding artifact package metadata and
 workspace-local artifact storage semantics. It does not change the accepted
 meaning of current runtime state files.
@@ -282,9 +282,9 @@ creating a GitHub repository or requiring GitHub credentials.
 Project Factory P1 uses:
 
 ```text
-active package version: 3.7.0
+active package version: 3.7.1
 active runtime schema: 3.1.0
-artifact package schema: 1.0.0
+artifact package schema: 1.1.0
 compatible historical tuples:
 3.6.1/3.1.0, 3.6.0/3.1.0, 3.5.0/3.1.0, 3.4.0/3.1.0,
 3.3.0/3.0.0, 3.2.0/3.0.0

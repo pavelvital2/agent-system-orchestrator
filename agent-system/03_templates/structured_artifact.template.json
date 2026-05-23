@@ -1,9 +1,9 @@
 {
   "schema_version": "1.0.0",
-  "package_version": "3.7.0",
-  "governance_ruleset_version": "3.7.0",
+  "package_version": "3.7.1",
+  "governance_ruleset_version": "3.7.1",
   "runtime_schema_version": "3.1.0",
-  "artifact_package_schema_version": "1.0.0",
+  "artifact_package_schema_version": "1.1.0",
   "artifact_id": "STRUCTURED_ARTIFACT_TEMPLATE",
   "artifact_type": "structured_artifact",
   "created_at": "2026-05-22T00:00:00Z",

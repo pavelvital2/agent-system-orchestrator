@@ -14,7 +14,7 @@ It must not replace task packets, audit reports, RESULT reports, or project docu
 TASK_ID:
 TASK_TITLE:
 TASK_TYPE:
-TASK_KIND: normal | research_dependency | design_continuation | task_continuation | correction | audit | testing | setup | launch | handover
+TASK_KIND: bootstrap | normal | research_dependency | design_continuation | task_continuation | correction | audit | testing | setup | launch | handover
 OWNER_ROLE:
 STATUS: pending | ready | running | audit_pending | audit_passed | checkpoint_done | blocked | failed | superseded | completed
 TASK_PACKET:

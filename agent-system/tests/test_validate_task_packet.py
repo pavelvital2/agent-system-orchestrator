@@ -28,7 +28,7 @@ def task_packet(role: str) -> str:
 
         ## TASK_KIND
         ```text
-        normal
+        bootstrap
         ```
 
         ## SUPERSEDES
@@ -346,6 +346,23 @@ class TaskPacketRoleAliasTests(unittest.TestCase):
             self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
             self.assertIn("VALID:", result.stdout)
             self.assertNotIn("WARNING:", result.stdout)
+
+    def test_obsolete_bootstrap_marker_fails_with_actionable_error(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            bootstrap_dir = root / "project-runtime" / "bootstrap"
+            bootstrap_dir.mkdir(parents=True)
+            packet_path = bootstrap_dir / "TASK_BOOTSTRAP_SOLUTION_ARCHITECT_001.md"
+            packet_path.write_text(
+                task_packet("solution_architect").replace("# TASK PACKET", "# BOOTSTRAP TASK PACKET", 1),
+                encoding="utf-8",
+            )
+
+            result = run_validator(root, packet_path)
+
+            self.assertNotEqual(result.returncode, 0)
+            self.assertIn("obsolete # BOOTSTRAP TASK PACKET marker", result.stdout)
+            self.assertIn("TASK_KIND: bootstrap", result.stdout)
 
 
 if __name__ == "__main__":

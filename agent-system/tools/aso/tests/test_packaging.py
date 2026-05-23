@@ -41,6 +41,7 @@ class PackagingCommandTests(unittest.TestCase):
         self.assertIn("archive", result.stdout)
         self.assertIn("package-layout", result.stdout)
         self.assertIn("package-sync", result.stdout)
+        self.assertIn("orchestrator", result.stdout)
 
     def test_console_script_entrypoint_is_registered_in_project_metadata(self) -> None:
         pyproject = (REPO_ROOT / "pyproject.toml").read_text(encoding="utf-8")
@@ -73,7 +74,7 @@ class PackagingCommandTests(unittest.TestCase):
         init_file = (ASO_TOOL_ROOT / "agent_system_orchestrator_aso" / "__init__.py").read_text(encoding="utf-8")
         package_version = pyproject["project"]["version"]
 
-        self.assertEqual(package_version, "3.7.0")
+        self.assertEqual(package_version, "3.7.1")
         self.assertIn(f'__version__ = "{package_version}"', init_file)
 
 

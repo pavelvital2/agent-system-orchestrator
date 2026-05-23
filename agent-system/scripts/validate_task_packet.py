@@ -37,6 +37,7 @@ CONTROL_ROLES = PROFILE_ROLES | {"orchestrator", "project_owner", "none"}
 TASK_STATUS_VALUES = {"active", "completed", "superseded", "deprecated"}
 
 TASK_KIND_VALUES = {
+    "bootstrap",
     "normal",
     "research_dependency",
     "design_continuation",
@@ -148,6 +149,10 @@ MANDATORY_TASK_PROPOSAL_SECTIONS = [
 ]
 
 H1_TASK_PACKET_RE = re.compile(r"^#\s+TASK PACKET\s*$", re.MULTILINE)
+H1_OBSOLETE_BOOTSTRAP_TASK_PACKET_RE = re.compile(
+    r"^#\s+BOOTSTRAP TASK PACKET\s*$",
+    re.MULTILINE,
+)
 H1_TASK_PROPOSAL_RE = re.compile(
     r"^#\s+(?:TASK PROPOSAL|TASK_PROPOSAL(?:_TEMPLATE)?)\s*$",
     re.MULTILINE,
@@ -452,8 +457,20 @@ def validate_path(path: Path, args: argparse.Namespace) -> ValidationResult:
         )
 
     marker_text = strip_fenced_blocks(text)
+    has_obsolete_bootstrap_marker = bool(H1_OBSOLETE_BOOTSTRAP_TASK_PACKET_RE.search(marker_text))
     has_task_packet = bool(H1_TASK_PACKET_RE.search(marker_text))
     has_task_proposal = bool(H1_TASK_PROPOSAL_RE.search(marker_text))
+
+    if has_obsolete_bootstrap_marker:
+        return ValidationResult(
+            path=path,
+            classification="obsolete_bootstrap_task_packet",
+            errors=[
+                "invalid_task_packet_schema: obsolete # BOOTSTRAP TASK PACKET marker; "
+                "use # TASK PACKET with TASK_KIND: bootstrap"
+            ],
+            warnings=[],
+        )
 
     if has_task_packet and has_task_proposal:
         return ValidationResult(

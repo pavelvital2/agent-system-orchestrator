@@ -579,7 +579,8 @@ MIGRATION_REQUIRED: yes
 MIGRATION_NOTE: Active package and governance ruleset versions change to 1.3.0 and runtime schema version changes to 1.2.0. Existing runtime state and task registries must be checked for requester return context, task kind, reasoning level fields, task registry return metadata, and ACTION_SEMANTIC tuple parity before normal dispatch. This feature upgrade must not use 1.2.1 as the active tuple.
 AUTHORIZED_BY: project_owner
 AUDIT_REQUIRED: yes
-STATUS: proposed
+STATUS: superseded
+SUPERSEDED_BY: GOV-2026-05-23-001
 
 CHANGE_ID: GOV-2026-05-16-009
 CHANGE_TITLE: UPG_ASU_130_002_BOOTSTRAP_V13_CONSISTENCY_FIX
@@ -1573,7 +1574,8 @@ MIGRATION_REQUIRED: no
 MIGRATION_NOTE: Runtime Schema 3.1.0 is preserved. P5 adds artifact package schema 1.0.0 metadata and package-boundary documentation only; it does not migrate active project-runtime state or redefine the P2/P3 runtime sidecar envelope.
 AUTHORIZED_BY: project_owner
 AUDIT_REQUIRED: yes
-STATUS: proposed
+STATUS: superseded
+SUPERSEDED_BY: GOV-2026-05-23-001
 
 CHANGE_ID: GOV-2026-05-22-004
 CHANGE_TITLE: TASK_ASO_APM5_070_LIFECYCLE_EVENTS_RECEIPTS_AND_REPLAY
@@ -1611,5 +1613,51 @@ MIGRATION_REQUIRED: no
 MIGRATION_NOTE: Runtime Schema 3.1.0 is preserved. This patch adds local lifecycle event/receipt integration for existing P5 artifact acceptance and profile-agent completion paths only; it does not migrate active project-runtime state or redefine sidecar schemas.
 AUTHORIZED_BY: project_owner
 AUDIT_REQUIRED: yes
-STATUS: proposed
+STATUS: superseded
+SUPERSEDED_BY: GOV-2026-05-23-001
+
+CHANGE_ID: GOV-2026-05-23-001
+CHANGE_TITLE: ASO_ARTIFACT_PACKAGE_MODEL_P5_1_CORRECTIVE_UPGRADE
+DATE: 2026-05-23
+PACKAGE_VERSION_BEFORE: 3.7.0
+PACKAGE_VERSION_AFTER: 3.7.1
+GOVERNANCE_RULESET_BEFORE: 3.7.0
+GOVERNANCE_RULESET_AFTER: 3.7.1
+RUNTIME_SCHEMA_BEFORE: 3.1.0
+RUNTIME_SCHEMA_AFTER: 3.1.0
+ARTIFACT_PACKAGE_SCHEMA_BEFORE: 1.0.0
+ARTIFACT_PACKAGE_SCHEMA_AFTER: 1.1.0
+CHANGE_TYPE: patch
+CHANGE_SUBTYPE: artifact_package_model_p5_1_corrective_upgrade
+AFFECTED_FILES:
+- README.md
+- README_INSTALL.md
+- pyproject.toml
+- agent-system/README.md
+- agent-system/PACKAGE_VERSIONING.md
+- agent-system/GOVERNANCE_CHANGELOG.md
+- agent-system/02_runtime/ARTIFACT_PACKAGE_MODEL_P5_1_CORRECTION_CONTRACT.md
+- agent-system/02_runtime/ORCHESTRATOR_CONVEYOR_PROTOCOL.md
+- agent-system/03_templates/BOOTSTRAP_TASK_PACKET_TEMPLATE.md
+- agent-system/09_validators/schemas/artifact_package_manifest.schema.json
+- agent-system/scripts/validate_task_packet.py
+- agent-system/tools/aso/agent_system_orchestrator_aso/aso_tool/commands/artifact.py
+- agent-system/tools/aso/agent_system_orchestrator_aso/aso_tool/commands/orchestrator.py
+AFFECTED_INVARIANTS:
+- Active package/governance/runtime tuple is 3.7.1 / 3.7.1 / 3.1.0.
+- Artifact package schema version is 1.1.0.
+- Bootstrap task packets use `# TASK PACKET` with `TASK_KIND: bootstrap`; the obsolete `# BOOTSTRAP TASK PACKET` marker is invalid.
+- Artifact package manifests are package-relative and self-contained under the package root directory.
+- Artifact accept/reject operates on whole package directories and records inventory hashes.
+- Normal orchestrator conveyor flow consumes current ASO status, next-action, validation, and receipt JSON before broad governance rereads.
+AFFECTED_TRANSITIONS:
+- candidate package validation -> fail closed on absolute, parent traversal, or workspace-root-prefixed payload refs.
+- candidate package acceptance -> immutable accepted package directory plus inventory-hash receipt.
+- candidate package rejection -> immutable rejected package directory plus rejection report.
+SCHEMA_TEMPLATE_IMPACT: artifact_package_manifest_schema_1_1_0
+MIGRATION_REQUIRED: no
+MIGRATION_NOTE: Runtime Schema 3.1.0 is preserved. Existing P5 manifest-only candidates must be repackaged as self-contained directories before P5.1 acceptance or rejection.
+AUTHORIZED_BY: project_owner
+AUDIT_REQUIRED: yes
+STATUS: accepted
 ```

@@ -2,11 +2,11 @@
 
 ## Purpose
 
-This contract defines the Artifact Package Schema `1.0.0` structured
-contracts for ASO package version `3.7.0`, governance ruleset version `3.7.0`,
+This contract defines the Artifact Package Schema `1.1.0` structured
+contracts for ASO package version `3.7.1`, governance ruleset version `3.7.1`,
 and Runtime Schema version `3.1.0`.
 
-Artifact Package Schema `1.0.0` is package metadata. It does not redefine the
+Artifact Package Schema `1.1.0` is package metadata. It does not redefine the
 Runtime Schema `3.1.0` sidecar envelope and does not create artifact CLI
 commands, package storage, lifecycle mutation, dispatch, checkpoint execution,
 commit, push, or publication behavior.
@@ -50,16 +50,16 @@ P5 RESULT package, AUDIT_RESULT package, and shared structured artifact schemas
 require:
 
 ```text
-schema_version: 1.0.0
-package_version: 3.7.0
-governance_ruleset_version: 3.7.0
+schema_version: 1.1.0
+package_version: 3.7.1
+governance_ruleset_version: 3.7.1
 runtime_schema_version: 3.1.0
-artifact_package_schema_version: 1.0.0
+artifact_package_schema_version: 1.1.0
 ```
 
 `artifact_package_manifest.schema.json` is excluded from that shared version
 tuple. The canonical manifest carries only `artifact_package_schema_version:
-1.0.0` plus the manifest fields defined by its schema:
+1.1.0` plus the manifest fields defined by its schema:
 
 ```text
 artifact_type

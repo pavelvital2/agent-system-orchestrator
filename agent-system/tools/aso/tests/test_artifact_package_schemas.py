@@ -89,13 +89,13 @@ class ArtifactPackageSchemaTests(unittest.TestCase):
             with self.subTest(path=template_path):
                 template = self._load_json(template_path)
 
-                self.assertEqual(template["artifact_package_schema_version"], "1.0.0")
+                self.assertEqual(template["artifact_package_schema_version"], "1.1.0")
                 if template_path == "agent-system/03_templates/artifact_package_manifest.template.json":
                     continue
 
                 self.assertEqual(template["schema_version"], "1.0.0")
-                self.assertEqual(template["package_version"], "3.7.0")
-                self.assertEqual(template["governance_ruleset_version"], "3.7.0")
+                self.assertEqual(template["package_version"], "3.7.1")
+                self.assertEqual(template["governance_ruleset_version"], "3.7.1")
                 self.assertEqual(template["runtime_schema_version"], "3.1.0")
 
     def test_contract_document_references_all_new_schemas_and_templates(self) -> None:

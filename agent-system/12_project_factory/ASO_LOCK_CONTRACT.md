@@ -22,9 +22,9 @@ Project Factory P0 uses:
 
 ```text
 lockfile_version: 1.0
-active package version: 3.7.0
+active package version: 3.7.1
 active runtime schema: 3.1.0
-artifact package schema: 1.0.0
+artifact package schema: 1.1.0
 ```
 
 `aso.lock` describes package/product capability and generated-project
@@ -41,7 +41,7 @@ Project Factory P0 lock files must include:
   "lockfile_version": "1.0",
   "aso_engine": {
     "package_name": "agent-system-orchestrator",
-    "version": "3.7.0",
+    "version": "3.7.1",
     "runtime_schema": "3.1.0",
     "source": "https://github.com/pavelvital2/agent-system-orchestrator",
     "engine_mode": "vendored"
@@ -201,7 +201,7 @@ Strict verification must return non-zero for lock validation failures.
 The active verifier accepts these package/runtime tuples:
 
 ```text
-3.7.0 / 3.1.0
+3.7.1 / 3.1.0
 3.6.1 / 3.1.0
 3.6.0 / 3.1.0
 3.5.0 / 3.1.0

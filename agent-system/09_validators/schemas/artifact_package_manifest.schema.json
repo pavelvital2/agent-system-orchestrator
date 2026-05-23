@@ -20,7 +20,7 @@
     "producer"
   ],
   "properties": {
-    "artifact_package_schema_version": { "type": "string", "const": "1.0.0" },
+    "artifact_package_schema_version": { "type": "string", "const": "1.1.0" },
     "artifact_type": { "$ref": "#/$defs/artifactType" },
     "artifact_id": {
       "type": "string",
@@ -95,7 +95,7 @@
       "minLength": 1,
       "not": {
         "anyOf": [
-          { "pattern": "^(\\.venv|project-input|project-runtime|project-archive)(/|$)" },
+          { "pattern": "^(\\.git|\\.github|\\.venv|agent-system|project-input|project-runtime|project-archive)(/|$)" },
           { "pattern": "(^|/)\\.\\.(?:/|$)" }
         ]
       }

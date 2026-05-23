@@ -20,9 +20,9 @@ filesystem-governed ASO helper CLI at `agent-system/tools/aso/aso.py`: most
 commands are read-only diagnostics or dry-run proposals, while Project Factory
 commands may create generated projects only within explicit target paths.
 
-This P5 package records the active package metadata as the governed `3.7.0`
+This P5.1 package records the active package metadata as the governed `3.7.1`
 package/governance tuple with runtime schema `3.1.0` and artifact package
-schema `1.0.0`. P5 defines the artifact package model boundary while
+schema `1.1.0`. P5.1 defines the artifact package model boundary while
 preserving the P2/P3 Runtime Schema `3.1.0` sidecar envelope. ASO remains a
 governance and control conveyor: it does not interpret raw TZ content, replace
 project designer reasoning, generate product questions from TZ, install
@@ -133,7 +133,7 @@ python3 agent-system/tools/aso/aso.py validate-context-pack agent-system/tests/f
 Runtime State P2 command surfaces formalize JSON sidecars under
 `project-runtime/state/`. JSON sidecars are canonical for P2+ runtime state;
 Markdown or report outputs are compatibility views generated from JSON. The
-active package version is `3.7.0` and the active runtime schema version is
+active package version is `3.7.1` and the active runtime schema version is
 `3.1.0`.
 
 ```text

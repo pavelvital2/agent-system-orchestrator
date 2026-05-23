@@ -17,8 +17,8 @@ and verifies the installed `aso` command. It uses local Python packaging only;
 it does not require secrets, GitHub credentials, remote repository access,
 dispatch authority, checkpoint execution, commit, push, or publication rights.
 
-This install document covers package version `3.7.0` with runtime schema
-`3.1.0` and artifact package schema `1.0.0`. P5 defines the artifact package
+This install document covers package version `3.7.1` with runtime schema
+`3.1.0` and artifact package schema `1.1.0`. P5.1 defines the artifact package
 model boundary while preserving the Runtime State P2/P3 sidecar schema and the
 Project Factory P1 command boundary. It does not add semantic TZ reading,
 product-intake automation, daemon mode, live dispatch, or checkpoint

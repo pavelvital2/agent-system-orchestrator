@@ -23,6 +23,7 @@ from .commands import (
     lint,
     package_layout,
     package_sync,
+    orchestrator,
     plan_next,
     propose_checkpoint,
     propose_next_task,
@@ -784,6 +785,34 @@ def build_parser() -> argparse.ArgumentParser:
     )
     artifact_render_parser.set_defaults(handler=artifact.run_render)
 
+    orchestrator_parser = subparsers.add_parser(
+        "orchestrator",
+        help="Read-only orchestrator conveyor summaries.",
+        description=(
+            "Summarize ASO conveyor state from runtime sidecars and receipt/report "
+            "JSON without dispatching agents, executing checkpoints, or mutating state."
+        ),
+    )
+    orchestrator_subparsers = orchestrator_parser.add_subparsers(dest="orchestrator_command", metavar="COMMAND")
+
+    orchestrator_status_parser = orchestrator_subparsers.add_parser(
+        "status",
+        help="Summarize current orchestrator-visible state.",
+    )
+    _add_root_argument(orchestrator_status_parser, validate=False)
+    orchestrator_status_parser.add_argument("--format", choices=("text", "json"), default="text")
+    orchestrator_status_parser.add_argument("--json-out", metavar="PATH")
+    orchestrator_status_parser.set_defaults(handler=orchestrator.run_status)
+
+    orchestrator_next_parser = orchestrator_subparsers.add_parser(
+        "next",
+        help="Summarize the current NEXT_ACTION sidecar.",
+    )
+    _add_root_argument(orchestrator_next_parser, validate=False)
+    orchestrator_next_parser.add_argument("--format", choices=("text", "json"), default="text")
+    orchestrator_next_parser.add_argument("--json-out", metavar="PATH")
+    orchestrator_next_parser.set_defaults(handler=orchestrator.run_next)
+
     record_result_parser = subparsers.add_parser(
         "record-result",
         help="Dry-run/read-only RESULT routing proposal.",
@@ -1108,8 +1137,8 @@ def build_parser() -> argparse.ArgumentParser:
     )
     state_init_parser.add_argument(
         "--package-version",
-        default="3.7.0",
-        help="Package version to record (default: 3.7.0).",
+        default="3.7.1",
+        help="Package version to record (default: 3.7.1).",
     )
     state_init_parser.add_argument(
         "--runtime-schema-version",

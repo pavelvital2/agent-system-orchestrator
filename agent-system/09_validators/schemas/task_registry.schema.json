@@ -73,7 +73,7 @@
         "task_type": { "$ref": "#/$defs/profileRole" },
         "task_kind": {
           "type": "string",
-          "enum": ["normal", "research_dependency", "design_continuation", "task_continuation", "correction", "audit", "testing", "setup", "launch", "handover"]
+          "enum": ["bootstrap", "normal", "research_dependency", "design_continuation", "task_continuation", "correction", "audit", "testing", "setup", "launch", "handover"]
         },
         "owner_role": { "$ref": "#/$defs/controlOrTargetRole" },
         "status": {

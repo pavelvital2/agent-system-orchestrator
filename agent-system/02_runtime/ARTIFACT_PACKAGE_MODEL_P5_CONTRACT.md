@@ -3,9 +3,9 @@
 ## Purpose
 
 This document defines the P5 artifact package model boundary for ASO package
-version `3.7.0`, governance ruleset version `3.7.0`, Runtime Schema version
+version `3.7.1`, governance ruleset version `3.7.1`, Runtime Schema version
 `3.1.0`, design/gap governance schema version `1.0.0`, and artifact package
-schema version `1.0.0`.
+schema version `1.1.0`.
 
 P5 is a version-boundary and packaging-governance update. It preserves the
 P2/P3 Runtime Schema `3.1.0` sidecar envelope and does not migrate active
@@ -13,7 +13,7 @@ P2/P3 Runtime Schema `3.1.0` sidecar envelope and does not migrate active
 
 ## Artifact Package Schema
 
-Artifact package schema `1.0.0` defines the publishable ASO package artifact
+Artifact package schema `1.1.0` defines the publishable ASO package artifact
 classes and their boundary from workspace-local state. It covers packaged
 instruction, role, runtime contract, template, validator, lifecycle, profile,
 gap-flow, log-template, example, release-evidence, factory-contract, script,
@@ -92,10 +92,10 @@ Their existence in a target workspace does not make them package artifacts.
 The active package metadata tuple is:
 
 ```text
-CURRENT_PACKAGE_VERSION: 3.7.0
-CURRENT_GOVERNANCE_RULESET_VERSION: 3.7.0
+CURRENT_PACKAGE_VERSION: 3.7.1
+CURRENT_GOVERNANCE_RULESET_VERSION: 3.7.1
 CURRENT_RUNTIME_SCHEMA_VERSION: 3.1.0
-ARTIFACT_PACKAGE_SCHEMA_VERSION: 1.0.0
+ARTIFACT_PACKAGE_SCHEMA_VERSION: 1.1.0
 DESIGN_GAP_GOVERNANCE_SCHEMA_VERSION: 1.0.0
 ```
 
@@ -131,7 +131,7 @@ ASO must not:
 
 Existing P4.1 package metadata and generated-project lockfiles remain
 compatible when they satisfy the accepted engine tuple rules. P5 makes
-`3.7.0 / 3.1.0` the active engine tuple and keeps earlier accepted tuples as
+`3.7.1 / 3.1.0` the active engine tuple and keeps earlier accepted tuples as
 explicit compatibility cases.
 
 Runtime Schema `3.1.0` remains the canonical sidecar schema for current

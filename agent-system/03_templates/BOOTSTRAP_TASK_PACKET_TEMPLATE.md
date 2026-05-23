@@ -30,7 +30,7 @@ A bootstrap handoff file may not be used as a task packet substitute.
 
 ---
 
-# BOOTSTRAP TASK PACKET
+# TASK PACKET
 
 ## TASK_ID
 
@@ -47,7 +47,7 @@ active
 ## TASK_KIND
 
 ```text
-normal
+bootstrap
 ```
 
 ## SUPERSEDES

@@ -19,10 +19,10 @@ RUNTIME_SCHEMA_VERSION:
 ## Active version constants
 
 ```text
-CURRENT_PACKAGE_VERSION: 3.7.0
-CURRENT_GOVERNANCE_RULESET_VERSION: 3.7.0
+CURRENT_PACKAGE_VERSION: 3.7.1
+CURRENT_GOVERNANCE_RULESET_VERSION: 3.7.1
 CURRENT_RUNTIME_SCHEMA_VERSION: 3.1.0
-ARTIFACT_PACKAGE_SCHEMA_VERSION: 1.0.0
+ARTIFACT_PACKAGE_SCHEMA_VERSION: 1.1.0
 ```
 
 These constants define the active package/governance/schema tuple for runtime validation. They are policy constants, not a release manifest.
@@ -347,17 +347,17 @@ generator, external worker system, or secret collection flow.
 The ASO Artifact Package Model P5 package installs:
 
 ```text
-CURRENT_PACKAGE_VERSION: 3.7.0
-CURRENT_GOVERNANCE_RULESET_VERSION: 3.7.0
+CURRENT_PACKAGE_VERSION: 3.7.1
+CURRENT_GOVERNANCE_RULESET_VERSION: 3.7.1
 CURRENT_RUNTIME_SCHEMA_VERSION: 3.1.0
-ARTIFACT_PACKAGE_SCHEMA_VERSION: 1.0.0
+ARTIFACT_PACKAGE_SCHEMA_VERSION: 1.1.0
 DESIGN_GAP_GOVERNANCE_SCHEMA_VERSION: 1.0.0
 ```
 
 This minor update defines the artifact package model contract and version
 boundary while preserving Runtime Schema `3.1.0`. P5 separates publishable
 package artifacts from workspace-local runtime/input/archive roots and
-formalizes artifact package schema version `1.0.0` for packaged instruction,
+formalizes artifact package schema version `1.1.0` for packaged instruction,
 template, validator, role, lifecycle, profile, example, release, and tool
 artifacts. It does not migrate active `project-runtime/` state, redefine the
 P2/P3 runtime sidecar envelope, install a daemon, dispatch live agents,

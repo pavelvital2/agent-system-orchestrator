@@ -5,8 +5,8 @@
 This contract defines the P5 workspace-local artifact storage model for raw
 artifacts, candidate artifacts, accepted artifacts, and rejected artifacts.
 
-It applies to ASO package version `3.7.0`, governance ruleset version `3.7.0`,
-Runtime Schema version `3.1.0`, and Artifact Package Schema version `1.0.0`.
+It applies to ASO package version `3.7.1`, governance ruleset version `3.7.1`,
+Runtime Schema version `3.1.0`, and Artifact Package Schema version `1.1.0`.
 
 This contract does not create checkpoint execution, commit behavior, push
 behavior, daemon behavior, live dispatch, or product-intake behavior.

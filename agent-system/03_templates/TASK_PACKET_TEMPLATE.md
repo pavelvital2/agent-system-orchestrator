@@ -90,7 +90,7 @@ Rules:
 ## TASK_KIND
 
 ```text
-normal | research_dependency | design_continuation | task_continuation | correction | audit | testing | setup | launch | handover
+bootstrap | normal | research_dependency | design_continuation | task_continuation | correction | audit | testing | setup | launch | handover
 ```
 
 Rules:

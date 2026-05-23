@@ -1,5 +1,11 @@
 # ORCHESTRATOR_RUNTIME_LOOP
 
+Normal operation follows `agent-system/02_runtime/ORCHESTRATOR_CONVEYOR_PROTOCOL.md`:
+the orchestrator should consume current ASO status/next summaries, validation
+reports, and artifact receipts before rereading broad governance documents.
+Full governance documents remain authoritative for debug, recovery, audit, and
+correction routing.
+
 ## Назначение
 
 Этот файл должен перечитываться оркестратором перед каждым новым действием.

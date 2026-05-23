@@ -68,7 +68,7 @@
     "TASK_STATUS": { "type": "string", "enum": ["active", "completed", "superseded", "deprecated"] },
     "TASK_KIND": {
       "type": "string",
-      "enum": ["normal", "research_dependency", "design_continuation", "task_continuation", "correction", "audit", "testing", "setup", "launch", "handover"]
+      "enum": ["bootstrap", "normal", "research_dependency", "design_continuation", "task_continuation", "correction", "audit", "testing", "setup", "launch", "handover"]
     },
     "SUPERSEDES": { "type": "string" },
     "SUPERSEDED_BY": { "type": "string" },

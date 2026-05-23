@@ -155,9 +155,9 @@ The package includes a filesystem-governed ASO helper CLI at
 dry-run proposals, while Project Factory commands may create generated
 projects only within explicit target paths.
 
-This P5 package records the active package metadata as the governed `3.7.0`
+This P5.1 package records the active package metadata as the governed `3.7.1`
 package/governance tuple with runtime schema `3.1.0` and artifact package
-schema `1.0.0`. It preserves the Project Factory P1 command boundary and the
+schema `1.1.0`. It preserves the Project Factory P1 command boundary and the
 P2/P3 Runtime Schema `3.1.0` sidecar envelope while defining the artifact
 package model boundary.
 
@@ -271,7 +271,7 @@ forbidden document checks, and required document existence under `--root`.
 Runtime State P2 command surfaces are local and offline. JSON sidecars under
 `project-runtime/state/` are canonical for P2+ runtime state. Markdown and
 report outputs are compatibility views generated from JSON, not the canonical
-state source. The active package version is `3.7.0` and the active runtime
+state source. The active package version is `3.7.1` and the active runtime
 schema version is `3.1.0`.
 
 ```text
@@ -315,7 +315,7 @@ uses the canonical next action value `CREATE_AGENT` without dispatching an
 agent.
 
 Safe Proposal / Apply P3 command surfaces are local and guarded. They run
-under the current package/governance `3.7.0` tuple with Runtime Schema `3.1.0`
+under the current package/governance `3.7.1` tuple with Runtime Schema `3.1.0`
 and preserve the P3 contract; they do not
 dispatch agents, do not commit or push, and do not publish runtime artifacts.
 Proposal commands default to dry-run. `--confirm-write` may write only proposal
@@ -418,7 +418,7 @@ agents or execute checkpoints.
 
 Project Factory P1 supports local vendored creation, local reference creation,
 GitHub dry-run planning, confirmed GitHub publish, and a guided
-wizard. It remains available in package version `3.7.0`; existing P1/P0
+wizard. It remains available in package version `3.7.1`; existing P1/P0
 generated-project lockfiles remain compatible when they satisfy the accepted
 publication-boundary and engine-mode rules.
 
@@ -660,13 +660,13 @@ agent-system/GOVERNANCE_CHANGELOG.md
 Current active tuple and package markers:
 
 ```text
-CURRENT_PACKAGE_VERSION: 3.7.0
-CURRENT_GOVERNANCE_RULESET_VERSION: 3.7.0
+CURRENT_PACKAGE_VERSION: 3.7.1
+CURRENT_GOVERNANCE_RULESET_VERSION: 3.7.1
 CURRENT_RUNTIME_SCHEMA_VERSION: 3.1.0
 PROJECT_FACTORY_RELEASE_MARKER: project-factory-p1
 RUNTIME_STATE_RELEASE_MARKER: artifact-package-model-p5
 DESIGN_GAP_GOVERNANCE_SCHEMA_VERSION: 1.0.0
-ARTIFACT_PACKAGE_SCHEMA_VERSION: 1.0.0
+ARTIFACT_PACKAGE_SCHEMA_VERSION: 1.1.0
 ```
 
 ## Examples

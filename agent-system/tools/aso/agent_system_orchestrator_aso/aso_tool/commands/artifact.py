@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import re
 import shutil
@@ -21,7 +22,7 @@ EXIT_IO_ERROR = 3
 
 SCHEMA_RELPATH = "agent-system/09_validators/schemas/artifact_package_manifest.schema.json"
 ARTIFACT_ID_RE = re.compile(r"^[A-Z][A-Z0-9_:-]+$")
-PACKAGE_FORBIDDEN_ROOTS = (".venv", "project-input", "project-runtime", "project-archive")
+PACKAGE_FORBIDDEN_ROOTS = (".git", ".github", ".venv", "agent-system", "project-input", "project-runtime", "project-archive")
 REQUIRED_MANIFEST_FIELDS = (
     "artifact_package_schema_version",
     "artifact_type",
@@ -89,7 +90,7 @@ def _finding(rule_id: str, title: str, details: str, path: str = "") -> dict[str
         "title": title,
         "details": details,
         "path": path,
-        "recommendation": "Conform the artifact package manifest to P5 schema 1.0.0.",
+        "recommendation": "Conform the artifact package manifest to P5.1 schema 1.1.0.",
     }
 
 
@@ -150,33 +151,52 @@ def _artifact_refs_errors(value: object, field: str) -> list[str]:
     return errors
 
 
-def _existing_package_path_errors(root: Path, value: object, field: str) -> list[str]:
+def _resolve_package_input(root: Path, value: str) -> tuple[Path | None, Path | None, str | None]:
+    raw = Path(value).expanduser()
+    workspace = root.expanduser().resolve(strict=False)
+    candidate = raw if raw.is_absolute() else workspace / raw
+    resolved = candidate.resolve(strict=False)
+    try:
+        resolved.relative_to(workspace)
+    except ValueError:
+        return None, None, "artifact package path must be inside --root"
+
+    if resolved.name == "manifest.json":
+        package_root = resolved.parent
+        manifest_path = resolved
+    else:
+        package_root = resolved
+        manifest_path = package_root / "manifest.json"
+    return package_root, manifest_path, None
+
+
+def _existing_package_path_errors(package_root: Path, value: object, field: str) -> list[str]:
     errors = _package_path_errors(value, field)
     if errors:
         return errors
     assert isinstance(value, str)
-    resolved = (root / value.strip()).resolve(strict=False)
+    resolved = (package_root / value.strip()).resolve(strict=False)
     try:
-        resolved.relative_to(root.resolve(strict=False))
+        resolved.relative_to(package_root.resolve(strict=False))
     except ValueError:
-        return [f"{field} resolves outside --root"]
+        return [f"{field} resolves outside package root"]
     if not resolved.is_file():
-        return [f"{field} does not exist under --root: {value.strip()}"]
+        return [f"{field} does not exist inside package root: {value.strip()}"]
     return []
 
 
-def _structured_artifact_content_errors(root: Path, value: object) -> list[str]:
+def _structured_artifact_content_errors(package_root: Path, value: object) -> list[str]:
     if value == "NONE":
         return []
     if not isinstance(value, list):
         return []
     errors: list[str] = []
     for index, item in enumerate(value):
-        path_errors = _existing_package_path_errors(root, item, f"structured_artifacts[{index}]")
+        path_errors = _existing_package_path_errors(package_root, item, f"structured_artifacts[{index}]")
         errors.extend(path_errors)
         if path_errors or not isinstance(item, str) or not item.strip().endswith(".json"):
             continue
-        path = root / item.strip()
+        path = package_root / item.strip()
         try:
             payload = json.loads(path.read_text(encoding="utf-8"))
         except OSError as exc:
@@ -192,7 +212,7 @@ def _structured_artifact_content_errors(root: Path, value: object) -> list[str]:
     return errors
 
 
-def _validate_manifest_payload(payload: dict[str, Any], root: Path) -> list[dict[str, str]]:
+def _validate_manifest_payload(payload: dict[str, Any], root: Path, package_root: Path) -> list[dict[str, str]]:
     findings: list[dict[str, str]] = []
     schema = _load_manifest_schema(root)
     schema_types = (
@@ -210,7 +230,7 @@ def _validate_manifest_payload(payload: dict[str, Any], root: Path) -> list[dict
         findings.append(_finding("ARTIFACT_VALIDATE_SCHEMA_002", "Manifest field is not allowed", f"{field} is not declared by the P5 manifest schema.", field))
 
     if payload.get("artifact_package_schema_version") != runtime_schema_contracts.ACTIVE_ARTIFACT_PACKAGE_SCHEMA_VERSION:
-        findings.append(_finding("ARTIFACT_VALIDATE_SCHEMA_003", "Artifact package schema version is invalid", "artifact_package_schema_version must be 1.0.0.", "artifact_package_schema_version"))
+        findings.append(_finding("ARTIFACT_VALIDATE_SCHEMA_003", "Artifact package schema version is invalid", "artifact_package_schema_version must be 1.1.0.", "artifact_package_schema_version"))
     if payload.get("artifact_type") not in allowed_types:
         findings.append(_finding("ARTIFACT_VALIDATE_SCHEMA_004", "Artifact type is unsupported", f"artifact_type must be one of: {', '.join(allowed_types)}.", "artifact_type"))
     artifact_id = payload.get("artifact_id")
@@ -224,12 +244,12 @@ def _validate_manifest_payload(payload: dict[str, Any], root: Path) -> list[dict
         findings.append(_finding("ARTIFACT_VALIDATE_SCHEMA_008", "Attempt number is invalid", "attempt_no must be an integer >= 1.", "attempt_no"))
     if payload.get("status") not in ALLOWED_STATUSES:
         findings.append(_finding("ARTIFACT_VALIDATE_SCHEMA_009", "Status is unsupported", f"status must be one of: {', '.join(ALLOWED_STATUSES)}.", "status"))
-    for error in _existing_package_path_errors(root, payload.get("main_document"), "main_document"):
+    for error in _existing_package_path_errors(package_root, payload.get("main_document"), "main_document"):
         findings.append(_finding("ARTIFACT_VALIDATE_PATH_001", "Main document path is invalid", error, "main_document"))
     for field in ("structured_artifacts", "evidence_refs"):
         for error in _artifact_refs_errors(payload.get(field), field):
             findings.append(_finding("ARTIFACT_VALIDATE_PATH_002", "Artifact reference path is invalid", error, field))
-    for error in _structured_artifact_content_errors(root, payload.get("structured_artifacts")):
+    for error in _structured_artifact_content_errors(package_root, payload.get("structured_artifacts")):
         findings.append(_finding("ARTIFACT_VALIDATE_JSON_003", "Structured artifact JSON is invalid", error, "structured_artifacts"))
     if not isinstance(payload.get("created_at"), str) or not str(payload.get("created_at", "")).strip():
         findings.append(_finding("ARTIFACT_VALIDATE_SCHEMA_010", "Created timestamp is invalid", "created_at must be a non-empty date-time string.", "created_at"))
@@ -255,9 +275,16 @@ def _validate_path(
     expected_role: str | None = None,
     strict: bool = False,
 ) -> dict[str, object]:
-    payload, findings = _read_json_object(artifact_path)
+    package_root, manifest_path, package_error = _resolve_package_input(root, artifact_path.as_posix())
+    findings: list[dict[str, str]] = []
+    if package_error is not None or package_root is None or manifest_path is None:
+        findings.append(_finding("ARTIFACT_VALIDATE_PACKAGE_001", "Artifact package path is invalid", package_error or "invalid package path", str(artifact_path)))
+        payload = None
+    else:
+        payload, findings = _read_json_object(manifest_path)
     if payload is not None:
-        findings.extend(_validate_manifest_payload(payload, root))
+        assert package_root is not None
+        findings.extend(_validate_manifest_payload(payload, root, package_root))
         if expected_type is not None and payload.get("artifact_type") != expected_type:
             findings.append(
                 _finding(
@@ -290,7 +317,8 @@ def _validate_path(
         "tool": "aso",
         "command": "artifact validate",
         "root": str(root),
-        "artifact": str(artifact_path),
+        "package_root": str(package_root) if package_root is not None else None,
+        "manifest": str(manifest_path) if manifest_path is not None else str(artifact_path),
         "schema_path": SCHEMA_RELPATH,
         "artifact_package_schema_version": runtime_schema_contracts.ACTIVE_ARTIFACT_PACKAGE_SCHEMA_VERSION,
         "status": status,
@@ -303,37 +331,29 @@ def _validate_path(
     }
 
 
-def _resolve_workspace_artifact(root: Path, value: str, bucket: str | None = None) -> tuple[Path | None, str | None, str | None]:
-    raw = Path(value).expanduser()
+def _resolve_workspace_package(root: Path, value: str, bucket: str | None = None) -> tuple[Path | None, str | None, Path | None, str | None]:
+    package_root, manifest_path, error = _resolve_package_input(root, value)
+    if error is not None or package_root is None or manifest_path is None:
+        return None, None, None, error or "invalid artifact package path"
     workspace = root.expanduser().resolve(strict=False)
-    if raw.is_absolute():
-        resolved = raw.resolve(strict=False)
-        try:
-            rel = resolved.relative_to(workspace)
-        except ValueError:
-            return None, None, "artifact path must be inside --root"
-        rel_text = rel.as_posix()
-    else:
-        rel_text = value
-        resolved = (workspace / rel_text).resolve(strict=False)
+    try:
+        rel_text = package_root.resolve(strict=False).relative_to(workspace).as_posix()
+    except ValueError:
+        return None, None, None, "artifact package path must be inside --root"
 
     parts = rel_text.split("/")
     if len(parts) < 4 or parts[:2] != ["project-runtime", "artifacts"]:
-        return None, None, "artifact path must be under project-runtime/artifacts"
+        return None, None, None, "artifact package path must be under project-runtime/artifacts"
     found_bucket = parts[2]
     if bucket is not None and found_bucket != bucket:
-        return None, None, f"artifact path must be under project-runtime/artifacts/{bucket}"
+        return None, None, None, f"artifact package path must be under project-runtime/artifacts/{bucket}"
     try:
         location = artifact_storage.safe_artifact_path(found_bucket, "/".join(parts[3:]))
     except artifact_storage.ArtifactPathError as exc:
-        return None, None, str(exc)
+        return None, None, None, str(exc)
     if location.relative_path != rel_text:
-        return None, None, "artifact path is not canonical"
-    try:
-        resolved.relative_to(workspace)
-    except ValueError:
-        return None, None, "artifact path escapes --root"
-    return resolved, location.relative_path, None
+        return None, None, None, "artifact package path is not canonical"
+    return package_root, location.relative_path, manifest_path, None
 
 
 def _target_for_classification(source_relpath: str, target_bucket: str) -> tuple[Path | None, str | None]:
@@ -347,6 +367,29 @@ def _target_for_classification(source_relpath: str, target_bucket: str) -> tuple
     except artifact_storage.ArtifactPathError as exc:
         return None, str(exc)
     return Path(location.relative_path), None
+
+
+def _file_sha256(path: Path) -> str:
+    digest = hashlib.sha256()
+    with path.open("rb") as handle:
+        for chunk in iter(lambda: handle.read(1024 * 1024), b""):
+            digest.update(chunk)
+    return digest.hexdigest()
+
+
+def _package_inventory(package_root: Path) -> list[dict[str, object]]:
+    rows: list[dict[str, object]] = []
+    for path in sorted(package_root.rglob("*")):
+        if not path.is_file():
+            continue
+        rows.append(
+            {
+                "path": path.relative_to(package_root).as_posix(),
+                "bytes": path.stat().st_size,
+                "sha256": _file_sha256(path),
+            }
+        )
+    return rows
 
 
 def _write_json_out(root: Path, path_text: str, payload: dict[str, object], allowed: tuple[str, ...]) -> tuple[bool, str]:
@@ -401,7 +444,7 @@ def run_validate(args: argparse.Namespace) -> int:
 
 
 def _classification_plan(root: Path, source_text: str, target_bucket: str, confirmed: bool, reason: str | None = None) -> tuple[dict[str, object], Path | None, Path | None]:
-    source_path, source_relpath, error = _resolve_workspace_artifact(root, source_text, "candidates")
+    source_path, source_relpath, manifest_path, error = _resolve_workspace_package(root, source_text, "candidates")
     findings: list[dict[str, str]] = []
     target_path: Path | None = None
     source_abs: Path | None = source_path
@@ -413,10 +456,12 @@ def _classification_plan(root: Path, source_text: str, target_bucket: str, confi
             findings.append(_finding("ARTIFACT_CLASSIFY_TRANSITION_001", "Artifact transition is not allowed", target_error or "invalid transition", source_relpath))
         else:
             target_path = root / target_relpath
-        if not source_path.is_file():
-            findings.append(_finding("ARTIFACT_CLASSIFY_READ_001", "Candidate artifact does not exist", "Candidate artifact must exist before classification.", source_relpath))
-        elif source_path.suffix == ".json":
-            validation = _validate_path(root, source_path)
+        if not source_path.is_dir():
+            findings.append(_finding("ARTIFACT_CLASSIFY_READ_001", "Candidate package does not exist", "Candidate package directory must exist before classification.", source_relpath))
+        elif manifest_path is None or not manifest_path.is_file():
+            findings.append(_finding("ARTIFACT_CLASSIFY_READ_002", "Candidate package manifest is missing", "Candidate package must contain manifest.json.", source_relpath))
+        else:
+            validation = _validate_path(root, manifest_path)
             for finding in validation.get("findings", []):
                 if isinstance(finding, dict):
                     findings.append(dict(finding))
@@ -438,7 +483,7 @@ def _classification_plan(root: Path, source_text: str, target_bucket: str, confi
         "mutations_performed": False,
         "reason": reason.strip() if isinstance(reason, str) and reason.strip() else None,
         "blocked_reasons": (["--confirm-write is required for artifact classification writes"] if blocked_without_confirm else []),
-        "validators_run": ["candidate_path_guard", "storage_transition_guard", "immutability_guard", "manifest_validation_if_json"],
+        "validators_run": ["candidate_package_path_guard", "storage_transition_guard", "immutability_guard", "manifest_validation", "package_inventory_hash"],
         "findings": findings,
         "summary": {"errors": len(findings) + (1 if blocked_without_confirm else 0)},
     }
@@ -450,9 +495,9 @@ def _acceptance_receipt_payload(
     source_path: Path,
     target_path: Path,
 ) -> tuple[dict[str, object], dict[str, object], str]:
-    manifest, _findings = _read_json_object(source_path)
+    manifest, _findings = _read_json_object(source_path / "manifest.json")
     manifest = manifest or {}
-    artifact_id = _as_text(manifest.get("artifact_id")) or target_path.stem.upper()
+    artifact_id = _as_text(manifest.get("artifact_id")) or target_path.name.upper()
     task_id = _as_text(manifest.get("task_id"))
     role = _as_text(manifest.get("role"))
     producer = manifest.get("producer") if isinstance(manifest.get("producer"), dict) else {}
@@ -474,6 +519,7 @@ def _acceptance_receipt_payload(
         "accepted_at": accepted_at,
         "accepted_by": "orchestrator",
         "storage_transition": "candidates -> accepted",
+        "inventory": _package_inventory(target_path),
     }
     event = {
         "event": "artifact_accepted",
@@ -491,6 +537,32 @@ def _acceptance_receipt_payload(
         "created_by": "orchestrator",
     }
     return receipt, event, receipt_relpath
+
+
+def _rejection_report_payload(root: Path, source_path: Path, target_path: Path, reason: str | None) -> tuple[dict[str, object], str]:
+    manifest, _findings = _read_json_object(source_path / "manifest.json")
+    manifest = manifest or {}
+    artifact_id = _as_text(manifest.get("artifact_id")) or target_path.name.upper()
+    task_id = _as_text(manifest.get("task_id"))
+    rejected_at = _now_utc()
+    report_relpath = f"project-runtime/receipts/artifacts/{task_id or 'UNKNOWN'}/{artifact_id}.rejection.json"
+    return (
+        {
+            "receipt_type": "ARTIFACT_REJECTION_REPORT",
+            "receipt_schema_version": "1.0.0",
+            "receipt_id": f"ARTIFACT_REJECTED-{artifact_id}",
+            "artifact_id": artifact_id,
+            "artifact_ref": target_path.relative_to(root).as_posix(),
+            "candidate_ref": source_path.relative_to(root).as_posix(),
+            "task_id": task_id,
+            "rejected_at": rejected_at,
+            "rejected_by": "orchestrator",
+            "reason": reason,
+            "storage_transition": "candidates -> rejected",
+            "inventory": _package_inventory(target_path),
+        },
+        report_relpath,
+    )
 
 
 def _append_lifecycle_event(root: Path, event: dict[str, object]) -> None:
@@ -515,7 +587,7 @@ def _run_classify(args: argparse.Namespace, target_bucket: str) -> int:
         assert target_path is not None
         try:
             target_path.parent.mkdir(parents=True, exist_ok=True)
-            shutil.copyfile(source_path, target_path)
+            shutil.copytree(source_path, target_path)
             if target_bucket == "accepted":
                 receipt, event, receipt_relpath = _acceptance_receipt_payload(root, source_path, target_path)
                 receipt_path = root / receipt_relpath
@@ -525,12 +597,21 @@ def _run_classify(args: argparse.Namespace, target_bucket: str) -> int:
                 report["receipt"] = receipt
                 report["receipt_ref"] = receipt_relpath
                 report["event"] = event
+            else:
+                rejection, rejection_relpath = _rejection_report_payload(root, source_path, target_path, report.get("reason") if isinstance(report.get("reason"), str) else None)
+                rejection_path = root / rejection_relpath
+                rejection_path.parent.mkdir(parents=True, exist_ok=True)
+                rejection_path.write_text(_json_bytes(rejection), encoding="utf-8")
+                report["rejection_report"] = rejection
+                report["rejection_report_ref"] = rejection_relpath
         except OSError as exc:
             print(f"aso {report['command']}: failed to write artifact: {exc}", file=sys.stderr)
             return EXIT_IO_ERROR
         files_written.append(target_path.relative_to(root).as_posix())
         if target_bucket == "accepted" and isinstance(report.get("receipt_ref"), str):
             files_written.append(str(report["receipt_ref"]))
+        if target_bucket == "rejected" and isinstance(report.get("rejection_report_ref"), str):
+            files_written.append(str(report["rejection_report_ref"]))
         report["status"] = "written"
         report["read_only"] = False
         report["mutations_performed"] = True
@@ -574,13 +655,13 @@ def _iter_artifacts(root: Path, bucket: str | None) -> list[dict[str, object]]:
 
 
 def _artifact_row(root: Path, value: str) -> dict[str, object] | None:
-    path, relpath, error = _resolve_workspace_artifact(root, value)
-    if error is not None or path is None or relpath is None or not path.is_file():
+    path, relpath, _manifest_path, error = _resolve_workspace_package(root, value)
+    if error is not None or path is None or relpath is None or not path.is_dir():
         return None
     return {
         "bucket": relpath.split("/")[2],
         "path": relpath,
-        "bytes": path.stat().st_size,
+        "bytes": sum(item.stat().st_size for item in path.rglob("*") if item.is_file()),
     }
 
 

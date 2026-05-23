@@ -112,6 +112,12 @@ BLOCKED_BY: invalid_or_missing_package_file
 1. `agent-system/01_roles/ORCHESTRATOR.md`
 2. `agent-system/PACKAGE_VERSIONING.md`
 3. `agent-system/GOVERNANCE_CHANGELOG.md`
+4. `agent-system/02_runtime/ORCHESTRATOR_CONVEYOR_PROTOCOL.md`
+
+After bootstrap, normal conveyor operation should prefer current ASO
+status/next JSON summaries, validation reports, and artifact receipts over
+routine rereads of broad governance documents. Full governance documents remain
+the debug, recovery, and correction authority.
 4. `agent-system/02_runtime/ORCHESTRATOR_RUNTIME_LOOP.md`
 5. `agent-system/02_runtime/ALLOWED_ORCHESTRATOR_ACTIONS.md`
 6. `agent-system/02_runtime/AGENT_LIFECYCLE.md`

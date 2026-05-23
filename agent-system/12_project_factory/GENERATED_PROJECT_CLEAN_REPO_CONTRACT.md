@@ -23,7 +23,7 @@ A generated project is clean when:
   boundary:
 
 ```text
-active package version: 3.7.0
+active package version: 3.7.1
 active runtime schema: 3.1.0
 compatible historical tuples:
 3.6.1/3.1.0, 3.6.0/3.1.0, 3.5.0/3.1.0, 3.4.0/3.1.0,
@@ -193,6 +193,6 @@ caller should write it outside the clean repository or to an ignored location.
 ## No Runtime Schema Change
 
 This contract does not change runtime-state semantics. In the active P5
-package it relies on package version `3.7.0`, runtime schema `3.1.0`, and
-artifact package schema `1.0.0`, while preserving compatibility for accepted
+package it relies on package version `3.7.1`, runtime schema `3.1.0`, and
+artifact package schema `1.1.0`, while preserving compatibility for accepted
 historical generated-project lock tuples.

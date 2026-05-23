@@ -37,7 +37,7 @@
     },
     "package_version": {
       "type": "string",
-      "const": "3.7.0"
+      "const": "3.7.1"
     },
     "runtime_schema_version": {
       "type": "string",

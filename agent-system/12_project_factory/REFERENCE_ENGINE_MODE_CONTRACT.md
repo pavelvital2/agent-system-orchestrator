@@ -22,9 +22,9 @@ reference
 Project Factory P1 reference mode uses:
 
 ```text
-active package version: 3.7.0
+active package version: 3.7.1
 active runtime schema: 3.1.0
-artifact package schema: 1.0.0
+artifact package schema: 1.1.0
 ```
 
 Reference mode was introduced for `3.3.0 / 3.0.0` generated projects and
@@ -39,7 +39,7 @@ generated-project packaging, not runtime-state semantics.
 {
   "aso_engine": {
     "package_name": "agent-system-orchestrator",
-    "version": "3.7.0",
+    "version": "3.7.1",
     "runtime_schema": "3.1.0",
     "source": "https://github.com/pavelvital2/agent-system-orchestrator",
     "engine_mode": "reference"

@@ -16,7 +16,7 @@ Project Factory P1 GitHub publish uses:
 ```text
 engine mode: selected vendored or reference mode
 active runtime schema: 3.1.0
-artifact package schema: 1.0.0
+artifact package schema: 1.1.0
 ```
 
 GitHub publish mode creates or uses a clean generated-project target, records

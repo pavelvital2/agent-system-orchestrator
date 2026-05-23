@@ -22,22 +22,17 @@ class ArtifactCliTests(unittest.TestCase):
         self.tmpdir = Path(tempfile.mkdtemp(prefix="aso-artifact-cli-"))
         self.root = self.tmpdir / "workspace"
         self.root.mkdir()
-        self.main_document = self.root / "package" / "RESULT_TASK_DEMO_ATTEMPT_001.md"
-        self.structured_artifact = self.root / "package" / "result_package.json"
-        self.main_document.parent.mkdir(parents=True)
-        self.main_document.write_text("RESULT:\nSTATUS: pass\n", encoding="utf-8")
-        self.structured_artifact.write_text('{"package_id":"RESULT_PACKAGE_TASK_DEMO_ATTEMPT_001"}\n', encoding="utf-8")
         self.manifest = {
-            "artifact_package_schema_version": "1.0.0",
+            "artifact_package_schema_version": "1.1.0",
             "artifact_type": "RESULT",
             "artifact_id": "RESULT_TASK_DEMO_ATTEMPT_001",
             "task_id": "TASK_DEMO",
             "role": "developer",
             "attempt_no": 1,
             "status": "pass",
-            "main_document": "package/RESULT_TASK_DEMO_ATTEMPT_001.md",
+            "main_document": "RESULT_TASK_DEMO_ATTEMPT_001.md",
             "structured_artifacts": [
-                "package/result_package.json",
+                "structured/result_package.json",
             ],
             "evidence_refs": "NONE",
             "created_at": "2026-05-22T00:00:00Z",
@@ -57,11 +52,23 @@ class ArtifactCliTests(unittest.TestCase):
             code = main(argv)
         return code, stdout.getvalue(), stderr.getvalue()
 
-    def _write_candidate(self, relpath: str = "project-runtime/artifacts/candidates/TASK_DEMO/manifest.json") -> Path:
+    def _write_candidate(self, relpath: str = "project-runtime/artifacts/candidates/TASK_DEMO/PACKAGE") -> Path:
         path = self.root / relpath
-        path.parent.mkdir(parents=True, exist_ok=True)
-        path.write_text(json.dumps(self.manifest, indent=2) + "\n", encoding="utf-8")
-        return path
+        package_root = path.parent if path.name == "manifest.json" else path
+        if package_root.exists():
+            shutil.rmtree(package_root)
+        package_root.mkdir(parents=True, exist_ok=True)
+        (package_root / "RESULT_TASK_DEMO_ATTEMPT_001.md").write_text("RESULT:\nSTATUS: pass\n", encoding="utf-8")
+        structured_dir = package_root / "structured"
+        structured_dir.mkdir()
+        (structured_dir / "result_package.json").write_text(
+            '{"package_id":"RESULT_PACKAGE_TASK_DEMO_ATTEMPT_001"}\n',
+            encoding="utf-8",
+        )
+        (package_root / "evidence").mkdir()
+        manifest_path = package_root / "manifest.json"
+        manifest_path.write_text(json.dumps(self.manifest, indent=2) + "\n", encoding="utf-8")
+        return manifest_path
 
     def _validate_candidate(self, candidate: Path, *extra: str) -> dict[str, object]:
         code, stdout, _stderr = self._run(
@@ -162,7 +169,7 @@ class ArtifactCliTests(unittest.TestCase):
             (
                 "malformed structured JSON",
                 lambda candidate: (
-                    self.structured_artifact.write_text('{"package_id":', encoding="utf-8"),
+                    (candidate.parent / "structured" / "result_package.json").write_text('{"package_id":', encoding="utf-8"),
                     candidate.write_text(json.dumps(self.manifest), encoding="utf-8"),
                 ),
                 (),
@@ -246,7 +253,9 @@ class ArtifactCliTests(unittest.TestCase):
         self.assertEqual(
             runtime_files,
             [
-                "artifacts/candidates/TASK_DEMO/manifest.json",
+                "artifacts/candidates/TASK_DEMO/PACKAGE/RESULT_TASK_DEMO_ATTEMPT_001.md",
+                "artifacts/candidates/TASK_DEMO/PACKAGE/manifest.json",
+                "artifacts/candidates/TASK_DEMO/PACKAGE/structured/result_package.json",
                 "reports/validation.json",
             ],
         )
@@ -285,7 +294,7 @@ class ArtifactCliTests(unittest.TestCase):
                 "--root",
                 str(self.root),
                 "--artifact",
-                "project-runtime/artifacts/candidates/TASK_DEMO/manifest.json",
+                "project-runtime/artifacts/candidates/TASK_DEMO/PACKAGE",
                 "--format",
                 "json",
             ]
@@ -295,7 +304,7 @@ class ArtifactCliTests(unittest.TestCase):
         report = json.loads(stdout)
         self.assertEqual(report["status"], "blocked")
         self.assertTrue(report["dry_run"])
-        self.assertFalse((self.root / "project-runtime/artifacts/accepted/TASK_DEMO/manifest.json").exists())
+        self.assertFalse((self.root / "project-runtime/artifacts/accepted/TASK_DEMO/PACKAGE").exists())
 
     def test_artifact_accept_confirm_write_copies_candidate_without_deleting_source(self) -> None:
         candidate = self._write_candidate()
@@ -308,7 +317,7 @@ class ArtifactCliTests(unittest.TestCase):
                 "--root",
                 str(self.root),
                 "--package",
-                "project-runtime/artifacts/candidates/TASK_DEMO/manifest.json",
+                "project-runtime/artifacts/candidates/TASK_DEMO/PACKAGE/manifest.json",
                 "--confirm-write",
                 "--json-out",
                 str(out),
@@ -318,10 +327,13 @@ class ArtifactCliTests(unittest.TestCase):
         self.assertEqual(code, 0, stderr)
         self.assertIn("ASO artifact accept: WRITTEN", stdout)
         report = json.loads(out.read_text(encoding="utf-8"))
-        accepted = self.root / "project-runtime/artifacts/accepted/TASK_DEMO/manifest.json"
+        accepted = self.root / "project-runtime/artifacts/accepted/TASK_DEMO/PACKAGE/manifest.json"
         self.assertEqual(report["status"], "written")
         self.assertTrue(candidate.exists())
         self.assertEqual(json.loads(accepted.read_text(encoding="utf-8")), self.manifest)
+        self.assertTrue((accepted.parent / "RESULT_TASK_DEMO_ATTEMPT_001.md").exists())
+        self.assertTrue((accepted.parent / "structured" / "result_package.json").exists())
+        self.assertGreaterEqual(len(report["receipt"]["inventory"]), 3)
         self.assertEqual(report["receipt"]["artifact_id"], "RESULT_TASK_DEMO_ATTEMPT_001")
         self.assertEqual(report["receipt_ref"], "project-runtime/receipts/artifacts/TASK_DEMO/RESULT_TASK_DEMO_ATTEMPT_001.acceptance.json")
         self.assertTrue((self.root / report["receipt_ref"]).exists())
@@ -344,7 +356,7 @@ class ArtifactCliTests(unittest.TestCase):
                 "--root",
                 str(self.root),
                 "--package",
-                "project-runtime/artifacts/candidates/TASK_DEMO/manifest.json",
+                "project-runtime/artifacts/candidates/TASK_DEMO/PACKAGE",
                 "--reason",
                 "audit failed",
                 "--confirm-write",
@@ -356,9 +368,10 @@ class ArtifactCliTests(unittest.TestCase):
         self.assertEqual(code, 0, stderr)
         self.assertIn("ASO artifact reject: WRITTEN", stdout)
         report = json.loads(out.read_text(encoding="utf-8"))
-        self.assertEqual(report["target"], "project-runtime/artifacts/rejected/TASK_DEMO/manifest.json")
+        self.assertEqual(report["target"], "project-runtime/artifacts/rejected/TASK_DEMO/PACKAGE")
         self.assertEqual(report["reason"], "audit failed")
-        self.assertTrue((self.root / "project-runtime/artifacts/rejected/TASK_DEMO/manifest.json").exists())
+        self.assertTrue((self.root / "project-runtime/artifacts/rejected/TASK_DEMO/PACKAGE/manifest.json").exists())
+        self.assertTrue((self.root / report["rejection_report_ref"]).exists())
 
     def test_artifact_list_and_render_are_read_only(self) -> None:
         self._write_candidate()
@@ -372,7 +385,7 @@ class ArtifactCliTests(unittest.TestCase):
 
         self.assertEqual(list_code, 0, list_stderr)
         self.assertEqual(render_code, 0, render_stderr)
-        self.assertEqual(json.loads(list_stdout)["summary"]["count"], 1)
+        self.assertEqual(json.loads(list_stdout)["summary"]["count"], 3)
         self.assertIn("ASO Artifact Storage Report", render_stdout)
 
     def test_artifact_render_spec_form_writes_out_without_confirm_write(self) -> None:
@@ -386,7 +399,7 @@ class ArtifactCliTests(unittest.TestCase):
                 "--root",
                 str(self.root),
                 "--package",
-                "project-runtime/artifacts/candidates/TASK_DEMO/manifest.json",
+                "project-runtime/artifacts/candidates/TASK_DEMO/PACKAGE",
                 "--format",
                 "markdown",
                 "--out",
@@ -396,13 +409,12 @@ class ArtifactCliTests(unittest.TestCase):
 
         self.assertEqual(code, 0, stderr)
         self.assertIn("ASO artifact render written:", stdout)
-        self.assertIn("project-runtime/artifacts/candidates/TASK_DEMO/manifest.json", out.read_text(encoding="utf-8"))
+        self.assertIn("project-runtime/artifacts/candidates/TASK_DEMO/PACKAGE", out.read_text(encoding="utf-8"))
 
     def test_artifact_list_spec_form_filters_state(self) -> None:
         self._write_candidate()
-        accepted = self.root / "project-runtime/artifacts/accepted/TASK_DEMO/manifest.json"
-        accepted.parent.mkdir(parents=True, exist_ok=True)
-        accepted.write_text(json.dumps(self.manifest, indent=2) + "\n", encoding="utf-8")
+        accepted = self.root / "project-runtime/artifacts/accepted/TASK_DEMO/PACKAGE"
+        shutil.copytree(self.root / "project-runtime/artifacts/candidates/TASK_DEMO/PACKAGE", accepted)
 
         code, stdout, stderr = self._run(
             [
@@ -416,8 +428,8 @@ class ArtifactCliTests(unittest.TestCase):
         )
 
         self.assertEqual(code, 0, stderr)
-        self.assertIn("project-runtime/artifacts/candidates/TASK_DEMO/manifest.json", stdout)
-        self.assertNotIn("project-runtime/artifacts/accepted/TASK_DEMO/manifest.json", stdout)
+        self.assertIn("project-runtime/artifacts/candidates/TASK_DEMO/PACKAGE/manifest.json", stdout)
+        self.assertNotIn("project-runtime/artifacts/accepted/TASK_DEMO/PACKAGE/manifest.json", stdout)
 
 
 if __name__ == "__main__":

@@ -77,7 +77,7 @@ Rules:
 ## PROPOSED_TASK_KIND
 
 ```text
-normal | research_dependency | design_continuation | task_continuation | correction | audit | testing | setup | launch | handover | UNKNOWN
+bootstrap | normal | research_dependency | design_continuation | task_continuation | correction | audit | testing | setup | launch | handover | UNKNOWN
 ```
 
 ---
