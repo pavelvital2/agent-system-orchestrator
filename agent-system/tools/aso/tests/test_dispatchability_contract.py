@@ -74,6 +74,72 @@ def valid_create_agent_report(schema: dict[str, object]) -> dict[str, object]:
     }
 
 
+def load_dispatchability_schema() -> dict[str, object]:
+    schema = json.loads(SCHEMA_PATH.read_text(encoding="utf-8"))
+    if not isinstance(schema, dict):
+        raise AssertionError("dispatchability schema must be a dictionary")
+    return schema
+
+
+def object_at(payload: dict[str, object], key: str, context: str) -> dict[str, object]:
+    value = payload[key]
+    if not isinstance(value, dict):
+        raise AssertionError(f"{context}.{key} must be a dictionary")
+    return value
+
+
+def list_at(payload: dict[str, object], key: str, context: str) -> list[object]:
+    value = payload[key]
+    if not isinstance(value, list):
+        raise AssertionError(f"{context}.{key} must be a list")
+    return value
+
+
+def schema_properties(schema: dict[str, object]) -> dict[str, object]:
+    return object_at(schema, "properties", "schema")
+
+
+def schema_defs(schema: dict[str, object]) -> dict[str, object]:
+    return object_at(schema, "$defs", "schema")
+
+
+def find_then_for_const(schema: dict[str, object], property_name: str, const_value: object) -> dict[str, object]:
+    for index, rule in enumerate(list_at(schema, "allOf", "schema")):
+        if not isinstance(rule, dict):
+            raise AssertionError(f"schema.allOf[{index}] must be a dictionary")
+        condition = object_at(rule, "if", f"schema.allOf[{index}]")
+        condition_props = object_at(condition, "properties", f"schema.allOf[{index}].if")
+        if property_name not in condition_props:
+            continue
+        property_condition = object_at(condition_props, property_name, f"schema.allOf[{index}].if.properties")
+        if property_condition.get("const") == const_value:
+            return object_at(rule, "then", f"schema.allOf[{index}]")
+    raise AssertionError(f"schema must define an allOf condition for {property_name}={const_value!r}")
+
+
+def required_passed_check_ids(schema: dict[str, object]) -> set[str]:
+    defs = schema_defs(schema)
+    required_checks = object_at(defs, "createAgentRequiredPassedChecks", "schema.$defs")
+    check_ids: set[str] = set()
+    for index, rule in enumerate(list_at(required_checks, "allOf", "createAgentRequiredPassedChecks")):
+        if not isinstance(rule, dict):
+            raise AssertionError(f"createAgentRequiredPassedChecks.allOf[{index}] must be a dictionary")
+        contains = object_at(rule, "contains", f"createAgentRequiredPassedChecks.allOf[{index}]")
+        required = list_at(contains, "required", f"createAgentRequiredPassedChecks.allOf[{index}].contains")
+        if required != ["check_id", "passed"]:
+            raise AssertionError(f"required passed check rule {index} must require check_id and passed")
+        properties = object_at(contains, "properties", f"createAgentRequiredPassedChecks.allOf[{index}].contains")
+        check_id = object_at(properties, "check_id", f"createAgentRequiredPassedChecks.allOf[{index}].contains.properties")
+        passed = object_at(properties, "passed", f"createAgentRequiredPassedChecks.allOf[{index}].contains.properties")
+        if passed.get("const") is not True:
+            raise AssertionError(f"required passed check rule {index} must require passed=true")
+        const = check_id.get("const")
+        if not isinstance(const, str):
+            raise AssertionError(f"required passed check rule {index} must require a concrete check_id")
+        check_ids.add(const)
+    return check_ids
+
+
 class DispatchabilityContractTests(unittest.TestCase):
     def test_machine_contract_distinguishes_profile_and_control_roles(self) -> None:
         contract = load_contract()
@@ -126,6 +192,104 @@ class DispatchabilityContractTests(unittest.TestCase):
                 "task_packet_none",
             ],
         )
+
+    def test_dispatchability_schema_stdlib_preserves_root_required_contract(self) -> None:
+        schema = load_dispatchability_schema()
+        properties = schema_properties(schema)
+
+        self.assertEqual(schema["$schema"], "https://json-schema.org/draft/2020-12/schema")
+        self.assertEqual(schema["type"], "object")
+        self.assertFalse(schema["additionalProperties"])
+        self.assertEqual(
+            list_at(schema, "required", "schema"),
+            [
+                "contract_id",
+                "contract_version",
+                "dispatchable",
+                "verdict",
+                "recommended_next_action",
+                "status",
+                "target_role",
+                "role_class",
+                "action_type",
+                "action_class",
+                "task_id",
+                "task_packet",
+                "checks",
+                "reasons",
+                "live_dispatch_performed",
+            ],
+        )
+        self.assertEqual(object_at(properties, "contract_id", "schema.properties")["const"], "ASO_PLANNER_DISPATCHABILITY_GATE_P5_4")
+        self.assertEqual(object_at(properties, "contract_version", "schema.properties")["const"], "1.0.0")
+        self.assertEqual(object_at(properties, "live_dispatch_performed", "schema.properties")["const"], False)
+        self.assertIn("CREATE_AGENT", list_at(object_at(properties, "recommended_next_action", "schema.properties"), "enum", "recommended_next_action"))
+        self.assertIn("profile_execution", list_at(object_at(properties, "role_class", "schema.properties"), "enum", "role_class"))
+        self.assertIn("dispatch", list_at(object_at(properties, "action_class", "schema.properties"), "enum", "action_class"))
+
+    def test_dispatchability_schema_stdlib_preserves_create_agent_constraints(self) -> None:
+        schema = load_dispatchability_schema()
+        then = find_then_for_const(schema, "recommended_next_action", "CREATE_AGENT")
+        properties = object_at(then, "properties", "CREATE_AGENT.then")
+
+        self.assertEqual(object_at(properties, "dispatchable", "CREATE_AGENT.then.properties")["const"], True)
+        self.assertEqual(object_at(properties, "verdict", "CREATE_AGENT.then.properties")["const"], "dispatchable")
+        self.assertEqual(object_at(properties, "role_class", "CREATE_AGENT.then.properties")["const"], "profile_execution")
+        self.assertEqual(object_at(properties, "action_type", "CREATE_AGENT.then.properties")["const"], "create_agent")
+        self.assertEqual(object_at(properties, "action_class", "CREATE_AGENT.then.properties")["const"], "dispatch")
+        self.assertEqual(object_at(properties, "task_id", "CREATE_AGENT.then.properties")["$ref"], "#/$defs/realDispatchValue")
+        self.assertEqual(object_at(properties, "task_packet", "CREATE_AGENT.then.properties")["$ref"], "#/$defs/realDispatchValue")
+        self.assertEqual(
+            list_at(object_at(properties, "target_role", "CREATE_AGENT.then.properties"), "enum", "CREATE_AGENT.target_role"),
+            [
+                "requirements_analyst",
+                "solution_architect",
+                "designer",
+                "developer",
+                "tester",
+                "technical_writer",
+                "devops_setup_engineer",
+                "release_manager",
+            ],
+        )
+
+    def test_dispatchability_schema_stdlib_preserves_required_passed_checks(self) -> None:
+        schema = load_dispatchability_schema()
+        check_def = object_at(schema_defs(schema), "check", "schema.$defs")
+        check_properties = object_at(check_def, "properties", "schema.$defs.check")
+        check_ids = set(list_at(object_at(check_properties, "check_id", "schema.$defs.check.properties"), "enum", "check_id"))
+
+        self.assertEqual(required_passed_check_ids(schema), check_ids)
+
+        then = find_then_for_const(schema, "recommended_next_action", "CREATE_AGENT")
+        checks = object_at(object_at(then, "properties", "CREATE_AGENT.then"), "checks", "CREATE_AGENT.then.properties")
+        check_rules = list_at(checks, "allOf", "CREATE_AGENT.then.properties.checks")
+        self.assertEqual(check_rules[0], {"$ref": "#/$defs/createAgentRequiredPassedChecks"})
+        no_failed_checks = object_at(check_rules[1], "not", "CREATE_AGENT.then.properties.checks.allOf[1]")
+        contains = object_at(no_failed_checks, "contains", "CREATE_AGENT.then.properties.checks.allOf[1].not")
+        self.assertEqual(list_at(contains, "required", "CREATE_AGENT.then.properties.checks.allOf[1].not.contains"), ["passed"])
+        passed = object_at(object_at(contains, "properties", "CREATE_AGENT.then.properties.checks.allOf[1].not.contains"), "passed", "contains.properties")
+        self.assertEqual(passed["const"], False)
+
+    def test_dispatchability_schema_stdlib_preserves_non_dispatch_and_sentinel_constraints(self) -> None:
+        schema = load_dispatchability_schema()
+        defs = schema_defs(schema)
+        real_dispatch_value = object_at(defs, "realDispatchValue", "schema.$defs")
+        self.assertEqual(real_dispatch_value["type"], "string")
+        self.assertEqual(real_dispatch_value["minLength"], 1)
+        self.assertEqual(
+            list_at(object_at(real_dispatch_value, "not", "schema.$defs.realDispatchValue"), "enum", "realDispatchValue.not"),
+            ["", "NONE", "none", "null", "UNKNOWN"],
+        )
+
+        non_dispatch_then = find_then_for_const(schema, "dispatchable", False)
+        non_dispatch_properties = object_at(non_dispatch_then, "properties", "dispatchable_false.then")
+        self.assertEqual(object_at(non_dispatch_properties, "verdict", "dispatchable_false.then.properties")["const"], "not_dispatchable")
+        self.assertEqual(
+            object_at(object_at(non_dispatch_properties, "recommended_next_action", "dispatchable_false.then.properties"), "not", "recommended_next_action")["const"],
+            "CREATE_AGENT",
+        )
+        self.assertEqual(list_at(non_dispatch_then, "required", "dispatchable_false.then"), ["reasons"])
 
     @unittest.skipIf(Draft202012Validator is None, "jsonschema is not installed")
     def test_dispatchability_schema_accepts_dispatchable_and_canonical_invalid_reports(self) -> None:
