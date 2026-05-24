@@ -20,6 +20,7 @@ from .commands import (
     design,
     doctor,
     incident_fixture,
+    intake,
     lifecycle,
     lint,
     package_layout,
@@ -353,6 +354,48 @@ def build_parser() -> argparse.ArgumentParser:
         help="Write proposal JSON to /tmp/... or <workspace>/project-runtime/proposals/...",
     )
     context_pack_build_parser.set_defaults(handler=context_pack_build.run_build)
+
+    intake_parser = subparsers.add_parser(
+        "intake",
+        help="Raw project input intake commands.",
+        description=(
+            "Create governed bootstrap state from a raw TZ input without interpreting "
+            "product requirements or dispatching agents."
+        ),
+    )
+    intake_subparsers = intake_parser.add_subparsers(dest="intake_command", metavar="COMMAND")
+    intake_bootstrap_parser = intake_subparsers.add_parser(
+        "bootstrap",
+        help="Create the first bounded requirements_analyst bootstrap task.",
+        description=(
+            "Validate a workspace-local TZ document and, with --confirm-write, create "
+            "exactly one bootstrap task packet plus dispatch-capable runtime state."
+        ),
+    )
+    _add_root_argument(intake_bootstrap_parser, validate=False)
+    intake_bootstrap_parser.add_argument(
+        "--tz",
+        required=True,
+        metavar="PATH",
+        help="Workspace-local raw TZ Markdown path, relative to --root or absolute inside --root.",
+    )
+    intake_bootstrap_parser.add_argument(
+        "--target-role",
+        required=True,
+        choices=("requirements_analyst",),
+        help="Bootstrap profile role to receive the first bounded task.",
+    )
+    intake_bootstrap_parser.add_argument(
+        "--confirm-write",
+        action="store_true",
+        help="Explicitly allow bootstrap task and runtime state writes.",
+    )
+    intake_bootstrap_parser.add_argument(
+        "--json-out",
+        metavar="PATH",
+        help="Write the bootstrap receipt JSON to PATH.",
+    )
+    intake_bootstrap_parser.set_defaults(handler=intake.run_bootstrap)
 
     validate_rules_parser = subparsers.add_parser(
         "validate-rules",
@@ -1151,6 +1194,11 @@ def build_parser() -> argparse.ArgumentParser:
         "--runtime-schema-version",
         default="3.1.1",
         help="Runtime schema version to initialize (default: 3.1.1).",
+    )
+    state_init_parser.add_argument(
+        "--tz",
+        metavar="PATH",
+        help="Workspace-local TZ document to record instead of creating project-input/TZ.md.",
     )
     state_init_parser.add_argument(
         "--dry-run",

@@ -109,6 +109,7 @@ def _initial_sidecars(
     root: Path,
     project_name: str,
     project_slug: str,
+    tz_path: Path,
     profile: str,
     repo_url: str,
     branch: str,
@@ -131,7 +132,7 @@ def _initial_sidecars(
                 "project_name": project_name,
                 "project_slug": project_slug,
                 "project_root": root_text,
-                "tz_path": CANONICAL_TZ_PATH.as_posix(),
+                "tz_path": tz_path.as_posix(),
                 "active_doc_root": "project-docs",
                 "package_version": package_version,
                 "governance_ruleset_version": runtime_schema_contracts.ACTIVE_GOVERNANCE_RULESET_VERSION,
@@ -287,14 +288,14 @@ def _json_bytes(payload: dict[str, Any]) -> str:
     return json.dumps(payload, indent=2, sort_keys=True) + "\n"
 
 
-def _build_plan(root: Path, sidecars: dict[str, dict[str, Any]], dry_run: bool) -> dict[str, Any]:
+def _build_plan(root: Path, sidecars: dict[str, dict[str, Any]], dry_run: bool, tz_path: Path) -> dict[str, Any]:
     state_root = root / "project-runtime" / "state"
-    tz_path = root / CANONICAL_TZ_PATH
+    tz_abs = root / tz_path
     writes = []
-    if not tz_path.exists():
+    if not tz_abs.exists():
         writes.append(
             {
-                "path": str(tz_path),
+                "path": str(tz_abs),
                 "sidecar_type": NONE,
                 "state_revision": NONE,
             }
@@ -322,6 +323,29 @@ def _build_plan(root: Path, sidecars: dict[str, dict[str, Any]], dry_run: bool) 
 def _fail(message: str, exit_code: int = EXIT_UNSAFE) -> int:
     print(f"aso state init: {message}", file=sys.stderr)
     return exit_code
+
+
+def _workspace_relative_tz_path(root: Path, value: str | None) -> tuple[Path | None, str]:
+    if not value:
+        return CANONICAL_TZ_PATH, ""
+    raw = Path(value).expanduser()
+    candidate = raw if raw.is_absolute() else root / raw
+    resolved_root = root.resolve(strict=False)
+    resolved_candidate = candidate.resolve(strict=False)
+    try:
+        relpath = resolved_candidate.relative_to(resolved_root)
+    except ValueError:
+        return None, "--tz must point to a workspace-local file"
+    if relpath == Path(".") or ".." in relpath.parts:
+        return None, "--tz must point to a workspace-local file"
+    if not candidate.is_file():
+        return None, f"--tz file is missing or unreadable: {value}"
+    try:
+        with candidate.open("r", encoding="utf-8") as handle:
+            handle.read(1)
+    except OSError as exc:
+        return None, f"--tz file is not readable: {exc}"
+    return relpath, ""
 
 
 def _validate_existing_state(state_root: Path, sidecars: dict[str, dict[str, Any]]) -> tuple[bool, str]:
@@ -354,12 +378,14 @@ def _validate_existing_state(state_root: Path, sidecars: dict[str, dict[str, Any
     return True, "existing state already matches deterministic init payload"
 
 
-def _write_tz_document(root: Path) -> tuple[bool, str]:
-    path = root / CANONICAL_TZ_PATH
+def _write_tz_document(root: Path, tz_path: Path, explicit_tz: bool) -> tuple[bool, str]:
+    path = root / tz_path
     if path.exists():
         if not path.is_file():
-            return False, f"{CANONICAL_TZ_PATH.as_posix()} exists but is not a file"
+            return False, f"{tz_path.as_posix()} exists but is not a file"
         return True, "existing TZ document preserved"
+    if explicit_tz:
+        return False, f"{tz_path.as_posix()} does not exist"
     try:
         path.parent.mkdir(parents=True, exist_ok=True)
         path.write_text(DEFAULT_TZ_TEXT, encoding="utf-8")
@@ -415,12 +441,16 @@ def run(args: argparse.Namespace) -> int:
 
     project_slug = _slug(args.project_slug or root.name)
     project_name = args.project_name or project_slug.replace("-", " ").title()
+    tz_path, tz_error = _workspace_relative_tz_path(root, getattr(args, "tz", None))
+    if tz_path is None:
+        return _fail(tz_error, EXIT_USAGE)
     branch = args.branch or _actual_branch(root)
     repo_url = args.repo_url or _actual_remote(root)
     sidecars = _initial_sidecars(
         root=root,
         project_name=project_name,
         project_slug=project_slug,
+        tz_path=tz_path,
         profile=args.profile,
         repo_url=repo_url,
         branch=branch,
@@ -432,7 +462,7 @@ def run(args: argparse.Namespace) -> int:
     if not ok:
         return _fail(detail)
 
-    plan = _build_plan(root, sidecars, args.dry_run)
+    plan = _build_plan(root, sidecars, args.dry_run, tz_path)
     plan["safety"] = {
         "existing_state": detail,
         "package_root_refused": True,
@@ -444,7 +474,7 @@ def run(args: argparse.Namespace) -> int:
         print(_json_bytes(plan), end="")
         return EXIT_OK
 
-    wrote_tz, tz_detail = _write_tz_document(root)
+    wrote_tz, tz_detail = _write_tz_document(root, tz_path, bool(getattr(args, "tz", None)))
     if not wrote_tz:
         return _fail(f"failed to write TZ document: {tz_detail}", EXIT_WRITE_ERROR)
     wrote, write_detail = _write_sidecars(state_root, sidecars)
