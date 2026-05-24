@@ -15,6 +15,42 @@ INSTALLED_RESOURCE_TEST = REPO_ROOT / "agent-system" / "tools" / "aso" / "tests"
 
 
 class CleanInstallHygieneTests(unittest.TestCase):
+    def _create_source_hygiene_fixture(self, repo: Path) -> None:
+        script_copy = repo / "agent-system" / "scripts" / "source_hygiene.sh"
+        script_copy.parent.mkdir(parents=True)
+        shutil.copy2(SOURCE_HYGIENE_SCRIPT, script_copy)
+
+        subprocess.run(["git", "init", "-q"], cwd=repo, check=True)
+        subprocess.run(["git", "config", "user.email", "aso-test@example.invalid"], cwd=repo, check=True)
+        subprocess.run(["git", "config", "user.name", "ASO Test"], cwd=repo, check=True)
+        subprocess.run(["git", "add", "agent-system/scripts/source_hygiene.sh"], cwd=repo, check=True)
+        subprocess.run(["git", "commit", "-m", "fixture"], cwd=repo, check=True, stdout=subprocess.DEVNULL)
+
+    def _run_source_hygiene(self, repo: Path) -> subprocess.CompletedProcess[str]:
+        return subprocess.run(
+            ["bash", "agent-system/scripts/source_hygiene.sh"],
+            cwd=repo,
+            check=False,
+            text=True,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+        )
+
+    def _write_source_hygiene_expanded_artifacts(self, repo: Path) -> list[str]:
+        artifact_paths = [
+            "agent-system/tools/aso/tests/.pytest_cache/CACHEDIR.TAG",
+            "agent-system/tools/aso/.mypy_cache/meta.json",
+            "agent-system/tools/aso/.ruff_cache/0.12/cache",
+            "agent-system/tools/aso/.coverage",
+            "agent-system/tools/aso/htmlcov/index.html",
+            "agent-system/tools/aso/coverage.xml",
+        ]
+        for artifact_path in artifact_paths:
+            path = repo / artifact_path
+            path.parent.mkdir(parents=True, exist_ok=True)
+            path.write_text("generated artifact\n", encoding="utf-8")
+        return artifact_paths
+
     def _fake_python_for_venv_creation(self, directory: Path) -> Path:
         fake_python = directory / "fake-python"
         fake_python.write_text(
@@ -136,44 +172,148 @@ exit 1
     def test_source_hygiene_catches_untracked_python_build_artifact(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             repo = Path(temp_dir) / "repo"
-            script_copy = repo / "agent-system" / "scripts" / "source_hygiene.sh"
-            script_copy.parent.mkdir(parents=True)
-            shutil.copy2(SOURCE_HYGIENE_SCRIPT, script_copy)
-
-            subprocess.run(["git", "init"], cwd=repo, check=True, stdout=subprocess.DEVNULL)
-            subprocess.run(["git", "config", "user.email", "aso-test@example.invalid"], cwd=repo, check=True)
-            subprocess.run(["git", "config", "user.name", "ASO Test"], cwd=repo, check=True)
-            subprocess.run(["git", "add", "agent-system/scripts/source_hygiene.sh"], cwd=repo, check=True)
-            subprocess.run(["git", "commit", "-m", "fixture"], cwd=repo, check=True, stdout=subprocess.DEVNULL)
+            self._create_source_hygiene_fixture(repo)
 
             project_input_file = repo / "project-input" / "owner-note.md"
             project_input_file.parent.mkdir()
             project_input_file.write_text("owner workflow input\n", encoding="utf-8")
-            clean_result = subprocess.run(
-                ["bash", "agent-system/scripts/source_hygiene.sh"],
-                cwd=repo,
-                check=False,
-                text=True,
-                stdout=subprocess.PIPE,
-                stderr=subprocess.PIPE,
-            )
+            clean_result = self._run_source_hygiene(repo)
             self.assertEqual(clean_result.returncode, 0, clean_result.stderr)
 
             forbidden_cache = repo / "agent-system" / "tools" / "aso" / "tests" / "__pycache__"
             forbidden_cache.mkdir(parents=True)
             (forbidden_cache / "bad.cpython-311.pyc").write_bytes(b"pyc")
-            dirty_result = subprocess.run(
-                ["bash", "agent-system/scripts/source_hygiene.sh"],
-                cwd=repo,
-                check=False,
-                text=True,
-                stdout=subprocess.PIPE,
-                stderr=subprocess.PIPE,
-            )
+            dirty_result = self._run_source_hygiene(repo)
 
             self.assertNotEqual(dirty_result.returncode, 0, dirty_result.stdout)
-            self.assertIn("Python build artifacts contaminate source checkout", dirty_result.stderr)
+            self.assertIn(
+                "Python/tooling cache, build, and coverage artifacts contaminate source checkout",
+                dirty_result.stderr,
+            )
             self.assertIn("agent-system/tools/aso/tests/__pycache__", dirty_result.stderr)
+
+    def test_source_hygiene_catches_tracked_tooling_cache_and_coverage_artifacts(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            repo = Path(temp_dir) / "repo"
+            self._create_source_hygiene_fixture(repo)
+            artifact_paths = self._write_source_hygiene_expanded_artifacts(repo)
+            subprocess.run(["git", "add", *artifact_paths], cwd=repo, check=True)
+            subprocess.run(
+                ["git", "commit", "-m", "tracked artifacts"],
+                cwd=repo,
+                check=True,
+                stdout=subprocess.DEVNULL,
+            )
+
+            dirty_result = self._run_source_hygiene(repo)
+
+            self.assertNotEqual(dirty_result.returncode, 0, dirty_result.stdout)
+            self.assertIn(
+                "tracked Python/tooling cache and coverage artifacts are not publishable",
+                dirty_result.stderr,
+            )
+            for artifact_path in artifact_paths:
+                self.assertIn(artifact_path, dirty_result.stderr)
+
+    def test_source_hygiene_catches_staged_tooling_cache_and_coverage_artifacts(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            repo = Path(temp_dir) / "repo"
+            self._create_source_hygiene_fixture(repo)
+            artifact_paths = self._write_source_hygiene_expanded_artifacts(repo)
+            subprocess.run(["git", "add", *artifact_paths], cwd=repo, check=True)
+
+            dirty_result = self._run_source_hygiene(repo)
+
+            self.assertNotEqual(dirty_result.returncode, 0, dirty_result.stdout)
+            self.assertIn(
+                "staged Python/tooling cache and coverage artifacts are not publishable",
+                dirty_result.stderr,
+            )
+            for artifact_path in artifact_paths:
+                self.assertIn(artifact_path, dirty_result.stderr)
+
+    def test_source_hygiene_catches_untracked_tooling_cache_and_coverage_artifacts(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            repo = Path(temp_dir) / "repo"
+            self._create_source_hygiene_fixture(repo)
+            artifact_paths = self._write_source_hygiene_expanded_artifacts(repo)
+
+            dirty_result = self._run_source_hygiene(repo)
+
+            self.assertNotEqual(dirty_result.returncode, 0, dirty_result.stdout)
+            self.assertIn(
+                "untracked Python/tooling cache, build, and coverage artifacts contaminate source checkout",
+                dirty_result.stderr,
+            )
+            for artifact_path in artifact_paths:
+                self.assertIn(artifact_path, dirty_result.stderr)
+
+    def test_source_hygiene_catches_ignored_tooling_cache_and_coverage_artifacts(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            repo = Path(temp_dir) / "repo"
+            self._create_source_hygiene_fixture(repo)
+            gitignore = repo / ".gitignore"
+            gitignore.write_text(
+                "\n".join(
+                    [
+                        ".pytest_cache/",
+                        ".mypy_cache/",
+                        ".ruff_cache/",
+                        ".coverage",
+                        "htmlcov/",
+                        "coverage.xml",
+                        "",
+                    ]
+                ),
+                encoding="utf-8",
+            )
+            subprocess.run(["git", "add", ".gitignore"], cwd=repo, check=True)
+            subprocess.run(
+                ["git", "commit", "-m", "ignore artifacts"],
+                cwd=repo,
+                check=True,
+                stdout=subprocess.DEVNULL,
+            )
+            self._write_source_hygiene_expanded_artifacts(repo)
+
+            dirty_result = self._run_source_hygiene(repo)
+
+            self.assertNotEqual(dirty_result.returncode, 0, dirty_result.stdout)
+            self.assertIn(
+                "filesystem Python/tooling cache, build, and coverage artifacts contaminate source checkout",
+                dirty_result.stderr,
+            )
+            for artifact_path in [
+                "agent-system/tools/aso/tests/.pytest_cache",
+                "agent-system/tools/aso/.mypy_cache",
+                "agent-system/tools/aso/.ruff_cache",
+                "agent-system/tools/aso/.coverage",
+                "agent-system/tools/aso/htmlcov",
+                "agent-system/tools/aso/coverage.xml",
+            ]:
+                self.assertIn(artifact_path, dirty_result.stderr)
+
+    def test_source_hygiene_allows_documentation_mentions_of_cache_and_coverage_names(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            repo = Path(temp_dir) / "repo"
+            self._create_source_hygiene_fixture(repo)
+            docs = repo / "agent-system" / "docs" / "source-hygiene-notes.md"
+            docs.parent.mkdir(parents=True)
+            docs.write_text(
+                "Mention .pytest_cache, .mypy_cache, .ruff_cache, .coverage, htmlcov, and coverage.xml as text.\n",
+                encoding="utf-8",
+            )
+            subprocess.run(["git", "add", "agent-system/docs/source-hygiene-notes.md"], cwd=repo, check=True)
+            subprocess.run(
+                ["git", "commit", "-m", "document names"],
+                cwd=repo,
+                check=True,
+                stdout=subprocess.DEVNULL,
+            )
+
+            clean_result = self._run_source_hygiene(repo)
+
+            self.assertEqual(clean_result.returncode, 0, clean_result.stderr)
 
 
 if __name__ == "__main__":
