@@ -10,6 +10,8 @@ from pathlib import Path
 
 CLI = Path(__file__).resolve().parents[1] / "aso.py"
 REPO_ROOT = Path(__file__).resolve().parents[4]
+DETERMINISTIC_TIMESTAMP = "2026-05-21T00:00:00Z"
+RFC3339_UTC_PATTERN = r"^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z$"
 
 
 def run_aso(*args: str) -> subprocess.CompletedProcess[str]:
@@ -115,6 +117,34 @@ class StateInitCommandTests(unittest.TestCase):
                 payload = json.loads(path.read_text(encoding="utf-8"))
                 self.assertEqual(payload["schema_version"], "3.1.1")
                 self.assertEqual(payload["runtime_schema_version"], "3.1.1")
+                self.assertRegex(payload["updated_at"], RFC3339_UTC_PATTERN)
+
+    def test_deterministic_timestamps_flag_uses_regression_timestamp(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+
+            init = run_aso(
+                "state",
+                "init",
+                "--root",
+                str(root),
+                "--project-name",
+                "Deterministic Init",
+                "--project-slug",
+                "deterministic-init",
+                "--confirm-write",
+                "--deterministic-timestamps",
+            )
+
+            self.assertEqual(init.returncode, 0, init.stdout + init.stderr)
+            state_root = root / "project-runtime" / "state"
+            for path in state_root.glob("*.json"):
+                payload = json.loads(path.read_text(encoding="utf-8"))
+                self.assertEqual(payload["updated_at"], DETERMINISTIC_TIMESTAMP)
+            workspace_identity = json.loads((state_root / "WORKSPACE_IDENTITY.json").read_text(encoding="utf-8"))
+            repository_lock = json.loads((state_root / "REPOSITORY_LOCK.json").read_text(encoding="utf-8"))
+            self.assertEqual(workspace_identity["content"]["validated_at"], DETERMINISTIC_TIMESTAMP)
+            self.assertEqual(repository_lock["content"]["created_at"], DETERMINISTIC_TIMESTAMP)
 
     def test_confirmed_current_state_requires_schema_manifest_for_strict_verify(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:

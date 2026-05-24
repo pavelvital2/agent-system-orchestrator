@@ -11,6 +11,7 @@ from pathlib import Path
 from typing import Any, NamedTuple
 
 from .. import runtime_schema_contracts
+from ..timestamps import DETERMINISTIC_TIMESTAMP, utc_timestamp
 
 
 EXIT_OK = 0
@@ -18,7 +19,7 @@ EXIT_USAGE = 2
 EXIT_UNSAFE = 3
 EXIT_WRITE_ERROR = 4
 
-UPDATED_AT = "2026-05-21T00:00:00Z"
+UPDATED_AT = DETERMINISTIC_TIMESTAMP
 UPDATED_BY = "orchestrator"
 NONE = "NONE"
 
@@ -36,6 +37,8 @@ SIDECAR_FILENAMES = (
 
 CANONICAL_TZ_PATH = Path("project-input") / "TZ.md"
 DEFAULT_TZ_TEXT = "# TZ\n\nTIMEZONE: UTC\n"
+RFC3339_UTC_RE = re.compile(r"^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z$")
+TIMESTAMP_SENTINEL = "<runtime-timestamp>"
 
 MARKDOWN_SOURCES = {
     "PROJECT_STATE": "project-runtime/PROJECT_STATE.md",
@@ -99,7 +102,7 @@ def _is_package_root(root: Path) -> bool:
     )
 
 
-def _envelope(sidecar_type: str, content: dict[str, Any]) -> dict[str, Any]:
+def _envelope(sidecar_type: str, content: dict[str, Any], *, updated_at: str) -> dict[str, Any]:
     return {
         "content": content,
         "markdown_source": MARKDOWN_SOURCES[sidecar_type],
@@ -107,7 +110,7 @@ def _envelope(sidecar_type: str, content: dict[str, Any]) -> dict[str, Any]:
         "schema_version": runtime_schema_contracts.ACTIVE_RUNTIME_SCHEMA_VERSION,
         "sidecar_type": sidecar_type,
         "state_revision": 1,
-        "updated_at": UPDATED_AT,
+        "updated_at": updated_at,
         "updated_by": UPDATED_BY,
     }
 
@@ -124,7 +127,9 @@ def _initial_sidecars(
     package_version: str,
     runtime_schema_version: str,
     probe_git: bool = True,
+    updated_at: str | None = None,
 ) -> dict[str, dict[str, Any]]:
+    timestamp = updated_at or utc_timestamp()
     root_text = str(root.resolve(strict=False))
     workspace_id = _workspace_id(project_slug)
     effective_repo_url = repo_url or NONE
@@ -190,8 +195,9 @@ def _initial_sidecars(
                 "active_gaps": [],
                 "last_accepted_result": NONE,
             },
+            updated_at=timestamp,
         ),
-        "TASK_REGISTRY.json": _envelope("TASK_REGISTRY", {"registry_revision": 1, "tasks": []}),
+        "TASK_REGISTRY.json": _envelope("TASK_REGISTRY", {"registry_revision": 1, "tasks": []}, updated_at=timestamp),
         "NEXT_ACTION.json": _envelope(
             "NEXT_ACTION",
             {
@@ -216,6 +222,7 @@ def _initial_sidecars(
                 "expected_result": [],
                 "instruction_for_orchestrator": "Runtime state is initialized; materialize Markdown views, verify bootstrap inputs, then create exactly one valid bootstrap task packet before first profile-agent dispatch.",
             },
+            updated_at=timestamp,
         ),
         "CURRENT_GATE.json": _envelope(
             "CURRENT_GATE",
@@ -241,6 +248,7 @@ def _initial_sidecars(
                 "blocking_status": NONE,
                 "notes": [],
             },
+            updated_at=timestamp,
         ),
         "WORKSPACE_IDENTITY.json": _envelope(
             "WORKSPACE_IDENTITY",
@@ -255,9 +263,10 @@ def _initial_sidecars(
                 "identity_validation_status": "not_required",
                 "repository_lock_status": "pending",
                 "push_allowed": False,
-                "validated_at": UPDATED_AT,
+                "validated_at": timestamp,
                 "validation_errors": [],
             },
+            updated_at=timestamp,
         ),
         "REPOSITORY_LOCK.json": _envelope(
             "REPOSITORY_LOCK",
@@ -267,10 +276,11 @@ def _initial_sidecars(
                 "repo_url": effective_repo_url,
                 "branch": effective_branch,
                 "push_allowed": False,
-                "created_at": UPDATED_AT,
+                "created_at": timestamp,
             },
+            updated_at=timestamp,
         ),
-        "ACCEPTED_ARTIFACTS.json": _envelope("ACCEPTED_ARTIFACTS", {"artifacts": []}),
+        "ACCEPTED_ARTIFACTS.json": _envelope("ACCEPTED_ARTIFACTS", {"artifacts": []}, updated_at=timestamp),
         "CHECKPOINT_STATE.json": _envelope(
             "CHECKPOINT_STATE",
             {
@@ -278,6 +288,7 @@ def _initial_sidecars(
                 "checkpoint_receipts": [],
                 "last_checkpoint_ref": NONE,
             },
+            updated_at=timestamp,
         ),
         "SCHEMA_MANIFEST.json": _envelope(
             "SCHEMA_MANIFEST",
@@ -288,6 +299,7 @@ def _initial_sidecars(
                 "created_by_profile": profile,
                 "sidecars": list(SIDECAR_FILENAMES),
             },
+            updated_at=timestamp,
         ),
     }
 
@@ -385,7 +397,55 @@ def select_canonical_tz(root: Path, value: str | None) -> tuple[TzSelection | No
     return TzSelection(CANONICAL_TZ_PATH, root / explicit_relpath, explicit_relpath, True, detail), ""
 
 
-def _validate_existing_state(state_root: Path, sidecars: dict[str, dict[str, Any]]) -> tuple[bool, str]:
+def _normalize_init_timestamps(filename: str, payload: dict[str, Any]) -> tuple[dict[str, Any] | None, str]:
+    normalized = json.loads(json.dumps(payload))
+    if not isinstance(normalized, dict):
+        return None, f"{filename} payload is not a JSON object"
+    timestamp_paths: list[tuple[str, ...]] = [("updated_at",)]
+    if filename == "WORKSPACE_IDENTITY.json":
+        timestamp_paths.append(("content", "validated_at"))
+    elif filename == "REPOSITORY_LOCK.json":
+        timestamp_paths.append(("content", "created_at"))
+
+    for path in timestamp_paths:
+        target: dict[str, Any] = normalized
+        for key in path[:-1]:
+            value = target.get(key)
+            if not isinstance(value, dict):
+                return None, f"{filename}.{'.'.join(path)} parent is invalid"
+            target = value
+        key = path[-1]
+        value = target.get(key)
+        if not isinstance(value, str) or not RFC3339_UTC_RE.match(value):
+            return None, f"{filename}.{'.'.join(path)} is not an RFC 3339 UTC timestamp"
+        target[key] = TIMESTAMP_SENTINEL
+    return normalized, ""
+
+
+def _init_payload_matches(
+    filename: str,
+    existing: dict[str, Any],
+    expected: dict[str, Any],
+    *,
+    compare_timestamps: bool,
+) -> tuple[bool, str]:
+    if compare_timestamps:
+        return existing == expected, ""
+    existing_normalized, error = _normalize_init_timestamps(filename, existing)
+    if error:
+        return False, error
+    expected_normalized, error = _normalize_init_timestamps(filename, expected)
+    if error:
+        return False, error
+    return existing_normalized == expected_normalized, ""
+
+
+def _validate_existing_state(
+    state_root: Path,
+    sidecars: dict[str, dict[str, Any]],
+    *,
+    compare_timestamps: bool = False,
+) -> tuple[bool, str]:
     if not state_root.exists():
         return True, "state root does not exist"
     if not state_root.is_dir():
@@ -407,12 +467,21 @@ def _validate_existing_state(state_root: Path, sidecars: dict[str, dict[str, Any
     for filename in SIDECAR_FILENAMES:
         path = state_root / filename
         try:
-            existing = path.read_text(encoding="utf-8")
+            existing = json.loads(path.read_text(encoding="utf-8"))
         except OSError as exc:
             return False, f"failed to read existing {filename}: {exc}"
-        if existing != _json_bytes(sidecars[filename]):
-            return False, f"existing {filename} is not the deterministic init payload"
-    return True, "existing state already matches deterministic init payload"
+        except json.JSONDecodeError as exc:
+            return False, f"existing {filename} is invalid JSON: {exc}"
+        matches, error = _init_payload_matches(
+            filename,
+            existing,
+            sidecars[filename],
+            compare_timestamps=compare_timestamps,
+        )
+        if not matches:
+            detail = error or "payload differs"
+            return False, f"existing {filename} does not match init payload: {detail}"
+    return True, "existing state already matches init payload"
 
 
 def write_selected_tz_document(root: Path, selection: TzSelection) -> tuple[bool, str]:
@@ -484,6 +553,7 @@ def run(args: argparse.Namespace) -> int:
 
     project_slug = _slug(args.project_slug or root.name)
     project_name = args.project_name or project_slug.replace("-", " ").title()
+    runtime_timestamp = utc_timestamp(deterministic=getattr(args, "deterministic_timestamps", False))
     tz_selection, tz_error = select_canonical_tz(root, getattr(args, "tz", None))
     if tz_selection is None:
         return _fail(tz_error, EXIT_USAGE)
@@ -500,9 +570,14 @@ def run(args: argparse.Namespace) -> int:
         branch=branch,
         package_version=args.package_version,
         runtime_schema_version=args.runtime_schema_version,
+        updated_at=runtime_timestamp,
     )
     state_root = root / "project-runtime" / "state"
-    ok, detail = _validate_existing_state(state_root, sidecars)
+    ok, detail = _validate_existing_state(
+        state_root,
+        sidecars,
+        compare_timestamps=getattr(args, "deterministic_timestamps", False),
+    )
     if not ok:
         return _fail(detail)
 

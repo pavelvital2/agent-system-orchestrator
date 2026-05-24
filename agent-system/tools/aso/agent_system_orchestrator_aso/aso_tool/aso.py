@@ -391,6 +391,11 @@ def build_parser() -> argparse.ArgumentParser:
         help="Explicitly allow bootstrap task and runtime state writes.",
     )
     intake_bootstrap_parser.add_argument(
+        "--deterministic-timestamps",
+        action="store_true",
+        help="Use the fixed regression timestamp for tests and fixtures instead of current UTC.",
+    )
+    intake_bootstrap_parser.add_argument(
         "--json-out",
         metavar="PATH",
         help="Write the bootstrap receipt JSON to PATH.",
@@ -1154,8 +1159,9 @@ def build_parser() -> argparse.ArgumentParser:
         "init",
         help="Initialize Runtime Schema 3.1.1 JSON state sidecars.",
         description=(
-            "Plan or create deterministic Runtime Schema 3.1.1 JSON sidecars under "
-            "project-runtime/state. Dry-run writes nothing; writes require --confirm-write."
+            "Plan or create Runtime Schema 3.1.1 JSON sidecars under project-runtime/state. "
+            "Runtime writes use current UTC timestamps by default. Dry-run writes nothing; "
+            "writes require --confirm-write."
         ),
     )
     _add_root_argument(state_init_parser, validate=False)
@@ -1209,6 +1215,11 @@ def build_parser() -> argparse.ArgumentParser:
         "--confirm-write",
         action="store_true",
         help="Explicitly allow writes under project-runtime/state.",
+    )
+    state_init_parser.add_argument(
+        "--deterministic-timestamps",
+        action="store_true",
+        help="Use the fixed regression timestamp for tests and fixtures instead of current UTC.",
     )
     state_init_parser.add_argument(
         "--json-out",

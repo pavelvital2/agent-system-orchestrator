@@ -105,7 +105,9 @@ Envelope rules:
 - sidecar_type must match the sidecar file and Markdown source.
 - markdown_source must point to the compatible Markdown runtime view.
 - state_revision is a positive integer that increases when governed content changes.
-- updated_at is an RFC 3339 UTC timestamp.
+- updated_at is an RFC 3339 UTC timestamp. Runtime commands write current UTC
+  timestamps by default; fixed deterministic timestamps are only for explicit
+  test or fixture modes.
 - updated_by records the actor that produced the sidecar.
 - content contains the state-specific object defined by the package template.
 - large reports, task packet bodies, audit bodies, and secret values must not be embedded.

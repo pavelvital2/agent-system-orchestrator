@@ -328,10 +328,13 @@ python3 agent-system/tools/aso/aso.py checkpoint-preflight --root . --mode packa
 `aso validate-rules` checks the packaged governance rule registry. `aso state
 init --dry-run` writes no files; confirmed initialization requires
 `--confirm-write` and writes only local ignored workspace sidecars under the
-selected root. `aso state migrate --dry-run` emits a deterministic migration
-plan for compatible legacy `2.0.0`/`3.0.0` sidecars; confirmed migration
-requires `--confirm-write`, fails closed on malformed or ambiguous state, and
-writes migration receipts under allowed runtime report paths. Without
+selected root. Confirmed runtime writes use current UTC timestamps by default;
+`--deterministic-timestamps` on `state init` and `intake bootstrap` is reserved
+for tests, golden fixtures, and reproducible documentation captures. `aso state
+migrate --dry-run` emits a deterministic migration plan for compatible legacy
+`2.0.0`/`3.0.0` sidecars; confirmed migration requires `--confirm-write`,
+fails closed on malformed or ambiguous state, and writes migration receipts
+under allowed runtime report paths. Without
 `--confirm-write`, `aso state render` is read-only except for explicit report
 output to `/tmp`, `project-runtime/reports`, or `project-runtime/rendered`.
 With `--confirm-write`, it writes generated Markdown compatibility views for

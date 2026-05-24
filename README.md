@@ -109,6 +109,11 @@ aso state verify --root "$WORK" --strict
 aso plan-next --root "$WORK" --strict
 ```
 
+Confirmed runtime bootstrap commands record factual UTC timestamps ending in
+`Z`. Use `--deterministic-timestamps` on `aso state init` or
+`aso intake bootstrap` only for tests, golden fixtures, and reproducible
+documentation captures that need the fixed regression timestamp.
+
 `plan-next` is read-only. It should recommend dispatch-capable `CREATE_AGENT`
 for the bootstrap requirements analyst task. The first profile-agent then
 creates a candidate package under `project-runtime/artifacts/candidates/<TASK_ID>/`
@@ -243,8 +248,10 @@ python3 agent-system/tools/aso/aso.py checkpoint-preflight --root . --mode packa
 
 `aso state init --dry-run` writes no files. Confirmed initialization requires
 `--confirm-write` and writes only local ignored workspace state under the
-selected root. `aso state migrate --dry-run` emits a deterministic migration
-plan for compatible legacy sidecars; confirmed migration requires
+selected root. Confirmed runtime writes use current UTC timestamps by default;
+`--deterministic-timestamps` is reserved for tests and fixtures. `aso state
+migrate --dry-run` emits a deterministic migration plan for compatible legacy
+sidecars; confirmed migration requires
 `--confirm-write`, fails closed on malformed or ambiguous input, and writes
 migration receipts under allowed `project-runtime/` report paths. Without
 `--confirm-write`, `aso state render` is read-only except for explicit report

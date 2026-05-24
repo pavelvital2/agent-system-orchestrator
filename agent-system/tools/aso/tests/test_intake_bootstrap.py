@@ -10,6 +10,7 @@ from pathlib import Path
 
 CLI = Path(__file__).resolve().parents[1] / "aso.py"
 REPO_ROOT = Path(__file__).resolve().parents[4]
+DETERMINISTIC_TIMESTAMP = "2026-05-21T00:00:00Z"
 
 
 def run_aso(*args: str) -> subprocess.CompletedProcess[str]:
@@ -38,6 +39,7 @@ def state_init(root: Path, tz_path: str = "project-input/TZ_REAL.md") -> subproc
         "--tz",
         tz_path,
         "--confirm-write",
+        "--deterministic-timestamps",
     )
 
 
@@ -96,6 +98,7 @@ class IntakeBootstrapCommandTests(unittest.TestCase):
                 "--target-role",
                 "requirements_analyst",
                 "--confirm-write",
+                "--deterministic-timestamps",
                 "--json-out",
                 str(receipt_path),
             )
@@ -129,6 +132,8 @@ class IntakeBootstrapCommandTests(unittest.TestCase):
             self.assertIn("Audit and acceptance happen after candidate artifact creation", packet_text)
             registry = json.loads((root / "project-runtime/state/TASK_REGISTRY.json").read_text(encoding="utf-8"))
             self.assertEqual(len(registry["content"]["tasks"]), 1)
+            self.assertEqual(registry["content"]["tasks"][0]["created_at"], DETERMINISTIC_TIMESTAMP)
+            self.assertEqual(registry["content"]["tasks"][0]["updated_at"], DETERMINISTIC_TIMESTAMP)
             assert_bootstrap_views_synced(self, root)
             plan_report = json.loads(plan_path.read_text(encoding="utf-8"))
             self.assertEqual(plan_report["recommended_next_action"], "CREATE_AGENT")
@@ -152,6 +157,7 @@ class IntakeBootstrapCommandTests(unittest.TestCase):
                 "--target-role",
                 "requirements_analyst",
                 "--confirm-write",
+                "--deterministic-timestamps",
             )
             second = run_aso(
                 "intake",
@@ -163,6 +169,7 @@ class IntakeBootstrapCommandTests(unittest.TestCase):
                 "--target-role",
                 "requirements_analyst",
                 "--confirm-write",
+                "--deterministic-timestamps",
             )
 
             self.assertEqual(first.returncode, 0, first.stdout + first.stderr)
@@ -218,6 +225,7 @@ class IntakeBootstrapCommandTests(unittest.TestCase):
                 "--target-role",
                 "requirements_analyst",
                 "--confirm-write",
+                "--deterministic-timestamps",
             )
             verify = run_aso("state", "verify", "--root", str(root), "--strict")
 
@@ -255,6 +263,7 @@ class IntakeBootstrapCommandTests(unittest.TestCase):
                 "--target-role",
                 "requirements_analyst",
                 "--confirm-write",
+                "--deterministic-timestamps",
             )
 
             self.assertEqual(result.returncode, 2, result.stdout + result.stderr)

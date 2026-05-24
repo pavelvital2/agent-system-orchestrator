@@ -8,6 +8,7 @@ import sys
 from pathlib import Path
 from typing import Any
 
+from ..timestamps import DETERMINISTIC_TIMESTAMP, utc_timestamp
 from . import state_init, state_render
 
 
@@ -19,7 +20,7 @@ EXIT_WRITE_ERROR = 4
 TASK_ID = "TASK_BOOTSTRAP_REQUIREMENTS_ANALYST_001"
 TASK_PACKET = Path("project-runtime/bootstrap") / f"{TASK_ID}.md"
 TARGET_ROLE = "requirements_analyst"
-UPDATED_AT = "2026-05-21T00:00:00Z"
+UPDATED_AT = DETERMINISTIC_TIMESTAMP
 
 
 def _json_bytes(payload: dict[str, Any]) -> str:
@@ -91,7 +92,7 @@ def _write_sidecar(root: Path, filename: str, payload: dict[str, Any]) -> None:
     path.write_text(_json_bytes(payload), encoding="utf-8")
 
 
-def _task_entry() -> dict[str, Any]:
+def _task_entry(*, updated_at: str = UPDATED_AT) -> dict[str, Any]:
     return {
         "task_id": TASK_ID,
         "task_title": "Bootstrap raw TZ intake for requirements analysis",
@@ -115,8 +116,8 @@ def _task_entry() -> dict[str, Any]:
         "push_status": "not_required",
         "accepted_files": [],
         "checkpoint_ref": "NONE",
-        "created_at": UPDATED_AT,
-        "updated_at": UPDATED_AT,
+        "created_at": updated_at,
+        "updated_at": updated_at,
     }
 
 
@@ -223,12 +224,22 @@ Create the first bounded requirements analysis from the raw TZ document.
 def _same_task(existing: dict[str, Any], tz_path: str) -> bool:
     expected = _task_entry()
     for key, value in expected.items():
+        if key in {"created_at", "updated_at"}:
+            timestamp = existing.get(key)
+            if not isinstance(timestamp, str) or not state_init.RFC3339_UTC_RE.match(timestamp):
+                return False
+            continue
         if existing.get(key) != value:
             return False
     return True
 
 
-def _apply_payloads(root: Path, tz_path: str) -> tuple[str, list[tuple[str, dict[str, Any]]], str]:
+def _apply_payloads(
+    root: Path,
+    tz_path: str,
+    *,
+    updated_at: str,
+) -> tuple[str, list[tuple[str, dict[str, Any]]], str]:
     project_state, error = _load_sidecar(root, "PROJECT_STATE.json")
     if error:
         return "blocked", [], error
@@ -248,7 +259,7 @@ def _apply_payloads(root: Path, tz_path: str) -> tuple[str, list[tuple[str, dict
         return "blocked", [], "TASK_REGISTRY.content.tasks must be a list"
 
     matching = [task for task in tasks if isinstance(task, dict) and task.get("task_id") == TASK_ID]
-    expected_task = _task_entry()
+    expected_task = _task_entry(updated_at=updated_at)
     expected_next = _next_action(tz_path)
     expected_gate = _current_gate()
     packet_path = root / TASK_PACKET
@@ -275,6 +286,8 @@ def _apply_payloads(root: Path, tz_path: str) -> tuple[str, list[tuple[str, dict
     project_state["content"]["tz_path"] = tz_path
     next_action["content"] = expected_next
     current_gate["content"] = expected_gate
+    for payload in (project_state, task_registry, next_action, current_gate):
+        payload["updated_at"] = updated_at
     return "created", [
         ("PROJECT_STATE.json", project_state),
         ("TASK_REGISTRY.json", task_registry),
@@ -290,13 +303,14 @@ def run_bootstrap(args: argparse.Namespace) -> int:
     root = root.resolve(strict=False)
     if args.target_role != TARGET_ROLE:
         return _blocked(root, "", f"--target-role must be {TARGET_ROLE}", args, EXIT_USAGE)
+    runtime_timestamp = utc_timestamp(deterministic=getattr(args, "deterministic_timestamps", False))
 
     tz_selection, error = state_init.select_canonical_tz(root, args.tz)
     if tz_selection is None:
         return _blocked(root, args.tz, error, args, EXIT_USAGE)
     tz_path = tz_selection.tz_path.as_posix()
 
-    status, payloads, message = _apply_payloads(root, tz_path)
+    status, payloads, message = _apply_payloads(root, tz_path, updated_at=runtime_timestamp)
     if status == "blocked":
         return _blocked(root, tz_path, message, args)
 

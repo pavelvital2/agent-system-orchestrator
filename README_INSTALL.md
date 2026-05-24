@@ -187,6 +187,11 @@ aso state verify --root "$WORK" --strict --json-out /tmp/aso-state-verify.json
 aso plan-next --root "$WORK" --strict --json-out /tmp/aso-plan-next.json
 ```
 
+By default, confirmed runtime bootstrap writes record current UTC timestamps in
+RFC 3339 `Z` form. Add `--deterministic-timestamps` to `state init` or
+`intake bootstrap` only for regression tests, fixture generation, or
+documentation captures that require the fixed test timestamp.
+
 Unsupported install and bootstrap patterns:
 
 - running clean install checks with `--venv` or `--source-copy` inside the live
@@ -235,8 +240,10 @@ aso state migrate --root agent-system/tests/fixtures/state/valid_workspace --to 
 
 `aso state init --dry-run` writes no files. Confirmed initialization requires
 `--confirm-write` and writes only local ignored workspace sidecars under
-`project-runtime/state/`. `aso state migrate --dry-run` emits a deterministic
-plan for compatible legacy sidecars; confirmed migration requires
+`project-runtime/state/`. Confirmed runtime writes use current UTC timestamps
+by default; `--deterministic-timestamps` is reserved for tests and fixtures.
+`aso state migrate --dry-run` emits a deterministic plan for compatible legacy
+sidecars; confirmed migration requires
 `--confirm-write`, fails closed on malformed or ambiguous input, and records
 receipts under allowed `project-runtime/` report paths. Without
 `--confirm-write`, `aso state render` is read-only except for explicit report

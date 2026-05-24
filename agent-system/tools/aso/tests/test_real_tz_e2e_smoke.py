@@ -15,6 +15,7 @@ REPO_ROOT = Path(__file__).resolve().parents[4]
 INSTALL_SCRIPT = REPO_ROOT / "agent-system" / "scripts" / "install_aso_clean.sh"
 REAL_TZ_FIXTURE = REPO_ROOT / "agent-system" / "tests" / "fixtures" / "real_tz_e2e" / "TZ_REAL_E2E_TELEGRAM_BOT.md"
 MISSING_TZ_FIXTURE = REPO_ROOT / "agent-system" / "tests" / "fixtures" / "real_tz_e2e" / "MISSING_TZ_PATH.txt"
+RFC3339_UTC_PATTERN = r"^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z$"
 
 
 def run_cmd(args: list[str], *, cwd: Path | None = None) -> subprocess.CompletedProcess[str]:
@@ -158,13 +159,17 @@ class RealTzE2ESmokeTests(unittest.TestCase):
             self.assertEqual(plan_report["target_role"], "requirements_analyst")
             self.assertEqual(project_state["content"]["identity_validation_status"], "not_checked")
             self.assertEqual(project_state["content"]["repository_lock_status"], "draft")
+            self.assertRegex(project_state["updated_at"], RFC3339_UTC_PATTERN)
             self.assertEqual(workspace_identity["content"]["identity_validation_status"], "not_required")
             self.assertEqual(workspace_identity["content"]["repository_lock_status"], "pending")
+            self.assertRegex(workspace_identity["content"]["validated_at"], RFC3339_UTC_PATTERN)
             self.assertNotIn(plan_report["task_id"], ("", "NONE"))
             self.assertNotIn(plan_report["task_packet"], ("", "NONE"))
             self.assertEqual(task["task_id"], plan_report["task_id"])
             self.assertEqual(task["task_packet"], plan_report["task_packet"])
             self.assertEqual(task["owner_role"], "requirements_analyst")
+            self.assertRegex(task["created_at"], RFC3339_UTC_PATTERN)
+            self.assertRegex(task["updated_at"], RFC3339_UTC_PATTERN)
             self.assertEqual(current_gate["content"]["task_id"], plan_report["task_id"])
             self.assertEqual(current_gate["content"]["task_packet"], plan_report["task_packet"])
             self.assertTrue((workspace / plan_report["task_packet"]).is_file())
