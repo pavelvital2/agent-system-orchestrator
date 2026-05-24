@@ -65,13 +65,13 @@ validation remains stdlib-only for its packaged schema/contract checks; the
 installer must still verify the canonical package from this checkout, not a
 root-level duplicate Python tree.
 
-This install document covers package version `3.7.5` with runtime schema
-`3.1.1` and artifact package schema `1.1.0`. P5.5 stabilizes active version
-and governance readiness around the P5.4 planner dispatchability gate while
-preserving the Runtime State sidecar schema, the artifact package schema, and
-the Project Factory P1 command boundary. It does not add semantic TZ reading,
-product-intake automation, daemon mode, live dispatch, or checkpoint
-execution.
+This install document covers package version `3.7.6` with runtime schema
+`3.1.1` and artifact package schema `1.1.0`. P5.6 documents and validates the
+installed real-TZ intake/bootstrap workflow while preserving the Runtime State
+sidecar schema, the artifact package schema, and the Project Factory P1
+command boundary. It does not add semantic TZ reading, product-intake
+automation, daemon mode, live dispatch, product generation, secret collection,
+or checkpoint execution.
 
 Both installers accept a Python executable and virtual environment path:
 
@@ -168,6 +168,36 @@ aso lifecycle receive-result --root /path/to/project --from-result project-runti
 aso artifact accept --root /path/to/project --package project-runtime/artifacts/candidates/TASK_ID/manifest.json --confirm-write
 aso lifecycle terminate-agent --root /path/to/project --from-result project-runtime/results/worker/RESULT_TASK_ID_ATTEMPT_001.md --confirm-write
 ```
+
+For a fresh real-TZ workspace, the official installed-orchestrator bootstrap
+sequence is:
+
+```text
+ASO_ROOT=$(pwd)
+WORK=/tmp/aso-real-tz-workspace
+rm -rf "$WORK"
+mkdir -p "$WORK/project-input"
+cp /path/to/TZ_REAL_E2E_TELEGRAM_BOT.md "$WORK/project-input/TZ_REAL_E2E_TELEGRAM_BOT.md"
+bash agent-system/scripts/install_aso_clean.sh --source "$ASO_ROOT" --venv /tmp/aso_clean_install_venv --source-copy /tmp/aso_clean_install_src --with-test
+. /tmp/aso_clean_install_venv/bin/activate
+aso state init --root "$WORK" --tz project-input/TZ_REAL_E2E_TELEGRAM_BOT.md --confirm-write --json-out /tmp/aso-state-init.json
+aso intake bootstrap --root "$WORK" --tz project-input/TZ_REAL_E2E_TELEGRAM_BOT.md --target-role requirements_analyst --confirm-write --json-out /tmp/aso-intake-bootstrap.json
+aso state verify --root "$WORK" --strict --json-out /tmp/aso-state-verify.json
+aso plan-next --root "$WORK" --strict --json-out /tmp/aso-plan-next.json
+```
+
+Unsupported install and bootstrap patterns:
+
+- running clean install checks with `--venv` or `--source-copy` inside the live
+  source checkout;
+- using direct `pip install .` or `pip install -e .` as clean-source
+  validation evidence;
+- giving `state init` an IANA timezone string when a project TZ document is
+  required;
+- running `intake bootstrap` without `--confirm-write` and expecting state
+  mutation;
+- treating `plan-next` output as live dispatch, audit, checkpoint, commit, or
+  push authority.
 
 After a profile-agent RESULT is recorded, completion must follow the P5
 artifact package sequence:

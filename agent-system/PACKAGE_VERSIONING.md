@@ -19,8 +19,8 @@ RUNTIME_SCHEMA_VERSION:
 ## Active version constants
 
 ```text
-CURRENT_PACKAGE_VERSION: 3.7.5
-CURRENT_GOVERNANCE_RULESET_VERSION: 3.7.5
+CURRENT_PACKAGE_VERSION: 3.7.6
+CURRENT_GOVERNANCE_RULESET_VERSION: 3.7.6
 CURRENT_RUNTIME_SCHEMA_VERSION: 3.1.1
 ARTIFACT_PACKAGE_SCHEMA_VERSION: 1.1.0
 ```
@@ -445,6 +445,22 @@ Artifact Package Schema `1.1.0` are preserved. P5.5 does not change planner
 implementation, runtime sidecar envelopes, artifact package schema, live
 dispatch authority, checkpoint execution, daemon behavior, or artifact package
 storage semantics.
+
+The ASO Real-TZ E2E Install and Intake P5.6 correction installs:
+
+```text
+CURRENT_PACKAGE_VERSION: 3.7.6
+CURRENT_GOVERNANCE_RULESET_VERSION: 3.7.6
+CURRENT_RUNTIME_SCHEMA_VERSION: 3.1.1
+ARTIFACT_PACKAGE_SCHEMA_VERSION: 1.1.0
+DESIGN_GAP_GOVERNANCE_SCHEMA_VERSION: 1.0.0
+```
+
+This patch records the accepted real-TZ installed-orchestrator workflow and
+release validation evidence. P5.6 keeps Runtime Schema `3.1.1` and Artifact
+Package Schema `1.1.0`; it does not change runtime sidecar envelopes, add
+product generation, dispatch live agents, execute checkpoints, install a
+daemon, or collect secrets.
 
 ## Version semantics
 

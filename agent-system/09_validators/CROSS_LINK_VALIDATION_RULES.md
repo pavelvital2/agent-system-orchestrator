@@ -362,15 +362,15 @@ of reasoning-level policy changes for the relevant versioned task.
 For current readiness checks, validators must confirm the active tuple:
 
 ```text
-CURRENT_PACKAGE_VERSION: 3.7.5
-CURRENT_GOVERNANCE_RULESET_VERSION: 3.7.5
+CURRENT_PACKAGE_VERSION: 3.7.6
+CURRENT_GOVERNANCE_RULESET_VERSION: 3.7.6
 CURRENT_RUNTIME_SCHEMA_VERSION: 3.1.1
 ARTIFACT_PACKAGE_SCHEMA_VERSION: 1.1.0
 ```
 
 Historical readiness evidence remains historical and must not be used as
 current package constants. Runtime Schema `3.1.1` and Artifact Package Schema
-`1.1.0` remain active for the P5.5 package/governance stabilization patch.
+`1.1.0` remain active for the P5.6 real-TZ install/intake validation patch.
 
 ## Changelog traceability checks
 

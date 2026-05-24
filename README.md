@@ -20,9 +20,10 @@ filesystem-governed ASO helper CLI at `agent-system/tools/aso/aso.py`: most
 commands are read-only diagnostics or dry-run proposals, while Project Factory
 commands may create generated projects only within explicit target paths.
 
-This P5.5 stabilization package records the active package metadata as the
-governed `3.7.5` package/governance tuple with runtime schema `3.1.1` and
-artifact package schema `1.1.0`. P5.5 stabilizes package/readiness metadata;
+This P5.6 correction package records the active package metadata as the
+governed `3.7.6` package/governance tuple with runtime schema `3.1.1` and
+artifact package schema `1.1.0`. P5.6 stabilizes installed real-TZ intake and
+release validation evidence;
 the P5.4 planner Dispatchability Gate remains the active authority:
 `plan-next` may recommend `CREATE_AGENT` only after proving the current next
 action can dispatch a profile agent with a valid role, task id, task packet,
@@ -87,6 +88,27 @@ unchanged before and after installation. The target virtual environment must
 be outside the source repository. Direct `pip install .` and
 `pip install -e .` are development shortcuts, not the official clean-source
 validation path for this package.
+
+The supported installed-orchestrator bootstrap workflow for a real project TZ
+file is:
+
+```text
+ASO_ROOT=$(pwd)
+WORK=/tmp/aso-real-tz-workspace
+rm -rf "$WORK"
+mkdir -p "$WORK/project-input"
+cp /path/to/TZ_REAL_E2E_TELEGRAM_BOT.md "$WORK/project-input/TZ_REAL_E2E_TELEGRAM_BOT.md"
+bash agent-system/scripts/install_aso_clean.sh --source "$ASO_ROOT" --venv /tmp/aso_clean_install_venv --source-copy /tmp/aso_clean_install_src --with-test
+. /tmp/aso_clean_install_venv/bin/activate
+aso state init --root "$WORK" --tz project-input/TZ_REAL_E2E_TELEGRAM_BOT.md --confirm-write
+aso intake bootstrap --root "$WORK" --tz project-input/TZ_REAL_E2E_TELEGRAM_BOT.md --target-role requirements_analyst --confirm-write
+aso state verify --root "$WORK" --strict
+aso plan-next --root "$WORK" --strict
+```
+
+`plan-next` is read-only. It should recommend dispatch-capable `CREATE_AGENT`
+for the bootstrap requirements analyst task; the operator still performs the
+normal audit, correction, and checkpoint steps outside ASO's read-only planner.
 
 For an editable user install from the repository root:
 
@@ -182,7 +204,7 @@ python3 agent-system/tools/aso/aso.py validate-context-pack agent-system/tests/f
 Runtime State P2 command surfaces formalize JSON sidecars under
 `project-runtime/state/`. JSON sidecars are canonical for P2+ runtime state;
 Markdown or report outputs are compatibility views generated from JSON. The
-active package version is `3.7.5` and the active runtime schema version is
+active package version is `3.7.6` and the active runtime schema version is
 `3.1.1`.
 
 ```text

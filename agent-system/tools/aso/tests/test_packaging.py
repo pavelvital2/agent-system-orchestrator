@@ -103,7 +103,7 @@ class PackagingCommandTests(unittest.TestCase):
         init_file = (ASO_TOOL_ROOT / "agent_system_orchestrator_aso" / "__init__.py").read_text(encoding="utf-8")
         package_version = pyproject["project"]["version"]
 
-        self.assertEqual(package_version, "3.7.5")
+        self.assertEqual(package_version, "3.7.6")
         self.assertIn(f'__version__ = "{package_version}"', init_file)
 
     def test_package_layout_verify_accepts_package_mode(self) -> None:

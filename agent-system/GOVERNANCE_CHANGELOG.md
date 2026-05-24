@@ -1833,3 +1833,50 @@ AUTHORIZED_BY: project_owner
 AUDIT_REQUIRED: yes
 STATUS: accepted
 ```
+
+```text
+CHANGE_ID: GOV-2026-05-24-001
+CHANGE_TITLE: ASO_REAL_TZ_E2E_INSTALL_INTAKE_P5_6_RELEASE_VALIDATION
+DATE: 2026-05-24
+PACKAGE_VERSION_BEFORE: 3.7.5
+PACKAGE_VERSION_AFTER: 3.7.6
+GOVERNANCE_RULESET_BEFORE: 3.7.5
+GOVERNANCE_RULESET_AFTER: 3.7.6
+RUNTIME_SCHEMA_BEFORE: 3.1.1
+RUNTIME_SCHEMA_AFTER: 3.1.1
+ARTIFACT_PACKAGE_SCHEMA_BEFORE: 1.1.0
+ARTIFACT_PACKAGE_SCHEMA_AFTER: 1.1.0
+CHANGE_TYPE: patch
+CHANGE_SUBTYPE: p5_6_real_tz_e2e_install_intake_release_validation
+AFFECTED_FILES:
+- README.md
+- README_INSTALL.md
+- pyproject.toml
+- agent-system/PACKAGE_VERSIONING.md
+- agent-system/GOVERNANCE_CHANGELOG.md
+- agent-system/02_runtime/CONTRACT_AUTHORITY_MAP.md
+- agent-system/09_validators/CROSS_LINK_VALIDATION_RULES.md
+- agent-system/tools/aso/agent_system_orchestrator_aso/__init__.py
+- agent-system/tools/aso/agent_system_orchestrator_aso/aso_tool/runtime_schema_contracts.py
+- agent-system/tools/aso/agent_system_orchestrator_aso/resources/agent-system/09_validators/CROSS_LINK_VALIDATION_RULES.md
+- agent-system/tools/aso/tests/test_contract_authority_map.py
+- agent-system/tools/aso/tests/test_packaging.py
+- agent-system/11_release/ASO_REAL_TZ_E2E_INSTALL_INTAKE_P5_6_V3_7_6_RELEASE_NOTES.md
+- agent-system/11_release/ASO_REAL_TZ_E2E_INSTALL_INTAKE_P5_6_V3_7_6_VALIDATION_REPORT.md
+AFFECTED_INVARIANTS:
+- Active package/governance/runtime tuple is 3.7.6 / 3.7.6 / 3.1.1.
+- Artifact package schema version remains 1.1.0.
+- Official installed-orchestrator validation uses the clean source installer and an external workspace.
+- A real project TZ document under project-input can initialize state and bootstrap a bounded requirements analyst task.
+- `plan-next` remains read-only and must not dispatch, audit, checkpoint, commit, push, generate products, or collect secrets.
+AFFECTED_TRANSITIONS:
+- real TZ document plus confirmed state init and confirmed intake bootstrap -> strict state verify -> read-only `plan-next` may recommend dispatch-capable `CREATE_AGENT`.
+- missing or unreadable TZ document -> fail closed with no runtime state mutation.
+- repeated intake bootstrap for the same task -> idempotent existing-task route, not duplicate task-packet creation.
+SCHEMA_TEMPLATE_IMPACT: none; Runtime Schema 3.1.1 and Artifact Package Schema 1.1.0 are preserved.
+MIGRATION_REQUIRED: no
+MIGRATION_NOTE: Runtime Schema 3.1.1 and Artifact Package Schema 1.1.0 are preserved. P5.6 records the installed real-TZ intake/bootstrap workflow, package/governance version metadata, release notes, and final validation evidence only; it does not migrate active project-runtime state, change runtime sidecar envelopes, change artifact package schema, add semantic TZ reading, generate product code, add live dispatch, execute checkpoints, install a daemon, collect secrets, or broaden publication authority.
+AUTHORIZED_BY: project_owner
+AUDIT_REQUIRED: yes
+STATUS: accepted
+```

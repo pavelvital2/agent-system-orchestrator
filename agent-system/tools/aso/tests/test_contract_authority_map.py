@@ -14,13 +14,13 @@ class ContractAuthorityMapTests(unittest.TestCase):
     def test_p5_authority_map_documents_active_chain(self) -> None:
         authority_map = AUTHORITY_MAP.read_text(encoding="utf-8")
 
-        for phase in ("P5", "P5.1", "P5.2", "P5.3", "P5.4", "P5.5"):
+        for phase in ("P5", "P5.1", "P5.2", "P5.3", "P5.4", "P5.5", "P5.6"):
             self.assertIn(f"| {phase} |", authority_map)
         self.assertIn("ARTIFACT_PACKAGE_MODEL_P5_CONTRACT.md", authority_map)
         self.assertIn("ARTIFACT_PACKAGE_MODEL_P5_1_CORRECTION_CONTRACT.md", authority_map)
         self.assertIn("BOOTSTRAP_STATE_RECONCILIATION_P5_2_CONTRACT.md", authority_map)
         self.assertIn("PLANNER_DISPATCHABILITY_GATE_P5_4_CONTRACT.md", authority_map)
-        self.assertIn("package_version: 3.7.5", authority_map)
+        self.assertIn("package_version: 3.7.6", authority_map)
         self.assertIn("runtime_schema_version: 3.1.1", authority_map)
 
     def test_runtime_schema_3_1_1_uses_mapped_base_contract_file(self) -> None:
