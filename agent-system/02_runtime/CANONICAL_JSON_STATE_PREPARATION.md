@@ -29,8 +29,10 @@ project-runtime/CURRENT_GATE.md
 project-runtime/NEXT_ACTION.md
 project-runtime/TASK_REGISTRY.md
 project-runtime/ACCEPTED_ARTIFACTS.md
-project-runtime/ORCHESTRATOR_EVENTS_LOG.md
-project-runtime/STATUS_SUMMARY.md
+project-runtime/WORKSPACE_IDENTITY.md
+project-runtime/REPOSITORY_LOCK.md
+project-runtime/CHECKPOINT_STATE.md
+project-runtime/SCHEMA_MANIFEST.md
 ```
 
 The current authority model is:
@@ -86,6 +88,9 @@ project-runtime/state/TASK_REGISTRY.json
 project-runtime/state/NEXT_ACTION.json
 project-runtime/state/CURRENT_GATE.json
 project-runtime/state/WORKSPACE_IDENTITY.json
+project-runtime/state/REPOSITORY_LOCK.json
+project-runtime/state/ACCEPTED_ARTIFACTS.json
+project-runtime/state/CHECKPOINT_STATE.json
 project-runtime/state/SCHEMA_MANIFEST.json
 ```
 
@@ -229,7 +234,9 @@ Without `--confirm-write`, `aso state render` is read-only except for explicit
 report output to `/tmp`, `project-runtime/reports`, or
 `project-runtime/rendered`. With `--confirm-write`, it writes Markdown
 compatibility views from canonical `project-runtime/state/*.json` sidecars and
-cannot be combined with `--out`.
+cannot be combined with `--out`. Every canonical sidecar receives a generated
+Markdown compatibility view; Markdown remains derived from JSON and is not
+canonical state.
 
 `aso state render --confirm-write` must:
 
@@ -255,8 +262,10 @@ views.CURRENT_GATE         -> project-runtime/CURRENT_GATE.md
 views.NEXT_ACTION          -> project-runtime/NEXT_ACTION.md
 views.TASK_REGISTRY        -> project-runtime/TASK_REGISTRY.md
 views.ACCEPTED_ARTIFACTS   -> project-runtime/ACCEPTED_ARTIFACTS.md
-views.STATUS_SUMMARY       -> project-runtime/STATUS_SUMMARY.md
-events.jsonl latest events -> project-runtime/ORCHESTRATOR_EVENTS_LOG.md or generated event summary view
+views.WORKSPACE_IDENTITY   -> project-runtime/WORKSPACE_IDENTITY.md
+views.SCHEMA_MANIFEST      -> project-runtime/SCHEMA_MANIFEST.md
+views.REPOSITORY_LOCK      -> project-runtime/REPOSITORY_LOCK.md
+views.CHECKPOINT_STATE     -> project-runtime/CHECKPOINT_STATE.md
 ```
 
 ## Validator expectations

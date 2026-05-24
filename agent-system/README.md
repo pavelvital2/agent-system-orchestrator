@@ -206,10 +206,9 @@ The P5.2 bootstrap state reconciliation contract is documented in
 `agent-system/02_runtime/BOOTSTRAP_STATE_RECONCILIATION_P5_2_CONTRACT.md`.
 The P5.4 planner Dispatchability Gate contract is documented in
 `agent-system/02_runtime/PLANNER_DISPATCHABILITY_GATE_P5_4_CONTRACT.md`.
-Bootstrap intake writes canonical JSON sidecars first, then synchronizes the
-standard materialized views `PROJECT_STATE.md`, `NEXT_ACTION.md`,
-`CURRENT_GATE.md`, and `TASK_REGISTRY.md` from those sidecars using the state
-renderer before returning.
+Bootstrap intake writes canonical JSON sidecars first, then synchronizes
+generated Markdown compatibility views for all canonical Runtime Schema
+sidecars from those JSON sidecars using the state renderer before returning.
 
 The canonical installable ASO package source is:
 
@@ -335,8 +334,8 @@ requires `--confirm-write`, fails closed on malformed or ambiguous state, and
 writes migration receipts under allowed runtime report paths. Without
 `--confirm-write`, `aso state render` is read-only except for explicit report
 output to `/tmp`, `project-runtime/reports`, or `project-runtime/rendered`.
-With `--confirm-write`, it writes Markdown compatibility views from canonical
-JSON sidecars. `aso state verify`
+With `--confirm-write`, it writes generated Markdown compatibility views for
+every canonical JSON sidecar. `aso state verify`
 validates Runtime Schema `3.1.1` envelopes, sidecar types, required fields,
 schema alignment, task references, and compatibility diagnostics, then emits
 optional JSON evidence. `aso plan-next` recommends the next orchestrator action

@@ -197,9 +197,9 @@ python3 agent-system/tools/aso/aso.py lifecycle terminate-agent --root /path/to/
 ```
 
 Run `state render --confirm-write` after manual state materialization changes.
-`intake bootstrap --confirm-write` synchronizes the standard
-`PROJECT_STATE.md`, `NEXT_ACTION.md`, `CURRENT_GATE.md`, and
-`TASK_REGISTRY.md` compatibility views from JSON sidecars before returning.
+`intake bootstrap --confirm-write` synchronizes generated Markdown
+compatibility views for all canonical Runtime Schema sidecars from JSON
+sidecars before returning.
 After a profile-agent RESULT is recorded, the governed completion sequence is:
 
 ```text
@@ -249,8 +249,8 @@ plan for compatible legacy sidecars; confirmed migration requires
 migration receipts under allowed `project-runtime/` report paths. Without
 `--confirm-write`, `aso state render` is read-only except for explicit report
 output to `/tmp` or workspace `project-runtime/reports` or
-`project-runtime/rendered` paths. With `--confirm-write`, it writes Markdown
-compatibility views from canonical JSON sidecars.
+`project-runtime/rendered` paths. With `--confirm-write`, it writes generated
+Markdown compatibility views for every canonical JSON sidecar.
 
 Corrected P4 design governance commands validate and route
 project-designer-authored artifacts. They do not interpret raw TZ content,

@@ -15,15 +15,7 @@ from . import output_policy, state_verify
 EXIT_OK = 0
 EXIT_FINDINGS = 1
 EXIT_IO_ERROR = 3
-MATERIALIZED_VIEW_TYPES = (
-    "PROJECT_STATE",
-    "CURRENT_GATE",
-    "NEXT_ACTION",
-    "TASK_REGISTRY",
-    "ACCEPTED_ARTIFACTS",
-    "REPOSITORY_LOCK",
-    "WORKSPACE_IDENTITY",
-)
+MATERIALIZED_VIEW_TYPES = runtime_schema_contracts.ALL_SIDECARS
 
 
 def _json_bytes(payload: dict[str, object]) -> str:

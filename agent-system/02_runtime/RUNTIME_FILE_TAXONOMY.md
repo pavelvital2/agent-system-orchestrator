@@ -203,6 +203,8 @@ project-runtime/ORCHESTRATOR_EVENTS_LOG.md
 project-runtime/STATUS_SUMMARY.md
 project-runtime/WORKSPACE_IDENTITY.md
 project-runtime/REPOSITORY_LOCK.md
+project-runtime/CHECKPOINT_STATE.md
+project-runtime/SCHEMA_MANIFEST.md
 ```
 
 `project-runtime/agent-results/` is retained only as compatibility/read-only
@@ -226,11 +228,14 @@ project-runtime/state/NEXT_ACTION.json
 project-runtime/state/CURRENT_GATE.json
 project-runtime/state/WORKSPACE_IDENTITY.json
 project-runtime/state/SCHEMA_MANIFEST.json
+project-runtime/state/REPOSITORY_LOCK.json
+project-runtime/state/ACCEPTED_ARTIFACTS.json
+project-runtime/state/CHECKPOINT_STATE.json
 ```
 
-Required sidecars are canonical runtime state for Runtime Schema `3.1.1`.
-Markdown files under `project-runtime/*.md` are compatibility views generated
-from those JSON sidecars.
+Runtime Schema `3.1.1` sidecars are canonical runtime state. Markdown files
+under `project-runtime/*.md` are compatibility views generated from those JSON
+sidecars; every canonical sidecar receives a generated view when materialized.
 
 This taxonomy is a preferred layout for new runtime artifacts, not permission
 to delete, rewrite, or relocate historical execution evidence.

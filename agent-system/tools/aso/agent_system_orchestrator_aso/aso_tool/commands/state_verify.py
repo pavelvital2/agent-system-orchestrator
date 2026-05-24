@@ -938,12 +938,17 @@ def _validate_markdown_parity(root: Path, spec: SidecarSpec, content: dict[str, 
     return findings
 
 
-def _validate_sidecar(root: Path, spec: SidecarSpec) -> tuple[dict[str, object] | None, list[Finding]]:
+def _validate_sidecar(
+    root: Path,
+    spec: SidecarSpec,
+    *,
+    allow_markdown_fallback: bool = True,
+) -> tuple[dict[str, object] | None, list[Finding]]:
     path = root / "project-runtime" / "state" / spec.filename
     relpath = _rel(root, path)
     if not path.is_file():
         markdown_path = root / spec.markdown_source
-        if markdown_path.is_file():
+        if allow_markdown_fallback and markdown_path.is_file():
             return None, [
                 _finding(
                     "SIDECAR_MISSING_MARKDOWN_FALLBACK_USED",
@@ -1520,8 +1525,19 @@ def _report(root: Path, strict: bool) -> tuple[dict[str, object], int]:
 
     current_p2_state = _is_current_p2_state(loaded_sidecars, root)
     if current_p2_state:
+        current_required = set(runtime_schema_contracts.REQUIRED_SIDECARS)
+        findings = [
+            finding
+            for finding in findings
+            if not (
+                finding.rule_id
+                in {"SIDECAR_MISSING_MARKDOWN_FALLBACK_USED", "SIDECAR_REQUIRED_SIDECAR_MISSING"}
+                and finding.path.removeprefix(f"{runtime_schema_contracts.STATE_ROOT}/").removesuffix(".json")
+                in current_required
+            )
+        ]
         for sidecar_type in runtime_schema_contracts.REQUIRED_SIDECARS:
-            if sidecar_type in loaded_sidecars or sidecar_type in missing:
+            if sidecar_type in loaded_sidecars:
                 continue
             spec = SIDECAR_BY_TYPE.get(sidecar_type)
             if spec is None:
@@ -1537,7 +1553,7 @@ def _report(root: Path, strict: bool) -> tuple[dict[str, object], int]:
                 )
                 missing.append(sidecar_type)
                 continue
-            payload, sidecar_findings = _validate_sidecar(root, spec)
+            payload, sidecar_findings = _validate_sidecar(root, spec, allow_markdown_fallback=False)
             findings.extend(sidecar_findings)
             if payload is None:
                 if sidecar_type not in missing:

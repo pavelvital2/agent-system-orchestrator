@@ -68,12 +68,17 @@ project-runtime/NEXT_ACTION.md
 project-runtime/TASK_REGISTRY.md
 project-runtime/ACCEPTED_ARTIFACTS.md
 project-runtime/WORKSPACE_IDENTITY.md
+project-runtime/REPOSITORY_LOCK.md
+project-runtime/CHECKPOINT_STATE.md
+project-runtime/SCHEMA_MANIFEST.md
 ```
 
 Required minimum P2 sidecars are defined in
 `RUNTIME_STATE_P2_CONTRACT.md`. Optional sidecars may be absent before the
 matching governance stage, but validators must report readiness or migration
 status instead of inferring missing state.
+When present, every canonical sidecar receives a generated Markdown
+compatibility view; the JSON sidecar remains authoritative.
 
 ## Common sidecar envelope
 
