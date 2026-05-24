@@ -117,10 +117,12 @@ Product capability gates, MVP readiness, and final acceptance distinctions are
 documented in
 [PRODUCT_CAPABILITY_GATE_POLICY.md](09_validators/PRODUCT_CAPABILITY_GATE_POLICY.md).
 
-Future migration from Markdown runtime state to canonical JSON state is
-specified in
-[CANONICAL_JSON_STATE_PREPARATION.md](02_runtime/CANONICAL_JSON_STATE_PREPARATION.md).
-In v0, Markdown runtime files remain authoritative and compatible.
+Runtime Schema `3.1.1` canonical JSON sidecars and generated Markdown
+compatibility views are specified in
+[CANONICAL_JSON_STATE_PREPARATION.md](02_runtime/CANONICAL_JSON_STATE_PREPARATION.md)
+and [CANONICAL_JSON_STATE.md](02_runtime/CANONICAL_JSON_STATE.md).
+`project-runtime/state/*.json` sidecars are canonical; Markdown runtime files
+are compatibility views generated from JSON.
 
 ## Safe workspace initialization
 
@@ -155,11 +157,11 @@ The package includes a filesystem-governed ASO helper CLI at
 dry-run proposals, while Project Factory commands may create generated
 projects only within explicit target paths.
 
-This P5.6 audit-hardening package records the active package metadata as the
-governed `3.7.7` package/governance tuple with runtime schema `3.1.1` and
-artifact package schema `1.1.0`. It preserves the Project Factory P1 command
-boundary, Runtime Schema `3.1.1`, and Artifact Package Schema `1.1.0` while
-retaining the P5.4 planner Dispatchability Gate. `plan-next` may recommend
+This P57 governance documentation authority sync records the active package
+metadata as the governed `3.7.8` package/governance tuple with runtime schema
+`3.1.1` and artifact package schema `1.1.0`. It preserves the Project Factory
+P1 command boundary, Runtime Schema `3.1.1`, and Artifact Package Schema
+`1.1.0` while retaining the P5.4 planner Dispatchability Gate. `plan-next` may recommend
 `CREATE_AGENT` only after proving the current next action can dispatch a
 profile agent with a valid role, task id, task packet, task registry entry,
 gate state, and workspace/repository baseline.
@@ -302,11 +304,12 @@ python3 agent-system/tools/aso/aso.py validate-context-pack path/to/CONTEXT_PACK
 It validates required shape, context budget, archive/deprecated path rejection,
 forbidden document checks, and required document existence under `--root`.
 
-Runtime State P2 command surfaces are local and offline. JSON sidecars under
-`project-runtime/state/` are canonical for P2+ runtime state. Markdown and
-report outputs are compatibility views generated from JSON, not the canonical
-state source. The active package version is `3.7.7` and the active runtime
-schema version is `3.1.1`.
+Runtime State P2 command surfaces are local and offline.
+`project-runtime/state/*.json` sidecars are canonical for Runtime Schema
+`3.1.1`. Markdown runtime files are generated compatibility views, and report
+outputs are diagnostics generated from JSON, not canonical state sources. The
+active package version is `3.7.8` and the active runtime schema version is
+`3.1.1`.
 
 ```text
 python3 agent-system/tools/aso/aso.py validate-rules --root . --strict
@@ -329,9 +332,11 @@ init --dry-run` writes no files; confirmed initialization requires
 selected root. `aso state migrate --dry-run` emits a deterministic migration
 plan for compatible legacy `2.0.0`/`3.0.0` sidecars; confirmed migration
 requires `--confirm-write`, fails closed on malformed or ambiguous state, and
-writes migration receipts under allowed runtime report paths. `aso state
-render` is read-only except for explicit output to `/tmp`,
-`project-runtime/reports`, or `project-runtime/rendered`. `aso state verify`
+writes migration receipts under allowed runtime report paths. Without
+`--confirm-write`, `aso state render` is read-only except for explicit report
+output to `/tmp`, `project-runtime/reports`, or `project-runtime/rendered`.
+With `--confirm-write`, it writes Markdown compatibility views from canonical
+JSON sidecars. `aso state verify`
 validates Runtime Schema `3.1.1` envelopes, sidecar types, required fields,
 schema alignment, task references, and compatibility diagnostics, then emits
 optional JSON evidence. `aso plan-next` recommends the next orchestrator action
@@ -349,7 +354,7 @@ may use the canonical next action value `CREATE_AGENT` only for a dispatchable
 route and does not dispatch an agent.
 
 Safe Proposal / Apply P3 command surfaces are local and guarded. They run
-under the current package/governance `3.7.5` tuple with Runtime Schema `3.1.1`
+under the current package/governance `3.7.8` tuple with Runtime Schema `3.1.1`
 and preserve the P3 contract; they do not
 dispatch agents, do not commit or push, and do not publish runtime artifacts.
 Proposal commands default to dry-run. `--confirm-write` may write only proposal
@@ -475,7 +480,7 @@ agents or execute checkpoints.
 
 Project Factory P1 supports local vendored creation, local reference creation,
 GitHub dry-run planning, confirmed GitHub publish, and a guided wizard. It
-remains available in package version `3.7.5`; existing P1/P0 generated-project
+remains available in package version `3.7.8`; existing P1/P0 generated-project
 lockfiles remain compatible when they satisfy the accepted publication-boundary
 and engine-mode rules.
 
@@ -717,8 +722,8 @@ agent-system/GOVERNANCE_CHANGELOG.md
 Current active tuple and package markers:
 
 ```text
-CURRENT_PACKAGE_VERSION: 3.7.7
-CURRENT_GOVERNANCE_RULESET_VERSION: 3.7.7
+CURRENT_PACKAGE_VERSION: 3.7.8
+CURRENT_GOVERNANCE_RULESET_VERSION: 3.7.8
 CURRENT_RUNTIME_SCHEMA_VERSION: 3.1.1
 PROJECT_FACTORY_RELEASE_MARKER: project-factory-p1
 RUNTIME_STATE_RELEASE_MARKER: artifact-package-model-p5

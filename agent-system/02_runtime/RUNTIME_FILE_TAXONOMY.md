@@ -213,20 +213,24 @@ must use `project-runtime/results/worker/RESULT_<TASK_ID>_ATTEMPT_<N>.md`.
 storage for historical audit evidence. New audit RESULT files must use
 `project-runtime/results/audit/AUDIT_RESULT_<TASK_ID>_ATTEMPT_<N>.md`.
 
-`project-runtime/state/` is reserved for the future canonical JSON runtime
-model documented in
-`agent-system/02_runtime/CANONICAL_JSON_STATE_PREPARATION.md`.
-The proposed future files are:
+`project-runtime/state/` contains the canonical Runtime Schema `3.1.1` JSON
+sidecar model documented in
+`agent-system/02_runtime/CANONICAL_JSON_STATE_PREPARATION.md` and
+`agent-system/02_runtime/CANONICAL_JSON_STATE.md`.
+The canonical sidecar set includes:
 
 ```text
-project-runtime/state/state.json
-project-runtime/state/events.jsonl
-project-runtime/state/schema.json
+project-runtime/state/PROJECT_STATE.json
+project-runtime/state/TASK_REGISTRY.json
+project-runtime/state/NEXT_ACTION.json
+project-runtime/state/CURRENT_GATE.json
+project-runtime/state/WORKSPACE_IDENTITY.json
+project-runtime/state/SCHEMA_MANIFEST.json
 ```
 
-They are not required by the current Markdown-compatible v0 runtime. A missing
-`project-runtime/state/` directory is not a validation error until a separate
-accepted migration activates canonical JSON state for the workspace.
+Required sidecars are canonical runtime state for Runtime Schema `3.1.1`.
+Markdown files under `project-runtime/*.md` are compatibility views generated
+from those JSON sidecars.
 
 This taxonomy is a preferred layout for new runtime artifacts, not permission
 to delete, rewrite, or relocate historical execution evidence.

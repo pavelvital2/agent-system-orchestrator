@@ -115,15 +115,15 @@ class PackagingCommandTests(unittest.TestCase):
         ).read_text(encoding="utf-8")
         package_version = pyproject["project"]["version"]
 
-        self.assertEqual(package_version, "3.7.7")
-        self.assertIn("CURRENT_PACKAGE_VERSION: 3.7.7", package_versioning)
-        self.assertIn("CURRENT_GOVERNANCE_RULESET_VERSION: 3.7.7", package_versioning)
+        self.assertEqual(package_version, "3.7.8")
+        self.assertIn("CURRENT_PACKAGE_VERSION: 3.7.8", package_versioning)
+        self.assertIn("CURRENT_GOVERNANCE_RULESET_VERSION: 3.7.8", package_versioning)
         self.assertIn("CURRENT_RUNTIME_SCHEMA_VERSION: 3.1.1", package_versioning)
         self.assertIn("ARTIFACT_PACKAGE_SCHEMA_VERSION: 1.1.0", package_versioning)
-        self.assertIn("governed `3.7.7` package/governance tuple", root_readme)
-        self.assertIn("governed `3.7.7` package/governance tuple", agent_readme)
-        self.assertIn("package_version: 3.7.7", authority_map)
-        self.assertIn("governance_ruleset_version: 3.7.7", authority_map)
+        self.assertIn("governed `3.7.8` package/governance tuple", root_readme)
+        self.assertIn("governed `3.7.8` package/governance tuple", agent_readme)
+        self.assertIn("package_version: 3.7.8", authority_map)
+        self.assertIn("governance_ruleset_version: 3.7.8", authority_map)
 
     def test_package_layout_verify_accepts_package_mode(self) -> None:
         result = subprocess.run(

@@ -114,30 +114,26 @@ When both forms exist:
 The sidecars are therefore validation specifications, not a requirement that
 the current package already contains executable validation tooling.
 
-## Canonical JSON state migration validation
+## Canonical JSON state validation authority
 
-Future canonical JSON runtime state is prepared in:
-
-```text
-agent-system/02_runtime/CANONICAL_JSON_STATE_PREPARATION.md
-```
-
-Current v0 validation remains Markdown-compatible. Missing future files under
-`project-runtime/state/` must not fail validation unless a separate accepted
-migration task activates them for the workspace.
-
-When canonical JSON state is later activated, validators must enforce the
-authority model in this order:
+Runtime Schema `3.1.1` uses canonical JSON runtime state sidecars under:
 
 ```text
-state.json   = machine source of truth
-events.jsonl = append-only event history
-*.md         = generated/readable views
+project-runtime/state/*.json
 ```
 
-Before activation, validators may compare generated or experimental JSON
-snapshots against Markdown, but Markdown remains authoritative and drift must be
-reported as a compatibility issue, not silently corrected.
+Validators must enforce the authority model in this order:
+
+```text
+project-runtime/state/*.json = canonical runtime state sidecars
+project-runtime/state/events.jsonl = append-only event history when present
+*.md = generated compatibility views
+```
+
+Markdown runtime files are compatibility views generated from canonical runtime
+state and must not override or repair JSON sidecar drift. Validators may compare
+generated Markdown views against JSON sidecars, but reported drift must preserve
+the JSON sidecars as the Runtime Schema `3.1.1` authority.
 
 ## Validation points
 

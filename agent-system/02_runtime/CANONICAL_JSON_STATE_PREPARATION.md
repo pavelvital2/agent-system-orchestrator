@@ -2,12 +2,12 @@
 
 ## Purpose
 
-This document prepares a future migration from Markdown runtime state to a
-canonical JSON runtime state.
+This document records the transition from Markdown runtime state to canonical
+JSON runtime state and defines the current Runtime Schema `3.1.1` authority.
 
-It is a preparation and specification document only. It does not authorize
-creation of active `project-runtime/state/*` files, does not migrate current
-runtime state, and does not add runtime mutation commands.
+It is a specification document. It does not add daemon mode, live dispatch,
+checkpoint execution, product generation, or profile-agent authority to mutate
+runtime state.
 
 Stage 2 adds package-level sidecar schemas and validation rules in:
 
@@ -17,12 +17,11 @@ agent-system/03_templates/state/*.json
 agent-system/09_validators/STATE_SIDECAR_VALIDATION_RULES.md
 ```
 
-These package files define preferred machine-verifiable sidecar shapes for
-future workspace state validation. They do not create active runtime state,
-do not change runtime ownership, and do not supersede the later aggregate
-`project-runtime/state/state.json` migration described below.
+These package files define machine-verifiable sidecar shapes for current
+workspace state validation. `project-runtime/state/*.json` files are canonical
+for Runtime Schema `3.1.1`; Markdown files are generated compatibility views.
 
-In v0, the existing Markdown runtime files remain compatible and authoritative:
+The generated Markdown compatibility views are:
 
 ```text
 project-runtime/PROJECT_STATE.md
@@ -34,33 +33,31 @@ project-runtime/ORCHESTRATOR_EVENTS_LOG.md
 project-runtime/STATUS_SUMMARY.md
 ```
 
-The future target model is:
+The current authority model is:
 
 ```text
-project-runtime/state/state.json     = machine source of truth
-project-runtime/state/events.jsonl   = append-only event history
-project-runtime/state/schema.json    = runtime-local JSON Schema used for state validation
-*.md                                 = generated, readable views
+project-runtime/state/*.json         = canonical machine source of truth
+project-runtime/*.md                 = generated, readable compatibility views
 ```
 
-## Non-goals for v0
+## Non-goals
 
-This preparation does not:
+This specification does not:
 
-- force a workspace to create `project-runtime/state/state.json`;
-- treat `project-runtime/state/state.json` as current source of truth;
-- require `aso render-runtime` to exist or mutate files;
+- use an aggregate `project-runtime/state/state.json` as the canonical source;
+- require `aso render-runtime` to exist;
 - replace Markdown templates or current runtime validators;
 - grant profile agents authority to write runtime state;
 - introduce checkpoint, dispatch, or state mutation commands.
 
 ## Migration phases
 
-### Phase 0: current Markdown runtime
+### Phase 0: historical Markdown runtime
 
-Markdown runtime files are the operational source of truth. JSON Schema
-sidecars under `agent-system/09_validators/schemas/` describe equivalent object
-forms for validation, but they do not require JSON runtime files.
+Markdown runtime files were the operational source of truth before canonical
+Runtime Schema sidecars were adopted. JSON Schema sidecars under
+`agent-system/09_validators/schemas/` described equivalent object forms for
+validation.
 
 Validators may parse Markdown into structured objects for checks. If parser
 support is unavailable, existing Markdown validation remains valid.
@@ -79,47 +76,44 @@ Requirements:
 - no loss of Markdown compatibility.
 ```
 
-### Phase 2: generated experimental JSON snapshot
+### Phase 2: canonical JSON sidecars
 
-A future accepted task may add generated experimental files:
+Accepted runtime-state tasks added canonical sidecars:
 
 ```text
-project-runtime/state/state.json
-project-runtime/state/schema.json
+project-runtime/state/PROJECT_STATE.json
+project-runtime/state/TASK_REGISTRY.json
+project-runtime/state/NEXT_ACTION.json
+project-runtime/state/CURRENT_GATE.json
+project-runtime/state/WORKSPACE_IDENTITY.json
+project-runtime/state/SCHEMA_MANIFEST.json
 ```
 
-At this phase, Markdown remains authoritative. `state.json` is a generated
-snapshot only, and validators must report drift between Markdown and generated
-JSON instead of silently choosing one.
+At this phase, JSON sidecars are canonical. Validators must report drift between
+canonical JSON and generated Markdown views instead of treating Markdown as
+authoritative.
 
-`events.jsonl` may be introduced as a generated mirror of material
-`ORCHESTRATOR_EVENTS_LOG.md` entries, but it is not authoritative until a later
-canonical phase.
+### Phase 3: governed render transition
 
-### Phase 3: governed dual-write transition
-
-After read-only diagnostics and parity checks are stable, a future accepted
-task may define orchestrator-owned transactions that update JSON state, append
-events, and render Markdown views in one bounded operation.
+Orchestrator-owned transactions update JSON state first, then render Markdown
+compatibility views in one bounded operation.
 
 Requirements:
 
 ```text
 - profile agents still do not mutate runtime state;
 - writes are orchestrator-owned only;
-- every mutation appends exactly one material event or an explicitly linked event batch;
 - Markdown views preserve all required fields from JSON;
 - validators check JSON/Markdown parity before checkpoint eligibility.
 ```
 
 ### Phase 4: canonical JSON runtime
 
-Only after a separate migration task is accepted may canonical authority switch:
+Canonical authority is:
 
 ```text
-state.json     = machine source of truth
-events.jsonl   = event history
-*.md           = generated/readable views
+project-runtime/state/*.json = machine source of truth
+project-runtime/*.md         = generated/readable views
 ```
 
 Manual edits to generated Markdown views are not authoritative in this phase.
@@ -128,9 +122,8 @@ report the Markdown drift.
 
 ### Phase 5: mutation command layer
 
-Future mutation commands may be added only after the canonical transition is
-accepted. Mutation commands must use the same transaction rules as the
-orchestrator and must never bypass event append or Markdown rendering.
+Mutation commands must use the same transaction rules as the orchestrator and
+must never bypass governed state validation or Markdown rendering.
 
 ## Proposed future file contracts
 
@@ -139,8 +132,9 @@ target contract, not files that this task creates under `project-runtime/`.
 
 ### project-runtime/state/state.json
 
-`state.json` is a single JSON object containing the current machine-readable
-runtime state.
+`state.json` would be a future aggregate JSON object containing a
+machine-readable runtime state snapshot. It is not the current Runtime Schema
+`3.1.1` source of truth.
 
 Minimum future envelope:
 
@@ -214,8 +208,8 @@ Rules:
 
 ### project-runtime/state/schema.json
 
-`schema.json` is the runtime-local schema used to validate `state.json` for the
-current workspace.
+`schema.json` would be the runtime-local schema used to validate a future
+aggregate `state.json` for a workspace.
 
 Rules:
 
@@ -227,17 +221,22 @@ Rules:
 - cannot weaken mandatory governance fields defined by RUNTIME_STATE_SCHEMA.md.
 ```
 
-## Future render-runtime behavior
+## State render behavior
 
-`aso render-runtime --root .` is a future command. In v0 it must remain
-non-required and must not be assumed by dispatch, lint, or checkpoint flow.
+`aso state render --root .` renders reports from canonical JSON sidecars.
 
-When implemented after canonical JSON state is accepted, `render-runtime` must:
+Without `--confirm-write`, `aso state render` is read-only except for explicit
+report output to `/tmp`, `project-runtime/reports`, or
+`project-runtime/rendered`. With `--confirm-write`, it writes Markdown
+compatibility views from canonical `project-runtime/state/*.json` sidecars and
+cannot be combined with `--out`.
+
+`aso state render --confirm-write` must:
 
 ```text
-1. read project-runtime/state/state.json;
-2. validate it against project-runtime/state/schema.json and package governance;
-3. render generated Markdown views into the existing project-runtime/*.md files;
+1. read project-runtime/state/*.json sidecars;
+2. validate them against package governance;
+3. render generated Markdown compatibility views into project-runtime/*.md files;
 4. preserve all required fields from the JSON source;
 5. fail instead of inferring missing required values;
 6. write generated views atomically;
@@ -245,9 +244,8 @@ When implemented after canonical JSON state is accepted, `render-runtime` must:
 8. avoid appending events for pure render-only operations unless a future task explicitly defines render audit events.
 ```
 
-Generated Markdown views should include a short generated-view notice after the
-canonical transition is active. Before that transition, Markdown files must not
-be marked generated because they remain authoritative.
+Generated Markdown views include a short generated-view notice and identify the
+canonical JSON sidecar source.
 
 Render mapping:
 
@@ -263,18 +261,18 @@ events.jsonl latest events -> project-runtime/ORCHESTRATOR_EVENTS_LOG.md or gene
 
 ## Validator expectations
 
-Current validators remain Markdown-compatible.
+Current validators remain Markdown-view compatible while treating required
+Runtime Schema `3.1.1` JSON sidecars as canonical state.
 
-Future validators should add checks in this order:
+Validators should apply checks in this order:
 
 ```text
 1. Markdown parse parity with existing sidecar schemas;
-2. generated state.json parity with Markdown while Markdown is authoritative;
-3. schema.json validity and compatibility with package schema;
-4. state.json/event append consistency;
-5. generated Markdown drift from canonical JSON after authority switches.
+2. generated Markdown parity with canonical JSON sidecars;
+3. sidecar schema validity and compatibility with package schema;
+4. sidecar/event consistency where event sidecars are present;
+5. generated Markdown drift from canonical JSON.
 ```
 
-Until a future accepted task activates canonical JSON state, missing
-`project-runtime/state/state.json`, `events.jsonl`, or `schema.json` must not be
-treated as a runtime error.
+For Runtime Schema `3.1.1`, missing required `project-runtime/state/*.json`
+sidecars are missing canonical runtime state.

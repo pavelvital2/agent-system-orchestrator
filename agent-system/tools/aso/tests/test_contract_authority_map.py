@@ -20,7 +20,7 @@ class ContractAuthorityMapTests(unittest.TestCase):
         self.assertIn("ARTIFACT_PACKAGE_MODEL_P5_1_CORRECTION_CONTRACT.md", authority_map)
         self.assertIn("BOOTSTRAP_STATE_RECONCILIATION_P5_2_CONTRACT.md", authority_map)
         self.assertIn("PLANNER_DISPATCHABILITY_GATE_P5_4_CONTRACT.md", authority_map)
-        self.assertIn("package_version: 3.7.6", authority_map)
+        self.assertIn("package_version: 3.7.8", authority_map)
         self.assertIn("runtime_schema_version: 3.1.1", authority_map)
 
     def test_runtime_schema_3_1_1_uses_mapped_base_contract_file(self) -> None:

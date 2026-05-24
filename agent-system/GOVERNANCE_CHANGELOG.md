@@ -1661,6 +1661,7 @@ AUTHORIZED_BY: project_owner
 AUDIT_REQUIRED: yes
 STATUS: accepted
 ```
+
 ```text
 CHANGE_ID: GOV-2026-05-23-002
 CHANGE_TITLE: ASO_BOOTSTRAP_STATE_RECONCILIATION_P5_2_CORRECTION
@@ -2174,6 +2175,50 @@ FIXED_AUDIT_TASKS:
 SCHEMA_TEMPLATE_IMPACT: none; Runtime Schema 3.1.1 and Artifact Package Schema 1.1.0 are preserved.
 MIGRATION_REQUIRED: no
 MIGRATION_NOTE: Release documentation and package metadata hardening only; no active project-runtime migration, schema migration, semantic TZ reader, full Telegram bot generation, live dispatch, checkpoint execution, daemon mode, or product generation is introduced.
+AUTHORIZED_BY: project_owner
+AUDIT_REQUIRED: yes
+STATUS: accepted
+```
+
+```text
+CHANGE_ID: GOV-2026-05-24-010
+CHANGE_TITLE: TASK_ASO_P57_010_GOVERNANCE_DOC_AUTHORITY_SYNC
+DATE: 2026-05-24
+PACKAGE_VERSION_BEFORE: 3.7.7
+PACKAGE_VERSION_AFTER: 3.7.8
+GOVERNANCE_RULESET_BEFORE: 3.7.7
+GOVERNANCE_RULESET_AFTER: 3.7.8
+RUNTIME_SCHEMA_BEFORE: 3.1.1
+RUNTIME_SCHEMA_AFTER: 3.1.1
+ARTIFACT_PACKAGE_SCHEMA_BEFORE: 1.1.0
+ARTIFACT_PACKAGE_SCHEMA_AFTER: 1.1.0
+CHANGE_TYPE: patch
+CHANGE_SUBTYPE: p57_governance_doc_authority_sync
+AFFECTED_FILES:
+- README.md
+- README_INSTALL.md
+- pyproject.toml
+- agent-system/README.md
+- agent-system/PACKAGE_VERSIONING.md
+- agent-system/GOVERNANCE_CHANGELOG.md
+- agent-system/02_runtime/CANONICAL_JSON_STATE.md
+- agent-system/02_runtime/CANONICAL_JSON_STATE_PREPARATION.md
+- agent-system/02_runtime/CONTRACT_AUTHORITY_MAP.md
+- agent-system/02_runtime/RUNTIME_FILE_TAXONOMY.md
+- agent-system/09_validators/CROSS_LINK_VALIDATION_RULES.md
+- agent-system/tools/aso/agent_system_orchestrator_aso/__init__.py
+- agent-system/tools/aso/agent_system_orchestrator_aso/aso_tool/runtime_schema_contracts.py
+- agent-system/tools/aso/agent_system_orchestrator_aso/resources/agent-system/09_validators/CROSS_LINK_VALIDATION_RULES.md
+AFFECTED_INVARIANTS:
+- Active package/governance tuple is 3.7.8 / 3.7.8 while Runtime Schema 3.1.1 and Artifact Package Schema 1.1.0 are preserved.
+- Runtime Schema 3.1.1 canonical state lives in project-runtime/state/*.json sidecars.
+- Markdown runtime files are generated compatibility views, not authoritative runtime sources.
+- state render without --confirm-write is read-only/report output only; state render --confirm-write materializes Markdown compatibility views from canonical JSON sidecars.
+AFFECTED_TRANSITIONS:
+- accepted P56 audit-hardening baseline -> P57 documentation authority sync -> package status/lint validation.
+SCHEMA_TEMPLATE_IMPACT: none; Runtime Schema 3.1.1 and Artifact Package Schema 1.1.0 are preserved.
+MIGRATION_REQUIRED: no
+MIGRATION_NOTE: Documentation authority and package metadata sync only; no active project-runtime migration, runtime sidecar schema change, artifact package schema change, semantic TZ reader, product-intake engine, full Telegram bot generation, live dispatch, checkpoint execution, daemon mode, or product generation is introduced.
 AUTHORIZED_BY: project_owner
 AUDIT_REQUIRED: yes
 STATUS: accepted

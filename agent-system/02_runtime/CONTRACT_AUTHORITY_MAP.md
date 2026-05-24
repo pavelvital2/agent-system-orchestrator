@@ -13,8 +13,9 @@ for the same runtime, artifact, bootstrap, or planner contract surface.
 | P5.2 | `BOOTSTRAP_STATE_RECONCILIATION_P5_2_CONTRACT.md` | Defines bootstrap state reconciliation and contradictory-state handling. | Overrides earlier bootstrap-readiness interpretation only. |
 | P5.3 | `RUNTIME_STATE_P2_CONTRACT.md` plus `runtime_state_3_1_0.contract.json` | Keeps the Runtime State sidecar envelope authority while advancing active runtime metadata to Runtime Schema `3.1.1`. | Updates runtime schema metadata and task-kind alignment without replacing the P2 envelope contract. |
 | P5.4 | `PLANNER_DISPATCHABILITY_GATE_P5_4_CONTRACT.md` | Defines the planner Dispatchability Gate, including profile-role dispatchability and non-dispatch control actions. | Adds planner gate authority; does not change runtime sidecar envelopes or artifact package storage. |
-| P5.5 | This map, package metadata `3.7.5`, and validator/readiness documentation | Stabilizes active authority references and CI/package smoke coverage. | Clarifies existing authority only; does not add runtime semantics, daemon mode, live dispatch, checkpoint execution, or duplicate contract files. |
-| P5.6 | Package metadata `3.7.7`, release validation docs, installed real-TZ workflow docs, and audit hardening evidence | Records real-TZ installed-orchestrator validation, safe install/intake operator guidance, source hygiene, clean install semantics, and CI E2E smoke coverage. | Documentation, metadata, test, and validation hardening only; does not add runtime semantics, daemon mode, live dispatch, checkpoint execution, product generation, or duplicate contract files. |
+| P5.5 | Historical package metadata and validator/readiness documentation | Stabilizes active authority references and CI/package smoke coverage. | Clarifies existing authority only; does not add runtime semantics, daemon mode, live dispatch, checkpoint execution, or duplicate contract files. |
+| P5.6 | Historical package metadata, release validation docs, installed real-TZ workflow docs, and audit hardening evidence | Records real-TZ installed-orchestrator validation, safe install/intake operator guidance, source hygiene, clean install semantics, and CI E2E smoke coverage. | Documentation, metadata, test, and validation hardening only; does not add runtime semantics, daemon mode, live dispatch, checkpoint execution, product generation, or duplicate contract files. |
+| P57 | Package metadata `3.7.8`, this map, runtime authority documentation, and state render write-boundary documentation | Aligns active package/governance authority and removes runtime source-of-truth contradictions. | Documentation and metadata authority sync only; Runtime Schema `3.1.1` and Artifact Package Schema `1.1.0` are preserved. |
 
 ## Runtime Schema Contract File Authority
 
@@ -39,11 +40,11 @@ map in the same change.
 
 ## Current Version Tuple
 
-The active P5.6 tuple is:
+The active P57 tuple is:
 
 ```text
-package_version: 3.7.7
-governance_ruleset_version: 3.7.7
+package_version: 3.7.8
+governance_ruleset_version: 3.7.8
 runtime_schema_version: 3.1.1
 artifact_package_schema_version: 1.1.0
 ```
@@ -52,6 +53,5 @@ This tuple is metadata and validation authority only. It does not authorize
 runtime mutation, profile-agent dispatch, daemon execution, checkpoint
 execution, publication, or workspace state migration.
 
-The previous P5.6 release-validation baseline recorded
-`package_version: 3.7.6`; the active audit-hardening tuple above supersedes it
-without changing Runtime Schema `3.1.1` or Artifact Package Schema `1.1.0`.
+The active P57 tuple supersedes prior P5.6 package/governance baselines without
+changing Runtime Schema `3.1.1` or Artifact Package Schema `1.1.0`.

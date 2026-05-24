@@ -12,19 +12,20 @@ agents authority to write runtime state.
 
 ## Runtime State P2 authority model
 
-JSON sidecars are the canonical machine-verifiable representation of P2+
-runtime state when they are present and valid. Markdown runtime files remain
-supported as compatibility and human-readable render views during migration
-windows.
+`project-runtime/state/*.json` sidecars are the canonical
+machine-verifiable representation of Runtime Schema `3.1.1` runtime state.
+Markdown runtime files remain supported as generated compatibility and
+human-readable render views.
 
-During the P2 migration window:
+For Runtime Schema `3.1.1`:
 
 ```text
-1. If a valid JSON sidecar and its Markdown source both exist, validators should
+1. If a valid JSON sidecar and its Markdown view both exist, validators should
    use the JSON sidecar as the structured input and verify parity with the
-   Markdown source for governed fields.
-2. If the JSON sidecar is missing, validators may parse the Markdown source as
-   the compatible fallback.
+   Markdown view for governed fields.
+2. If a required JSON sidecar is missing, current Runtime Schema `3.1.1`
+   validation must report the missing canonical state instead of treating the
+   Markdown view as authoritative.
 3. If JSON and Markdown conflict on governed fields, validators must fail
    instead of silently choosing one source.
 4. A JSON sidecar cannot authorize a runtime mutation, checkpoint, commit,
@@ -237,11 +238,10 @@ validation_errors
 
 ## Migration compatibility
 
-Stage 2 validators should prefer JSON sidecars for structured checks but must
-keep Markdown fallback behavior. A workspace that has not adopted sidecars can
-still be valid if its Markdown runtime files satisfy the existing governance
-rules.
+Runtime Schema `3.1.1` validators should prefer JSON sidecars for structured
+checks and treat missing required sidecars as missing canonical runtime state.
+Historical workspaces without sidecars require governed migration or
+compatibility handling before current strict validation can pass.
 
 Sidecar adoption is not permission to delete Markdown views. Markdown remains
-the readable compatibility surface until a later accepted migration switches to
-generated Markdown views from canonical JSON state.
+the readable compatibility surface generated from canonical JSON state.

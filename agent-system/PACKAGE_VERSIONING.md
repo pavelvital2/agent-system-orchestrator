@@ -19,8 +19,8 @@ RUNTIME_SCHEMA_VERSION:
 ## Active version constants
 
 ```text
-CURRENT_PACKAGE_VERSION: 3.7.7
-CURRENT_GOVERNANCE_RULESET_VERSION: 3.7.7
+CURRENT_PACKAGE_VERSION: 3.7.8
+CURRENT_GOVERNANCE_RULESET_VERSION: 3.7.8
 CURRENT_RUNTIME_SCHEMA_VERSION: 3.1.1
 ARTIFACT_PACKAGE_SCHEMA_VERSION: 1.1.0
 ```
@@ -478,6 +478,24 @@ synchronization, bootstrap candidate artifact output, status enum authority,
 CI E2E hardening, and final release validation docs. It validates ASO workflow
 readiness through real-TZ bootstrap and read-only plan-next dispatchability
 only; it does not claim full real-product Telegram bot generation.
+
+The ASO P57 governance documentation authority sync installs:
+
+```text
+CURRENT_PACKAGE_VERSION: 3.7.8
+CURRENT_GOVERNANCE_RULESET_VERSION: 3.7.8
+CURRENT_RUNTIME_SCHEMA_VERSION: 3.1.1
+ARTIFACT_PACKAGE_SCHEMA_VERSION: 1.1.0
+DESIGN_GAP_GOVERNANCE_SCHEMA_VERSION: 1.0.0
+```
+
+This patch aligns active package/governance metadata and documentation
+authority language. Runtime Schema `3.1.1` and Artifact Package Schema `1.1.0`
+are preserved. `project-runtime/state/*.json` sidecars are canonical for
+Runtime Schema `3.1.1`; Markdown runtime files are generated compatibility
+views. `aso state render` without `--confirm-write` is read-only except for an
+explicit report output path, while `--confirm-write` materializes Markdown
+compatibility views from canonical JSON sidecars.
 
 ## Version semantics
 

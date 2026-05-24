@@ -65,14 +65,14 @@ validation remains stdlib-only for its packaged schema/contract checks; the
 installer must still verify the canonical package from this checkout, not a
 root-level duplicate Python tree.
 
-This install document covers package version `3.7.7` with runtime schema
-`3.1.1` and artifact package schema `1.1.0`. P5.6 documents and validates ASO
-workflow readiness through installed real-TZ intake/bootstrap and read-only
-plan-next dispatchability while preserving the Runtime State sidecar schema,
-the artifact package schema, and the Project Factory P1 command boundary. It
-does not claim full real-product Telegram bot generation and does not add
-semantic TZ reading, product-intake automation, daemon mode, live dispatch,
-product generation, secret collection, or checkpoint execution.
+This install document covers package version `3.7.8` with runtime schema
+`3.1.1` and artifact package schema `1.1.0`. P57 documents ASO workflow
+readiness through installed real-TZ intake/bootstrap and read-only plan-next
+dispatchability while preserving the Runtime State sidecar schema, the artifact
+package schema, and the Project Factory P1 command boundary. It does not claim
+full real-product Telegram bot generation and does not add semantic TZ reading,
+product-intake automation, daemon mode, live dispatch, product generation,
+secret collection, or checkpoint execution.
 
 Both installers accept a Python executable and virtual environment path:
 
@@ -238,9 +238,11 @@ aso state migrate --root agent-system/tests/fixtures/state/valid_workspace --to 
 `project-runtime/state/`. `aso state migrate --dry-run` emits a deterministic
 plan for compatible legacy sidecars; confirmed migration requires
 `--confirm-write`, fails closed on malformed or ambiguous input, and records
-receipts under allowed `project-runtime/` report paths. `aso state render` is
-read-only except for explicit output to `/tmp`, `project-runtime/reports`, or
-`project-runtime/rendered`. In strict workspace mode, an active/open bootstrap
+receipts under allowed `project-runtime/` report paths. Without
+`--confirm-write`, `aso state render` is read-only except for explicit report
+output to `/tmp`, `project-runtime/reports`, or `project-runtime/rendered`.
+With `--confirm-write`, it writes Markdown compatibility views from canonical
+`project-runtime/state/*.json` sidecars. In strict workspace mode, an active/open bootstrap
 state with mandatory inputs must not be treated as terminal STOP-ready; an
 IANA timezone string such as `Europe/Moscow` is not a valid `TZ_PATH` value
 when `project-input/TZ.md` or another project TZ file should be referenced.
