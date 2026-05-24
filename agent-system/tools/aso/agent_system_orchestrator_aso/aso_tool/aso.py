@@ -42,6 +42,7 @@ from .commands import (
     validate_rules,
     wizard,
 )
+from .commands import mode_guard
 
 
 EXIT_USAGE = 2
@@ -71,11 +72,11 @@ def _add_mode_argument(parser: argparse.ArgumentParser) -> None:
     parser.add_argument(
         "--mode",
         choices=("workspace", "package"),
-        default="workspace",
+        default=None,
         help=(
             "Inspection mode. workspace reads generated project-runtime state; "
             "package validates the packaged agent-system tree without requiring root "
-            "project-runtime (default: workspace)."
+            "project-runtime. Omitted mode is auto-detected from --root."
         ),
     )
 
@@ -1482,7 +1483,30 @@ def main(argv: list[str] | None = None) -> int:
     if args.handler is None:
         parser.print_help()
         return EXIT_USAGE
+    mode_finding = _resolve_omitted_mode(args)
+    if mode_finding is not None:
+        print(
+            (
+                f"aso: {mode_finding.rule_id}: {mode_finding.details} "
+                f"Signals: {', '.join(mode_finding.files)}. "
+                f"{mode_finding.recommendation}"
+            ),
+            file=sys.stderr,
+        )
+        return EXIT_USAGE
     return int(args.handler(args))
+
+
+def _resolve_omitted_mode(args: argparse.Namespace) -> mode_guard.ModeFinding | None:
+    if not hasattr(args, "mode") or args.mode is not None:
+        return None
+    root = getattr(args, "root", None)
+    if not isinstance(root, Path):
+        args.mode = "workspace"
+        return None
+    resolved_mode, finding = mode_guard.resolve_omitted_mode(root)
+    args.mode = resolved_mode
+    return finding
 
 
 if __name__ == "__main__":

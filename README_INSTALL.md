@@ -138,6 +138,12 @@ strict package-layout verification. Package validation still works without
 PYTHONDONTWRITEBYTECODE=1 python3 agent-system/tools/aso/aso.py lint --root . --mode package --strict
 ```
 
+Package checks should continue to pass `--mode package` explicitly. When
+`--mode` is omitted, the CLI guards inference by detecting package roots from
+`pyproject.toml` plus `agent-system/`, initialized workspace roots from
+`project-runtime/state/`, and failing with `ASO_MODE_AMBIGUOUS` if both are
+present.
+
 CI uses the same reproducible clean install smoke path locally available as:
 
 ```text

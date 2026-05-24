@@ -25,6 +25,7 @@ WORKSPACE_STATE_GLOBS = (
     "project-runtime/WORKSPACE_IDENTITY.md",
     "project-runtime/REPOSITORY_LOCK.md",
 )
+INITIALIZED_WORKSPACE_STATE_GLOB = "project-runtime/state/*.json"
 
 
 @dataclass(frozen=True)
@@ -96,6 +97,39 @@ def package_mode_guard(root: Path) -> ModeFinding | None:
     )
 
 
+def resolve_omitted_mode(root: Path) -> tuple[str, ModeFinding | None]:
+    """Resolve an omitted CLI --mode value without mutating the root.
+
+    Explicit --mode values bypass this helper. Package repository roots are
+    detected by the package pyproject plus the packaged agent-system tree.
+    Initialized workspaces are detected by JSON state sidecars. Roots that show
+    both signals fail closed because silently choosing either mode can mask a
+    package/workspace boundary mistake.
+    """
+    package_signals = _package_signals(root)
+    workspace_signals = _initialized_workspace_signals(root)
+
+    if package_signals and workspace_signals:
+        return "workspace", ModeFinding(
+            "ASO_MODE_AMBIGUOUS",
+            "error",
+            "Ambiguous ASO command mode",
+            (
+                "Root contains both ASO package repository signals and "
+                "initialized workspace state signals."
+            ),
+            package_signals + workspace_signals,
+            "Pass --mode package or --mode workspace explicitly.",
+        )
+
+    if package_signals:
+        return "package", None
+    if workspace_signals:
+        return "workspace", None
+
+    return "workspace", None
+
+
 def _package_signals(root: Path) -> list[str]:
     signals: list[str] = []
     if (root / PACKAGE_ROOT).is_dir():
@@ -118,6 +152,12 @@ def _workspace_signals(root: Path) -> list[str]:
             base = pattern.replace("*.json", "")
             signals.append(base.rstrip("/"))
     return signals
+
+
+def _initialized_workspace_signals(root: Path) -> list[str]:
+    if any(root.glob(INITIALIZED_WORKSPACE_STATE_GLOB)):
+        return ["project-runtime/state"]
+    return []
 
 
 def _is_aso_pyproject(path: Path) -> bool:

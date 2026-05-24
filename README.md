@@ -189,6 +189,11 @@ python3 agent-system/tools/aso/aso.py lint --root . --mode package --strict
 python3 agent-system/tools/aso/aso.py doctor --root . --mode package --strict
 ```
 
+Omitted `--mode` is guarded. The CLI auto-detects package roots from
+`pyproject.toml` plus `agent-system/`, detects initialized workspace roots from
+`project-runtime/state/`, and fails with `ASO_MODE_AMBIGUOUS` when both signals
+are present. Package checks should still pass `--mode package` explicitly.
+
 Initialized project workspaces use explicit workspace mode:
 
 ```text
