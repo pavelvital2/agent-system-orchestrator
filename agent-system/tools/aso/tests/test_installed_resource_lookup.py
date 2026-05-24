@@ -11,12 +11,20 @@ from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parents[4]
 DIRECT_CLI = REPO_ROOT / "agent-system" / "tools" / "aso" / "aso.py"
+INSTALL_SCRIPT = REPO_ROOT / "agent-system" / "scripts" / "install_aso_clean.sh"
 
 
 def _run(command: list[str], *, cwd: Path = REPO_ROOT) -> subprocess.CompletedProcess[str]:
     env = os.environ.copy()
     env["PYTHONDONTWRITEBYTECODE"] = "1"
     return subprocess.run(command, cwd=cwd, check=False, text=True, capture_output=True, env=env)
+
+
+def _git_status() -> str:
+    status = _run(["git", "status", "--short", "--branch"])
+    if status.returncode != 0:
+        raise AssertionError(status.stdout + status.stderr)
+    return status.stdout
 
 
 class InstalledResourceLookupTests(unittest.TestCase):
@@ -29,14 +37,26 @@ class InstalledResourceLookupTests(unittest.TestCase):
             installed_json = tmp_path / "installed-plan-next.json"
             workspace.mkdir()
 
-            create_venv = _run([sys.executable, "-m", "venv", str(venv)])
-            self.assertEqual(create_venv.returncode, 0, create_venv.stderr)
-
-            pip = venv / "bin" / "python"
-            install = _run([str(pip), "-m", "pip", "install", f"{REPO_ROOT}[test]"])
+            status_before = _git_status()
+            install = _run(
+                [
+                    "bash",
+                    str(INSTALL_SCRIPT),
+                    "--source",
+                    str(REPO_ROOT),
+                    "--venv",
+                    str(venv),
+                    "--python",
+                    sys.executable,
+                    "--with-test",
+                    "--skip-verify",
+                ]
+            )
             self.assertEqual(install.returncode, 0, install.stdout + install.stderr)
+            self.assertEqual(_git_status(), status_before)
 
             installed_aso = venv / "bin" / "aso"
+            status_before_installed_init = _git_status()
             init = _run(
                 [
                     str(installed_aso),
@@ -50,6 +70,7 @@ class InstalledResourceLookupTests(unittest.TestCase):
                 ]
             )
             self.assertEqual(init.returncode, 0, init.stdout + init.stderr)
+            self.assertEqual(_git_status(), status_before_installed_init)
 
             direct = _run(
                 [
@@ -63,6 +84,7 @@ class InstalledResourceLookupTests(unittest.TestCase):
                     str(direct_json),
                 ]
             )
+            status_before_installed_plan_next = _git_status()
             installed = _run(
                 [
                     str(installed_aso),
@@ -74,6 +96,7 @@ class InstalledResourceLookupTests(unittest.TestCase):
                     str(installed_json),
                 ]
             )
+            self.assertEqual(_git_status(), status_before_installed_plan_next)
 
             self.assertEqual(installed.returncode, direct.returncode, installed.stdout + installed.stderr)
             direct_report = json.loads(direct_json.read_text(encoding="utf-8"))

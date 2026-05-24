@@ -1881,3 +1881,35 @@ AUTHORIZED_BY: project_owner
 AUDIT_REQUIRED: yes
 STATUS: accepted
 ```
+
+```text
+CHANGE_ID: GOV-2026-05-24-002
+CHANGE_TITLE: ASO_P56_AUDIT_FIX_010_INSTALL_RESOURCE_TEST_HYGIENE
+DATE: 2026-05-24
+PACKAGE_VERSION_BEFORE: 3.7.6
+PACKAGE_VERSION_AFTER: 3.7.7
+GOVERNANCE_RULESET_BEFORE: 3.7.6
+GOVERNANCE_RULESET_AFTER: 3.7.7
+RUNTIME_SCHEMA_BEFORE: 3.1.1
+RUNTIME_SCHEMA_AFTER: 3.1.1
+ARTIFACT_PACKAGE_SCHEMA_BEFORE: 1.1.0
+ARTIFACT_PACKAGE_SCHEMA_AFTER: 1.1.0
+CHANGE_TYPE: patch
+CHANGE_SUBTYPE: p56_audit_fix_010_install_resource_test_hygiene
+AFFECTED_FILES:
+- agent-system/tools/aso/tests/test_installed_resource_lookup.py
+- agent-system/tools/aso/tests/test_install_hygiene.py
+- agent-system/GOVERNANCE_CHANGELOG.md
+AFFECTED_INVARIANTS:
+- Installed-resource lookup tests must install ASO from an isolated source snapshot, not directly from the live checkout.
+- Installed CLI checks must leave live source git status unchanged.
+- Installed `aso plan-next` must load packaged governance resources and must not depend on a venv-local `agent-system/09_validators` tree.
+AFFECTED_TRANSITIONS:
+- installed clean-source validation -> installed CLI resource lookup -> read-only `plan-next` evidence comparison.
+SCHEMA_TEMPLATE_IMPACT: none; Runtime Schema 3.1.1 and Artifact Package Schema 1.1.0 are preserved.
+MIGRATION_REQUIRED: no
+MIGRATION_NOTE: Test hygiene hardening only; no active project-runtime migration, schema migration, transition redesign, or package resource relaxation is introduced.
+AUTHORIZED_BY: project_owner
+AUDIT_REQUIRED: yes
+STATUS: accepted
+```
