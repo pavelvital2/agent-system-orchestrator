@@ -1,0 +1,164 @@
+{
+  "schema_version": "1.0",
+  "registry_id": "aso-governance-rule-registry",
+  "rules": [
+    {
+      "id": "GOV-CHECKPOINT-AUDIT-GATE",
+      "severity": "critical",
+      "source_docs": [
+        "agent-system/09_validators/GIT_CHECKPOINT_VALIDATION_RULES.md",
+        "agent-system/02_runtime/STATE_TRANSITION_RULES.md"
+      ],
+      "check_target": "post_audit_checkpoint",
+      "trigger": "checkpoint, commit, or push is requested for task work",
+      "expected_action": [
+        "block",
+        "require_audit_pass",
+        "require_checkpoint_preflight"
+      ],
+      "rationale": "Checkpoint validation is allowed only after the required audit passes and preflight proves the changed files, runtime state, identity, and secret-safety checks are valid."
+    },
+    {
+      "id": "GOV-FORBIDDEN-ROOTS",
+      "severity": "critical",
+      "source_docs": [
+        "agent-system/09_validators/TASK_PACKET_VALIDATION_RULES.md",
+        "agent-system/09_validators/GIT_CHECKPOINT_VALIDATION_RULES.md",
+        "agent-system/09_validators/RESULT_VALIDATION_RULES.md"
+      ],
+      "check_target": "filesystem_scope",
+      "trigger": "a task packet, result, or checkpoint references protected filesystem roots",
+      "expected_action": [
+        "block",
+        "validate_scope"
+      ],
+      "rationale": "Protected roots such as agent-system, project-runtime, project-input, and project-archive require explicit bounded authority and must not be mutated by ordinary project tasks."
+    },
+    {
+      "id": "GOV-ONE-TASK-ONE-AGENT",
+      "severity": "error",
+      "source_docs": [
+        "agent-system/09_validators/RESULT_VALIDATION_RULES.md",
+        "agent-system/09_validators/TASK_PACKET_VALIDATION_RULES.md"
+      ],
+      "check_target": "profile_agent_lifecycle",
+      "trigger": "profile-agent RESULT or task packet is validated",
+      "expected_action": [
+        "block",
+        "validate_schema"
+      ],
+      "rationale": "Each profile-agent RESULT must identify the dispatched task and single agent instance, forbid reuse, and require termination after the bounded task."
+    },
+    {
+      "id": "GOV-CONTEXT-BUDGET-REQUIRED-DOCS",
+      "severity": "error",
+      "source_docs": [
+        "agent-system/09_validators/TASK_PACKET_VALIDATION_RULES.md"
+      ],
+      "check_target": "task_packet_required_docs",
+      "trigger": "task packet REQUIRED_DOCS or scope requires unbounded context",
+      "expected_action": [
+        "block",
+        "validate_schema"
+      ],
+      "rationale": "Task packets must keep required context bounded, reject unrelated or archive-only documents, and avoid forcing an agent to read the entire project."
+    },
+    {
+      "id": "GOV-DESIGN-TRACEABILITY",
+      "severity": "error",
+      "source_docs": [
+        "agent-system/09_validators/DESIGN_TRACEABILITY_RULES.md",
+        "agent-system/09_validators/RESULT_VALIDATION_RULES.md"
+      ],
+      "check_target": "solution_architect_design_output",
+      "trigger": "solution_architect or deprecated designer output is audited",
+      "expected_action": [
+        "block",
+        "validate_traceability"
+      ],
+      "rationale": "Design output can pass only when requirements, decisions, assumptions, GAPs, downstream tasks, gates, tests, and product capability claims are explicitly traceable."
+    },
+    {
+      "id": "GOV-RESULT-STATUS-LIFECYCLE",
+      "severity": "error",
+      "source_docs": [
+        "agent-system/09_validators/RESULT_VALIDATION_RULES.md",
+        "agent-system/09_validators/TRANSITION_VALIDATION_RULES.md"
+      ],
+      "check_target": "profile_agent_result",
+      "trigger": "profile-agent RESULT is received",
+      "expected_action": [
+        "block",
+        "validate_schema",
+        "validate_transition"
+      ],
+      "rationale": "Profile-agent RESULT status is limited to pass, fail, blocked, or gap, and advisory routing must not bypass transition governance or required gates."
+    },
+    {
+      "id": "GOV-BRANCH-LOCK-IDENTITY",
+      "severity": "critical",
+      "source_docs": [
+        "agent-system/02_runtime/STATE_TRANSITION_RULES.md",
+        "agent-system/09_validators/GIT_CHECKPOINT_VALIDATION_RULES.md"
+      ],
+      "check_target": "workspace_identity_repository_lock",
+      "trigger": "dispatch, checkpoint, commit, or push is requested",
+      "expected_action": [
+        "block",
+        "require_identity_pass",
+        "require_repository_lock"
+      ],
+      "rationale": "Workspace identity and repository lock validation must pass before dispatch and Git actions; wrong branch, wrong remote, or missing push authority blocks dependent work."
+    },
+    {
+      "id": "GOV-ACTION-SEMANTICS",
+      "severity": "error",
+      "source_docs": [
+        "agent-system/02_runtime/STATE_TRANSITION_RULES.md",
+        "agent-system/09_validators/TRANSITION_VALIDATION_RULES.md"
+      ],
+      "check_target": "next_action_semantics",
+      "trigger": "NEXT_ACTION uses wait_for_owner, pause, completed, or stop_terminal semantics",
+      "expected_action": [
+        "block",
+        "validate_transition"
+      ],
+      "rationale": "Action semantics must match the runtime tuple: owner waits require owner-facing blocked state, pause requires a blocker and resume path, and terminal stop requires completed invariants."
+    },
+    {
+      "id": "GOV-PLANNER-DISPATCHABILITY-GATE",
+      "severity": "critical",
+      "source_docs": [
+        "agent-system/02_runtime/PLANNER_DISPATCHABILITY_GATE_P5_4_CONTRACT.md",
+        "agent-system/09_validators/CROSS_LINK_VALIDATION_RULES.md"
+      ],
+      "check_target": "planner_dispatchability_gate",
+      "trigger": "plan-next recommends CREATE_AGENT or evaluates a P5.4/P5.5 dispatch route",
+      "expected_action": [
+        "block",
+        "validate_schema",
+        "validate_transition",
+        "require_identity_pass",
+        "require_repository_lock"
+      ],
+      "rationale": "CREATE_AGENT is allowed only when the P5.4/P5.5 dispatchability gate proves a dispatch-capable action, profile execution role, concrete task id and task packet, compatible task registry entry, permissive current gate, no blocking rules, accepted workspace identity, accepted repository lock, baseline readiness, and runtime schema compatibility."
+    },
+    {
+      "id": "GOV-PROPOSAL-APPLY-P3-BOUNDARY",
+      "severity": "critical",
+      "source_docs": [
+        "agent-system/02_runtime/PROPOSAL_APPLY_P3_CONTRACT.md",
+        "agent-system/02_runtime/RUNTIME_STATE_P2_CONTRACT.md"
+      ],
+      "check_target": "proposal_apply_runtime_boundary",
+      "trigger": "proposal/apply automation, receipt generation, or checkpoint proposal evidence is requested",
+      "expected_action": [
+        "block_unbounded_mutation",
+        "require_local_runtime_artifact_roots",
+        "require_state_verify",
+        "require_receipt"
+      ],
+      "rationale": "Safe Proposal / Apply P3 is bounded to local runtime-state proposal, apply, receipt, and report artifacts under project-runtime/proposals, project-runtime/receipts, and project-runtime/reports. It does not authorize daemon operation, live dispatch, checkpoint execution, commit/push automation, distributed workers, a web control panel, or a multi-project registry."
+    }
+  ]
+}

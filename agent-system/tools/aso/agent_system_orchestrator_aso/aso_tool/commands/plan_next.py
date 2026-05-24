@@ -10,6 +10,7 @@ from pathlib import Path
 from typing import Any
 
 from . import state_verify
+from .. import resources
 
 
 EXIT_OK = 0
@@ -70,30 +71,22 @@ def _content(sidecars: dict[str, dict[str, object]], sidecar_type: str) -> dict[
     return content if isinstance(content, dict) else {}
 
 
-def _repo_root() -> Path:
-    for parent in Path(__file__).resolve().parents:
-        if (parent / RULES_RELATIVE_PATH).is_file():
-            return parent
-    return Path(__file__).resolve().parents[6]
-
-
-def _rules_path(workspace_root: Path) -> Path:
-    workspace_rules = workspace_root / RULES_RELATIVE_PATH
-    if workspace_rules.is_file():
-        return workspace_rules
-    return _repo_root() / RULES_RELATIVE_PATH
-
-
 def _load_governance_rules(workspace_root: Path) -> tuple[dict[str, dict[str, object]], dict[str, object]]:
-    path = _rules_path(workspace_root)
     try:
-        payload = json.loads(path.read_text(encoding="utf-8"))
+        resource = resources.read_resource_text(RULES_RELATIVE_PATH, anchor_file=__file__)
+        payload = json.loads(resource.text)
     except (OSError, json.JSONDecodeError) as exc:
         return {}, {
-            "path": str(path),
+            "path": RULES_RELATIVE_PATH.as_posix(),
+            "origin": "",
+            "attempted_paths": getattr(exc, "filename", "") or str(exc),
             "registry_id": "",
             "rule_count": 0,
-            "load_error": str(exc),
+            "load_error": (
+                f"Governance rule registry could not be loaded. {exc}. "
+                "Reinstall agent-system-orchestrator from a complete source archive, or run the direct script from "
+                "an ASO source checkout."
+            ),
         }
 
     rules: dict[str, dict[str, object]] = {}
@@ -103,7 +96,9 @@ def _load_governance_rules(workspace_root: Path) -> tuple[dict[str, dict[str, ob
             if isinstance(item, dict) and isinstance(item.get("id"), str):
                 rules[item["id"]] = item
     return rules, {
-        "path": str(path),
+        "path": resource.relative_path,
+        "origin": resource.origin,
+        "attempted_paths": list(resource.attempted_paths),
         "registry_id": payload.get("registry_id", "") if isinstance(payload, dict) else "",
         "rule_count": len(rules),
         "load_error": "",

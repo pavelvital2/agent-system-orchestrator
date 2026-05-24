@@ -21,3 +21,9 @@ aso = "agent_system_orchestrator_aso.cli:main"
 [tool.setuptools.packages.find]
 where = ["agent-system/tools/aso"]
 include = ["agent_system_orchestrator_aso*"]
+
+[tool.setuptools.package-data]
+"agent_system_orchestrator_aso.resources" = [
+    "agent-system/**/*.json",
+    "agent-system/**/*.md",
+]

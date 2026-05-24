@@ -1,0 +1,298 @@
+# RESULT_VALIDATION_RULES
+
+## Purpose
+
+This document defines documentation-first validation rules for profile-agent
+RESULT payloads.
+
+## Source documents
+
+```text
+agent-system/03_templates/AGENT_RESULT_TEMPLATE.md
+agent-system/02_runtime/PROFILE_AGENT_LIFECYCLE.md
+agent-system/03_templates/RESEARCH_RESULT_TEMPLATE.md
+agent-system/02_runtime/STATE_TRANSITION_RULES.md
+agent-system/02_runtime/FILESYSTEM_GOVERNANCE.md
+agent-system/02_runtime/REQUESTER_RETURN_PROTOCOL.md
+agent-system/02_runtime/ACCEPTED_STATE_LOCKING.md
+agent-system/03_templates/DESIGN_OUTPUT_CONTRACT.md
+agent-system/09_validators/DESIGN_TRACEABILITY_RULES.md
+agent-system/09_validators/DESIGN_REVIEW_RUBRIC.md
+```
+
+## Required structure
+
+A RESULT is invalid if it omits required sections from the current
+`AGENT_RESULT_TEMPLATE.md`.
+
+At minimum, validators must check:
+
+```text
+RESULT:
+STATUS:
+TASK_ID:
+AGENT_INSTANCE_ID:
+ROLE:
+TASK:
+SUMMARY:
+CHANGED_FILES:
+READ_DOCS:
+COMMANDS_RUN:
+TESTS_RUN:
+EVIDENCE:
+RISKS:
+LIMITATIONS:
+BLOCKERS:
+GAPS:
+NEXT_RECOMMENDED_ACTION:
+REUSE_ALLOWED:
+AGENT_TERMINATION_REQUIRED:
+```
+
+If a newer template adds sections, the validator must follow the template.
+
+`NEXT_REQUIRED_ACTION` is a legacy alias for older RESULT records. v1.2.0
+validators must not require profile agents to emit it.
+
+## STATUS validation
+
+Profile-agent `STATUS` must be one of:
+
+```text
+pass
+fail
+blocked
+gap
+```
+
+Invalid statuses include:
+
+```text
+violation
+completed
+accepted
+checkpoint_done
+```
+
+`violation` is reserved for orchestrator recovery classification.
+
+## Lifecycle field validation
+
+Every profile-agent RESULT is invalid unless:
+
+- `TASK_ID` identifies the dispatched task;
+- `AGENT_INSTANCE_ID` identifies the single profile-agent instance used for
+  that task;
+- `REUSE_ALLOWED` is exactly `false`;
+- `AGENT_TERMINATION_REQUIRED` is exactly `true`;
+- `TESTS_RUN` is present and uses `NONE` when no tests or checks were run;
+- `LIMITATIONS` is present and uses `NONE` when no limitation is known.
+
+The orchestrator must validate termination and reuse evidence using:
+
+```text
+agent-system/09_validators/AGENT_LIFECYCLE_VALIDATION_RULES.md
+```
+
+## Role and task validation
+
+A RESULT is invalid when:
+
+- `ROLE` does not match the dispatched `TARGET_ROLE`;
+- `TASK` does not match the dispatched `TASK_ID` or task title;
+- RESULT claims work from a different task packet;
+- RESULT claims authority to update runtime state directly;
+- RESULT claims project completion directly.
+
+## Design output validation
+
+For `ROLE: solution_architect`, validators must verify design output against:
+
+```text
+agent-system/03_templates/DESIGN_OUTPUT_CONTRACT.md
+agent-system/09_validators/DESIGN_TRACEABILITY_RULES.md
+agent-system/09_validators/DESIGN_REVIEW_RUBRIC.md
+```
+
+At minimum, design output is invalid when:
+
+- a required design contract section is missing;
+- an architecture decision lacks an allowed source reference;
+- an assumption, GAP, or research dependency is presented as an accepted
+  decision;
+- downstream task-like artifacts are not classified as dispatchable task
+  packets or non-dispatchable proposals;
+- a downstream dispatchable task packet is claimed as `NEXT_ACTION`-eligible
+  without task packet schema validation evidence.
+- the design review rubric records any hard fail condition;
+- deterministic design traceability status is `failed` or `blocked`.
+
+## Evidence validation
+
+For `STATUS: pass`, RESULT must provide enough evidence to verify the task
+packet acceptance criteria.
+
+For `STATUS: fail`, `blocked`, or `gap`, RESULT must provide the reason and
+the blocked or failed surface without expanding scope.
+
+Evidence is invalid when it:
+
+- references files the agent was not allowed to read;
+- references project-specific external state not included as input;
+- includes unredacted secrets;
+- claims tests or commands were run without listing them when the task packet
+  requires command evidence.
+
+## File change validation
+
+`CHANGED_FILES` must be compared to the task packet:
+
+```text
+ALLOWED_FILE_CHANGES
+FORBIDDEN_FILE_CHANGES
+```
+
+The RESULT is invalid when:
+
+- a changed path is outside allowed scope;
+- a changed path matches forbidden scope;
+- an ordinary project task changes `agent-system/`;
+- a profile agent changes `project-runtime/`;
+- a developer changes task packets or architecture docs without explicit scope;
+- an auditor modifies files outside an explicitly assigned correction task.
+
+`CHANGED_FILES: NONE` is required when no files changed.
+
+## RESULT artifact path validation
+
+When validators inspect RESULT file locations or bounded RESULT references,
+new worker RESULT artifacts must use:
+
+```text
+project-runtime/results/worker/RESULT_<TASK_ID>_ATTEMPT_<N>.md
+```
+
+New audit RESULT artifacts must use:
+
+```text
+project-runtime/results/audit/AUDIT_RESULT_<TASK_ID>_ATTEMPT_<N>.md
+```
+
+New RESULT artifact basenames must not duplicate task packet basenames. A
+worker RESULT must be prefixed with `RESULT_`; an audit RESULT must be prefixed
+with `AUDIT_RESULT_`.
+
+`project-runtime/agent-results/` is compatibility/read-only legacy storage.
+Validators may read historical worker RESULT evidence from that path, but must
+classify new RESULT files there as non-canonical unless an explicit bounded
+compatibility exception applies.
+
+## Secret-safety validation
+
+RESULT is invalid if it prints or embeds:
+
+- credentials;
+- tokens;
+- cookies;
+- private keys;
+- `.env` values;
+- secret-bearing command output.
+
+If a command or file path suggests a secret was involved, the RESULT must cite
+only the command class, path, or redacted marker. It must not reproduce the
+secret value.
+
+## GAP validation
+
+When `STATUS: gap`, the `GAPS` section must include:
+
+- `GAP_ID`;
+- `TYPE`;
+- `BLOCKS`;
+- `QUESTION_TO_OWNER`;
+- `RECOMMENDED_OPTIONS`;
+- `RECOMMENDED_OPTION`;
+- `REASON`.
+
+When no GAP exists, the section must be:
+
+```text
+GAPS:
+- NONE
+```
+
+## BLOCKERS validation
+
+When `STATUS: blocked`, the RESULT must identify a blocker or explain why an
+owner decision is required.
+
+`STATUS: blocked` with:
+
+```text
+BLOCKERS:
+- NONE
+```
+
+is invalid unless the task packet explicitly defines a no-progress condition
+that does not require a blocker.
+
+## NEXT_RECOMMENDED_ACTION validation
+
+`NEXT_RECOMMENDED_ACTION` is advisory and must not contradict governance. It is
+not authoritative for routing until the orchestrator validates it against
+runtime state, task registry, current gate, transition rules, blockers, and
+accepted artifacts.
+
+Legacy RESULT readers may accept `NEXT_REQUIRED_ACTION` as an alias when
+reading older records, but current RESULT validation must require
+`NEXT_RECOMMENDED_ACTION`.
+
+Invalid RESULT recommendations include:
+
+- solution_architect pass directly to developer;
+- developer pass directly to tester or technical writer;
+- audit fail routed to normal next task;
+- audit fail routed to Git checkpoint;
+- tester fail routed to technical writer or finalization;
+- profile agent directly setting project completed;
+- direct progress after a required audit fail.
+- direct requester continuation from unaudited research output.
+
+The orchestrator must validate advisory action against transition rules before
+updating `NEXT_ACTION.md`.
+
+## Research result validation
+
+For `TASK_KIND: research_dependency`, RESULT is invalid unless it includes the
+additional research output fields from
+`agent-system/03_templates/RESEARCH_RESULT_TEMPLATE.md`:
+
+```text
+RESEARCH_QUESTION_ID
+RESEARCH_SUMMARY
+SOURCES_USED
+EVIDENCE_MATRIX
+UNRESOLVED_FINDINGS
+DESIGN_OR_TASK_IMPLICATIONS
+RECOMMENDED_NEXT_ACTION
+```
+
+Machine-readable validation for these additional fields is defined by:
+
+```text
+agent-system/09_validators/schemas/research_result.schema.json
+```
+
+When a validator knows from the task packet, task registry, or dispatch context
+that the RESULT belongs to `TASK_KIND: research_dependency`, it must validate
+the RESULT against both `result.schema.json` and `research_result.schema.json`.
+
+Research result validation must reject:
+
+- missing source references for factual findings;
+- use of forbidden sources;
+- unredacted secrets;
+- owner decisions treated as research findings instead of GAP;
+- technical execution obstacles treated as research findings instead of
+  BLOCKER;
+- any recommendation that bypasses independent audit before requester return.

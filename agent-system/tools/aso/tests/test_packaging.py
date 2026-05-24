@@ -81,6 +81,23 @@ class PackagingCommandTests(unittest.TestCase):
         self.assertEqual(package_find["include"], ["agent_system_orchestrator_aso*"])
         self.assertFalse((REPO_ROOT / "agent_system_orchestrator_aso").exists())
 
+    def test_runtime_resource_package_data_is_declared(self) -> None:
+        pyproject = tomllib.loads((REPO_ROOT / "pyproject.toml").read_text(encoding="utf-8"))
+        package_data = pyproject["tool"]["setuptools"]["package-data"]
+
+        self.assertEqual(
+            package_data["agent_system_orchestrator_aso.resources"],
+            ["agent-system/**/*.json", "agent-system/**/*.md"],
+        )
+        resources_root = ASO_TOOL_ROOT / "agent_system_orchestrator_aso" / "resources"
+        self.assertTrue((resources_root / "agent-system/09_validators/rules/governance_rules.json").is_file())
+        self.assertTrue(
+            (
+                resources_root
+                / "agent-system/02_runtime/PLANNER_DISPATCHABILITY_GATE_P5_4_CONTRACT.md"
+            ).is_file()
+        )
+
     def test_package_version_is_coherent(self) -> None:
         pyproject = tomllib.loads((REPO_ROOT / "pyproject.toml").read_text(encoding="utf-8"))
         init_file = (ASO_TOOL_ROOT / "agent_system_orchestrator_aso" / "__init__.py").read_text(encoding="utf-8")

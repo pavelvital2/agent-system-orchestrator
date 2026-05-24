@@ -8,6 +8,8 @@ import sys
 from pathlib import Path
 from typing import Any
 
+from .. import resources
+
 
 REGISTRY_RELATIVE_PATH = Path("agent-system/09_validators/rules/governance_rules.json")
 REQUIRED_RULE_FIELDS = {
@@ -75,7 +77,10 @@ def _json_type(value: Any) -> str:
 class RuleRegistryValidator:
     def __init__(self, root: Path) -> None:
         self.root = root.resolve()
-        self.registry_path = self.root / REGISTRY_RELATIVE_PATH
+        self.registry_path = REGISTRY_RELATIVE_PATH
+        self.registry_origin = ""
+        self.attempted_paths: list[str] = []
+        self._using_root_registry = False
         self.errors: list[str] = []
         self.warnings: list[str] = []
         self.rule_count = 0
@@ -92,18 +97,35 @@ class RuleRegistryValidator:
         self._validate_registry_object(registry)
 
     def _load_registry(self) -> Any | None:
-        if not self.registry_path.is_file():
-            self.errors.append(f"registry file does not exist: {REGISTRY_RELATIVE_PATH.as_posix()}")
-            return None
+        root_registry = self.root / REGISTRY_RELATIVE_PATH
+        if root_registry.is_file():
+            self._using_root_registry = True
+            self.registry_origin = str(root_registry)
+            self.attempted_paths = [str(root_registry)]
+            try:
+                return json.loads(root_registry.read_text(encoding="utf-8"))
+            except json.JSONDecodeError as exc:
+                self.errors.append(f"registry JSON is invalid at line {exc.lineno}, column {exc.colno}: {exc.msg}")
+                return None
+            except OSError as exc:
+                self.errors.append(f"registry file is unreadable: {exc}")
+                return None
 
         try:
-            with self.registry_path.open("r", encoding="utf-8") as handle:
-                return json.load(handle)
+            resource = resources.read_resource_text(REGISTRY_RELATIVE_PATH, anchor_file=__file__)
+            self.registry_origin = resource.origin
+            self.attempted_paths = list(resource.attempted_paths)
+            return json.loads(resource.text)
         except json.JSONDecodeError as exc:
             self.errors.append(f"registry JSON is invalid at line {exc.lineno}, column {exc.colno}: {exc.msg}")
             return None
         except OSError as exc:
-            self.errors.append(f"registry file is unreadable: {exc}")
+            self.errors.append(
+                "registry file is unreadable: "
+                f"{exc}. Attempted paths: {self.attempted_paths or [REGISTRY_RELATIVE_PATH.as_posix()]}. "
+                "Reinstall agent-system-orchestrator from a complete source archive, or run the direct script from "
+                "an ASO source checkout."
+            )
             return None
 
     def _validate_registry_object(self, registry: dict[str, Any]) -> None:
@@ -173,7 +195,11 @@ class RuleRegistryValidator:
                 self.errors.append(f"{doc_location} must be a repository-relative path without parent traversal")
                 continue
 
-            if not (self.root / doc_path).is_file():
+            if self._using_root_registry:
+                exists = (self.root / doc_path).is_file()
+            else:
+                exists = resources.resource_exists(doc_path, anchor_file=__file__)
+            if not exists:
                 self.errors.append(f"{doc_location} does not exist: {doc_path.as_posix()}")
 
     def _validate_expected_action(self, expected_action: Any, location: str) -> None:
@@ -205,6 +231,8 @@ class RuleRegistryValidator:
             "status": "failed" if failed else "passed",
             "strict": strict,
             "registry_path": REGISTRY_RELATIVE_PATH.as_posix(),
+            "registry_origin": self.registry_origin,
+            "attempted_paths": self.attempted_paths,
             "rule_count": self.rule_count,
             "allowed_severities": sorted(ALLOWED_SEVERITIES),
             "allowed_actions": sorted(ALLOWED_ACTIONS),

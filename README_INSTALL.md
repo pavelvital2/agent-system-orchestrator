@@ -91,6 +91,17 @@ PYTHONDONTWRITEBYTECODE=1 python3 -m unittest discover -s agent-system/tools/aso
 The `test` extra includes `jsonschema>=4.22`, which is required by the schema
 and dispatchability contract tests.
 
+Installed `aso` commands resolve required governance resources from packaged
+package data, not from the virtualenv root or the current working directory.
+The packaged runtime resource set is limited to
+`agent-system/09_validators/rules/governance_rules.json` and the registry's
+referenced source documents:
+`agent-system/02_runtime/PLANNER_DISPATCHABILITY_GATE_P5_4_CONTRACT.md`,
+`agent-system/02_runtime/PROPOSAL_APPLY_P3_CONTRACT.md`,
+`agent-system/02_runtime/RUNTIME_STATE_P2_CONTRACT.md`,
+`agent-system/02_runtime/STATE_TRANSITION_RULES.md`, and the six referenced
+validator rule Markdown files under `agent-system/09_validators/`.
+
 ## Activate
 
 ```text

@@ -1,0 +1,299 @@
+# TASK_PACKET_VALIDATION_RULES
+
+## Purpose
+
+This document defines documentation-first validation rules for bounded task
+packets.
+
+## Source documents
+
+```text
+agent-system/03_templates/TASK_PACKET_TEMPLATE.md
+agent-system/02_runtime/FILESYSTEM_GOVERNANCE.md
+agent-system/02_runtime/STATE_TRANSITION_RULES.md
+agent-system/02_runtime/ACCEPTED_STATE_LOCKING.md
+agent-system/02_runtime/REQUESTER_RETURN_PROTOCOL.md
+agent-system/04_state/RUNTIME_STATE_SCHEMA.md
+agent-system/09_validators/REASONING_LEVEL_VALIDATION_RULES.md
+agent-system/09_validators/PRODUCT_CAPABILITY_GATE_POLICY.md
+```
+
+## Required structure
+
+A task packet is invalid if it omits required sections from the current
+`TASK_PACKET_TEMPLATE.md`.
+
+Validators must check the current template rather than freezing a separate
+schema here.
+
+`RESEARCH_REQUEST_TEMPLATE.md` and
+`DESIGN_CONTINUATION_TASK_TEMPLATE.md` are extension section templates. They
+are schema-invalid if dispatched standalone and are valid only when embedded in
+a full `TASK_PACKET_TEMPLATE.md`-compatible task packet.
+
+## Bounded scope checks
+
+A task packet is invalid when:
+
+- purpose contains multiple unrelated objectives;
+- scope in contains hidden follow-up work;
+- scope out is missing;
+- required docs force an agent to read the whole project;
+- acceptance criteria expand beyond scope in;
+- expected outputs are not verifiable;
+- workflow fields contradict governance.
+- `REASONING_LEVEL` is missing, invalid, below the gate-required floor, or
+  lowered below role default without a valid mechanical-task `OVERRIDE_REASON`;
+- `TASK_KIND: research_dependency` lacks requester return metadata or expected
+  research evidence.
+- a task packet claims `capability_pass`, `product_pass`, `mvp_ready`, or
+  `final_acceptance` without mapping the claim to capability IDs and accepted
+  gate evidence.
+
+## ACTIVE_DOC_ROOT checks
+
+For ordinary project work:
+
+- active task packets must be inside `ACTIVE_DOC_ROOT`;
+- active project docs must be inside `ACTIVE_DOC_ROOT`;
+- `project-archive/` cannot be active source-of-truth;
+- deprecated or superseded docs cannot be in `REQUIRED_DOCS`;
+- `NEXT_ACTION` cannot dispatch deprecated or superseded task packets.
+
+The only active task packet exception outside `ACTIVE_DOC_ROOT` is the first
+bootstrap profile-agent dispatch packet:
+
+```text
+project-runtime/bootstrap/TASK_BOOTSTRAP_<TARGET_ROLE>_001.md
+```
+
+Validators must reject any ordinary task packet outside `ACTIVE_DOC_ROOT`.
+They must also reject handoff files used as task packets, profile-agent
+dispatch without a task packet, and more than one active first bootstrap task
+packet at the same time.
+
+For the first bootstrap exception, validators must also confirm that the
+corresponding `NEXT_ACTION` uses the current required fields from
+`NEXT_ACTION_TEMPLATE.md` and references the canonical path:
+
+```text
+project-runtime/bootstrap/TASK_BOOTSTRAP_<TARGET_ROLE>_001.md
+```
+
+Universal package upgrade tasks may change `agent-system/` only when a bounded
+task packet explicitly authorizes that scope.
+
+## Allowed and forbidden file checks
+
+Every task packet must define bounded file-change authority.
+
+Invalid conditions:
+
+- `ALLOWED_FILE_CHANGES` is missing;
+- `ALLOWED_FILE_CHANGES` is effectively unbounded;
+- wildcard scope is broader than the task purpose requires;
+- `FORBIDDEN_FILE_CHANGES` is missing when protected zones exist;
+- allowed and forbidden patterns overlap without explicit clarification;
+- protected zones are mutable without role and task authority.
+
+Protected zones include:
+
+```text
+agent-system/
+project-runtime/
+project-input/
+project-archive/
+```
+
+## Required docs checks
+
+`REQUIRED_DOCS` is invalid when it includes:
+
+- deprecated docs;
+- superseded task packets;
+- archive-only references for active source-of-truth;
+- secrets or credential files;
+- unrelated reference documents;
+- entire directory trees without bounded need.
+
+## Workflow checks
+
+A task packet is invalid when it allows or requires:
+
+- solution_architect pass directly to developer;
+- developer pass directly to tester or technical writer;
+- audit bypass after solution_architect or developer work;
+- audit fail to normal next task;
+- audit fail to Git checkpoint;
+- correction without a fresh bounded task where correction is required;
+- terminal completion by profile-agent RESULT alone.
+- requester continuation before research audit pass;
+- audit fail, blocked, or gap routing to requester continuation;
+- research dependency used as a substitute for GAP or BLOCKER handling.
+
+## Product capability mapping checks
+
+Task packets may map bounded work to product capability IDs using existing
+sections such as `SCOPE_IN`, `ACCEPTANCE_CRITERIA`, `EVIDENCE_REQUIREMENTS`,
+and `NOTES`.
+
+Validators must preserve the distinction between:
+
+```text
+governance_pass
+task_pass
+capability_pass
+product_pass
+mvp_ready
+final_acceptance
+```
+
+A task packet is invalid when it treats a skeleton/scaffold pass, profile-agent
+pass, or auditor pass as MVP readiness or final acceptance. Product gates must
+be checked according to `PRODUCT_CAPABILITY_GATE_POLICY.md` before final
+acceptance routing.
+
+## Reasoning level checks
+
+Allowed levels are:
+
+```text
+low
+medium
+high
+xhigh
+```
+
+`default`, `maximum`, and `role_default` are deprecated as level values;
+`role_default` may be used only as source/policy metadata.
+
+Allowed `REASONING_LEVEL_SOURCE` values are `explicit`, `role_default`,
+`gate_floor`, `escalated`, and `fallback`.
+
+Task packets may raise reasoning level freely. They may lower below role
+default only for mechanical bounded tasks and only with `OVERRIDE_REASON`.
+They must not lower below the gate-required floor. `low` is forbidden for
+design, requirements, audit, correction after failed audit,
+lifecycle/state/transition changes, security/secrets policy, launch/release
+readiness, final acceptance, and cross-link validation.
+
+## Research dependency checks
+
+For `TASK_KIND: research_dependency`, validators must require:
+
+```text
+REQUESTED_BY_ROLE
+REQUESTED_BY_TASK
+RESEARCH_QUESTION_ID
+RESEARCH_PURPOSE
+RESEARCH_QUESTIONS
+ALLOWED_SOURCES
+FORBIDDEN_SOURCES
+EXPECTED_EVIDENCE
+EXPECTED_OUTPUT
+RETURN_TO_REQUESTER_AFTER_AUDIT_PASS
+RETURN_TO_ROLE_AFTER_AUDIT_PASS
+RETURN_TASK_AFTER_AUDIT_PASS
+AUDIT_REQUIREMENTS: mandatory
+```
+
+Research dependencies are invalid if they request owner decisions, omit allowed
+or forbidden sources, omit expected evidence, or allow requester return before
+independent audit pass.
+
+## Role enum checks
+
+Profile execution `TASK_TYPE` values are limited to:
+
+```text
+requirements_analyst
+solution_architect
+designer
+developer
+auditor
+tester
+technical_writer
+devops_setup_engineer
+release_manager
+```
+
+For profile execution tasks, `TARGET_ROLE` must match `TASK_TYPE` after role
+alias normalization unless the packet explicitly documents a governed
+exception.
+
+Role alias:
+
+```yaml
+ROLE_ALIASES:
+  designer: solution_architect
+```
+
+`designer` is deprecated but remains valid for old task packets. Validators
+must emit a warning and normalize it to `solution_architect`, not hard-fail the
+packet solely because the old role name is present.
+
+Control pseudo-roles are:
+
+```text
+orchestrator
+project_owner
+none
+```
+
+They are valid in control/routing contexts, such as next-role routing, owner
+waits, and terminal routing. They are invalid as profile execution `TASK_TYPE`
+values unless a governance-only exception is explicitly documented.
+
+## Correction task checks
+
+Correction task packets must include:
+
+```text
+CORRECTION_OF
+SOURCE_RESULT_REF
+ATTEMPT_NO
+FAILURE_TYPE
+```
+
+Invalid correction packets include:
+
+- missing source result or violation reference when one exists;
+- scope broader than the failed surface without solution architect approval;
+- missing mandatory audit path;
+- repeated same failure without escalation path.
+
+## RESULT_PATH checks
+
+For new file-backed RESULT artifacts, `RESULT_PATH` must use the canonical
+target workspace paths:
+
+```text
+project-runtime/results/worker/RESULT_<TASK_ID>_ATTEMPT_<N>.md
+project-runtime/results/audit/AUDIT_RESULT_<TASK_ID>_ATTEMPT_<N>.md
+```
+
+Validators must reject new worker RESULT paths that omit the `RESULT_` prefix
+or visually reuse a task packet basename under an untyped results directory.
+
+Validators must reject new audit RESULT paths that omit the `AUDIT_RESULT_`
+prefix or use a task packet basename under a legacy audit directory.
+
+`project-runtime/agent-results/` is compatibility/read-only legacy storage for
+historical worker RESULT evidence. Validators may read historical references
+there, but new task packets must not set `RESULT_PATH` under that directory.
+
+## Secret-safety checks
+
+A task packet is invalid when it asks an agent to:
+
+- read, print, create, modify, stage, commit, or push secrets;
+- include secret values in evidence;
+- inspect credential files without an explicit redaction-only protocol;
+- use real credentials as acceptance evidence.
+
+Secret-related evidence must be redacted and path/class based.
+
+## Project-agnostic checks
+
+Universal agent-system task packets are invalid if they introduce
+project-specific business terms into universal core files.
