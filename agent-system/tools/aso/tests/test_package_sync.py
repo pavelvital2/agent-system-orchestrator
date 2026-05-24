@@ -111,10 +111,12 @@ class PackageSyncAliasTests(unittest.TestCase):
             result = _run_package_sync(root)
             report = json.loads(result.stdout)
 
-        self.assertEqual(result.returncode, 0, result.stderr)
-        self.assertEqual(report["status"], "passed")
-        self.assertEqual(report["command"], "package-sync verify")
-        self.assertNotIn("mismatches", report)
+            self.assertEqual(result.returncode, 0, result.stderr)
+            self.assertEqual(report["status"], "passed")
+            self.assertEqual(report["command"], "package-sync verify")
+            self.assertNotIn("mismatches", report)
+            self.assertTrue(root.exists())
+            self.assertFalse((root / "agent_system_orchestrator_aso").exists())
 
 
 if __name__ == "__main__":

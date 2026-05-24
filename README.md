@@ -71,6 +71,9 @@ The former root-level duplicate package path
 `agent_system_orchestrator_aso/` is not a package source or runtime source and
 must remain absent from tracked files before merge. Package-layout verification
 replaces duplicate copy synchronization checks for this cleanup.
+`aso package-sync verify` remains only as a deprecated compatibility alias for
+`aso package-layout verify`; it performs no copy synchronization and must not
+reintroduce duplicate package trees.
 
 ## Local install and command surface
 
@@ -318,6 +321,11 @@ entrypoint, hygiene, and canonical package-source coherence:
 ```text
 python3 agent-system/tools/aso/aso.py package-layout verify --root . --strict
 ```
+
+The deprecated `package-sync verify` command is the same read-only package
+layout verification path kept for compatibility. It is not a synchronization
+command, performs no file copying, and must not recreate the former root-level
+`agent_system_orchestrator_aso/` package tree.
 
 Project Factory P1 creates local generated project workspaces, plans GitHub
 publication, and can publish a clean generated project using the selected

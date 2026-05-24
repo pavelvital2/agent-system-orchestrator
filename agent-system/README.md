@@ -392,6 +392,9 @@ python3 agent-system/tools/aso/aso.py package-layout verify --root . --strict
 version, entrypoint, workflow, or hygiene drift and exits nonzero on strict
 mismatches. It checks that the root duplicate package is absent and the
 canonical package is under `agent-system/tools/aso/agent_system_orchestrator_aso/`.
+`aso package-sync verify` is a deprecated compatibility alias for the same
+inspection path. It performs no copy synchronization and must not reintroduce
+duplicate package trees.
 
 For DAG readiness, `audit_passed` is not a completed dependency. Downstream
 work that depends on accepted task output requires `checkpoint_done` with

@@ -94,7 +94,9 @@ and dispatchability contract tests.
 
 Installed `aso` commands resolve required governance resources from packaged
 package data, not from the virtualenv root or the current working directory.
-The packaged runtime resource set is limited to
+Packaged ASO governance/runtime resources are JSON and Markdown only unless a
+future task explicitly expands package data. The packaged runtime resource set
+is limited to
 `agent-system/09_validators/rules/governance_rules.json` and the registry's
 referenced source documents:
 `agent-system/02_runtime/PLANNER_DISPATCHABILITY_GATE_P5_4_CONTRACT.md`,
@@ -102,6 +104,10 @@ referenced source documents:
 `agent-system/02_runtime/RUNTIME_STATE_P2_CONTRACT.md`,
 `agent-system/02_runtime/STATE_TRANSITION_RULES.md`, and the six referenced
 validator rule Markdown files under `agent-system/09_validators/`.
+
+`aso package-sync verify` is a deprecated compatibility alias for
+`aso package-layout verify`. It performs no copy synchronization and must not
+be used to reintroduce duplicate package trees.
 
 ## Activate
 
