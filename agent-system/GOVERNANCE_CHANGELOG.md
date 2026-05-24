@@ -1852,6 +1852,7 @@ AFFECTED_FILES:
 - README.md
 - README_INSTALL.md
 - pyproject.toml
+- agent-system/README.md
 - agent-system/PACKAGE_VERSIONING.md
 - agent-system/GOVERNANCE_CHANGELOG.md
 - agent-system/02_runtime/CONTRACT_AUTHORITY_MAP.md
