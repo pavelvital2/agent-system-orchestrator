@@ -1441,7 +1441,7 @@ def _bootstrap_semantic_findings(root: Path, sidecars: dict[str, dict[str, objec
                 "project-input/TZ.md exists, so PROJECT_STATE.content.tz_path must reference project-input/TZ.md.",
                 "project-runtime/state/PROJECT_STATE.json",
                 "content.tz_path",
-                "Set tz_path to project-input/TZ.md.",
+                "Set PROJECT_STATE.content.tz_path to project-input/TZ.md and rerun aso state render --root WORKSPACE --confirm-write so PROJECT_STATE.md shows the same TZ_PATH.",
             )
         )
     return findings

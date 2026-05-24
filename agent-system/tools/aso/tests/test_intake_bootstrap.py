@@ -75,10 +75,11 @@ class IntakeBootstrapCommandTests(unittest.TestCase):
             self.assertEqual(receipt["status"], "created")
             self.assertTrue(receipt["mutations_performed"])
             self.assertEqual(receipt["target_role"], "requirements_analyst")
-            self.assertEqual(receipt["tz_path"], "project-input/TZ_REAL.md")
+            self.assertEqual(receipt["tz_path"], "project-input/TZ.md")
             packet = root / "project-runtime/bootstrap/TASK_BOOTSTRAP_REQUIREMENTS_ANALYST_001.md"
             self.assertTrue(packet.is_file())
             self.assertIn("Do not implement product logic", packet.read_text(encoding="utf-8"))
+            self.assertIn("project-input/TZ.md", packet.read_text(encoding="utf-8"))
             registry = json.loads((root / "project-runtime/state/TASK_REGISTRY.json").read_text(encoding="utf-8"))
             self.assertEqual(len(registry["content"]["tasks"]), 1)
             plan_report = json.loads(plan_path.read_text(encoding="utf-8"))
@@ -147,6 +148,45 @@ class IntakeBootstrapCommandTests(unittest.TestCase):
             self.assertFalse((root / "project-runtime/bootstrap").exists())
             after = {path.name: path.read_text(encoding="utf-8") for path in state_root.glob("*.json")}
             self.assertEqual(before, after)
+
+    def test_bootstrap_preserves_existing_canonical_tz_and_materialized_state(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp) / "workspace"
+            root.mkdir()
+            canonical = write_tz(root, "project-input/TZ.md")
+            canonical.write_text("# TZ\n\nCanonical request.\n", encoding="utf-8")
+            owner_tz = write_tz(root, "project-input/TZ_REAL.md")
+            self.assertEqual(state_init(root, "project-input/TZ.md").returncode, 0)
+            render = run_aso("state", "render", "--root", str(root), "--confirm-write")
+            self.assertEqual(render.returncode, 0, render.stdout + render.stderr)
+
+            intake = run_aso(
+                "intake",
+                "bootstrap",
+                "--root",
+                str(root),
+                "--tz",
+                "project-input/TZ_REAL.md",
+                "--target-role",
+                "requirements_analyst",
+                "--confirm-write",
+            )
+            verify = run_aso("state", "verify", "--root", str(root), "--strict")
+
+            self.assertEqual(intake.returncode, 0, intake.stdout + intake.stderr)
+            self.assertEqual(verify.returncode, 0, verify.stdout + verify.stderr)
+            receipt = json.loads(intake.stdout)
+            self.assertEqual(receipt["tz_path"], "project-input/TZ.md")
+            self.assertEqual(canonical.read_text(encoding="utf-8"), "# TZ\n\nCanonical request.\n")
+            self.assertEqual(owner_tz.read_text(encoding="utf-8"), "# TZ\n\nBuild a governed test app.\n")
+            project_state = json.loads(
+                (root / "project-runtime" / "state" / "PROJECT_STATE.json").read_text(encoding="utf-8")
+            )
+            self.assertEqual(project_state["content"]["tz_path"], "project-input/TZ.md")
+            self.assertIn(
+                "TZ_PATH: project-input/TZ.md",
+                (root / "project-runtime" / "PROJECT_STATE.md").read_text(encoding="utf-8"),
+            )
 
     def test_tz_outside_workspace_is_rejected(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:

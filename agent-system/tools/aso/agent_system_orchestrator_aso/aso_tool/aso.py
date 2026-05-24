@@ -1198,7 +1198,7 @@ def build_parser() -> argparse.ArgumentParser:
     state_init_parser.add_argument(
         "--tz",
         metavar="PATH",
-        help="Workspace-local TZ document to record instead of creating project-input/TZ.md.",
+        help="Workspace-local TZ document to validate and canonicalize to project-input/TZ.md.",
     )
     state_init_parser.add_argument(
         "--dry-run",

@@ -8,7 +8,7 @@ import re
 import subprocess
 import sys
 from pathlib import Path
-from typing import Any
+from typing import Any, NamedTuple
 
 from .. import runtime_schema_contracts
 
@@ -48,6 +48,14 @@ MARKDOWN_SOURCES = {
     "CHECKPOINT_STATE": "project-runtime/CHECKPOINT_STATE.md",
     "SCHEMA_MANIFEST": "project-runtime/SCHEMA_MANIFEST.md",
 }
+
+
+class TzSelection(NamedTuple):
+    tz_path: Path
+    source_path: Path | None
+    explicit_tz_path: Path | None
+    copy_to_canonical: bool
+    detail: str
 
 
 def _slug(value: str) -> str:
@@ -325,9 +333,7 @@ def _fail(message: str, exit_code: int = EXIT_UNSAFE) -> int:
     return exit_code
 
 
-def _workspace_relative_tz_path(root: Path, value: str | None) -> tuple[Path | None, str]:
-    if not value:
-        return CANONICAL_TZ_PATH, ""
+def _workspace_relative_existing_tz_path(root: Path, value: str) -> tuple[Path | None, str]:
     raw = Path(value).expanduser()
     candidate = raw if raw.is_absolute() else root / raw
     resolved_root = root.resolve(strict=False)
@@ -341,11 +347,42 @@ def _workspace_relative_tz_path(root: Path, value: str | None) -> tuple[Path | N
     if not candidate.is_file():
         return None, f"--tz file is missing or unreadable: {value}"
     try:
-        with candidate.open("r", encoding="utf-8") as handle:
-            handle.read(1)
+        text = candidate.read_text(encoding="utf-8")
     except OSError as exc:
         return None, f"--tz file is not readable: {exc}"
+    if not text.strip():
+        return None, f"--tz file is empty: {value}"
     return relpath, ""
+
+
+def select_canonical_tz(root: Path, value: str | None) -> tuple[TzSelection | None, str]:
+    canonical_abs = root / CANONICAL_TZ_PATH
+    if not value:
+        return TzSelection(CANONICAL_TZ_PATH, None, None, False, "canonical TZ path selected"), ""
+
+    explicit_relpath, error = _workspace_relative_existing_tz_path(root, value)
+    if explicit_relpath is None:
+        return None, error
+    if explicit_relpath == CANONICAL_TZ_PATH:
+        return TzSelection(CANONICAL_TZ_PATH, canonical_abs, explicit_relpath, False, "canonical TZ path selected"), ""
+
+    if canonical_abs.exists():
+        if not canonical_abs.is_file():
+            return None, f"{CANONICAL_TZ_PATH.as_posix()} exists but is not a file"
+        try:
+            canonical_text = canonical_abs.read_text(encoding="utf-8")
+        except OSError as exc:
+            return None, f"{CANONICAL_TZ_PATH.as_posix()} is not readable: {exc}"
+        if not canonical_text.strip():
+            return None, f"{CANONICAL_TZ_PATH.as_posix()} exists but is empty"
+        detail = (
+            f"existing canonical TZ document preserved; explicit TZ {explicit_relpath.as_posix()} "
+            f"validated but not copied"
+        )
+        return TzSelection(CANONICAL_TZ_PATH, canonical_abs, explicit_relpath, False, detail), ""
+
+    detail = f"will copy explicit TZ {explicit_relpath.as_posix()} to project-input/TZ.md"
+    return TzSelection(CANONICAL_TZ_PATH, root / explicit_relpath, explicit_relpath, True, detail), ""
 
 
 def _validate_existing_state(state_root: Path, sidecars: dict[str, dict[str, Any]]) -> tuple[bool, str]:
@@ -378,16 +415,22 @@ def _validate_existing_state(state_root: Path, sidecars: dict[str, dict[str, Any
     return True, "existing state already matches deterministic init payload"
 
 
-def _write_tz_document(root: Path, tz_path: Path, explicit_tz: bool) -> tuple[bool, str]:
+def write_selected_tz_document(root: Path, selection: TzSelection) -> tuple[bool, str]:
+    tz_path = selection.tz_path
     path = root / tz_path
     if path.exists():
         if not path.is_file():
             return False, f"{tz_path.as_posix()} exists but is not a file"
+        if selection.explicit_tz_path and selection.explicit_tz_path != tz_path:
+            return True, selection.detail
         return True, "existing TZ document preserved"
-    if explicit_tz:
-        return False, f"{tz_path.as_posix()} does not exist"
     try:
         path.parent.mkdir(parents=True, exist_ok=True)
+        if selection.copy_to_canonical:
+            if selection.source_path is None:
+                return False, "canonical TZ copy source is missing"
+            path.write_text(selection.source_path.read_text(encoding="utf-8"), encoding="utf-8")
+            return True, f"copied {selection.explicit_tz_path.as_posix()} to project-input/TZ.md"
         path.write_text(DEFAULT_TZ_TEXT, encoding="utf-8")
     except OSError as exc:
         return False, str(exc)
@@ -441,9 +484,10 @@ def run(args: argparse.Namespace) -> int:
 
     project_slug = _slug(args.project_slug or root.name)
     project_name = args.project_name or project_slug.replace("-", " ").title()
-    tz_path, tz_error = _workspace_relative_tz_path(root, getattr(args, "tz", None))
-    if tz_path is None:
+    tz_selection, tz_error = select_canonical_tz(root, getattr(args, "tz", None))
+    if tz_selection is None:
         return _fail(tz_error, EXIT_USAGE)
+    tz_path = tz_selection.tz_path
     branch = args.branch or _actual_branch(root)
     repo_url = args.repo_url or _actual_remote(root)
     sidecars = _initial_sidecars(
@@ -474,7 +518,7 @@ def run(args: argparse.Namespace) -> int:
         print(_json_bytes(plan), end="")
         return EXIT_OK
 
-    wrote_tz, tz_detail = _write_tz_document(root, tz_path, bool(getattr(args, "tz", None)))
+    wrote_tz, tz_detail = write_selected_tz_document(root, tz_selection)
     if not wrote_tz:
         return _fail(f"failed to write TZ document: {tz_detail}", EXIT_WRITE_ERROR)
     wrote, write_detail = _write_sidecars(state_root, sidecars)

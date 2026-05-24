@@ -201,6 +201,81 @@ class StateInitCommandTests(unittest.TestCase):
             self.assertEqual(verify.returncode, 0, verify.stdout + verify.stderr)
             self.assertEqual((root / "project-input" / "TZ.md").read_text(encoding="utf-8"), "Europe/Moscow\n")
 
+    def test_confirm_write_with_explicit_canonical_tz_preserves_document(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            write_tz_file(root)
+
+            init = run_aso(
+                "state",
+                "init",
+                "--root",
+                str(root),
+                "--project-name",
+                "Canonical TZ",
+                "--project-slug",
+                "canonical-tz",
+                "--tz",
+                "project-input/TZ.md",
+                "--confirm-write",
+            )
+            render = run_aso("state", "render", "--root", str(root), "--confirm-write")
+            verify = run_aso("state", "verify", "--root", str(root), "--strict")
+
+            self.assertEqual(init.returncode, 0, init.stdout + init.stderr)
+            self.assertEqual(render.returncode, 0, render.stdout + render.stderr)
+            self.assertEqual(verify.returncode, 0, verify.stdout + verify.stderr)
+            project_state = json.loads(
+                (root / "project-runtime" / "state" / "PROJECT_STATE.json").read_text(encoding="utf-8")
+            )
+            self.assertEqual(project_state["content"]["tz_path"], "project-input/TZ.md")
+            self.assertIn(
+                "TZ_PATH: project-input/TZ.md",
+                (root / "project-runtime" / "PROJECT_STATE.md").read_text(encoding="utf-8"),
+            )
+            self.assertEqual((root / "project-input" / "TZ.md").read_text(encoding="utf-8"), "Europe/Moscow\n")
+
+    def test_confirm_write_with_owner_noncanonical_tz_copies_to_canonical(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            owner_tz = root / "project-input" / "TZ_REAL_E2E_TELEGRAM_BOT.md"
+            owner_tz.parent.mkdir(parents=True, exist_ok=True)
+            owner_tz.write_text("# TZ\n\nBuild a Telegram bot.\n", encoding="utf-8")
+
+            init = run_aso(
+                "state",
+                "init",
+                "--root",
+                str(root),
+                "--project-name",
+                "Owner TZ",
+                "--project-slug",
+                "owner-tz",
+                "--tz",
+                "project-input/TZ_REAL_E2E_TELEGRAM_BOT.md",
+                "--confirm-write",
+            )
+            render = run_aso("state", "render", "--root", str(root), "--confirm-write")
+            verify = run_aso("state", "verify", "--root", str(root), "--strict")
+
+            self.assertEqual(init.returncode, 0, init.stdout + init.stderr)
+            self.assertEqual(render.returncode, 0, render.stdout + render.stderr)
+            self.assertEqual(verify.returncode, 0, verify.stdout + verify.stderr)
+            receipt = json.loads(init.stdout)
+            self.assertIn("copied project-input/TZ_REAL_E2E_TELEGRAM_BOT.md to project-input/TZ.md", receipt["write_result"])
+            self.assertEqual(
+                (root / "project-input" / "TZ.md").read_text(encoding="utf-8"),
+                "# TZ\n\nBuild a Telegram bot.\n",
+            )
+            project_state = json.loads(
+                (root / "project-runtime" / "state" / "PROJECT_STATE.json").read_text(encoding="utf-8")
+            )
+            self.assertEqual(project_state["content"]["tz_path"], "project-input/TZ.md")
+            self.assertIn(
+                "TZ_PATH: project-input/TZ.md",
+                (root / "project-runtime" / "PROJECT_STATE.md").read_text(encoding="utf-8"),
+            )
+
     def test_package_root_is_refused(self) -> None:
         result = run_aso("state", "init", "--root", str(REPO_ROOT), "--dry-run")
 

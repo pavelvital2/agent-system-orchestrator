@@ -8,6 +8,8 @@ import sys
 from pathlib import Path
 from typing import Any
 
+from . import state_init, state_render
+
 
 EXIT_OK = 0
 EXIT_BLOCKED = 1
@@ -71,28 +73,6 @@ def _blocked(root: Path, tz_path: str, message: str, args: argparse.Namespace, e
     return exit_code
 
 
-def _workspace_relative_path(root: Path, value: str) -> tuple[Path | None, str]:
-    raw = Path(value).expanduser()
-    candidate = raw if raw.is_absolute() else root / raw
-    resolved_root = root.resolve(strict=False)
-    resolved_candidate = candidate.resolve(strict=False)
-    try:
-        relpath = resolved_candidate.relative_to(resolved_root)
-    except ValueError:
-        return None, "--tz must point to a workspace-local file"
-    if relpath == Path(".") or ".." in relpath.parts:
-        return None, "--tz must point to a workspace-local file"
-    if not candidate.is_file():
-        return None, f"--tz file is missing or unreadable: {value}"
-    try:
-        text = candidate.read_text(encoding="utf-8")
-    except OSError as exc:
-        return None, f"--tz file is not readable: {exc}"
-    if not text.strip():
-        return None, f"--tz file is empty: {value}"
-    return relpath, ""
-
-
 def _load_sidecar(root: Path, filename: str) -> tuple[dict[str, Any] | None, str]:
     path = root / "project-runtime" / "state" / filename
     try:
@@ -109,6 +89,12 @@ def _load_sidecar(root: Path, filename: str) -> tuple[dict[str, Any] | None, str
 def _write_sidecar(root: Path, filename: str, payload: dict[str, Any]) -> None:
     path = root / "project-runtime" / "state" / filename
     path.write_text(_json_bytes(payload), encoding="utf-8")
+
+
+def _write_materialized_project_state_if_present(root: Path, payload: dict[str, Any]) -> None:
+    path = root / "project-runtime" / "PROJECT_STATE.md"
+    if path.exists():
+        path.write_text(state_render.render_compatibility_view("PROJECT_STATE", payload), encoding="utf-8")
 
 
 def _task_entry() -> dict[str, Any]:
@@ -307,10 +293,10 @@ def run_bootstrap(args: argparse.Namespace) -> int:
     if args.target_role != TARGET_ROLE:
         return _blocked(root, "", f"--target-role must be {TARGET_ROLE}", args, EXIT_USAGE)
 
-    tz_relpath, error = _workspace_relative_path(root, args.tz)
-    if tz_relpath is None:
+    tz_selection, error = state_init.select_canonical_tz(root, args.tz)
+    if tz_selection is None:
         return _blocked(root, args.tz, error, args, EXIT_USAGE)
-    tz_path = tz_relpath.as_posix()
+    tz_path = tz_selection.tz_path.as_posix()
 
     status, payloads, message = _apply_payloads(root, tz_path)
     if status == "blocked":
@@ -331,11 +317,16 @@ def run_bootstrap(args: argparse.Namespace) -> int:
 
     if status == "created":
         try:
+            wrote_tz, tz_detail = state_init.write_selected_tz_document(root, tz_selection)
+            if not wrote_tz:
+                return _blocked(root, tz_path, f"failed to write TZ document: {tz_detail}", args, EXIT_WRITE_ERROR)
             packet_path = root / TASK_PACKET
             packet_path.parent.mkdir(parents=True, exist_ok=True)
             packet_path.write_text(_task_packet_text(tz_path), encoding="utf-8")
             for filename, payload in payloads:
                 _write_sidecar(root, filename, payload)
+                if filename == "PROJECT_STATE.json":
+                    _write_materialized_project_state_if_present(root, payload)
         except OSError as exc:
             return _blocked(root, tz_path, f"failed to write bootstrap state: {exc}", args, EXIT_WRITE_ERROR)
 
