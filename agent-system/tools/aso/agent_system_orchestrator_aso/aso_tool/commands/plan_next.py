@@ -11,6 +11,7 @@ from typing import Any
 
 from . import state_verify
 from .. import resources
+from .. import transition_engine
 
 
 EXIT_OK = 0
@@ -275,6 +276,26 @@ def _dedupe_rules(blockers: list[dict[str, object]]) -> list[dict[str, object]]:
         seen.add(key)
         deduped.append(blocker)
     return deduped
+
+
+def _transition_engine_evidence(sidecars: dict[str, dict[str, object]]) -> dict[str, object]:
+    try:
+        contract = transition_engine.load_runtime_contract()
+        return transition_engine.explain_next_action_from_sidecars(contract, sidecars).to_json()
+    except (OSError, transition_engine.RuntimeContractError) as exc:
+        return {
+            "allowed": False,
+            "findings": [
+                {
+                    "rule_id": "RUNTIME_CONTRACT_LOAD_FAILED",
+                    "severity": "error",
+                    "message": "Runtime contract could not be loaded.",
+                    "evidence": str(exc),
+                    "recommendation": "Restore ORCHESTRATOR_RUNTIME_CONTRACT.json before routing.",
+                }
+            ],
+            "reference_docs_used": [transition_engine.CONTRACT_RELATIVE_PATH.as_posix()],
+        }
 
 
 def _is_checkpoint_attempt(next_action: dict[str, object]) -> bool:
@@ -1024,6 +1045,7 @@ def _plan(
                 "audit_refs": task.get("audit_refs", []),
             },
             "audit_pass_evidence": audit_evidence,
+            "transition_engine": _transition_engine_evidence(sidecars),
         },
     }
 

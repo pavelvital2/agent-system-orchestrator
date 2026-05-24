@@ -152,6 +152,30 @@ def _schema_manifest(filenames: tuple[str, ...]) -> dict[str, Any]:
     )
 
 
+def _reconcile_legacy_next_action(migrated: dict[str, dict[str, Any]]) -> None:
+    next_payload = migrated.get("NEXT_ACTION.json", {})
+    next_content = next_payload.get("content") if isinstance(next_payload.get("content"), dict) else {}
+    registry_payload = migrated.get("TASK_REGISTRY.json", {})
+    registry_content = registry_payload.get("content") if isinstance(registry_payload.get("content"), dict) else {}
+    if not isinstance(next_content, dict) or not isinstance(registry_content, dict):
+        return
+    if next_content.get("action_type") != "create_agent":
+        return
+    task_id = next_content.get("task_id")
+    if not isinstance(task_id, str) or state_verify._is_none(task_id):
+        return
+    tasks = registry_content.get("tasks")
+    if not isinstance(tasks, list):
+        return
+    for task in tasks:
+        if not isinstance(task, dict) or task.get("task_id") != task_id:
+            continue
+        has_result_refs = isinstance(task.get("result_refs"), list) and bool(task.get("result_refs"))
+        has_audit_refs = isinstance(task.get("audit_refs"), list) and bool(task.get("audit_refs"))
+        if task.get("status") == "running" and not has_result_refs and not has_audit_refs:
+            task["status"] = "ready"
+
+
 def _load_legacy_sidecars(root: Path) -> tuple[dict[str, dict[str, Any]], list[dict[str, object]]]:
     state_root = root / runtime_schema_contracts.STATE_ROOT
     findings: list[dict[str, object]] = []
@@ -254,6 +278,7 @@ def _build_migrated_sidecars(legacy: dict[str, dict[str, Any]]) -> dict[str, dic
     migrated["REPOSITORY_LOCK.json"] = _repository_lock(legacy["PROJECT_STATE"], legacy["WORKSPACE_IDENTITY"])
     migrated["CHECKPOINT_STATE.json"] = _checkpoint_state(legacy["PROJECT_STATE"])
     migrated["SCHEMA_MANIFEST.json"] = _schema_manifest(tuple(sorted(set(CURRENT_FILENAMES))))
+    _reconcile_legacy_next_action(migrated)
     return dict(sorted(migrated.items()))
 
 

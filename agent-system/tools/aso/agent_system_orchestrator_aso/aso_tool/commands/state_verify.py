@@ -11,6 +11,7 @@ from pathlib import Path
 from typing import Iterable
 
 from .. import runtime_schema_contracts
+from .. import transition_engine
 from . import repair_hints
 
 
@@ -1493,6 +1494,38 @@ def _optional_readiness_findings(missing_optional: list[str]) -> list[Finding]:
     return findings
 
 
+def _transition_engine_findings(sidecars: dict[str, dict[str, object]]) -> list[Finding]:
+    try:
+        contract = transition_engine.load_runtime_contract()
+    except (OSError, transition_engine.RuntimeContractError) as exc:
+        return [
+            _finding(
+                "RUNTIME_CONTRACT_LOAD_FAILED",
+                "Runtime contract could not be loaded",
+                str(exc),
+                transition_engine.CONTRACT_RELATIVE_PATH.as_posix(),
+                "",
+                "Restore ORCHESTRATOR_RUNTIME_CONTRACT.json and its schema before verifying current runtime state.",
+            )
+        ]
+
+    decision = transition_engine.explain_next_action_from_sidecars(contract, sidecars)
+    findings: list[Finding] = []
+    for engine_finding in decision.findings:
+        findings.append(
+            _finding(
+                engine_finding.rule_id,
+                "Transition engine rejected NEXT_ACTION",
+                engine_finding.message,
+                "project-runtime/state/NEXT_ACTION.json",
+                "content",
+                engine_finding.recommendation,
+                severity=engine_finding.severity,
+            )
+        )
+    return findings
+
+
 def _report(root: Path, strict: bool) -> tuple[dict[str, object], int]:
     findings: list[Finding] = []
     loaded_sidecars: dict[str, dict[str, object]] = {}
@@ -1570,6 +1603,8 @@ def _report(root: Path, strict: bool) -> tuple[dict[str, object], int]:
     findings.extend(_artifact_package_findings(loaded_sidecars))
     findings.extend(_checkpoint_findings(loaded_sidecars))
     findings.extend(_bootstrap_semantic_findings(root, loaded_sidecars))
+    if current_p2_state:
+        findings.extend(_transition_engine_findings(loaded_sidecars))
     findings = sorted(findings, key=lambda item: (item.severity != "error", item.rule_id, item.path, item.field, item.details))
     summary = _summary(findings)
     status, exit_code = _status(summary, strict)

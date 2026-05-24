@@ -186,6 +186,19 @@ def write_termination_event(root: Path, result_path: Path) -> None:
 
 
 class RecordResultCommandTests(unittest.TestCase):
+    def assert_command_route_matches_transition_engine(self, report: dict[str, object]) -> None:
+        evidence = report["evidence"]
+        self.assertIsInstance(evidence, dict)
+        transition = evidence["transition_engine"]
+        self.assertIsInstance(transition, dict)
+        self.assertTrue(transition["contract_authoritative"])
+        self.assertEqual(report["recommended_next_action"], transition["command_recommended_next_action"])
+        self.assertTrue(transition["allowed"], transition)
+        self.assertEqual(report["recommended_next_action"], transition["canonical_recommended_next_action"])
+        next_action = transition["next_action"]
+        self.assertIsInstance(next_action, dict)
+        self.assertEqual(report["recommended_next_action"], next_action["recommended_next_action"])
+
     def test_help_declares_dry_run_read_only(self) -> None:
         result = subprocess.run(
             [sys.executable, str(CLI), "record-result", "--help"],
@@ -241,6 +254,7 @@ class RecordResultCommandTests(unittest.TestCase):
         self.assertEqual(path.stat().st_mtime_ns, before)
         rule_ids = {item["rule_id"] for item in report["blocking_rules"]}
         self.assertIn("GOV-CHECKPOINT-AUDIT-GATE", rule_ids)
+        self.assert_command_route_matches_transition_engine(report)
 
     def test_strict_rejects_transitional_markdown_result_heading(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
@@ -277,6 +291,7 @@ class RecordResultCommandTests(unittest.TestCase):
         self.assertEqual(after.returncode, 0, after.stdout + after.stderr)
         after_report = report_from(after)
         self.assertEqual(after_report["recommended_next_action"], "CREATE_AUDITOR")
+        self.assert_command_route_matches_transition_engine(after_report)
 
     def test_profile_pass_inside_workspace_requires_accepted_result_package_before_audit_route(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
@@ -414,6 +429,7 @@ class RecordResultCommandTests(unittest.TestCase):
             ["agent-system/tests/fixtures/results/RESULT_TASK_DEMO_001_PASS.md"],
         )
         self.assertEqual(report["blocking_rules"], [])
+        self.assert_command_route_matches_transition_engine(report)
 
     def test_audit_pass_inside_workspace_requires_auditor_termination_before_checkpoint_preflight(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
@@ -453,6 +469,7 @@ class RecordResultCommandTests(unittest.TestCase):
         after_report = report_from(after)
         self.assertTrue(after_report["checkpoint_candidate"])
         self.assertEqual(after_report["recommended_next_action"], "CHECKPOINT_PREFLIGHT")
+        self.assert_command_route_matches_transition_engine(after_report)
 
     def test_profile_failed_result_never_becomes_checkpoint_ready(self) -> None:
         result = run_record_result(fixture("RESULT_TASK_DEMO_001_FAIL.md"), "--strict")
@@ -462,26 +479,45 @@ class RecordResultCommandTests(unittest.TestCase):
         self.assertEqual(report["result_type"], "profile_result")
         self.assertEqual(report["status"], "fail")
         self.assertFalse(report["checkpoint_candidate"])
-        self.assertEqual(report["recommended_next_action"], "ROUTE_CORRECTION")
+        self.assertEqual(report["recommended_next_action"], "CORRECTION_REQUIRED")
         rule_ids = {item["rule_id"] for item in report["blocking_rules"]}
         self.assertIn("GOV-PROFILE-FAIL-NO-CHECKPOINT", rule_ids)
+        self.assert_command_route_matches_transition_engine(report)
 
-    def test_audit_non_pass_statuses_never_become_checkpoint_ready(self) -> None:
+    def test_audit_fail_routes_to_contract_correction_action(self) -> None:
+        result = run_record_result(fixture("AUDIT_RESULT_TASK_DEMO_001_FAIL.md"), "--strict")
+
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        report = report_from(result)
+        self.assertEqual(report["result_type"], "audit_result")
+        self.assertEqual(report["status"], "fail")
+        self.assertFalse(report["checkpoint_candidate"])
+        self.assertEqual(report["recommended_next_action"], "CORRECTION_REQUIRED")
+        self.assert_command_route_matches_transition_engine(report)
+
+    def test_audit_statuses_missing_from_runtime_contract_fail_closed(self) -> None:
         cases = {
-            "AUDIT_RESULT_TASK_DEMO_001_FAIL.md": ("fail", "ROUTE_CORRECTION"),
-            "AUDIT_RESULT_TASK_DEMO_001_BLOCKED.md": ("blocked", "ORCHESTRATOR_BLOCKED_ROUTING"),
-            "AUDIT_RESULT_TASK_DEMO_001_GAP.md": ("gap", "REGISTER_GAP"),
+            "AUDIT_RESULT_TASK_DEMO_001_BLOCKED.md": "blocked",
+            "AUDIT_RESULT_TASK_DEMO_001_GAP.md": "gap",
         }
-        for filename, expected in cases.items():
+        for filename, expected_status in cases.items():
             with self.subTest(filename=filename):
                 result = run_record_result(fixture(filename), "--strict")
 
-                self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+                self.assertEqual(result.returncode, 1, result.stdout + result.stderr)
                 report = report_from(result)
+                self.assertEqual(report["report_status"], "rejected")
                 self.assertEqual(report["result_type"], "audit_result")
-                self.assertEqual(report["status"], expected[0])
+                self.assertEqual(report["status"], expected_status)
                 self.assertFalse(report["checkpoint_candidate"])
-                self.assertEqual(report["recommended_next_action"], expected[1])
+                self.assertEqual(report["recommended_next_action"], "NONE")
+                transition = report["evidence"]["transition_engine"]
+                self.assertFalse(transition["allowed"], transition)
+                self.assertEqual(transition["canonical_recommended_next_action"], "NONE")
+                self.assertEqual(transition["command_recommended_next_action"], "NONE")
+                rule_ids = {item["rule_id"] for item in report["validation_errors"]}
+                self.assertIn("RUNTIME_EVENT_NOT_ALLOWED", rule_ids)
+                self.assertIn("RUNTIME_TRANSITION_NOT_ALLOWED", rule_ids)
 
     def test_strict_rejects_profile_audit_bypass_attempt(self) -> None:
         result = run_record_result(fixture("RESULT_TASK_DEMO_001_BYPASS.md"), "--strict")
@@ -493,6 +529,7 @@ class RecordResultCommandTests(unittest.TestCase):
         self.assertEqual(report["recommended_next_action"], "CREATE_AUDITOR")
         rule_ids = {item["rule_id"] for item in report["validation_errors"]}
         self.assertIn("RESULT_BYPASS_001", rule_ids)
+        self.assert_command_route_matches_transition_engine(report)
 
     def test_strict_rejects_malformed_result(self) -> None:
         result = run_record_result(fixture("RESULT_TASK_DEMO_001_MALFORMED.md"), "--strict")

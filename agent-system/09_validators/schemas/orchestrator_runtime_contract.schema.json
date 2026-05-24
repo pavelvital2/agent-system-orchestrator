@@ -1,0 +1,295 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://agent-system.local/schemas/orchestrator_runtime_contract.schema.json",
+  "title": "ORCHESTRATOR_RUNTIME_CONTRACT",
+  "type": "object",
+  "additionalProperties": true,
+  "required": [
+    "contract_version",
+    "package_version",
+    "governance_ruleset_version",
+    "runtime_schema_version",
+    "artifact_package_schema_version",
+    "allowed_roles",
+    "forbidden_dispatch_roles",
+    "allowed_events",
+    "state_transitions",
+    "forbidden_transitions",
+    "next_actions_by_state",
+    "required_docs_by_role",
+    "reasoning_floor_by_role",
+    "artifact_contracts",
+    "audit_gate_rules",
+    "checkpoint_rules",
+    "routine_context_policy"
+  ],
+  "properties": {
+    "contract_version": {
+      "type": "string",
+      "minLength": 1
+    },
+    "package_version": {
+      "type": "string",
+      "minLength": 1
+    },
+    "governance_ruleset_version": {
+      "type": "string",
+      "minLength": 1
+    },
+    "runtime_schema_version": {
+      "type": "string",
+      "minLength": 1
+    },
+    "artifact_package_schema_version": {
+      "type": "string",
+      "minLength": 1
+    },
+    "allowed_roles": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 1
+      },
+      "minItems": 1,
+      "uniqueItems": true
+    },
+    "forbidden_dispatch_roles": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 1
+      },
+      "uniqueItems": true
+    },
+    "allowed_events": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 1
+      },
+      "minItems": 1,
+      "uniqueItems": true
+    },
+    "event_aliases": {
+      "type": "object",
+      "additionalProperties": {
+        "oneOf": [
+          {
+            "type": "string"
+          },
+          {
+            "type": "object",
+            "additionalProperties": {
+              "type": "string"
+            }
+          }
+        ]
+      }
+    },
+    "state_transitions": {
+      "type": "object",
+      "minProperties": 1,
+      "additionalProperties": {
+        "type": "object",
+        "additionalProperties": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    },
+    "terminal_states": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 1
+      },
+      "uniqueItems": true
+    },
+    "forbidden_transitions": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "from_states",
+          "event",
+          "reason"
+        ],
+        "properties": {
+          "from_states": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1
+            },
+            "minItems": 1
+          },
+          "event": {
+            "type": "string",
+            "minLength": 1
+          },
+          "same_task": {
+            "type": "boolean"
+          },
+          "reason": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "additionalProperties": true
+      }
+    },
+    "next_actions_by_state": {
+      "type": "object",
+      "minProperties": 1,
+      "additionalProperties": {
+        "$ref": "#/$defs/nextAction"
+      }
+    },
+    "next_action_aliases": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "array",
+        "items": {
+          "type": "string"
+        }
+      }
+    },
+    "required_docs_by_role": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "array",
+        "items": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    },
+    "reasoning_floor_by_role": {
+      "type": "object",
+      "additionalProperties": {
+        "enum": [
+          "medium",
+          "high",
+          "xhigh",
+          "maximum"
+        ]
+      }
+    },
+    "artifact_contracts": {
+      "type": "object",
+      "required": [
+        "candidate_manifest_canonical",
+        "accepted_manifest_canonical"
+      ],
+      "properties": {
+        "candidate_manifest_canonical": {
+          "type": "string",
+          "minLength": 1
+        },
+        "candidate_manifest_legacy_aliases": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "accepted_manifest_canonical": {
+          "type": "string",
+          "minLength": 1
+        }
+      },
+      "additionalProperties": true
+    },
+    "audit_gate_rules": {
+      "type": "object",
+      "required": [
+        "audit_pass_allows_checkpoint",
+        "audit_fail_routes_correction",
+        "audit_fail_blocks_checkpoint"
+      ],
+      "additionalProperties": {
+        "type": "boolean"
+      }
+    },
+    "checkpoint_rules": {
+      "type": "object",
+      "required": [
+        "requires_audit_pass",
+        "requires_no_open_lifecycle_blockers",
+        "requires_state_consistency"
+      ],
+      "additionalProperties": {
+        "type": "boolean"
+      }
+    },
+    "routine_context_policy": {
+      "type": "object",
+      "required": [
+        "orchestrator_must_read",
+        "orchestrator_must_not_read_routinely",
+        "reference_docs_allowed_only_for"
+      ],
+      "properties": {
+        "orchestrator_must_read": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "orchestrator_must_not_read_routinely": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "reference_docs_allowed_only_for": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      },
+      "additionalProperties": true
+    }
+  },
+  "$defs": {
+    "nextAction": {
+      "type": "object",
+      "required": [
+        "recommended_next_action",
+        "action_type",
+        "dispatchable"
+      ],
+      "properties": {
+        "recommended_next_action": {
+          "type": "string",
+          "minLength": 1
+        },
+        "action_type": {
+          "type": "string",
+          "enum": [
+            "create_agent",
+            "route_result",
+            "update_state",
+            "wait_for_owner",
+            "correction",
+            "finalize",
+            "stop"
+          ]
+        },
+        "target_role": {
+          "type": "string"
+        },
+        "target_role_source": {
+          "type": "string"
+        },
+        "checkpoint_policy": {
+          "type": "string"
+        },
+        "dispatchable": {
+          "type": "boolean"
+        }
+      },
+      "additionalProperties": true
+    }
+  }
+}

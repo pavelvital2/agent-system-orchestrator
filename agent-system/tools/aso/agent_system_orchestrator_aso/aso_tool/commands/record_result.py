@@ -10,6 +10,7 @@ from pathlib import Path
 from typing import Any
 
 from .. import runtime_schema_contracts
+from .. import transition_engine
 
 
 EXIT_OK = 0
@@ -482,7 +483,7 @@ def _validate_common(path: Path, text: str, fields: dict[str, Any], strict: bool
     return errors
 
 
-def _route(
+def _route_guardrails(
     fields: dict[str, Any],
     result_type: str,
     strict: bool,
@@ -490,13 +491,14 @@ def _route(
     terminated: bool,
     accepted_result_package: bool,
     accepted_result_package_detail: str,
-) -> tuple[str, bool, list[Rule], list[Rule]]:
+) -> tuple[list[Rule], list[Rule], bool]:
     status = _as_string(fields, "STATUS")
     role = _as_string(fields, "ROLE")
     task_id = _as_string(fields, "TASK_ID")
     claims = _claimed_next_actions(fields)
     blocking_rules: list[Rule] = []
     validation_errors: list[Rule] = []
+    suppress_route = False
 
     if result_type == "audit_result":
         if strict and not terminated:
@@ -508,7 +510,7 @@ def _route(
                     "Run aso lifecycle terminate-agent --root WORKSPACE --from-result RESULT_PATH --confirm-write before checkpoint preflight.",
                 )
             )
-            return "NONE", False, blocking_rules, validation_errors
+            return blocking_rules, validation_errors, True
         if status == "pass":
             refs = _source_result_refs(fields)
             if strict and not refs:
@@ -520,9 +522,8 @@ def _route(
                         "SOURCE_RESULT_REF missing",
                     )
                 )
-                return "NONE", False, blocking_rules, validation_errors
-            return "CHECKPOINT_PREFLIGHT", True, blocking_rules, validation_errors
-        if status == "fail":
+                suppress_route = True
+        elif status == "fail":
             blocking_rules.append(
                 _blocking_rule(
                     "GOV-AUDIT-FAIL-NO-CHECKPOINT",
@@ -530,8 +531,7 @@ def _route(
                     f"TASK_ID={task_id}",
                 )
             )
-            return "ROUTE_CORRECTION", False, blocking_rules, validation_errors
-        if status == "blocked":
+        elif status == "blocked":
             blocking_rules.append(
                 _blocking_rule(
                     "GOV-AUDIT-BLOCKED-NO-CHECKPOINT",
@@ -539,8 +539,7 @@ def _route(
                     f"TASK_ID={task_id}",
                 )
             )
-            return "ORCHESTRATOR_BLOCKED_ROUTING", False, blocking_rules, validation_errors
-        if status == "gap":
+        elif status == "gap":
             blocking_rules.append(
                 _blocking_rule(
                     "GOV-AUDIT-GAP-NO-CHECKPOINT",
@@ -548,8 +547,7 @@ def _route(
                     f"TASK_ID={task_id}",
                 )
             )
-            return "REGISTER_GAP", False, blocking_rules, validation_errors
-        return "NONE", False, blocking_rules, validation_errors
+        return blocking_rules, validation_errors, suppress_route
 
     audit_required = role in PROFILE_ROLES
     if status == "pass" and audit_required:
@@ -562,7 +560,7 @@ def _route(
                     "Run aso lifecycle terminate-agent --root WORKSPACE --from-result RESULT_PATH --confirm-write before audit route.",
                 )
             )
-            return "NONE", False, blocking_rules, validation_errors
+            return blocking_rules, validation_errors, True
         if strict and not accepted_result_package:
             validation_errors.append(
                 Rule(
@@ -572,7 +570,7 @@ def _route(
                     accepted_result_package_detail,
                 )
             )
-            return "NONE", False, blocking_rules, validation_errors
+            return blocking_rules, validation_errors, True
         if strict and _contains_bypass_claim(claims):
             validation_errors.append(
                 Rule(
@@ -589,8 +587,7 @@ def _route(
                 f"TASK_ID={task_id}",
             )
         )
-        return "CREATE_AUDITOR", False, blocking_rules, validation_errors
-    if status == "fail":
+    elif status == "fail":
         blocking_rules.append(
             _blocking_rule(
                 "GOV-PROFILE-FAIL-NO-CHECKPOINT",
@@ -598,8 +595,7 @@ def _route(
                 f"TASK_ID={task_id}",
             )
         )
-        return "ROUTE_CORRECTION", False, blocking_rules, validation_errors
-    if status == "blocked":
+    elif status == "blocked":
         blocking_rules.append(
             _blocking_rule(
                 "GOV-PROFILE-BLOCKED-NO-CHECKPOINT",
@@ -607,8 +603,7 @@ def _route(
                 f"TASK_ID={task_id}",
             )
         )
-        return "ORCHESTRATOR_BLOCKED_ROUTING", False, blocking_rules, validation_errors
-    if status == "gap":
+    elif status == "gap":
         blocking_rules.append(
             _blocking_rule(
                 "GOV-PROFILE-GAP-NO-CHECKPOINT",
@@ -616,8 +611,83 @@ def _route(
                 f"TASK_ID={task_id}",
             )
         )
-        return "REGISTER_GAP", False, blocking_rules, validation_errors
-    return "NONE", False, blocking_rules, validation_errors
+    return blocking_rules, validation_errors, suppress_route
+
+
+def _transition_findings_as_rules(findings: tuple[transition_engine.TransitionFinding, ...]) -> list[Rule]:
+    rules: list[Rule] = []
+    for finding in findings:
+        if finding.severity != "error":
+            continue
+        evidence = finding.evidence
+        if finding.recommendation:
+            evidence = f"{evidence}; recommendation={finding.recommendation}"
+        rules.append(Rule(finding.rule_id, finding.severity, finding.message, evidence))
+    return rules
+
+
+def _transition_contract_load_failure(exc: BaseException) -> dict[str, object]:
+    return {
+        "allowed": False,
+        "findings": [
+            {
+                "rule_id": "RUNTIME_CONTRACT_LOAD_FAILED",
+                "severity": "error",
+                "message": "Runtime contract could not be loaded.",
+                "evidence": str(exc),
+                "recommendation": "Restore ORCHESTRATOR_RUNTIME_CONTRACT.json before routing RESULTs.",
+            }
+        ],
+        "reference_docs_used": [transition_engine.CONTRACT_RELATIVE_PATH.as_posix()],
+        "canonical_recommended_next_action": "NONE",
+        "contract_authoritative": True,
+    }
+
+
+def _canonical_transition_route(
+    fields: dict[str, Any],
+    result_type: str,
+) -> tuple[dict[str, object], str, list[Rule]]:
+    try:
+        contract = transition_engine.load_runtime_contract()
+    except (OSError, transition_engine.RuntimeContractError) as exc:
+        return _transition_contract_load_failure(exc), "NONE", [
+            Rule(
+                "RUNTIME_CONTRACT_LOAD_FAILED",
+                "error",
+                "Runtime contract could not be loaded.",
+                str(exc),
+            )
+        ]
+
+    task_id = _as_string(fields, "TASK_ID")
+    status = _as_string(fields, "STATUS")
+    decision = transition_engine.derive_result_route(
+        contract,
+        result_type,
+        status,
+        task_id=task_id,
+    )
+    payload = decision.to_json()
+    errors = _transition_findings_as_rules(decision.findings)
+    candidate_next_action = str(decision.next_action.get("recommended_next_action") or "NONE").strip() or "NONE"
+    canonical_next_action = "NONE" if errors else candidate_next_action
+    payload["candidate_recommended_next_action"] = candidate_next_action
+    payload["canonical_recommended_next_action"] = canonical_next_action
+    payload["contract_authoritative"] = True
+    return payload, "NONE" if errors else canonical_next_action, errors
+
+
+def _transition_not_run_evidence(reason: str) -> dict[str, object]:
+    return {
+        "allowed": False,
+        "findings": [],
+        "reference_docs_used": [transition_engine.CONTRACT_RELATIVE_PATH.as_posix()],
+        "canonical_recommended_next_action": "NONE",
+        "command_recommended_next_action": "NONE",
+        "contract_authoritative": True,
+        "route_suppressed_by": reason,
+    }
 
 
 def build_report(result_path: Path, strict: bool) -> tuple[dict[str, Any], int]:
@@ -632,12 +702,14 @@ def build_report(result_path: Path, strict: bool) -> tuple[dict[str, Any], int]:
     blocking_rules: list[Rule] = []
     accepted_result_package = True
     accepted_result_package_detail = "not required"
+    transition_evidence = _transition_not_run_evidence("pre_route_validation_errors")
     if not io_errors and not validation_errors:
         root = _result_root(result_path)
         terminated = True if root is None else _has_matching_termination(root, fields, result_path)
         if root is not None and result_type == "profile_result" and role in PROFILE_ROLES:
             accepted_result_package, accepted_result_package_detail = _accepted_result_package(root, fields, result_path)
-        recommended_next_action, checkpoint_candidate, blocking_rules, route_errors = _route(
+        transition_evidence, canonical_next_action, transition_errors = _canonical_transition_route(fields, result_type)
+        blocking_rules, route_errors, route_suppressed = _route_guardrails(
             fields,
             result_type,
             strict,
@@ -646,6 +718,15 @@ def build_report(result_path: Path, strict: bool) -> tuple[dict[str, Any], int]:
             accepted_result_package_detail=accepted_result_package_detail,
         )
         validation_errors.extend(route_errors)
+        validation_errors.extend(transition_errors)
+        if not route_suppressed and not transition_errors:
+            recommended_next_action = canonical_next_action
+            checkpoint_candidate = recommended_next_action == "CHECKPOINT_PREFLIGHT"
+        transition_evidence["command_recommended_next_action"] = recommended_next_action
+        if route_suppressed or transition_errors:
+            transition_evidence["route_suppressed_by"] = (
+                "transition_engine_errors" if transition_errors else "record_result_guardrail_errors"
+            )
 
     report_status = "rejected" if validation_errors else "ready"
     exit_code = EXIT_IO_ERROR if io_errors else EXIT_FINDINGS if validation_errors else EXIT_OK
@@ -676,6 +757,7 @@ def build_report(result_path: Path, strict: bool) -> tuple[dict[str, Any], int]:
             "source_result_refs": _source_result_refs(fields),
             "claimed_next_actions": _claimed_next_actions(fields),
             "parsed_fields": sorted(fields),
+            "transition_engine": transition_evidence,
         },
     }, exit_code
 
