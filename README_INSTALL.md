@@ -1,5 +1,46 @@
 # ASO local user install
 
+## Clean source install
+
+For source-hygiene validation, use the clean installer from the repository
+root:
+
+```text
+bash agent-system/scripts/install_aso_clean.sh --source . --venv /tmp/aso_clean_install_venv --with-test
+source /tmp/aso_clean_install_venv/bin/activate
+aso --help
+aso status --root . --mode package
+```
+
+The clean installer archives the tracked ASO source into an isolated temporary
+directory, installs from that copy, and compares the original repository git
+status before and after installation. The virtual environment and optional
+`--source-copy` path must be outside the source repository. Use `--with-test`
+to install the supported `test` extra.
+
+Direct local path installs such as `python3 -m pip install .` or
+`python3 -m pip install -e .` are development shortcuts only. They are not the
+official clean-source validation path for this package because the current
+setuptools backend may write build metadata into the live checkout. Route clean
+install checks through `agent-system/scripts/install_aso_clean.sh`.
+
+To verify the source status externally around the clean install:
+
+```text
+ASO_ROOT=$(pwd)
+git status --short --branch > /tmp/aso_before_install_status.txt
+rm -rf /tmp/aso_clean_install_venv /tmp/aso_clean_install_src
+bash agent-system/scripts/install_aso_clean.sh --source "$ASO_ROOT" --venv /tmp/aso_clean_install_venv --source-copy /tmp/aso_clean_install_src --with-test
+. /tmp/aso_clean_install_venv/bin/activate
+aso --help
+aso status --root "$ASO_ROOT" --mode package
+cd "$ASO_ROOT"
+git status --short --branch > /tmp/aso_after_install_status.txt
+diff -u /tmp/aso_before_install_status.txt /tmp/aso_after_install_status.txt
+```
+
+## Editable user install
+
 Run from the repository root:
 
 ```text
@@ -12,10 +53,11 @@ On Windows PowerShell, run from the repository root:
 powershell -ExecutionPolicy Bypass -File install.ps1
 ```
 
-The installer creates `.venv`, installs this checkout as an editable package,
-and verifies the installed `aso` command. It uses local Python packaging only;
-it does not require secrets, GitHub credentials, remote repository access,
-dispatch authority, checkpoint execution, commit, push, or publication rights.
+The editable installer creates `.venv`, installs this checkout as an editable
+package, and verifies the installed `aso` command. It uses local Python
+packaging only; it does not require secrets, GitHub credentials, remote
+repository access, dispatch authority, checkpoint execution, commit, push, or
+publication rights.
 On POSIX systems, `install.sh` creates the virtual environment with
 `--system-site-packages` so existing environment-provided packaging tools such
 as `setuptools` can satisfy the editable install bootstrap. ASO runtime
@@ -90,10 +132,11 @@ CI uses the same reproducible clean install smoke path locally available as:
 make install-smoke
 ```
 
-The target creates a temporary virtual environment, runs `python -m pip install
--e .`, verifies `aso --help`, `aso status --root . --mode package`, strict
-package-layout verification, and confirms the canonical import path resolves
-to `agent-system/tools/aso/agent_system_orchestrator_aso/`.
+The target creates a temporary virtual environment, runs
+`agent-system/scripts/install_aso_clean.sh`, verifies `aso --help`,
+`aso status --root . --mode package`, strict package-layout verification, and
+confirms the installed package resolves from the virtual environment
+`site-packages` rather than the live source checkout.
 
 To repeat only the test dependency install in an existing environment, run:
 

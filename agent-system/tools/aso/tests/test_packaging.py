@@ -117,12 +117,12 @@ class PackagingCommandTests(unittest.TestCase):
         self.assertIn("install-smoke:", makefile)
         self.assertIn("install-test:", makefile)
         self.assertIn('-m pip install -e ".[test]"', makefile)
-        self.assertIn("python\" -m pip install -e .", makefile)
+        self.assertIn("agent-system/scripts/install_aso_clean.sh --source .", makefile)
         self.assertIn("bin/aso\" --help >/dev/null", makefile)
         self.assertIn("bin/aso\" status --root . --mode package", makefile)
         self.assertIn("bin/aso\" package-layout verify --root . --mode package --strict", makefile)
         self.assertIn("agent_system_orchestrator_aso.cli", makefile)
-        self.assertIn("/agent-system/tools/aso/agent_system_orchestrator_aso/__init__.py", makefile)
+        self.assertIn("/site-packages/agent_system_orchestrator_aso/__init__.py", makefile)
         self.assertIn("ci: test smoke doctor lint install-smoke", makefile)
 
 

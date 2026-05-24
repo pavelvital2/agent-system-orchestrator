@@ -72,7 +72,23 @@ replaces duplicate copy synchronization checks for this cleanup.
 
 ## Local install and command surface
 
-For a repeatable user install from the repository root:
+For clean source-hygiene validation from the repository root:
+
+```text
+bash agent-system/scripts/install_aso_clean.sh --source . --venv /tmp/aso_clean_install_venv --with-test
+source /tmp/aso_clean_install_venv/bin/activate
+aso --help
+aso status --root . --mode package
+```
+
+The clean installer archives the tracked source into an isolated temporary
+copy, installs from that copy, and verifies the live repository git status is
+unchanged before and after installation. The target virtual environment must
+be outside the source repository. Direct `pip install .` and
+`pip install -e .` are development shortcuts, not the official clean-source
+validation path for this package.
+
+For an editable user install from the repository root:
 
 ```text
 bash install.sh
@@ -80,9 +96,9 @@ source .venv/bin/activate
 make verify-install
 ```
 
-The installer creates `.venv`, installs this checkout in editable mode, and
-verifies the installed `aso` command. It does not require secrets, GitHub
-credentials, remote repository access, dispatch authority, checkpoint
+The editable installer creates `.venv`, installs this checkout in editable
+mode, and verifies the installed `aso` command. It does not require secrets,
+GitHub credentials, remote repository access, dispatch authority, checkpoint
 execution, commit, push, or publication rights. See
 `README_INSTALL.md` for activation, verification, update, and cleanup
 commands.
@@ -93,10 +109,11 @@ CI also runs the reproducible clean install smoke path:
 make install-smoke
 ```
 
-That target creates a temporary virtual environment, installs this checkout in
-editable mode, verifies `aso --help`, `aso status --root . --mode package`,
-strict package-layout verification, and imports the canonical
-`agent_system_orchestrator_aso` package from `agent-system/tools/aso`.
+That target creates a temporary virtual environment, installs from an isolated
+source archive with `agent-system/scripts/install_aso_clean.sh`, verifies
+`aso --help`, `aso status --root . --mode package`, strict package-layout
+verification, and imports the installed `agent_system_orchestrator_aso`
+package from virtualenv `site-packages`.
 
 For local console-script use from this repository:
 

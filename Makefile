@@ -26,13 +26,12 @@ verify-install:
 
 install-smoke:
 	tmp_dir="$$(mktemp -d)"; \
-	trap 'rm -rf "$$tmp_dir" agent-system/tools/aso/agent_system_orchestrator.egg-info' EXIT; \
-	"$(PYTHON)" -m venv "$$tmp_dir/venv"; \
-	PYTHONDONTWRITEBYTECODE=1 "$$tmp_dir/venv/bin/python" -m pip install -e .; \
+	trap 'rm -rf "$$tmp_dir"' EXIT; \
+	PYTHONDONTWRITEBYTECODE=1 bash agent-system/scripts/install_aso_clean.sh --source . --venv "$$tmp_dir/venv" --python "$(PYTHON)"; \
 	PYTHONDONTWRITEBYTECODE=1 "$$tmp_dir/venv/bin/aso" --help >/dev/null; \
 	PYTHONDONTWRITEBYTECODE=1 "$$tmp_dir/venv/bin/aso" status --root . --mode package; \
 	PYTHONDONTWRITEBYTECODE=1 "$$tmp_dir/venv/bin/aso" package-layout verify --root . --mode package --strict; \
-	PYTHONDONTWRITEBYTECODE=1 "$$tmp_dir/venv/bin/python" -c "import importlib.metadata as md, json, pathlib; import agent_system_orchestrator_aso, agent_system_orchestrator_aso.cli as cli; dist = md.distribution('agent-system-orchestrator'); direct_url = json.loads(dist.read_text('direct_url.json') or '{}'); source = pathlib.Path(agent_system_orchestrator_aso.__file__).resolve().as_posix(); assert direct_url.get('dir_info', {}).get('editable') is True, direct_url; assert source.endswith('/agent-system/tools/aso/agent_system_orchestrator_aso/__init__.py'), source; assert callable(cli.main), cli.main; print(source)"
+	PYTHONDONTWRITEBYTECODE=1 "$$tmp_dir/venv/bin/python" -c "import importlib.metadata as md, json, pathlib; import agent_system_orchestrator_aso, agent_system_orchestrator_aso.cli as cli; dist = md.distribution('agent-system-orchestrator'); direct_url = json.loads(dist.read_text('direct_url.json') or '{}'); source = pathlib.Path(agent_system_orchestrator_aso.__file__).resolve().as_posix(); assert direct_url.get('dir_info', {}).get('editable') is not True, direct_url; assert '/site-packages/agent_system_orchestrator_aso/__init__.py' in source, source; assert callable(cli.main), cli.main; print(source)"
 
 test: source-hygiene
 	$(PYTHON) -m unittest discover -s agent-system/tools/aso/tests
