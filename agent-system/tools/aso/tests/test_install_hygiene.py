@@ -15,6 +15,59 @@ INSTALLED_RESOURCE_TEST = REPO_ROOT / "agent-system" / "tools" / "aso" / "tests"
 
 
 class CleanInstallHygieneTests(unittest.TestCase):
+    def _fake_python_for_venv_creation(self, directory: Path) -> Path:
+        fake_python = directory / "fake-python"
+        fake_python.write_text(
+            """#!/usr/bin/env bash
+set -euo pipefail
+if [ "$#" -ge 3 ] && [ "$1" = "-m" ] && [ "$2" = "venv" ]; then
+  venv_dir="$3"
+  mkdir -p "$venv_dir/bin"
+  cat >"$venv_dir/bin/python" <<'PYEOF'
+#!/usr/bin/env bash
+exit 0
+PYEOF
+  cat >"$venv_dir/bin/pip" <<'PIPEOF'
+#!/usr/bin/env bash
+exit 0
+PIPEOF
+  chmod +x "$venv_dir/bin/python" "$venv_dir/bin/pip"
+  exit 0
+fi
+exit 1
+""",
+            encoding="utf-8",
+        )
+        fake_python.chmod(0o755)
+        return fake_python
+
+    def _run_clean_installer(
+        self,
+        temp_dir: Path,
+        venv: Path,
+        *extra_args: str,
+    ) -> subprocess.CompletedProcess[str]:
+        fake_python = self._fake_python_for_venv_creation(temp_dir)
+        return subprocess.run(
+            [
+                "bash",
+                str(INSTALL_SCRIPT),
+                "--source",
+                str(REPO_ROOT),
+                "--venv",
+                str(venv),
+                "--python",
+                str(fake_python),
+                "--skip-verify",
+                *extra_args,
+            ],
+            cwd=REPO_ROOT,
+            check=False,
+            text=True,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+        )
+
     def test_clean_installer_uses_isolated_git_archive_source(self) -> None:
         script = INSTALL_SCRIPT.read_text(encoding="utf-8")
 
@@ -30,6 +83,34 @@ class CleanInstallHygieneTests(unittest.TestCase):
         self.assertIn("git -C \"$source_root\" status --short --branch >\"$status_before\"", script)
         self.assertIn("git -C \"$source_root\" status --short --branch >\"$status_after\"", script)
         self.assertIn("diff -u \"$status_before\" \"$status_after\"", script)
+
+    def test_clean_installer_requires_explicit_existing_venv_semantics(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir_name:
+            temp_dir = Path(temp_dir_name)
+            venv = temp_dir / "venv"
+
+            absent_result = self._run_clean_installer(temp_dir, venv)
+            self.assertEqual(absent_result.returncode, 0, absent_result.stderr)
+            self.assertTrue((venv / "bin" / "python").exists())
+
+            default_result = self._run_clean_installer(temp_dir, venv)
+            self.assertNotEqual(default_result.returncode, 0, default_result.stdout)
+            self.assertIn("--venv already exists and is non-empty", default_result.stderr)
+            self.assertIn("--fresh", default_result.stderr)
+            self.assertIn("--reuse-venv", default_result.stderr)
+
+            marker = venv / "reuse-marker"
+            marker.write_text("existing venv state\n", encoding="utf-8")
+            fresh_result = self._run_clean_installer(temp_dir, venv, "--fresh")
+            self.assertEqual(fresh_result.returncode, 0, fresh_result.stderr)
+            self.assertFalse(marker.exists())
+            self.assertTrue((venv / "bin" / "python").exists())
+
+            reuse_marker = venv / "explicit-reuse-marker"
+            reuse_marker.write_text("intentional reuse state\n", encoding="utf-8")
+            reuse_result = self._run_clean_installer(temp_dir, venv, "--reuse-venv")
+            self.assertEqual(reuse_result.returncode, 0, reuse_result.stderr)
+            self.assertTrue(reuse_marker.exists())
 
     def test_clean_installer_verifies_installed_console_command(self) -> None:
         script = INSTALL_SCRIPT.read_text(encoding="utf-8")

@@ -225,6 +225,19 @@ execution, commit, push, or publication rights. Activation, update,
 verification, and cleanup commands are documented in the repository-root
 `README_INSTALL.md`.
 
+For clean source-hygiene validation from the repository root, install from an
+isolated source archive into an external virtual environment:
+
+```text
+bash agent-system/scripts/install_aso_clean.sh --source . --venv /tmp/aso_clean_install_venv --fresh --with-test
+source /tmp/aso_clean_install_venv/bin/activate
+aso status --root . --mode package
+```
+
+The clean installer fails by default when `--venv` already exists and is
+non-empty. Use `--fresh` to recreate the environment, or `--reuse-venv` only
+when reuse is intentional.
+
 Manual editable install remains available:
 
 ```text

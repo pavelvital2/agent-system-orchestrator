@@ -1946,3 +1946,40 @@ AUTHORIZED_BY: project_owner
 AUDIT_REQUIRED: yes
 STATUS: accepted
 ```
+
+```text
+CHANGE_ID: GOV-2026-05-24-004
+CHANGE_TITLE: ASO_P56_AUDIT_FIX_030_FRESH_INSTALL_SEMANTICS
+DATE: 2026-05-24
+PACKAGE_VERSION_BEFORE: 3.7.7
+PACKAGE_VERSION_AFTER: 3.7.7
+GOVERNANCE_RULESET_BEFORE: 3.7.7
+GOVERNANCE_RULESET_AFTER: 3.7.7
+RUNTIME_SCHEMA_BEFORE: 3.1.1
+RUNTIME_SCHEMA_AFTER: 3.1.1
+ARTIFACT_PACKAGE_SCHEMA_BEFORE: 1.1.0
+ARTIFACT_PACKAGE_SCHEMA_AFTER: 1.1.0
+CHANGE_TYPE: patch
+CHANGE_SUBTYPE: p56_audit_fix_030_fresh_install_semantics
+AFFECTED_FILES:
+- agent-system/scripts/install_aso_clean.sh
+- agent-system/tools/aso/tests/test_install_hygiene.py
+- README.md
+- agent-system/README.md
+- agent-system/GOVERNANCE_CHANGELOG.md
+AFFECTED_INVARIANTS:
+- The clean installer must not silently reuse an existing non-empty virtual environment.
+- Recreating a clean install target requires explicit --fresh.
+- Reusing an existing install target requires explicit --reuse-venv.
+AFFECTED_TRANSITIONS:
+- clean install request with absent or empty venv -> create venv and install from isolated source archive.
+- clean install request with non-empty venv and no explicit mode -> fail closed.
+- clean install request with --fresh -> remove and recreate the target venv.
+- clean install request with --reuse-venv -> reuse only by explicit operator intent.
+SCHEMA_TEMPLATE_IMPACT: none; Runtime Schema 3.1.1 and Artifact Package Schema 1.1.0 are preserved.
+MIGRATION_REQUIRED: no
+MIGRATION_NOTE: Installer semantics and documentation hardening only; no active project-runtime migration, schema migration, transition redesign, package resource relaxation, or runtime state mutation is introduced.
+AUTHORIZED_BY: project_owner
+AUDIT_REQUIRED: yes
+STATUS: accepted
+```

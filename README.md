@@ -76,7 +76,7 @@ replaces duplicate copy synchronization checks for this cleanup.
 For clean source-hygiene validation from the repository root:
 
 ```text
-bash agent-system/scripts/install_aso_clean.sh --source . --venv /tmp/aso_clean_install_venv --with-test
+bash agent-system/scripts/install_aso_clean.sh --source . --venv /tmp/aso_clean_install_venv --fresh --with-test
 source /tmp/aso_clean_install_venv/bin/activate
 aso --help
 aso status --root . --mode package
@@ -85,7 +85,9 @@ aso status --root . --mode package
 The clean installer archives the tracked source into an isolated temporary
 copy, installs from that copy, and verifies the live repository git status is
 unchanged before and after installation. The target virtual environment must
-be outside the source repository. Direct `pip install .` and
+be outside the source repository. By default, the clean installer fails if
+`--venv` already exists and is non-empty; use `--fresh` to recreate it or
+`--reuse-venv` only when reuse is intentional. Direct `pip install .` and
 `pip install -e .` are development shortcuts, not the official clean-source
 validation path for this package.
 
@@ -96,9 +98,10 @@ file is:
 ASO_ROOT=$(pwd)
 WORK=/tmp/aso-real-tz-workspace
 rm -rf "$WORK"
+rm -rf /tmp/aso_clean_install_src
 mkdir -p "$WORK/project-input"
 cp /path/to/TZ_REAL_E2E_TELEGRAM_BOT.md "$WORK/project-input/TZ_REAL_E2E_TELEGRAM_BOT.md"
-bash agent-system/scripts/install_aso_clean.sh --source "$ASO_ROOT" --venv /tmp/aso_clean_install_venv --source-copy /tmp/aso_clean_install_src --with-test
+bash agent-system/scripts/install_aso_clean.sh --source "$ASO_ROOT" --venv /tmp/aso_clean_install_venv --fresh --source-copy /tmp/aso_clean_install_src --with-test
 . /tmp/aso_clean_install_venv/bin/activate
 aso state init --root "$WORK" --tz project-input/TZ_REAL_E2E_TELEGRAM_BOT.md --confirm-write
 aso intake bootstrap --root "$WORK" --tz project-input/TZ_REAL_E2E_TELEGRAM_BOT.md --target-role requirements_analyst --confirm-write

@@ -10,8 +10,10 @@ build, wheel, or egg-info artifacts.
 
 Options:
   --source PATH       ASO source repository root to install from (required)
-  --venv PATH         Virtual environment path to create or reuse (required)
+  --venv PATH         Virtual environment path to create (required)
   --python PYTHON     Python executable for venv creation (default: python3)
+  --fresh             Remove and recreate --venv if it already exists
+  --reuse-venv        Explicitly allow installing into an existing --venv
   --with-test         Install the supported ASO test extra
   --source-copy PATH  Directory for the isolated source copy (default: mktemp)
   --keep-source       Keep the isolated source copy after install
@@ -27,6 +29,8 @@ source_copy=""
 with_test=0
 keep_source=0
 verify_install=1
+fresh_venv=0
+reuse_venv=0
 
 while [ "$#" -gt 0 ]; do
   case "$1" in
@@ -53,6 +57,14 @@ while [ "$#" -gt 0 ]; do
       fi
       python_bin="$2"
       shift 2
+      ;;
+    --fresh)
+      fresh_venv=1
+      shift
+      ;;
+    --reuse-venv)
+      reuse_venv=1
+      shift
       ;;
     --with-test)
       with_test=1
@@ -92,6 +104,11 @@ if [ -z "$source_root" ] || [ -z "$venv_dir" ]; then
   exit 2
 fi
 
+if [ "$fresh_venv" -eq 1 ] && [ "$reuse_venv" -eq 1 ]; then
+  echo "install_aso_clean.sh: --fresh and --reuse-venv are mutually exclusive" >&2
+  exit 2
+fi
+
 source_root="$(cd "$source_root" && pwd)"
 venv_parent="$(dirname "$venv_dir")"
 mkdir -p "$venv_parent"
@@ -108,6 +125,18 @@ case "$venv_dir" in
     exit 1
     ;;
 esac
+
+if [ "$fresh_venv" -eq 1 ]; then
+  rm -rf "$venv_dir"
+elif [ -e "$venv_dir" ] && [ "$reuse_venv" -eq 0 ]; then
+  if [ -d "$venv_dir" ] && [ -z "$(find "$venv_dir" -mindepth 1 -maxdepth 1 -print -quit)" ]; then
+    :
+  else
+    echo "install_aso_clean.sh: --venv already exists and is non-empty: $venv_dir" >&2
+    echo "install_aso_clean.sh: use --fresh to recreate it or --reuse-venv to reuse it intentionally" >&2
+    exit 1
+  fi
+fi
 
 if ! git -C "$source_root" rev-parse --is-inside-work-tree >/dev/null 2>&1; then
   echo "install_aso_clean.sh: --source must be a git worktree so status can be verified" >&2
