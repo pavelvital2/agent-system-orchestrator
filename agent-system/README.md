@@ -491,9 +491,11 @@ RESULT_RECEIVED -> ARTIFACT_ACCEPTED -> AGENT_TERMINATED -> AUDIT_ROUTE_READY
 
 Profile-agent output starts as a candidate artifact package under
 `project-runtime/artifacts/candidates/<TASK_ID>/` with
-`artifact_package_manifest.json`. Profile agents must not write accepted
+`manifest.json`. Legacy candidate packages named
+`artifact_package_manifest.json` are accepted with a compatibility warning.
+Profile agents must not write accepted
 artifacts directly. The orchestrator accepts the candidate into
-`project-runtime/artifacts/accepted/`, records the acceptance receipt and
+`project-runtime/artifacts/accepted/` using canonical `manifest.json`, records the acceptance receipt and
 `ARTIFACT_ACCEPTED` lifecycle event, and only then terminates the agent
 instance and marks audit routing ready. The first real-TZ bootstrap workflow
 therefore follows candidate creation -> artifact accept -> lifecycle event ->

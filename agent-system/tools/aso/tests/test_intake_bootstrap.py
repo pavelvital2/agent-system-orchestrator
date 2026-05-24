@@ -120,7 +120,7 @@ class IntakeBootstrapCommandTests(unittest.TestCase):
             self.assertIn("Do not implement product logic", packet_text)
             self.assertIn("project-input/TZ.md", packet_text)
             self.assertIn(
-                "project-runtime/artifacts/candidates/TASK_BOOTSTRAP_REQUIREMENTS_ANALYST_001/artifact_package_manifest.json",
+                "project-runtime/artifacts/candidates/TASK_BOOTSTRAP_REQUIREMENTS_ANALYST_001/manifest.json",
                 packet_text,
             )
             self.assertIn(

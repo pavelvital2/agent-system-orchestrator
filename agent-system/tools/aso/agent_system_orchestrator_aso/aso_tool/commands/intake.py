@@ -190,7 +190,7 @@ Create the first bounded requirements analysis from the raw TZ document.
 
 - Read `{tz_path}` as the authoritative raw TZ input.
 - Identify requirements, ambiguities, conflicts, and owner questions for downstream governed work.
-- Produce the primary P5 candidate artifact package at `project-runtime/artifacts/candidates/{TASK_ID}/artifact_package_manifest.json`.
+- Produce the primary P5 candidate artifact package at `project-runtime/artifacts/candidates/{TASK_ID}/manifest.json`.
 
 ## Scope Out
 
@@ -202,7 +202,7 @@ Create the first bounded requirements analysis from the raw TZ document.
 
 ## Expected Outputs
 
-- Primary output: P5 candidate artifact package manifest at `project-runtime/artifacts/candidates/{TASK_ID}/artifact_package_manifest.json` with traceability to `{tz_path}`.
+- Primary output: P5 candidate artifact package manifest at `project-runtime/artifacts/candidates/{TASK_ID}/manifest.json` with traceability to `{tz_path}`.
 - Explicit conflict, ambiguity, and owner-question notes when present.
 - Optional secondary/compatibility evidence under `project-runtime/results/**` only if still needed by the result workflow.
 

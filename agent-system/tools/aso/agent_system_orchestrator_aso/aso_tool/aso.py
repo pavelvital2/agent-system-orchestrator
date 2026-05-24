@@ -636,7 +636,7 @@ def build_parser() -> argparse.ArgumentParser:
         "artifact",
         help="P5 artifact storage commands.",
         description=(
-            "Validate and classify existing P5 artifact package manifests under "
+            "Validate and classify existing P5 artifact packages under "
             "project-runtime/artifacts. Write operations require --confirm-write and "
             "do not dispatch agents, mutate lifecycle state, or execute checkpoints."
         ),
@@ -644,8 +644,8 @@ def build_parser() -> argparse.ArgumentParser:
     artifact_subparsers = artifact_parser.add_subparsers(dest="artifact_command", metavar="COMMAND")
     artifact_validate_parser = artifact_subparsers.add_parser(
         "validate",
-        help="Validate a P5 artifact package manifest.",
-        description="Read-only validation for artifact_package_manifest.schema.json and package path boundaries.",
+        help="Validate a P5 artifact package manifest or package directory.",
+        description="Read-only validation for canonical manifest.json, legacy artifact_package_manifest.json aliases, and package path boundaries.",
     )
     _add_root_argument(artifact_validate_parser, validate=False)
     artifact_validate_parser.add_argument(
@@ -654,7 +654,7 @@ def build_parser() -> argparse.ArgumentParser:
         dest="artifact",
         required=True,
         metavar="PATH",
-        help="Artifact package manifest JSON to validate.",
+        help="Artifact package directory or manifest JSON to validate.",
     )
     artifact_validate_parser.add_argument(
         "--type",
@@ -704,7 +704,7 @@ def build_parser() -> argparse.ArgumentParser:
         dest="artifact",
         required=True,
         metavar="project-runtime/artifacts/candidates/...",
-        help="Candidate artifact path under project-runtime/artifacts/candidates.",
+        help="Candidate artifact package directory or manifest JSON under project-runtime/artifacts/candidates.",
     )
     artifact_accept_parser.add_argument(
         "--confirm-write",
@@ -739,7 +739,7 @@ def build_parser() -> argparse.ArgumentParser:
         dest="artifact",
         required=True,
         metavar="project-runtime/artifacts/candidates/...",
-        help="Candidate artifact path under project-runtime/artifacts/candidates.",
+        help="Candidate artifact package directory or manifest JSON under project-runtime/artifacts/candidates.",
     )
     artifact_reject_parser.add_argument(
         "--confirm-write",

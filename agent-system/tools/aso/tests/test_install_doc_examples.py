@@ -13,17 +13,17 @@ ACTIVE_DOCS = (
 )
 
 FORBIDDEN_ACTIVE_MANIFEST_PATTERNS = (
-    re.compile(r"artifacts/candidates/.*/manifest\.json"),
-    re.compile(r"candidates/TASK_ID/manifest\.json"),
+    re.compile(r"artifacts/candidates/.*/artifact_package_manifest\.json"),
+    re.compile(r"candidates/TASK_ID/artifact_package_manifest\.json"),
 )
 
 
 class InstallDocExampleTests(unittest.TestCase):
-    def test_active_docs_use_artifact_package_manifest_path(self) -> None:
+    def test_active_docs_use_canonical_manifest_path(self) -> None:
         for doc in ACTIVE_DOCS:
             text = doc.read_text(encoding="utf-8")
             with self.subTest(doc=str(doc.relative_to(REPO_ROOT))):
-                self.assertIn("artifact_package_manifest.json", text)
+                self.assertIn("manifest.json", text)
                 for pattern in FORBIDDEN_ACTIVE_MANIFEST_PATTERNS:
                     self.assertIsNone(pattern.search(text))
 

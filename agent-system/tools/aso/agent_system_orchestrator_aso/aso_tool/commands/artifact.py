@@ -21,6 +21,9 @@ EXIT_BLOCKED = 1
 EXIT_IO_ERROR = 3
 
 SCHEMA_RELPATH = "agent-system/09_validators/schemas/artifact_package_manifest.schema.json"
+CANONICAL_MANIFEST_FILENAME = "manifest.json"
+LEGACY_MANIFEST_FILENAMES = ("artifact_package_manifest.json",)
+SUPPORTED_MANIFEST_FILENAMES = (CANONICAL_MANIFEST_FILENAME, *LEGACY_MANIFEST_FILENAMES)
 ARTIFACT_ID_RE = re.compile(r"^[A-Z][A-Z0-9_:-]+$")
 PACKAGE_FORBIDDEN_ROOTS = (".git", ".github", ".venv", "agent-system", "project-input", "project-runtime", "project-archive")
 REQUIRED_MANIFEST_FIELDS = (
@@ -94,6 +97,44 @@ def _finding(rule_id: str, title: str, details: str, path: str = "") -> dict[str
     }
 
 
+def _warning(rule_id: str, title: str, details: str, path: str = "") -> dict[str, str]:
+    finding = _finding(rule_id, title, details, path)
+    finding["severity"] = "warning"
+    return finding
+
+
+def _is_error_finding(finding: object) -> bool:
+    return isinstance(finding, dict) and finding.get("severity", "error") == "error"
+
+
+def _finding_counts(findings: list[dict[str, str]]) -> dict[str, int]:
+    errors = sum(1 for finding in findings if _is_error_finding(finding))
+    return {"errors": errors, "warnings": len(findings) - errors}
+
+
+def _blocked_reason(findings: list[dict[str, str]], extra_reasons: list[str] | None = None) -> str | None:
+    reasons = list(extra_reasons or [])
+    reasons.extend(
+        f"{finding.get('rule_id')}: {finding.get('details')}"
+        for finding in findings
+        if _is_error_finding(finding)
+    )
+    return "; ".join(reason for reason in reasons if reason) or None
+
+
+def _manifest_filename_findings(path: Path) -> list[dict[str, str]]:
+    if path.name not in LEGACY_MANIFEST_FILENAMES:
+        return []
+    return [
+        _warning(
+            "ARTIFACT_MANIFEST_COMPAT_001",
+            "Legacy artifact manifest filename is accepted",
+            f"{path.name} is a legacy compatibility alias; use {CANONICAL_MANIFEST_FILENAME} for new candidate and accepted packages.",
+            str(path),
+        )
+    ]
+
+
 def _read_json_object(path: Path) -> tuple[dict[str, Any] | None, list[dict[str, str]]]:
     try:
         raw = path.read_text(encoding="utf-8")
@@ -151,6 +192,17 @@ def _artifact_refs_errors(value: object, field: str) -> list[str]:
     return errors
 
 
+def _select_manifest_path(package_root: Path) -> Path:
+    canonical = package_root / CANONICAL_MANIFEST_FILENAME
+    if canonical.is_file():
+        return canonical
+    for filename in LEGACY_MANIFEST_FILENAMES:
+        legacy = package_root / filename
+        if legacy.is_file():
+            return legacy
+    return canonical
+
+
 def _resolve_package_input(root: Path, value: str) -> tuple[Path | None, Path | None, str | None]:
     raw = Path(value).expanduser()
     workspace = root.expanduser().resolve(strict=False)
@@ -161,12 +213,12 @@ def _resolve_package_input(root: Path, value: str) -> tuple[Path | None, Path | 
     except ValueError:
         return None, None, "artifact package path must be inside --root"
 
-    if resolved.name == "manifest.json":
+    if resolved.name in SUPPORTED_MANIFEST_FILENAMES:
         package_root = resolved.parent
         manifest_path = resolved
     else:
         package_root = resolved
-        manifest_path = package_root / "manifest.json"
+        manifest_path = _select_manifest_path(package_root)
     return package_root, manifest_path, None
 
 
@@ -267,6 +319,52 @@ def _validate_manifest_payload(payload: dict[str, Any], root: Path, package_root
     return findings
 
 
+def _validate_manifest_selection(
+    root: Path,
+    package_root: Path,
+    manifest_path: Path,
+    expected_type: str | None = None,
+    expected_task_id: str | None = None,
+    expected_role: str | None = None,
+) -> tuple[dict[str, Any] | None, list[dict[str, str]]]:
+    findings: list[dict[str, str]] = []
+    findings.extend(_manifest_filename_findings(manifest_path))
+    payload, read_findings = _read_json_object(manifest_path)
+    findings.extend(read_findings)
+    if payload is None:
+        return None, findings
+
+    findings.extend(_validate_manifest_payload(payload, root, package_root))
+    if expected_type is not None and payload.get("artifact_type") != expected_type:
+        findings.append(
+            _finding(
+                "ARTIFACT_VALIDATE_TYPE_001",
+                "Artifact type does not match requested type",
+                f"artifact_type must be {expected_type}.",
+                "artifact_type",
+            )
+        )
+    if expected_task_id is not None and payload.get("task_id") != expected_task_id:
+        findings.append(
+            _finding(
+                "ARTIFACT_VALIDATE_TASK_001",
+                "Task id does not match requested task",
+                f"task_id must be {expected_task_id}.",
+                "task_id",
+            )
+        )
+    if expected_role is not None and payload.get("role") != expected_role:
+        findings.append(
+            _finding(
+                "ARTIFACT_VALIDATE_ROLE_001",
+                "Role does not match requested role",
+                f"role must be {expected_role}.",
+                "role",
+            )
+        )
+    return payload, findings
+
+
 def _validate_path(
     root: Path,
     artifact_path: Path,
@@ -281,38 +379,17 @@ def _validate_path(
         findings.append(_finding("ARTIFACT_VALIDATE_PACKAGE_001", "Artifact package path is invalid", package_error or "invalid package path", str(artifact_path)))
         payload = None
     else:
-        payload, findings = _read_json_object(manifest_path)
-    if payload is not None:
-        assert package_root is not None
-        findings.extend(_validate_manifest_payload(payload, root, package_root))
-        if expected_type is not None and payload.get("artifact_type") != expected_type:
-            findings.append(
-                _finding(
-                    "ARTIFACT_VALIDATE_TYPE_001",
-                    "Artifact type does not match requested type",
-                    f"artifact_type must be {expected_type}.",
-                    "artifact_type",
-                )
-            )
-        if expected_task_id is not None and payload.get("task_id") != expected_task_id:
-            findings.append(
-                _finding(
-                    "ARTIFACT_VALIDATE_TASK_001",
-                    "Task id does not match requested task",
-                    f"task_id must be {expected_task_id}.",
-                    "task_id",
-                )
-            )
-        if expected_role is not None and payload.get("role") != expected_role:
-            findings.append(
-                _finding(
-                    "ARTIFACT_VALIDATE_ROLE_001",
-                    "Role does not match requested role",
-                    f"role must be {expected_role}.",
-                    "role",
-                )
-            )
-    status = "pass" if not findings else "blocked"
+        payload, manifest_findings = _validate_manifest_selection(
+            root,
+            package_root,
+            manifest_path,
+            expected_type=expected_type,
+            expected_task_id=expected_task_id,
+            expected_role=expected_role,
+        )
+        findings.extend(manifest_findings)
+    counts = _finding_counts(findings)
+    status = "pass" if counts["errors"] == 0 else "blocked"
     return {
         "tool": "aso",
         "command": "artifact validate",
@@ -323,11 +400,15 @@ def _validate_path(
         "artifact_package_schema_version": runtime_schema_contracts.ACTIVE_ARTIFACT_PACKAGE_SCHEMA_VERSION,
         "status": status,
         "strict": strict,
+        "requested_write_mode": "read_only",
         "read_only": True,
         "mutations_performed": False,
+        "blocked_reason": _blocked_reason(findings),
+        "actual_read_outcome": "completed" if payload is not None else "blocked",
+        "actual_write_outcome": "not_requested",
         "validators_run": ["json_parse", "artifact_package_manifest_schema", "package_path_boundary"],
         "findings": findings,
-        "summary": {"errors": len(findings)},
+        "summary": counts,
     }
 
 
@@ -392,6 +473,20 @@ def _package_inventory(package_root: Path) -> list[dict[str, object]]:
     return rows
 
 
+def _read_package_manifest(package_root: Path) -> dict[str, Any]:
+    manifest, _findings = _read_json_object(_select_manifest_path(package_root))
+    return manifest or {}
+
+
+def _materialize_canonical_manifest(package_root: Path, manifest: dict[str, Any]) -> None:
+    canonical = package_root / CANONICAL_MANIFEST_FILENAME
+    canonical.write_text(_json_bytes(manifest), encoding="utf-8")
+    for filename in LEGACY_MANIFEST_FILENAMES:
+        legacy = package_root / filename
+        if legacy.exists():
+            legacy.unlink()
+
+
 def _write_json_out(root: Path, path_text: str, payload: dict[str, object], allowed: tuple[str, ...]) -> tuple[bool, str]:
     path = output_policy.resolve_output_path(path_text)
     error = output_policy.validate_generated_output_path(root, path, allowed_workspace_subdirs=allowed)
@@ -443,11 +538,18 @@ def run_validate(args: argparse.Namespace) -> int:
     return EXIT_OK if report["status"] == "pass" else EXIT_BLOCKED
 
 
-def _classification_plan(root: Path, source_text: str, target_bucket: str, confirmed: bool, reason: str | None = None) -> tuple[dict[str, object], Path | None, Path | None]:
+def _classification_plan(
+    root: Path,
+    source_text: str,
+    target_bucket: str,
+    confirmed: bool,
+    reason: str | None = None,
+) -> tuple[dict[str, object], Path | None, Path | None, dict[str, Any] | None]:
     source_path, source_relpath, manifest_path, error = _resolve_workspace_package(root, source_text, "candidates")
     findings: list[dict[str, str]] = []
     target_path: Path | None = None
     source_abs: Path | None = source_path
+    selected_manifest: dict[str, Any] | None = None
     if error is not None or source_path is None or source_relpath is None:
         findings.append(_finding("ARTIFACT_CLASSIFY_PATH_001", "Candidate artifact path is invalid", error or "invalid artifact path", source_text))
     else:
@@ -461,15 +563,20 @@ def _classification_plan(root: Path, source_text: str, target_bucket: str, confi
         elif manifest_path is None or not manifest_path.is_file():
             findings.append(_finding("ARTIFACT_CLASSIFY_READ_002", "Candidate package manifest is missing", "Candidate package must contain manifest.json.", source_relpath))
         else:
-            validation = _validate_path(root, manifest_path)
-            for finding in validation.get("findings", []):
-                if isinstance(finding, dict):
-                    findings.append(dict(finding))
+            selected_manifest, manifest_findings = _validate_manifest_selection(root, source_path, manifest_path)
+            findings.extend(manifest_findings)
         if target_path is not None and target_path.exists():
             findings.append(_finding("ARTIFACT_CLASSIFY_IMMUTABLE_001", "Target artifact already exists", "Artifact buckets are immutable; refusing overwrite.", target_path.relative_to(root).as_posix()))
 
     blocked_without_confirm = not confirmed
-    status = "blocked" if findings or blocked_without_confirm else "ready"
+    counts = _finding_counts(findings)
+    blocked_reasons = ["--confirm-write is required for artifact classification writes"] if blocked_without_confirm else []
+    status = "blocked" if counts["errors"] or blocked_without_confirm else "ready"
+    actual_read_outcome = (
+        "completed"
+        if source_path is not None and source_path.is_dir() and manifest_path is not None and manifest_path.is_file()
+        else "blocked"
+    )
     report = {
         "tool": "aso",
         "command": f"artifact {target_bucket[:-2] if target_bucket == 'accepted' else 'reject'}",
@@ -479,24 +586,27 @@ def _classification_plan(root: Path, source_text: str, target_bucket: str, confi
         "target": target_path.relative_to(root).as_posix() if target_path is not None else None,
         "status": status,
         "dry_run": not confirmed,
+        "requested_write_mode": "confirmed_write" if confirmed else "dry_run",
         "read_only": not confirmed,
         "mutations_performed": False,
+        "blocked_reason": _blocked_reason(findings, blocked_reasons),
+        "actual_read_outcome": actual_read_outcome,
+        "actual_write_outcome": "not_requested" if not confirmed else ("blocked" if status == "blocked" else "pending"),
         "reason": reason.strip() if isinstance(reason, str) and reason.strip() else None,
-        "blocked_reasons": (["--confirm-write is required for artifact classification writes"] if blocked_without_confirm else []),
+        "blocked_reasons": blocked_reasons,
         "validators_run": ["candidate_package_path_guard", "storage_transition_guard", "immutability_guard", "manifest_validation", "package_inventory_hash"],
         "findings": findings,
-        "summary": {"errors": len(findings) + (1 if blocked_without_confirm else 0)},
+        "summary": {"errors": counts["errors"] + (1 if blocked_without_confirm else 0), "warnings": counts["warnings"]},
     }
-    return report, source_abs, target_path
+    return report, source_abs, target_path, selected_manifest
 
 
 def _acceptance_receipt_payload(
     root: Path,
     source_path: Path,
     target_path: Path,
+    manifest: dict[str, Any],
 ) -> tuple[dict[str, object], dict[str, object], str]:
-    manifest, _findings = _read_json_object(source_path / "manifest.json")
-    manifest = manifest or {}
     artifact_id = _as_text(manifest.get("artifact_id")) or target_path.name.upper()
     task_id = _as_text(manifest.get("task_id"))
     role = _as_text(manifest.get("role"))
@@ -505,13 +615,15 @@ def _acceptance_receipt_payload(
     accepted_at = _now_utc()
     source_ref = source_path.relative_to(root).as_posix()
     target_ref = target_path.relative_to(root).as_posix()
+    target_manifest_ref = (target_path / CANONICAL_MANIFEST_FILENAME).relative_to(root).as_posix()
     receipt_relpath = f"project-runtime/receipts/artifacts/{task_id or 'UNKNOWN'}/{artifact_id}.acceptance.json"
     receipt = {
         "receipt_type": "ARTIFACT_ACCEPTANCE_RECEIPT",
         "receipt_schema_version": "1.0.0",
         "receipt_id": f"ARTIFACT_ACCEPTED-{artifact_id}",
         "artifact_id": artifact_id,
-        "artifact_ref": target_ref,
+        "artifact_ref": target_manifest_ref,
+        "artifact_package_ref": target_ref,
         "candidate_ref": source_ref,
         "task_id": task_id,
         "role": role,
@@ -529,7 +641,8 @@ def _acceptance_receipt_payload(
         "agent_role": role,
         "agent_instance_id": agent_instance_id,
         "artifact_id": artifact_id,
-        "artifact_ref": target_ref,
+        "artifact_ref": target_manifest_ref,
+        "artifact_package_ref": target_ref,
         "candidate_ref": source_ref,
         "receipt_ref": receipt_relpath,
         "accepted_at": accepted_at,
@@ -540,8 +653,7 @@ def _acceptance_receipt_payload(
 
 
 def _rejection_report_payload(root: Path, source_path: Path, target_path: Path, reason: str | None) -> tuple[dict[str, object], str]:
-    manifest, _findings = _read_json_object(source_path / "manifest.json")
-    manifest = manifest or {}
+    manifest = _read_package_manifest(source_path)
     artifact_id = _as_text(manifest.get("artifact_id")) or target_path.name.upper()
     task_id = _as_text(manifest.get("task_id"))
     rejected_at = _now_utc()
@@ -574,7 +686,7 @@ def _append_lifecycle_event(root: Path, event: dict[str, object]) -> None:
 
 def _run_classify(args: argparse.Namespace, target_bucket: str) -> int:
     root = Path(args.root).expanduser()
-    report, source_path, target_path = _classification_plan(
+    report, source_path, target_path, selected_manifest = _classification_plan(
         root,
         str(args.artifact),
         target_bucket,
@@ -589,7 +701,9 @@ def _run_classify(args: argparse.Namespace, target_bucket: str) -> int:
             target_path.parent.mkdir(parents=True, exist_ok=True)
             shutil.copytree(source_path, target_path)
             if target_bucket == "accepted":
-                receipt, event, receipt_relpath = _acceptance_receipt_payload(root, source_path, target_path)
+                assert selected_manifest is not None
+                _materialize_canonical_manifest(target_path, selected_manifest)
+                receipt, event, receipt_relpath = _acceptance_receipt_payload(root, source_path, target_path, selected_manifest)
                 receipt_path = root / receipt_relpath
                 receipt_path.parent.mkdir(parents=True, exist_ok=True)
                 receipt_path.write_text(_json_bytes(receipt), encoding="utf-8")
@@ -615,6 +729,8 @@ def _run_classify(args: argparse.Namespace, target_bucket: str) -> int:
         report["status"] = "written"
         report["read_only"] = False
         report["mutations_performed"] = True
+        report["blocked_reason"] = None
+        report["actual_write_outcome"] = "completed"
         report["files_written"] = files_written
     if getattr(args, "json_out", None):
         ok, error = _write_json_out(root, str(args.json_out), report, ("project-runtime/reports",))

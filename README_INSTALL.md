@@ -185,7 +185,7 @@ aso status --root /path/to/project --mode workspace
 aso lint --root /path/to/project --mode workspace --strict
 aso doctor --root /path/to/project --mode workspace --strict
 aso lifecycle receive-result --root /path/to/project --from-result project-runtime/results/worker/RESULT_TASK_ID_ATTEMPT_001.md --confirm-write
-aso artifact accept --root /path/to/project --package project-runtime/artifacts/candidates/TASK_ID/artifact_package_manifest.json --confirm-write
+aso artifact accept --root /path/to/project --package project-runtime/artifacts/candidates/TASK_ID/manifest.json --confirm-write
 aso lifecycle terminate-agent --root /path/to/project --from-result project-runtime/results/worker/RESULT_TASK_ID_ATTEMPT_001.md --confirm-write
 ```
 

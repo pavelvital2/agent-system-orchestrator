@@ -2039,7 +2039,7 @@ AFFECTED_FILES:
 - agent-system/README.md
 - agent-system/GOVERNANCE_CHANGELOG.md
 AFFECTED_INVARIANTS:
-- Bootstrap task packets must require the primary P5 candidate artifact package at project-runtime/artifacts/candidates/<TASK_ID>/artifact_package_manifest.json.
+- Bootstrap task packets must require the primary P5 candidate artifact package at project-runtime/artifacts/candidates/<TASK_ID>/manifest.json.
 - Profile agents must not write accepted artifacts directly.
 - Audit and acceptance happen after candidate artifact package creation.
 AFFECTED_TRANSITIONS:
