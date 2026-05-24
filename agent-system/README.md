@@ -200,6 +200,16 @@ for legacy `2.0.0`, `3.0.0`, and `3.1.0` sidecars, and fixture expectations.
 Contract validation is Python stdlib only and does not add a runtime
 `jsonschema` dependency.
 
+P57 release evidence is recorded in
+`agent-system/11_release/ASO_P57_DOC_RUNTIME_CLEANUP_V3_7_8_RELEASE_NOTES.md`
+and
+`agent-system/11_release/ASO_P57_DOC_RUNTIME_CLEANUP_V3_7_8_VALIDATION_REPORT.md`.
+Post-push remote CI evidence for the final pushed HEAD is recorded separately
+in
+`agent-system/11_release/ASO_P57_DOC_RUNTIME_CLEANUP_V3_7_8_REMOTE_CI_EVIDENCE.md`
+after GitHub Actions completes. P57 documents final real-TZ readiness criteria
+but does not claim final real-TZ acceptance beyond the required smoke target.
+
 The corrected P4 governance boundary is documented in
 `agent-system/02_runtime/PROJECT_DESIGN_GAP_GOVERNANCE_P4_CONTRACT.md`.
 The P4.1 hotfix boundary is documented in

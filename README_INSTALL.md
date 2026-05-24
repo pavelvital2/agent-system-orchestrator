@@ -73,6 +73,13 @@ package schema, and the Project Factory P1 command boundary. It does not claim
 full real-product Telegram bot generation and does not add semantic TZ reading,
 product-intake automation, daemon mode, live dispatch, product generation,
 secret collection, or checkpoint execution.
+P57 release validation is recorded in
+`agent-system/11_release/ASO_P57_DOC_RUNTIME_CLEANUP_V3_7_8_VALIDATION_REPORT.md`;
+post-push GitHub Actions evidence for the final pushed HEAD is recorded in
+`agent-system/11_release/ASO_P57_DOC_RUNTIME_CLEANUP_V3_7_8_REMOTE_CI_EVIDENCE.md`.
+Final real-TZ readiness criteria are documented, but final real-TZ acceptance
+requires explicit owner instruction after P57 merge readiness and remote CI
+evidence.
 
 Both installers accept a Python executable and virtual environment path:
 

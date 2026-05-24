@@ -497,6 +497,21 @@ views. `aso state render` without `--confirm-write` is read-only except for an
 explicit report output path, while `--confirm-write` materializes Markdown
 compatibility views from canonical JSON sidecars.
 
+P57 final release validation evidence is recorded in:
+
+```text
+agent-system/11_release/ASO_P57_DOC_RUNTIME_CLEANUP_V3_7_8_RELEASE_NOTES.md
+agent-system/11_release/ASO_P57_DOC_RUNTIME_CLEANUP_V3_7_8_VALIDATION_REPORT.md
+agent-system/11_release/ASO_P57_DOC_RUNTIME_CLEANUP_V3_7_8_REMOTE_CI_EVIDENCE.md
+```
+
+The remote CI evidence file is a post-push observation for the final pushed
+HEAD. Committing or editing that evidence creates a new HEAD and requires a new
+CI observation before any claim about that newer HEAD. Final real-TZ readiness
+criteria are documented by P57, but final real-TZ acceptance remains outside
+the release patch until explicitly instructed by the owner after P57 merge
+readiness and remote CI evidence.
+
 ## Version semantics
 
 ```text

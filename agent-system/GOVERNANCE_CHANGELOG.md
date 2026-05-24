@@ -2275,3 +2275,41 @@ AUTHORIZED_BY: project_owner
 AUDIT_REQUIRED: yes
 STATUS: accepted
 ```
+
+```text
+CHANGE_ID: GOV-2026-05-24-012
+CHANGE_TITLE: TASK_ASO_P57_090_RELEASE_VALIDATION_AND_REMOTE_CI_EVIDENCE
+DATE: 2026-05-24
+PACKAGE_VERSION_BEFORE: 3.7.8
+PACKAGE_VERSION_AFTER: 3.7.8
+GOVERNANCE_RULESET_BEFORE: 3.7.8
+GOVERNANCE_RULESET_AFTER: 3.7.8
+RUNTIME_SCHEMA_BEFORE: 3.1.1
+RUNTIME_SCHEMA_AFTER: 3.1.1
+ARTIFACT_PACKAGE_SCHEMA_BEFORE: 1.1.0
+ARTIFACT_PACKAGE_SCHEMA_AFTER: 1.1.0
+CHANGE_TYPE: patch
+CHANGE_SUBTYPE: p57_release_validation_and_remote_ci_evidence
+AFFECTED_FILES:
+- README.md
+- README_INSTALL.md
+- agent-system/README.md
+- agent-system/PACKAGE_VERSIONING.md
+- agent-system/GOVERNANCE_CHANGELOG.md
+- agent-system/11_release/ASO_P57_DOC_RUNTIME_CLEANUP_V3_7_8_RELEASE_NOTES.md
+- agent-system/11_release/ASO_P57_DOC_RUNTIME_CLEANUP_V3_7_8_VALIDATION_REPORT.md
+- agent-system/11_release/ASO_P57_DOC_RUNTIME_CLEANUP_V3_7_8_REMOTE_CI_EVIDENCE.md
+AFFECTED_INVARIANTS:
+- Active package/governance tuple remains 3.7.8 / 3.7.8 while Runtime Schema 3.1.1 and Artifact Package Schema 1.1.0 are preserved.
+- P57 release validation must reference task, test, audit, tuple-coherence, forbidden-root, and remote CI evidence.
+- Final real-TZ readiness criteria are documented, but final real-TZ acceptance is not claimed before owner instruction after P57 merge readiness and remote CI evidence.
+- Post-push remote CI evidence must not be fabricated before the final pushed HEAD has a completed successful GitHub Actions run.
+AFFECTED_TRANSITIONS:
+- P57 tasks 010-080 accepted -> release validation docs -> local validation -> final push -> remote CI evidence observation.
+SCHEMA_TEMPLATE_IMPACT: none; Runtime Schema 3.1.1 and Artifact Package Schema 1.1.0 are preserved.
+MIGRATION_REQUIRED: no
+MIGRATION_NOTE: Release validation and evidence documentation only; no active project-runtime migration, runtime schema change, artifact package schema change, live dispatch executor, checkpoint executor, daemon, product-intake engine, external worker, product generation, secret collection, or final real-TZ acceptance run is introduced.
+AUTHORIZED_BY: project_owner
+AUDIT_REQUIRED: yes
+STATUS: accepted
+```
