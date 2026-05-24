@@ -306,6 +306,59 @@ class PlanNextCommandTests(unittest.TestCase):
                 rule_ids = {rule["rule_id"] for rule in report["blocking_rules"]}
                 self.assertIn("GOV-ACTION-SEMANTICS", rule_ids)
 
+    def test_invalid_identity_and_repository_statuses_are_not_dispatch_passed(self) -> None:
+        cases = (
+            (
+                "identity_validation_status",
+                "DG54_WORKSPACE_IDENTITY_READY",
+                "workspace_identity_not_ready",
+                "PROJECT_STATE.content.identity_validation_status",
+            ),
+            (
+                "repository_lock_status",
+                "DG54_REPOSITORY_LOCK_READY",
+                "repository_lock_not_ready",
+                "PROJECT_STATE.content.repository_lock_status",
+            ),
+        )
+        for field, check_id, reason_code, input_ref in cases:
+            with self.subTest(field=field), tempfile.TemporaryDirectory() as tmp:
+                root = copy_valid_workspace(tmp)
+                make_tz_valid(root)
+                set_project_state(root, **{field: "surprising"})
+                json_out = Path(tmp) / f"plan-next-invalid-{field}.json"
+
+                result = run_plan_next(root, "--strict", "--json-out", str(json_out))
+
+                self.assertEqual(result.returncode, 1, result.stdout + result.stderr)
+                report = json.loads(json_out.read_text(encoding="utf-8"))
+                self.assertEqual(report["status"], "blocked")
+                self.assertEqual(report["recommended_next_action"], "CORRECTION_REQUIRED")
+                self.assertFalse(report["dispatchable"])
+                self.assertFalse(report["dispatchability"]["dispatchable"])
+                checks = {
+                    check["check_id"]: check
+                    for check in report["dispatchability"]["checks"]
+                    if isinstance(check, dict)
+                }
+                self.assertIn(check_id, checks)
+                self.assertFalse(checks[check_id]["passed"])
+                self.assertEqual(checks[check_id]["reason_code"], reason_code)
+                self.assertIn("is invalid", checks[check_id]["evidence"])
+                reason_codes = {reason["reason_code"] for reason in report["dispatchability"]["reasons"]}
+                self.assertIn(reason_code, reason_codes)
+                self.assertTrue(
+                    any(
+                        finding["rule_id"] == "SIDECAR_ENUM_VALUE_INVALID"
+                        and finding["field"] == f"content.{field}"
+                        for finding in report["evidence"]["state_verify"]["findings"]
+                    )
+                )
+                matching_reason = next(
+                    reason for reason in report["dispatchability"]["reasons"] if reason["reason_code"] == reason_code
+                )
+                self.assertEqual(matching_reason["input_ref"], input_ref)
+
     def test_valid_first_bootstrap_readiness_passes_without_identity_or_lock_requirements(self) -> None:
         packet = "project-runtime/tasks/active/TASK_FIXTURE_STATE_001.md"
         with tempfile.TemporaryDirectory() as tmp:

@@ -163,6 +163,12 @@ retaining the P5.4 planner Dispatchability Gate. `plan-next` may recommend
 `CREATE_AGENT` only after proving the current next action can dispatch a
 profile agent with a valid role, task id, task packet, task registry entry,
 gate state, and workspace/repository baseline.
+The dispatchability authority for identity and repository readiness is
+`PROJECT_STATE`: `identity_validation_status` is limited to
+`not_checked | passed | failed | blocked`, and `repository_lock_status` is
+limited to `draft | accepted | revoked | blocked | absent`. `WORKSPACE_IDENTITY`
+status fields remain compatibility diagnostics and cannot make dispatch pass
+when the corresponding `PROJECT_STATE` value is invalid under `state verify`.
 
 ASO remains a deterministic governance/control conveyor. It validates and
 gates artifacts produced by profile agents and detects contradictory bootstrap

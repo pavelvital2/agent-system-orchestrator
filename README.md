@@ -115,6 +115,13 @@ creates a candidate package under `project-runtime/artifacts/candidates/<TASK_ID
 with `artifact_package_manifest.json`; the operator accepts that package,
 records the `ARTIFACT_ACCEPTED` lifecycle event, and only then follows audit
 routing, correction, and checkpoint steps outside ASO's read-only planner.
+Dispatch readiness is governed by canonical `PROJECT_STATE` enum values:
+`identity_validation_status` is `not_checked | passed | failed | blocked`, and
+`repository_lock_status` is `draft | accepted | revoked | blocked | absent`.
+`WORKSPACE_IDENTITY` keeps compatibility diagnostics; it does not override
+`PROJECT_STATE` for dispatchability. Invalid `PROJECT_STATE` readiness values
+block `plan-next`, even when a corresponding `NEXT_ACTION` requirement flag is
+false.
 
 For an editable user install from the repository root:
 

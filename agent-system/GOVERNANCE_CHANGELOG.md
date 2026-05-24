@@ -2051,3 +2051,43 @@ AUTHORIZED_BY: project_owner
 AUDIT_REQUIRED: yes
 STATUS: accepted
 ```
+
+```text
+CHANGE_ID: GOV-2026-05-24-007
+CHANGE_TITLE: ASO_P56_AUDIT_FIX_060_STATUS_ENUM_CONTRACT
+DATE: 2026-05-24
+PACKAGE_VERSION_BEFORE: 3.7.7
+PACKAGE_VERSION_AFTER: 3.7.7
+GOVERNANCE_RULESET_BEFORE: 3.7.7
+GOVERNANCE_RULESET_AFTER: 3.7.7
+RUNTIME_SCHEMA_BEFORE: 3.1.1
+RUNTIME_SCHEMA_AFTER: 3.1.1
+ARTIFACT_PACKAGE_SCHEMA_BEFORE: 1.1.0
+ARTIFACT_PACKAGE_SCHEMA_AFTER: 1.1.0
+CHANGE_TYPE: patch
+CHANGE_SUBTYPE: p56_audit_fix_060_status_enum_contract
+AFFECTED_FILES:
+- agent-system/tools/aso/agent_system_orchestrator_aso/aso_tool/commands/plan_next.py
+- agent-system/tools/aso/tests/test_state_verify.py
+- agent-system/tools/aso/tests/test_plan_next.py
+- agent-system/tools/aso/tests/test_real_tz_e2e_smoke.py
+- agent-system/02_runtime/STATE_TRANSITION_RULES.md
+- agent-system/02_runtime/PLANNER_DISPATCHABILITY_GATE_P5_4_CONTRACT.md
+- README.md
+- agent-system/README.md
+- agent-system/GOVERNANCE_CHANGELOG.md
+AFFECTED_INVARIANTS:
+- PROJECT_STATE identity_validation_status canonical values are not_checked, passed, failed, and blocked.
+- PROJECT_STATE repository_lock_status canonical values are draft, accepted, revoked, blocked, and absent.
+- WORKSPACE_IDENTITY status fields are diagnostic compatibility fields and do not override PROJECT_STATE dispatch readiness.
+- Dispatchability must not mark identity or repository readiness passed when the corresponding PROJECT_STATE value is invalid under state verify.
+AFFECTED_TRANSITIONS:
+- state verify invalid PROJECT_STATE readiness enum -> plan-next blocked -> no CREATE_AGENT recommendation.
+- initialized real-TZ bootstrap with valid canonical non-ready PROJECT_STATE statuses and false requirement flags -> dispatchable bootstrap profile-agent route.
+SCHEMA_TEMPLATE_IMPACT: none; Runtime Schema 3.1.1 and Artifact Package Schema 1.1.0 are preserved.
+MIGRATION_REQUIRED: no
+MIGRATION_NOTE: Planner readiness enforcement and contract documentation only; no active project-runtime migration, schema migration, transition redesign, package resource relaxation, or sidecar template rewrite is introduced.
+AUTHORIZED_BY: project_owner
+AUDIT_REQUIRED: yes
+STATUS: accepted
+```

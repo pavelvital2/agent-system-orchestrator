@@ -140,6 +140,10 @@ class RealTzE2ESmokeTests(unittest.TestCase):
             init_report = json.loads(init_json.read_text(encoding="utf-8"))
             intake_report = json.loads(intake_json.read_text(encoding="utf-8"))
             plan_report = json.loads(plan_json.read_text(encoding="utf-8"))
+            project_state = json.loads((workspace / "project-runtime/state/PROJECT_STATE.json").read_text(encoding="utf-8"))
+            workspace_identity = json.loads(
+                (workspace / "project-runtime/state/WORKSPACE_IDENTITY.json").read_text(encoding="utf-8")
+            )
             registry = json.loads((workspace / "project-runtime/state/TASK_REGISTRY.json").read_text(encoding="utf-8"))
             current_gate = json.loads((workspace / "project-runtime/state/CURRENT_GATE.json").read_text(encoding="utf-8"))
             task = registry["content"]["tasks"][0]
@@ -152,6 +156,10 @@ class RealTzE2ESmokeTests(unittest.TestCase):
             self.assertTrue(plan_report["dispatchable"])
             self.assertFalse(plan_report["mutations_performed"])
             self.assertEqual(plan_report["target_role"], "requirements_analyst")
+            self.assertEqual(project_state["content"]["identity_validation_status"], "not_checked")
+            self.assertEqual(project_state["content"]["repository_lock_status"], "draft")
+            self.assertEqual(workspace_identity["content"]["identity_validation_status"], "not_required")
+            self.assertEqual(workspace_identity["content"]["repository_lock_status"], "pending")
             self.assertNotIn(plan_report["task_id"], ("", "NONE"))
             self.assertNotIn(plan_report["task_packet"], ("", "NONE"))
             self.assertEqual(task["task_id"], plan_report["task_id"])

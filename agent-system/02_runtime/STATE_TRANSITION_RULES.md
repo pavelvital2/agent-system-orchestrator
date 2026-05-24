@@ -358,6 +358,19 @@ WORKSPACE_TYPE: package_repo | project_workspace | implementation_repo
 
 `WORKSPACE_TYPE: test_fixture` must always keep `PUSH_ALLOWED: false`.
 
+For Runtime Schema 3.1.1 dispatch readiness, the canonical status fields are:
+
+```text
+PROJECT_STATE.IDENTITY_VALIDATION_STATUS: not_checked | passed | failed | blocked
+PROJECT_STATE.REPOSITORY_LOCK_STATUS: draft | accepted | revoked | blocked | absent
+```
+
+`WORKSPACE_IDENTITY.IDENTITY_VALIDATION_STATUS` and
+`WORKSPACE_IDENTITY.REPOSITORY_LOCK_STATUS` are diagnostic compatibility
+signals and do not override the canonical `PROJECT_STATE` dispatchability
+values. A `PROJECT_STATE` value rejected by state verification is never
+dispatch-ready, even when a `NEXT_ACTION` requirement flag is false.
+
 Commit is forbidden after wrong remote or wrong branch unless the active
 repository lock and active task packet explicitly allow a governed local-only
 checkpoint. That local-only exception must not push.

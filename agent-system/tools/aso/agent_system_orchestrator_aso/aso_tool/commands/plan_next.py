@@ -58,6 +58,8 @@ BOOTSTRAP_INPUTS = (Path("project-input/TZ.md"),)
 PROJECT_STATE_READY_IDENTITY_STATUSES = {"passed"}
 PROJECT_STATE_READY_REPOSITORY_LOCK_STATUSES = {"accepted"}
 PROJECT_STATE_READY_BASELINE_STATUSES = {"passed"}
+PROJECT_STATE_IDENTITY_STATUSES = state_verify.ENUM_FIELDS[("PROJECT_STATE", "identity_validation_status")]
+PROJECT_STATE_REPOSITORY_LOCK_STATUSES = state_verify.ENUM_FIELDS[("PROJECT_STATE", "repository_lock_status")]
 
 
 def _is_none(value: object) -> bool:
@@ -470,9 +472,11 @@ def _current_gate_permits_dispatch(
 
 
 def _workspace_identity_ready(project_state: dict[str, object], next_action: dict[str, object]) -> tuple[bool, str]:
+    status = _as_text(project_state.get("identity_validation_status"))
+    if status not in PROJECT_STATE_IDENTITY_STATUSES:
+        return False, f"PROJECT_STATE.content.identity_validation_status={status or 'NONE'} is invalid"
     if next_action.get("workspace_identity_required") is False:
         return True, "NEXT_ACTION.content.workspace_identity_required=false"
-    status = _as_text(project_state.get("identity_validation_status"))
     return (
         status in PROJECT_STATE_READY_IDENTITY_STATUSES,
         f"PROJECT_STATE.content.identity_validation_status={status or 'NONE'}",
@@ -480,9 +484,11 @@ def _workspace_identity_ready(project_state: dict[str, object], next_action: dic
 
 
 def _repository_lock_ready(project_state: dict[str, object], next_action: dict[str, object]) -> tuple[bool, str]:
+    status = _as_text(project_state.get("repository_lock_status"))
+    if status not in PROJECT_STATE_REPOSITORY_LOCK_STATUSES:
+        return False, f"PROJECT_STATE.content.repository_lock_status={status or 'NONE'} is invalid"
     if next_action.get("repository_lock_required") is False:
         return True, "NEXT_ACTION.content.repository_lock_required=false"
-    status = _as_text(project_state.get("repository_lock_status"))
     return (
         status in PROJECT_STATE_READY_REPOSITORY_LOCK_STATUSES,
         f"PROJECT_STATE.content.repository_lock_status={status or 'NONE'}",

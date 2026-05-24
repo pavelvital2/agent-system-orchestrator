@@ -353,6 +353,16 @@ must not make a DG54 readiness check pass. Requirement flags such as
 `NEXT_ACTION.content.workspace_identity_required=false` and
 `NEXT_ACTION.content.repository_lock_required=false` may make the corresponding
 check pass without changing the canonical `PROJECT_STATE` status vocabulary.
+Those requirement flags are exemptions from readiness, not exemptions from
+schema validation: if `state verify` rejects
+`PROJECT_STATE.content.identity_validation_status` or
+`PROJECT_STATE.content.repository_lock_status` as an invalid enum value, the
+matching DG54 readiness condition must also be reported as not passed.
+
+`WORKSPACE_IDENTITY.content.identity_validation_status` and
+`WORKSPACE_IDENTITY.content.repository_lock_status` are diagnostic compatibility
+fields. They may retain historical diagnostic values while the dispatchability
+authority remains the canonical `PROJECT_STATE` fields above.
 
 ## Command Output Contract
 
