@@ -432,13 +432,17 @@ RESULT_RECEIVED -> ARTIFACT_ACCEPTED -> AGENT_TERMINATED -> AUDIT_ROUTE_READY
 ```
 
 Profile-agent output starts as a candidate artifact package under
-`project-runtime/artifacts/candidates/`. The orchestrator accepts the candidate
-into `project-runtime/artifacts/accepted/`, records the acceptance receipt and
+`project-runtime/artifacts/candidates/<TASK_ID>/` with
+`artifact_package_manifest.json`. Profile agents must not write accepted
+artifacts directly. The orchestrator accepts the candidate into
+`project-runtime/artifacts/accepted/`, records the acceptance receipt and
 `ARTIFACT_ACCEPTED` lifecycle event, and only then terminates the agent
-instance and marks audit routing ready. Context handed to later agents must
-cite accepted artifact packages or rendered views under
-`project-runtime/rendered/`; raw chat context, raw artifacts, rejected
-artifacts, and local runtime scratch files are not accepted context.
+instance and marks audit routing ready. The first real-TZ bootstrap workflow
+therefore follows candidate creation -> artifact accept -> lifecycle event ->
+audit route. Context handed to later agents must cite accepted artifact
+packages or rendered views under `project-runtime/rendered/`; raw chat context,
+raw artifacts, rejected artifacts, and local runtime scratch files are not
+accepted context.
 `AUDIT_ROUTE_READY` is a readiness marker only and does not dispatch live
 agents or execute checkpoints.
 

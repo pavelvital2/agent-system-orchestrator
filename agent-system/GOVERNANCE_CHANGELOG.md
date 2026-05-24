@@ -2017,3 +2017,37 @@ AUTHORIZED_BY: project_owner
 AUDIT_REQUIRED: yes
 STATUS: accepted
 ```
+
+```text
+CHANGE_ID: GOV-2026-05-24-006
+CHANGE_TITLE: ASO_P56_AUDIT_FIX_050_BOOTSTRAP_ARTIFACT_OUTPUT
+DATE: 2026-05-24
+PACKAGE_VERSION_BEFORE: 3.7.7
+PACKAGE_VERSION_AFTER: 3.7.7
+GOVERNANCE_RULESET_BEFORE: 3.7.7
+GOVERNANCE_RULESET_AFTER: 3.7.7
+RUNTIME_SCHEMA_BEFORE: 3.1.1
+RUNTIME_SCHEMA_AFTER: 3.1.1
+ARTIFACT_PACKAGE_SCHEMA_BEFORE: 1.1.0
+ARTIFACT_PACKAGE_SCHEMA_AFTER: 1.1.0
+CHANGE_TYPE: patch
+CHANGE_SUBTYPE: p56_audit_fix_050_bootstrap_artifact_output
+AFFECTED_FILES:
+- agent-system/tools/aso/agent_system_orchestrator_aso/aso_tool/commands/intake.py
+- agent-system/tools/aso/tests/test_intake_bootstrap.py
+- README.md
+- agent-system/README.md
+- agent-system/GOVERNANCE_CHANGELOG.md
+AFFECTED_INVARIANTS:
+- Bootstrap task packets must require the primary P5 candidate artifact package at project-runtime/artifacts/candidates/<TASK_ID>/artifact_package_manifest.json.
+- Profile agents must not write accepted artifacts directly.
+- Audit and acceptance happen after candidate artifact package creation.
+AFFECTED_TRANSITIONS:
+- real TZ bootstrap dispatch -> candidate artifact package creation -> artifact acceptance -> ARTIFACT_ACCEPTED lifecycle event -> audit route.
+SCHEMA_TEMPLATE_IMPACT: none; Runtime Schema 3.1.1 and Artifact Package Schema 1.1.0 are preserved.
+MIGRATION_REQUIRED: no
+MIGRATION_NOTE: Bootstrap packet output instructions and documentation alignment only; no active project-runtime migration, schema migration, transition redesign, package resource relaxation, or artifact package schema change is introduced.
+AUTHORIZED_BY: project_owner
+AUDIT_REQUIRED: yes
+STATUS: accepted
+```

@@ -113,8 +113,20 @@ class IntakeBootstrapCommandTests(unittest.TestCase):
             self.assertEqual(receipt["tz_path"], "project-input/TZ.md")
             packet = root / "project-runtime/bootstrap/TASK_BOOTSTRAP_REQUIREMENTS_ANALYST_001.md"
             self.assertTrue(packet.is_file())
-            self.assertIn("Do not implement product logic", packet.read_text(encoding="utf-8"))
-            self.assertIn("project-input/TZ.md", packet.read_text(encoding="utf-8"))
+            packet_text = packet.read_text(encoding="utf-8")
+            self.assertIn("Do not implement product logic", packet_text)
+            self.assertIn("project-input/TZ.md", packet_text)
+            self.assertIn(
+                "project-runtime/artifacts/candidates/TASK_BOOTSTRAP_REQUIREMENTS_ANALYST_001/artifact_package_manifest.json",
+                packet_text,
+            )
+            self.assertIn(
+                "project-runtime/artifacts/candidates/TASK_BOOTSTRAP_REQUIREMENTS_ANALYST_001/**",
+                packet_text,
+            )
+            self.assertIn("project-runtime/results/** only as secondary/compatibility evidence", packet_text)
+            self.assertIn("Do not write accepted artifacts directly", packet_text)
+            self.assertIn("Audit and acceptance happen after candidate artifact creation", packet_text)
             registry = json.loads((root / "project-runtime/state/TASK_REGISTRY.json").read_text(encoding="utf-8"))
             self.assertEqual(len(registry["content"]["tasks"]), 1)
             assert_bootstrap_views_synced(self, root)

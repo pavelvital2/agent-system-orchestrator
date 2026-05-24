@@ -110,8 +110,11 @@ aso plan-next --root "$WORK" --strict
 ```
 
 `plan-next` is read-only. It should recommend dispatch-capable `CREATE_AGENT`
-for the bootstrap requirements analyst task; the operator still performs the
-normal audit, correction, and checkpoint steps outside ASO's read-only planner.
+for the bootstrap requirements analyst task. The first profile-agent then
+creates a candidate package under `project-runtime/artifacts/candidates/<TASK_ID>/`
+with `artifact_package_manifest.json`; the operator accepts that package,
+records the `ARTIFACT_ACCEPTED` lifecycle event, and only then follows audit
+routing, correction, and checkpoint steps outside ASO's read-only planner.
 
 For an editable user install from the repository root:
 
@@ -178,7 +181,7 @@ python3 agent-system/tools/aso/aso.py status --root /path/to/project --mode work
 python3 agent-system/tools/aso/aso.py lint --root /path/to/project --mode workspace --strict
 python3 agent-system/tools/aso/aso.py doctor --root /path/to/project --mode workspace --strict
 python3 agent-system/tools/aso/aso.py lifecycle receive-result --root /path/to/project --from-result project-runtime/results/worker/RESULT_TASK_ID_ATTEMPT_001.md --confirm-write
-python3 agent-system/tools/aso/aso.py artifact accept --root /path/to/project --package project-runtime/artifacts/candidates/TASK_ID/manifest.json --confirm-write
+python3 agent-system/tools/aso/aso.py artifact accept --root /path/to/project --package project-runtime/artifacts/candidates/TASK_ID/artifact_package_manifest.json --confirm-write
 python3 agent-system/tools/aso/aso.py lifecycle terminate-agent --root /path/to/project --from-result project-runtime/results/worker/RESULT_TASK_ID_ATTEMPT_001.md --confirm-write
 ```
 

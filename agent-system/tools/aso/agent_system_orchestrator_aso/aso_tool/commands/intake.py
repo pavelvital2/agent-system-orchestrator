@@ -189,30 +189,34 @@ Create the first bounded requirements analysis from the raw TZ document.
 
 - Read `{tz_path}` as the authoritative raw TZ input.
 - Identify requirements, ambiguities, conflicts, and owner questions for downstream governed work.
-- Produce a requirements analysis result package using ASO result conventions.
+- Produce the primary P5 candidate artifact package at `project-runtime/artifacts/candidates/{TASK_ID}/artifact_package_manifest.json`.
 
 ## Scope Out
 
 - Do not implement product logic.
 - Do not generate product source files.
 - Do not dispatch additional agents.
+- Do not write accepted artifacts directly; accepted artifacts are created only by the governed artifact acceptance step.
 - Do not bypass audit, correction, or checkpoint gates.
 
 ## Expected Outputs
 
-- Requirements analysis result package with traceability to `{tz_path}`.
+- Primary output: P5 candidate artifact package manifest at `project-runtime/artifacts/candidates/{TASK_ID}/artifact_package_manifest.json` with traceability to `{tz_path}`.
 - Explicit conflict, ambiguity, and owner-question notes when present.
+- Optional secondary/compatibility evidence under `project-runtime/results/**` only if still needed by the result workflow.
 
 ## Allowed File Changes
 
-- project-runtime/results/**
+- project-runtime/artifacts/candidates/{TASK_ID}/**
+- project-runtime/results/** only as secondary/compatibility evidence if still needed
 - project-docs/requirements/**
 
 ## Acceptance Criteria
 
 - The raw TZ file remains the source of truth.
 - Product implementation is deferred to downstream governed tasks.
-- The result is ready for audit routing.
+- Audit and acceptance happen after candidate artifact creation; the profile-agent must not write accepted artifacts directly.
+- The candidate artifact package is ready for governed artifact acceptance and subsequent audit routing.
 """
 
 
