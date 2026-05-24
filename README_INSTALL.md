@@ -166,7 +166,7 @@ aso status --root /path/to/project --mode workspace
 aso lint --root /path/to/project --mode workspace --strict
 aso doctor --root /path/to/project --mode workspace --strict
 aso lifecycle receive-result --root /path/to/project --from-result project-runtime/results/worker/RESULT_TASK_ID_ATTEMPT_001.md --confirm-write
-aso artifact accept --root /path/to/project --package project-runtime/artifacts/candidates/TASK_ID/manifest.json --confirm-write
+aso artifact accept --root /path/to/project --package project-runtime/artifacts/candidates/TASK_ID/artifact_package_manifest.json --confirm-write
 aso lifecycle terminate-agent --root /path/to/project --from-result project-runtime/results/worker/RESULT_TASK_ID_ATTEMPT_001.md --confirm-write
 ```
 
@@ -176,10 +176,10 @@ sequence is:
 ```text
 ASO_ROOT=$(pwd)
 WORK=/tmp/aso-real-tz-workspace
-rm -rf "$WORK"
+rm -rf "$WORK" /tmp/aso_clean_install_venv /tmp/aso_clean_install_src
 mkdir -p "$WORK/project-input"
 cp /path/to/TZ_REAL_E2E_TELEGRAM_BOT.md "$WORK/project-input/TZ_REAL_E2E_TELEGRAM_BOT.md"
-bash agent-system/scripts/install_aso_clean.sh --source "$ASO_ROOT" --venv /tmp/aso_clean_install_venv --source-copy /tmp/aso_clean_install_src --with-test
+bash agent-system/scripts/install_aso_clean.sh --source "$ASO_ROOT" --venv /tmp/aso_clean_install_venv --fresh --source-copy /tmp/aso_clean_install_src --with-test
 . /tmp/aso_clean_install_venv/bin/activate
 aso state init --root "$WORK" --tz project-input/TZ_REAL_E2E_TELEGRAM_BOT.md --confirm-write --json-out /tmp/aso-state-init.json
 aso intake bootstrap --root "$WORK" --tz project-input/TZ_REAL_E2E_TELEGRAM_BOT.md --target-role requirements_analyst --confirm-write --json-out /tmp/aso-intake-bootstrap.json

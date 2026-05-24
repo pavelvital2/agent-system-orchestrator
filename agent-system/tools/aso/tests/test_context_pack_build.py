@@ -11,6 +11,8 @@ from pathlib import Path
 CLI = Path(__file__).resolve().parents[1] / "aso.py"
 REPO_ROOT = Path(__file__).resolve().parents[4]
 TASK_FIXTURE_ROOT = REPO_ROOT / "agent-system" / "tests" / "fixtures" / "task_packets"
+LEGACY_MANIFEST_FILENAME = "manifest.json"
+LEGACY_CANDIDATE_MANIFEST = f"project-runtime/artifacts/candidates/TASK_DEMO/{LEGACY_MANIFEST_FILENAME}"
 
 
 def run_aso(*args: str) -> subprocess.CompletedProcess[str]:
@@ -159,14 +161,14 @@ project-runtime/**
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp) / "workspace"
             doc = root / "docs/source.md"
-            candidate = root / "project-runtime/artifacts/candidates/TASK_DEMO/manifest.json"
+            candidate = root / LEGACY_CANDIDATE_MANIFEST
             doc.parent.mkdir(parents=True)
             candidate.parent.mkdir(parents=True)
             doc.write_text("# Source\n", encoding="utf-8")
             candidate.write_text('{"status":"candidate"}\n', encoding="utf-8")
             task_packet = root / "TASK_DEMO.md"
             task_packet.write_text(
-                """# TASK PACKET
+                f"""# TASK PACKET
 
 ```text
 TASK_ID: TASK_DEMO
@@ -178,7 +180,7 @@ TASK_ID: TASK_DEMO
 
 ## Read inputs
 
-- `project-runtime/artifacts/candidates/TASK_DEMO/manifest.json`
+- `{LEGACY_CANDIDATE_MANIFEST}`
 """,
                 encoding="utf-8",
             )

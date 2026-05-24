@@ -98,8 +98,7 @@ file is:
 ```text
 ASO_ROOT=$(pwd)
 WORK=/tmp/aso-real-tz-workspace
-rm -rf "$WORK"
-rm -rf /tmp/aso_clean_install_src
+rm -rf "$WORK" /tmp/aso_clean_install_venv /tmp/aso_clean_install_src
 mkdir -p "$WORK/project-input"
 cp /path/to/TZ_REAL_E2E_TELEGRAM_BOT.md "$WORK/project-input/TZ_REAL_E2E_TELEGRAM_BOT.md"
 bash agent-system/scripts/install_aso_clean.sh --source "$ASO_ROOT" --venv /tmp/aso_clean_install_venv --fresh --source-copy /tmp/aso_clean_install_src --with-test

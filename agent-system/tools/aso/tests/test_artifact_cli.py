@@ -17,6 +17,11 @@ if str(ASO_DIR) not in sys.path:
 from agent_system_orchestrator_aso.aso_tool.aso import main  # noqa: E402
 
 
+LEGACY_MANIFEST_FILENAME = "manifest.json"
+LEGACY_CANDIDATE_PACKAGE = "project-runtime/artifacts/candidates/TASK_DEMO/PACKAGE"
+LEGACY_ACCEPTED_PACKAGE = "project-runtime/artifacts/accepted/TASK_DEMO/PACKAGE"
+
+
 class ArtifactCliTests(unittest.TestCase):
     def setUp(self) -> None:
         self.tmpdir = Path(tempfile.mkdtemp(prefix="aso-artifact-cli-"))
@@ -54,7 +59,7 @@ class ArtifactCliTests(unittest.TestCase):
 
     def _write_candidate(self, relpath: str = "project-runtime/artifacts/candidates/TASK_DEMO/PACKAGE") -> Path:
         path = self.root / relpath
-        package_root = path.parent if path.name == "manifest.json" else path
+        package_root = path.parent if path.name == LEGACY_MANIFEST_FILENAME else path
         if package_root.exists():
             shutil.rmtree(package_root)
         package_root.mkdir(parents=True, exist_ok=True)
@@ -66,7 +71,7 @@ class ArtifactCliTests(unittest.TestCase):
             encoding="utf-8",
         )
         (package_root / "evidence").mkdir()
-        manifest_path = package_root / "manifest.json"
+        manifest_path = package_root / LEGACY_MANIFEST_FILENAME
         manifest_path.write_text(json.dumps(self.manifest, indent=2) + "\n", encoding="utf-8")
         return manifest_path
 
@@ -193,7 +198,7 @@ class ArtifactCliTests(unittest.TestCase):
                 self.assertIn(rule_id, {finding["rule_id"] for finding in report["findings"]})
 
     def test_artifact_validate_missing_manifest_is_blocked(self) -> None:
-        missing = self.root / "project-runtime/artifacts/candidates/TASK_DEMO/manifest.json"
+        missing = self.root / f"project-runtime/artifacts/candidates/TASK_DEMO/{LEGACY_MANIFEST_FILENAME}"
 
         report = self._validate_candidate(missing)
 
@@ -254,7 +259,7 @@ class ArtifactCliTests(unittest.TestCase):
             runtime_files,
             [
                 "artifacts/candidates/TASK_DEMO/PACKAGE/RESULT_TASK_DEMO_ATTEMPT_001.md",
-                "artifacts/candidates/TASK_DEMO/PACKAGE/manifest.json",
+                f"artifacts/candidates/TASK_DEMO/PACKAGE/{LEGACY_MANIFEST_FILENAME}",
                 "artifacts/candidates/TASK_DEMO/PACKAGE/structured/result_package.json",
                 "reports/validation.json",
             ],
@@ -317,7 +322,7 @@ class ArtifactCliTests(unittest.TestCase):
                 "--root",
                 str(self.root),
                 "--package",
-                "project-runtime/artifacts/candidates/TASK_DEMO/PACKAGE/manifest.json",
+                f"{LEGACY_CANDIDATE_PACKAGE}/{LEGACY_MANIFEST_FILENAME}",
                 "--confirm-write",
                 "--json-out",
                 str(out),
@@ -327,7 +332,7 @@ class ArtifactCliTests(unittest.TestCase):
         self.assertEqual(code, 0, stderr)
         self.assertIn("ASO artifact accept: WRITTEN", stdout)
         report = json.loads(out.read_text(encoding="utf-8"))
-        accepted = self.root / "project-runtime/artifacts/accepted/TASK_DEMO/PACKAGE/manifest.json"
+        accepted = self.root / f"{LEGACY_ACCEPTED_PACKAGE}/{LEGACY_MANIFEST_FILENAME}"
         self.assertEqual(report["status"], "written")
         self.assertTrue(candidate.exists())
         self.assertEqual(json.loads(accepted.read_text(encoding="utf-8")), self.manifest)
@@ -428,8 +433,8 @@ class ArtifactCliTests(unittest.TestCase):
         )
 
         self.assertEqual(code, 0, stderr)
-        self.assertIn("project-runtime/artifacts/candidates/TASK_DEMO/PACKAGE/manifest.json", stdout)
-        self.assertNotIn("project-runtime/artifacts/accepted/TASK_DEMO/PACKAGE/manifest.json", stdout)
+        self.assertIn(f"{LEGACY_CANDIDATE_PACKAGE}/{LEGACY_MANIFEST_FILENAME}", stdout)
+        self.assertNotIn(f"{LEGACY_ACCEPTED_PACKAGE}/{LEGACY_MANIFEST_FILENAME}", stdout)
 
 
 if __name__ == "__main__":

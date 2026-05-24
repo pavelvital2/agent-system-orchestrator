@@ -113,7 +113,7 @@ TESTS:
 - agent-system/tools/aso/tests/test_lint.py lifecycle LINT_AGENT_003 positive and negative guards
 COMMANDS:
 - python3 agent-system/tools/aso/aso.py lifecycle receive-result --root WORKSPACE --from-result project-runtime/results/worker/RESULT_TASK_DEMO_001_ATTEMPT_001.md --confirm-write
-- python3 agent-system/tools/aso/aso.py artifact accept --root WORKSPACE --package project-runtime/artifacts/candidates/TASK_DEMO_001/manifest.json --confirm-write
+- python3 agent-system/tools/aso/aso.py artifact accept --root WORKSPACE --package project-runtime/artifacts/candidates/TASK_DEMO_001/artifact_package_manifest.json --confirm-write
 - python3 agent-system/tools/aso/aso.py lifecycle terminate-agent --root WORKSPACE --from-result project-runtime/results/worker/RESULT_TASK_DEMO_001_ATTEMPT_001.md --confirm-write
 - python3 agent-system/tools/aso/aso.py lint --root WORKSPACE --mode workspace --strict
 ```
