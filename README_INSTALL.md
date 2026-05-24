@@ -6,7 +6,7 @@ For source-hygiene validation, use the clean installer from the repository
 root:
 
 ```text
-bash agent-system/scripts/install_aso_clean.sh --source . --venv /tmp/aso_clean_install_venv --with-test
+bash agent-system/scripts/install_aso_clean.sh --source . --venv /tmp/aso_clean_install_venv --fresh --with-test
 source /tmp/aso_clean_install_venv/bin/activate
 aso --help
 aso status --root . --mode package
@@ -30,7 +30,7 @@ To verify the source status externally around the clean install:
 ASO_ROOT=$(pwd)
 git status --short --branch > /tmp/aso_before_install_status.txt
 rm -rf /tmp/aso_clean_install_venv /tmp/aso_clean_install_src
-bash agent-system/scripts/install_aso_clean.sh --source "$ASO_ROOT" --venv /tmp/aso_clean_install_venv --source-copy /tmp/aso_clean_install_src --with-test
+bash agent-system/scripts/install_aso_clean.sh --source "$ASO_ROOT" --venv /tmp/aso_clean_install_venv --fresh --source-copy /tmp/aso_clean_install_src --with-test
 . /tmp/aso_clean_install_venv/bin/activate
 aso --help
 aso status --root "$ASO_ROOT" --mode package
@@ -65,13 +65,14 @@ validation remains stdlib-only for its packaged schema/contract checks; the
 installer must still verify the canonical package from this checkout, not a
 root-level duplicate Python tree.
 
-This install document covers package version `3.7.6` with runtime schema
-`3.1.1` and artifact package schema `1.1.0`. P5.6 documents and validates the
-installed real-TZ intake/bootstrap workflow while preserving the Runtime State
-sidecar schema, the artifact package schema, and the Project Factory P1
-command boundary. It does not add semantic TZ reading, product-intake
-automation, daemon mode, live dispatch, product generation, secret collection,
-or checkpoint execution.
+This install document covers package version `3.7.7` with runtime schema
+`3.1.1` and artifact package schema `1.1.0`. P5.6 documents and validates ASO
+workflow readiness through installed real-TZ intake/bootstrap and read-only
+plan-next dispatchability while preserving the Runtime State sidecar schema,
+the artifact package schema, and the Project Factory P1 command boundary. It
+does not claim full real-product Telegram bot generation and does not add
+semantic TZ reading, product-intake automation, daemon mode, live dispatch,
+product generation, secret collection, or checkpoint execution.
 
 Both installers accept a Python executable and virtual environment path:
 

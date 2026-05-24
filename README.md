@@ -20,10 +20,11 @@ filesystem-governed ASO helper CLI at `agent-system/tools/aso/aso.py`: most
 commands are read-only diagnostics or dry-run proposals, while Project Factory
 commands may create generated projects only within explicit target paths.
 
-This P5.6 correction package records the active package metadata as the
-governed `3.7.6` package/governance tuple with runtime schema `3.1.1` and
-artifact package schema `1.1.0`. P5.6 stabilizes installed real-TZ intake and
-release validation evidence;
+This P5.6 audit-hardening package records the active package metadata as the
+governed `3.7.7` package/governance tuple with runtime schema `3.1.1` and
+artifact package schema `1.1.0`. P5.6 stabilizes installed real-TZ intake,
+release validation evidence, clean install semantics, source hygiene, and CI
+E2E smoke coverage;
 the P5.4 planner Dispatchability Gate remains the active authority:
 `plan-next` may recommend `CREATE_AGENT` only after proving the current next
 action can dispatch a profile agent with a valid role, task id, task packet,
@@ -223,7 +224,7 @@ python3 agent-system/tools/aso/aso.py validate-context-pack agent-system/tests/f
 Runtime State P2 command surfaces formalize JSON sidecars under
 `project-runtime/state/`. JSON sidecars are canonical for P2+ runtime state;
 Markdown or report outputs are compatibility views generated from JSON. The
-active package version is `3.7.6` and the active runtime schema version is
+active package version is `3.7.7` and the active runtime schema version is
 `3.1.1`.
 
 ```text

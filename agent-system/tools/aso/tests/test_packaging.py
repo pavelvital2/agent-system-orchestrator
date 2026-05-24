@@ -107,11 +107,23 @@ class PackagingCommandTests(unittest.TestCase):
 
     def test_package_version_is_coherent(self) -> None:
         pyproject = tomllib.loads((REPO_ROOT / "pyproject.toml").read_text(encoding="utf-8"))
-        init_file = (ASO_TOOL_ROOT / "agent_system_orchestrator_aso" / "__init__.py").read_text(encoding="utf-8")
+        package_versioning = (REPO_ROOT / "agent-system" / "PACKAGE_VERSIONING.md").read_text(encoding="utf-8")
+        root_readme = (REPO_ROOT / "README.md").read_text(encoding="utf-8")
+        agent_readme = (REPO_ROOT / "agent-system" / "README.md").read_text(encoding="utf-8")
+        authority_map = (
+            REPO_ROOT / "agent-system" / "02_runtime" / "CONTRACT_AUTHORITY_MAP.md"
+        ).read_text(encoding="utf-8")
         package_version = pyproject["project"]["version"]
 
-        self.assertEqual(package_version, "3.7.6")
-        self.assertIn(f'__version__ = "{package_version}"', init_file)
+        self.assertEqual(package_version, "3.7.7")
+        self.assertIn("CURRENT_PACKAGE_VERSION: 3.7.7", package_versioning)
+        self.assertIn("CURRENT_GOVERNANCE_RULESET_VERSION: 3.7.7", package_versioning)
+        self.assertIn("CURRENT_RUNTIME_SCHEMA_VERSION: 3.1.1", package_versioning)
+        self.assertIn("ARTIFACT_PACKAGE_SCHEMA_VERSION: 1.1.0", package_versioning)
+        self.assertIn("governed `3.7.7` package/governance tuple", root_readme)
+        self.assertIn("governed `3.7.7` package/governance tuple", agent_readme)
+        self.assertIn("package_version: 3.7.7", authority_map)
+        self.assertIn("governance_ruleset_version: 3.7.7", authority_map)
 
     def test_package_layout_verify_accepts_package_mode(self) -> None:
         result = subprocess.run(

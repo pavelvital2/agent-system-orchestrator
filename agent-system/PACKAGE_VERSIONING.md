@@ -19,8 +19,8 @@ RUNTIME_SCHEMA_VERSION:
 ## Active version constants
 
 ```text
-CURRENT_PACKAGE_VERSION: 3.7.6
-CURRENT_GOVERNANCE_RULESET_VERSION: 3.7.6
+CURRENT_PACKAGE_VERSION: 3.7.7
+CURRENT_GOVERNANCE_RULESET_VERSION: 3.7.7
 CURRENT_RUNTIME_SCHEMA_VERSION: 3.1.1
 ARTIFACT_PACKAGE_SCHEMA_VERSION: 1.1.0
 ```
@@ -461,6 +461,23 @@ release validation evidence. P5.6 keeps Runtime Schema `3.1.1` and Artifact
 Package Schema `1.1.0`; it does not change runtime sidecar envelopes, add
 product generation, dispatch live agents, execute checkpoints, install a
 daemon, or collect secrets.
+
+The ASO P5.6 audit hardening correction installs:
+
+```text
+CURRENT_PACKAGE_VERSION: 3.7.7
+CURRENT_GOVERNANCE_RULESET_VERSION: 3.7.7
+CURRENT_RUNTIME_SCHEMA_VERSION: 3.1.1
+ARTIFACT_PACKAGE_SCHEMA_VERSION: 1.1.0
+DESIGN_GAP_GOVERNANCE_SCHEMA_VERSION: 1.0.0
+```
+
+This patch closes audit fixes 010 through 080 for installed-resource test
+hygiene, source contamination guarding, clean install semantics, intake render
+synchronization, bootstrap candidate artifact output, status enum authority,
+CI E2E hardening, and final release validation docs. It validates ASO workflow
+readiness through real-TZ bootstrap and read-only plan-next dispatchability
+only; it does not claim full real-product Telegram bot generation.
 
 ## Version semantics
 

@@ -1661,7 +1661,6 @@ AUTHORIZED_BY: project_owner
 AUDIT_REQUIRED: yes
 STATUS: accepted
 ```
-
 ```text
 CHANGE_ID: GOV-2026-05-23-002
 CHANGE_TITLE: ASO_BOOTSTRAP_STATE_RECONCILIATION_P5_2_CORRECTION
@@ -2127,6 +2126,54 @@ AFFECTED_TRANSITIONS:
 SCHEMA_TEMPLATE_IMPACT: none; Runtime Schema 3.1.1 and Artifact Package Schema 1.1.0 are preserved.
 MIGRATION_REQUIRED: no
 MIGRATION_NOTE: CI and validation target hardening only; no active project-runtime migration, schema migration, transition redesign, package resource relaxation, or sidecar template rewrite is introduced.
+AUTHORIZED_BY: project_owner
+AUDIT_REQUIRED: yes
+STATUS: accepted
+```
+
+```text
+CHANGE_ID: GOV-2026-05-24-009
+CHANGE_TITLE: ASO_P56_AUDIT_FIX_080_RELEASE_VALIDATION_DOCS
+DATE: 2026-05-24
+PACKAGE_VERSION_BEFORE: 3.7.7
+PACKAGE_VERSION_AFTER: 3.7.7
+GOVERNANCE_RULESET_BEFORE: 3.7.7
+GOVERNANCE_RULESET_AFTER: 3.7.7
+RUNTIME_SCHEMA_BEFORE: 3.1.1
+RUNTIME_SCHEMA_AFTER: 3.1.1
+ARTIFACT_PACKAGE_SCHEMA_BEFORE: 1.1.0
+ARTIFACT_PACKAGE_SCHEMA_AFTER: 1.1.0
+CHANGE_TYPE: patch
+CHANGE_SUBTYPE: p56_audit_fix_080_release_validation_docs
+AFFECTED_FILES:
+- README.md
+- README_INSTALL.md
+- pyproject.toml
+- agent-system/README.md
+- agent-system/PACKAGE_VERSIONING.md
+- agent-system/GOVERNANCE_CHANGELOG.md
+- agent-system/02_runtime/CONTRACT_AUTHORITY_MAP.md
+- agent-system/11_release/ASO_P56_AUDIT_HARDENING_RELEASE_NOTES.md
+- agent-system/11_release/ASO_P56_AUDIT_HARDENING_VALIDATION_REPORT.md
+- agent-system/tools/aso/tests/test_packaging.py
+AFFECTED_INVARIANTS:
+- Active package/governance tuple is 3.7.7 / 3.7.7 while Runtime Schema 3.1.1 and Artifact Package Schema 1.1.0 are preserved.
+- P5.6 audit-hardening release evidence must cover tasks 010 through 080.
+- Release claims are limited to ASO workflow readiness through real-TZ bootstrap and read-only plan-next dispatchability.
+AFFECTED_TRANSITIONS:
+- audit fixes 010-070 accepted -> release validation docs -> final local validation -> orchestrator audit route.
+FIXED_AUDIT_TASKS:
+- TASK_ASO_P56_AUDIT_FIX_010_INSTALL_RESOURCE_TEST_HYGIENE
+- TASK_ASO_P56_AUDIT_FIX_020_SOURCE_CONTAMINATION_GUARD
+- TASK_ASO_P56_AUDIT_FIX_030_FRESH_INSTALL_SEMANTICS
+- TASK_ASO_P56_AUDIT_FIX_040_INTAKE_RENDER_SYNC
+- TASK_ASO_P56_AUDIT_FIX_050_BOOTSTRAP_ARTIFACT_OUTPUT
+- TASK_ASO_P56_AUDIT_FIX_060_STATUS_ENUM_CONTRACT
+- TASK_ASO_P56_AUDIT_FIX_070_CI_E2E_HARDENING
+- TASK_ASO_P56_AUDIT_FIX_080_RELEASE_VALIDATION_DOCS
+SCHEMA_TEMPLATE_IMPACT: none; Runtime Schema 3.1.1 and Artifact Package Schema 1.1.0 are preserved.
+MIGRATION_REQUIRED: no
+MIGRATION_NOTE: Release documentation and package metadata hardening only; no active project-runtime migration, schema migration, semantic TZ reader, full Telegram bot generation, live dispatch, checkpoint execution, daemon mode, or product generation is introduced.
 AUTHORIZED_BY: project_owner
 AUDIT_REQUIRED: yes
 STATUS: accepted
