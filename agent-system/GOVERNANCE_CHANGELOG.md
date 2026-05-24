@@ -1983,3 +1983,37 @@ AUTHORIZED_BY: project_owner
 AUDIT_REQUIRED: yes
 STATUS: accepted
 ```
+
+```text
+CHANGE_ID: GOV-2026-05-24-005
+CHANGE_TITLE: ASO_P56_AUDIT_FIX_040_INTAKE_RENDER_SYNC
+DATE: 2026-05-24
+PACKAGE_VERSION_BEFORE: 3.7.7
+PACKAGE_VERSION_AFTER: 3.7.7
+GOVERNANCE_RULESET_BEFORE: 3.7.7
+GOVERNANCE_RULESET_AFTER: 3.7.7
+RUNTIME_SCHEMA_BEFORE: 3.1.1
+RUNTIME_SCHEMA_AFTER: 3.1.1
+ARTIFACT_PACKAGE_SCHEMA_BEFORE: 1.1.0
+ARTIFACT_PACKAGE_SCHEMA_AFTER: 1.1.0
+CHANGE_TYPE: patch
+CHANGE_SUBTYPE: p56_audit_fix_040_intake_render_sync
+AFFECTED_FILES:
+- agent-system/tools/aso/agent_system_orchestrator_aso/aso_tool/commands/intake.py
+- agent-system/tools/aso/tests/test_intake_bootstrap.py
+- README.md
+- agent-system/README.md
+- agent-system/GOVERNANCE_CHANGELOG.md
+AFFECTED_INVARIANTS:
+- intake bootstrap must keep JSON sidecars canonical while synchronizing standard materialized Markdown views.
+- PROJECT_STATE.md, NEXT_ACTION.md, CURRENT_GATE.md, and TASK_REGISTRY.md must reflect bootstrap task id and role state after intake bootstrap --confirm-write.
+- plan-next remains read-only and must not mutate workspace files.
+AFFECTED_TRANSITIONS:
+- state init --confirm-write -> intake bootstrap --confirm-write -> materialized view synchronization -> plan-next read-only dispatchability check.
+SCHEMA_TEMPLATE_IMPACT: none; Runtime Schema 3.1.1 and Artifact Package Schema 1.1.0 are preserved.
+MIGRATION_REQUIRED: no
+MIGRATION_NOTE: Bootstrap materialized-view synchronization only; no active project-runtime migration, schema migration, transition redesign, package resource relaxation, or sidecar schema change is introduced.
+AUTHORIZED_BY: project_owner
+AUDIT_REQUIRED: yes
+STATUS: accepted
+```

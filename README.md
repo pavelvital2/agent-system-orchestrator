@@ -182,9 +182,11 @@ python3 agent-system/tools/aso/aso.py artifact accept --root /path/to/project --
 python3 agent-system/tools/aso/aso.py lifecycle terminate-agent --root /path/to/project --from-result project-runtime/results/worker/RESULT_TASK_ID_ATTEMPT_001.md --confirm-write
 ```
 
-Run `state render --confirm-write` after state initialization/materialization
-changes. After a profile-agent RESULT is recorded, the governed completion
-sequence is:
+Run `state render --confirm-write` after manual state materialization changes.
+`intake bootstrap --confirm-write` synchronizes the standard
+`PROJECT_STATE.md`, `NEXT_ACTION.md`, `CURRENT_GATE.md`, and
+`TASK_REGISTRY.md` compatibility views from JSON sidecars before returning.
+After a profile-agent RESULT is recorded, the governed completion sequence is:
 
 ```text
 RESULT_RECEIVED -> ARTIFACT_ACCEPTED -> AGENT_TERMINATED -> AUDIT_ROUTE_READY

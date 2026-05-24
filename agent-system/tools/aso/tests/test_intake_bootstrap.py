@@ -41,6 +41,41 @@ def state_init(root: Path, tz_path: str = "project-input/TZ_REAL.md") -> subproc
     )
 
 
+def assert_bootstrap_views_synced(testcase: unittest.TestCase, root: Path) -> None:
+    state_root = root / "project-runtime" / "state"
+    next_action = json.loads((state_root / "NEXT_ACTION.json").read_text(encoding="utf-8"))
+    current_gate = json.loads((state_root / "CURRENT_GATE.json").read_text(encoding="utf-8"))
+    registry = json.loads((state_root / "TASK_REGISTRY.json").read_text(encoding="utf-8"))
+
+    next_content = next_action["content"]
+    gate_content = current_gate["content"]
+    task = registry["content"]["tasks"][0]
+    task_id = next_content["task_id"]
+    target_role = next_content["target_role"]
+
+    testcase.assertEqual(gate_content["task_id"], task_id)
+    testcase.assertEqual(gate_content["required_next_role"], target_role)
+    testcase.assertEqual(task["task_id"], task_id)
+    testcase.assertEqual(task["owner_role"], target_role)
+
+    for view_name in ("PROJECT_STATE.md", "NEXT_ACTION.md", "CURRENT_GATE.md", "TASK_REGISTRY.md"):
+        view = root / "project-runtime" / view_name
+        testcase.assertTrue(view.is_file(), view_name)
+        text = view.read_text(encoding="utf-8")
+        testcase.assertIn("DERIVED VIEW.", text)
+        testcase.assertIn(f"Source: project-runtime/state/{view_name.removesuffix('.md')}.json", text)
+
+    next_view = (root / "project-runtime" / "NEXT_ACTION.md").read_text(encoding="utf-8")
+    gate_view = (root / "project-runtime" / "CURRENT_GATE.md").read_text(encoding="utf-8")
+    registry_view = (root / "project-runtime" / "TASK_REGISTRY.md").read_text(encoding="utf-8")
+    testcase.assertIn(f"TASK_ID: {task_id}", next_view)
+    testcase.assertIn(f"TARGET_ROLE: {target_role}", next_view)
+    testcase.assertIn(f"TASK_ID: {task_id}", gate_view)
+    testcase.assertIn(f"REQUIRED_NEXT_ROLE: {target_role}", gate_view)
+    testcase.assertIn(f"TASK_ID: {task_id}", registry_view)
+    testcase.assertIn(f"OWNER_ROLE: {target_role}", registry_view)
+
+
 class IntakeBootstrapCommandTests(unittest.TestCase):
     def test_bootstrap_creates_dispatchable_requirements_task(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
@@ -82,6 +117,7 @@ class IntakeBootstrapCommandTests(unittest.TestCase):
             self.assertIn("project-input/TZ.md", packet.read_text(encoding="utf-8"))
             registry = json.loads((root / "project-runtime/state/TASK_REGISTRY.json").read_text(encoding="utf-8"))
             self.assertEqual(len(registry["content"]["tasks"]), 1)
+            assert_bootstrap_views_synced(self, root)
             plan_report = json.loads(plan_path.read_text(encoding="utf-8"))
             self.assertEqual(plan_report["recommended_next_action"], "CREATE_AGENT")
             self.assertTrue(plan_report["dispatchable"])

@@ -198,6 +198,10 @@ The P5.2 bootstrap state reconciliation contract is documented in
 `agent-system/02_runtime/BOOTSTRAP_STATE_RECONCILIATION_P5_2_CONTRACT.md`.
 The P5.4 planner Dispatchability Gate contract is documented in
 `agent-system/02_runtime/PLANNER_DISPATCHABILITY_GATE_P5_4_CONTRACT.md`.
+Bootstrap intake writes canonical JSON sidecars first, then synchronizes the
+standard materialized views `PROJECT_STATE.md`, `NEXT_ACTION.md`,
+`CURRENT_GATE.md`, and `TASK_REGISTRY.md` from those sidecars using the state
+renderer before returning.
 
 The canonical installable ASO package source is:
 

@@ -91,12 +91,6 @@ def _write_sidecar(root: Path, filename: str, payload: dict[str, Any]) -> None:
     path.write_text(_json_bytes(payload), encoding="utf-8")
 
 
-def _write_materialized_project_state_if_present(root: Path, payload: dict[str, Any]) -> None:
-    path = root / "project-runtime" / "PROJECT_STATE.md"
-    if path.exists():
-        path.write_text(state_render.render_compatibility_view("PROJECT_STATE", payload), encoding="utf-8")
-
-
 def _task_entry() -> dict[str, Any]:
     return {
         "task_id": TASK_ID,
@@ -325,8 +319,15 @@ def run_bootstrap(args: argparse.Namespace) -> int:
             packet_path.write_text(_task_packet_text(tz_path), encoding="utf-8")
             for filename, payload in payloads:
                 _write_sidecar(root, filename, payload)
-                if filename == "PROJECT_STATE.json":
-                    _write_materialized_project_state_if_present(root, payload)
+            render_report, render_exit = state_render.materialize_compatibility_views(root)
+            if render_exit != state_render.EXIT_OK:
+                return _blocked(
+                    root,
+                    tz_path,
+                    f"failed to materialize bootstrap state views: {render_report.get('findings', [])}",
+                    args,
+                    EXIT_WRITE_ERROR,
+                )
         except OSError as exc:
             return _blocked(root, tz_path, f"failed to write bootstrap state: {exc}", args, EXIT_WRITE_ERROR)
 
