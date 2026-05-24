@@ -38,6 +38,17 @@ bash install.sh --python python3 --venv .venv
 powershell -ExecutionPolicy Bypass -File install.ps1 -Python python -Venv .venv
 ```
 
+For development and schema contract test runs, install the supported test extra
+inside the active environment:
+
+```text
+python3 -m pip install -e ".[test]"
+PYTHONDONTWRITEBYTECODE=1 python3 -m unittest discover -s agent-system/tools/aso/tests
+```
+
+The `test` extra includes `jsonschema>=4.22`, which is required by the schema
+and dispatchability contract tests.
+
 ## Activate
 
 ```text
@@ -83,6 +94,12 @@ The target creates a temporary virtual environment, runs `python -m pip install
 -e .`, verifies `aso --help`, `aso status --root . --mode package`, strict
 package-layout verification, and confirms the canonical import path resolves
 to `agent-system/tools/aso/agent_system_orchestrator_aso/`.
+
+To repeat only the test dependency install in an existing environment, run:
+
+```text
+make install-test
+```
 
 Initialized project workspaces use explicit workspace mode, materialized
 runtime views, and bootstrap reconciliation checks:

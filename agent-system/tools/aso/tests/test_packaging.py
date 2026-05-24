@@ -4,6 +4,7 @@ import subprocess
 import sys
 import unittest
 import tomllib
+from importlib import metadata
 from pathlib import Path
 
 
@@ -49,6 +50,17 @@ class PackagingCommandTests(unittest.TestCase):
         self.assertIn("[project.scripts]", pyproject)
         self.assertIn('aso = "agent_system_orchestrator_aso.cli:main"', pyproject)
         self.assertTrue(callable(wrapper_cli.main))
+
+    def test_test_extra_installs_schema_test_dependency(self) -> None:
+        pyproject = tomllib.loads((REPO_ROOT / "pyproject.toml").read_text(encoding="utf-8"))
+        test_extra = pyproject["project"]["optional-dependencies"]["test"]
+
+        self.assertIn("jsonschema>=4.22", test_extra)
+
+    def test_supported_test_environment_has_jsonschema(self) -> None:
+        version = metadata.version("jsonschema")
+
+        self.assertGreaterEqual(tuple(int(part) for part in version.split(".")[:2]), (4, 22))
 
     def test_canonical_package_contains_aso_implementation(self) -> None:
         bundled_tool_dir = ASO_TOOL_ROOT / "agent_system_orchestrator_aso" / "aso_tool"
@@ -103,6 +115,8 @@ class PackagingCommandTests(unittest.TestCase):
         makefile = (REPO_ROOT / "Makefile").read_text(encoding="utf-8")
 
         self.assertIn("install-smoke:", makefile)
+        self.assertIn("install-test:", makefile)
+        self.assertIn('-m pip install -e ".[test]"', makefile)
         self.assertIn("python\" -m pip install -e .", makefile)
         self.assertIn("bin/aso\" --help >/dev/null", makefile)
         self.assertIn("bin/aso\" status --root . --mode package", makefile)

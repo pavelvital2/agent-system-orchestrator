@@ -105,6 +105,15 @@ python3 -m pip install -e .
 aso --help
 ```
 
+For local test runs, install the supported test extra so schema contract tests
+have `jsonschema` available instead of relying on environment-specific
+packages:
+
+```text
+python3 -m pip install -e ".[test]"
+PYTHONDONTWRITEBYTECODE=1 python3 -m unittest discover -s agent-system/tools/aso/tests
+```
+
 Direct script execution remains supported and is the compatibility baseline:
 
 ```text

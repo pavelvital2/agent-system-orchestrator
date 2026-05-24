@@ -1,4 +1,4 @@
-.PHONY: install install-user verify-install install-smoke test smoke doctor lint source-hygiene ci
+.PHONY: install install-test install-user verify-install install-smoke test smoke doctor lint source-hygiene ci
 
 PYTHON ?= python3
 ASO_SCRIPT := agent-system/tools/aso/aso.py
@@ -7,6 +7,9 @@ ASO_BIN := $(VENV)/bin/aso
 
 install:
 	$(PYTHON) -m pip install -e .
+
+install-test:
+	$(PYTHON) -m pip install -e ".[test]"
 
 install-user:
 	PYTHONDONTWRITEBYTECODE=1 bash install.sh --python "$(PYTHON)" --venv "$(VENV)"
