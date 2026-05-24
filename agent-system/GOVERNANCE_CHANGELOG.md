@@ -2091,3 +2091,43 @@ AUTHORIZED_BY: project_owner
 AUDIT_REQUIRED: yes
 STATUS: accepted
 ```
+
+```text
+CHANGE_ID: GOV-2026-05-24-008
+CHANGE_TITLE: ASO_P56_AUDIT_FIX_070_CI_E2E_HARDENING
+DATE: 2026-05-24
+PACKAGE_VERSION_BEFORE: 3.7.7
+PACKAGE_VERSION_AFTER: 3.7.7
+GOVERNANCE_RULESET_BEFORE: 3.7.7
+GOVERNANCE_RULESET_AFTER: 3.7.7
+RUNTIME_SCHEMA_BEFORE: 3.1.1
+RUNTIME_SCHEMA_AFTER: 3.1.1
+ARTIFACT_PACKAGE_SCHEMA_BEFORE: 1.1.0
+ARTIFACT_PACKAGE_SCHEMA_AFTER: 1.1.0
+CHANGE_TYPE: patch
+CHANGE_SUBTYPE: p56_audit_fix_070_ci_e2e_hardening
+AFFECTED_FILES:
+- Makefile
+- .github/workflows/stage1-governance.yml
+- agent-system/scripts/install_aso_clean.sh
+- agent-system/scripts/source_hygiene.sh
+- agent-system/tools/aso/tests/test_real_tz_e2e_smoke.py
+- agent-system/tools/aso/tests/test_packaging.py
+- README.md
+- agent-system/README.md
+- agent-system/GOVERNANCE_CHANGELOG.md
+AFFECTED_INVARIANTS:
+- CI must invoke the same repository-local make ci target used for final local validation.
+- CI must include clean install smoke, clean [test] install smoke, real-TZ E2E smoke, and source contamination guard.
+- The clean [test] install smoke must prove supported jsonschema dependency installation from the package test extra, not from ambient global packages.
+- Source contamination guard must run after tests and install smokes.
+AFFECTED_TRANSITIONS:
+- local validation -> make ci -> clean install smoke -> clean [test] install smoke -> real-TZ E2E smoke -> source contamination guard -> diff check.
+- GitHub Actions package-governance job -> make ci with the same validation surface.
+SCHEMA_TEMPLATE_IMPACT: none; Runtime Schema 3.1.1 and Artifact Package Schema 1.1.0 are preserved.
+MIGRATION_REQUIRED: no
+MIGRATION_NOTE: CI and validation target hardening only; no active project-runtime migration, schema migration, transition redesign, package resource relaxation, or sidecar template rewrite is introduced.
+AUTHORIZED_BY: project_owner
+AUDIT_REQUIRED: yes
+STATUS: accepted
+```

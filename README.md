@@ -138,17 +138,21 @@ execution, commit, push, or publication rights. See
 `README_INSTALL.md` for activation, verification, update, and cleanup
 commands.
 
-CI also runs the reproducible clean install smoke path:
+CI also runs reproducible clean install smoke paths:
 
 ```text
 make install-smoke
+make install-test-smoke
 ```
 
-That target creates a temporary virtual environment, installs from an isolated
-source archive with `agent-system/scripts/install_aso_clean.sh`, verifies
-`aso --help`, `aso status --root . --mode package`, strict package-layout
-verification, and imports the installed `agent_system_orchestrator_aso`
-package from virtualenv `site-packages`.
+`make install-smoke` creates a temporary virtual environment, installs from an
+isolated source archive with `agent-system/scripts/install_aso_clean.sh`,
+verifies `aso --help`, `aso status --root . --mode package`, strict
+package-layout verification, and imports the installed
+`agent_system_orchestrator_aso` package from virtualenv `site-packages`.
+`make install-test-smoke` repeats the clean install with `--with-test` and
+imports `jsonschema` from that temporary virtual environment, proving the
+supported test extra rather than relying on an ambient global package.
 
 For local console-script use from this repository:
 
@@ -398,6 +402,10 @@ make test
 make smoke
 make doctor
 make lint
+make install-smoke
+make install-test-smoke
+make e2e-real-tz-smoke
+make source-contamination-guard
 make ci
 ```
 
@@ -405,10 +413,20 @@ The smoke target includes CLI help, package status, strict package lint,
 strict package doctor, read-only package-layout verification, valid
 design/context-pack fixtures, rule validation, state sidecar verification,
 dry-run next-action planning, static dashboard rendering to `/tmp`,
-and checkpoint preflight. The CI target runs the local test, smoke, doctor,
-lint, and whitespace diff checks. CI should use the same local commands and
-must not require secrets, network credentials, real remotes, publishing
-permissions, or live automation authority.
+and checkpoint preflight. The CI target runs local test, smoke, doctor, lint,
+clean install smoke, clean `[test]` install smoke, real-TZ E2E smoke, source
+contamination guard, and whitespace diff checks. CI should use the same local
+`make ci` command and must not require secrets, network credentials, real
+remotes, publishing permissions, or live automation authority.
+
+Final local and CI validation commands for this package are:
+
+```text
+PYTHONDONTWRITEBYTECODE=1 make install-smoke
+PYTHONDONTWRITEBYTECODE=1 make install-test-smoke
+PYTHONDONTWRITEBYTECODE=1 make e2e-real-tz-smoke
+PYTHONDONTWRITEBYTECODE=1 make ci
+```
 
 `make install-user` runs `install.sh` against `.venv`. `make verify-install`
 uses the installed `.venv/bin/aso` command for package status, strict lint,

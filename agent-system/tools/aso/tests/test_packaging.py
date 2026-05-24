@@ -139,15 +139,24 @@ class PackagingCommandTests(unittest.TestCase):
         makefile = (REPO_ROOT / "Makefile").read_text(encoding="utf-8")
 
         self.assertIn("install-smoke:", makefile)
+        self.assertIn("install-test-smoke:", makefile)
         self.assertIn("install-test:", makefile)
         self.assertIn('-m pip install -e ".[test]"', makefile)
         self.assertIn("agent-system/scripts/install_aso_clean.sh --source .", makefile)
+        self.assertIn("--with-test", makefile)
+        self.assertIn("import jsonschema", makefile)
+        self.assertIn("md.version('jsonschema')", makefile)
         self.assertIn("bin/aso\" --help >/dev/null", makefile)
         self.assertIn("bin/aso\" status --root . --mode package", makefile)
         self.assertIn("bin/aso\" package-layout verify --root . --mode package --strict", makefile)
         self.assertIn("agent_system_orchestrator_aso.cli", makefile)
         self.assertIn("/site-packages/agent_system_orchestrator_aso/__init__.py", makefile)
+        self.assertIn("e2e-real-tz-smoke:", makefile)
+        self.assertIn("source-contamination-guard:", makefile)
         self.assertIn("ci: test smoke doctor lint install-smoke", makefile)
+        self.assertIn("$(MAKE) install-test-smoke", makefile)
+        self.assertIn("$(MAKE) e2e-real-tz-smoke", makefile)
+        self.assertIn("$(MAKE) source-contamination-guard", makefile)
 
 
 if __name__ == "__main__":

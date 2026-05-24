@@ -1,4 +1,4 @@
-.PHONY: install install-test install-user verify-install install-smoke e2e-real-tz-smoke test smoke doctor lint source-contamination-guard source-hygiene ci
+.PHONY: install install-test install-user verify-install install-smoke install-test-smoke e2e-real-tz-smoke test smoke doctor lint source-contamination-guard source-hygiene ci
 
 PYTHON ?= python3
 ASO_SCRIPT := agent-system/tools/aso/aso.py
@@ -32,6 +32,13 @@ install-smoke:
 	PYTHONDONTWRITEBYTECODE=1 "$$tmp_dir/venv/bin/aso" status --root . --mode package; \
 	PYTHONDONTWRITEBYTECODE=1 "$$tmp_dir/venv/bin/aso" package-layout verify --root . --mode package --strict; \
 	PYTHONDONTWRITEBYTECODE=1 "$$tmp_dir/venv/bin/python" -c "import importlib.metadata as md, json, pathlib; import agent_system_orchestrator_aso, agent_system_orchestrator_aso.cli as cli; dist = md.distribution('agent-system-orchestrator'); direct_url = json.loads(dist.read_text('direct_url.json') or '{}'); source = pathlib.Path(agent_system_orchestrator_aso.__file__).resolve().as_posix(); assert direct_url.get('dir_info', {}).get('editable') is not True, direct_url; assert '/site-packages/agent_system_orchestrator_aso/__init__.py' in source, source; assert callable(cli.main), cli.main; print(source)"
+
+install-test-smoke:
+	tmp_dir="$$(mktemp -d)"; \
+	trap 'rm -rf "$$tmp_dir"' EXIT; \
+	PYTHONDONTWRITEBYTECODE=1 bash agent-system/scripts/install_aso_clean.sh --source . --venv "$$tmp_dir/venv" --python "$(PYTHON)" --with-test; \
+	PYTHONDONTWRITEBYTECODE=1 "$$tmp_dir/venv/bin/aso" --help >/dev/null; \
+	PYTHONDONTWRITEBYTECODE=1 "$$tmp_dir/venv/bin/python" -c "import importlib.metadata as md; import jsonschema; assert md.version('jsonschema'); assert jsonschema.__name__ == 'jsonschema'; print(md.version('jsonschema'))"
 
 e2e-real-tz-smoke:
 	PYTHONDONTWRITEBYTECODE=1 $(PYTHON) -m unittest agent-system/tools/aso/tests/test_real_tz_e2e_smoke.py -v
@@ -72,5 +79,7 @@ source-hygiene:
 	PYTHONDONTWRITEBYTECODE=1 bash agent-system/scripts/source_hygiene.sh
 
 ci: test smoke doctor lint install-smoke
+	$(MAKE) install-test-smoke
+	$(MAKE) e2e-real-tz-smoke
 	$(MAKE) source-contamination-guard
 	git diff --check

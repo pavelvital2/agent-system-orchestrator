@@ -396,6 +396,10 @@ make test
 make smoke
 make doctor
 make lint
+make install-smoke
+make install-test-smoke
+make e2e-real-tz-smoke
+make source-contamination-guard
 make ci
 ```
 
@@ -404,10 +408,25 @@ make ci
 doctor, read-only package-layout verification, valid design/context-pack
 fixtures, rule validation, state sidecar verification, dry-run next-action
 planning, static dashboard rendering to `/tmp`, checkpoint preflight, and the
-local Stage 3 diagnostics. `make ci` runs `test`, `smoke`, `doctor`, `lint`,
-and `git diff --check`. The smoke and CI surfaces are local and diagnostic:
-they must not require secrets, network credentials, real remotes, publishing
-permissions, live service access, or live automation authority.
+local Stage 3 diagnostics. `make install-smoke` performs a clean isolated
+install from a source archive. `make install-test-smoke` repeats that clean
+install with the supported `[test]` extra and imports `jsonschema` from the
+temporary virtual environment instead of relying on an ambient global package.
+`make ci` runs `test`, `smoke`, `doctor`, `lint`, clean install smoke, clean
+`[test]` install smoke, real-TZ E2E smoke, source contamination guard, and
+`git diff --check`. The GitHub Actions workflow runs the same `make ci`
+target. The smoke and CI surfaces are local and diagnostic: they must not
+require secrets, network credentials, real remotes, publishing permissions,
+live service access, or live automation authority.
+
+Final local and CI validation commands for this package are:
+
+```text
+PYTHONDONTWRITEBYTECODE=1 make install-smoke
+PYTHONDONTWRITEBYTECODE=1 make install-test-smoke
+PYTHONDONTWRITEBYTECODE=1 make e2e-real-tz-smoke
+PYTHONDONTWRITEBYTECODE=1 make ci
+```
 
 `make install-user` runs `install.sh` against `.venv`. `make verify-install`
 uses the installed `.venv/bin/aso` command for package status, strict lint,
