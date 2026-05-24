@@ -1072,6 +1072,7 @@ def _initialize_runtime_state(
         root=root,
         project_name=project_name,
         project_slug=project_slug,
+        tz_path=state_init.CANONICAL_TZ_PATH,
         profile=profile,
         repo_url=repo_url or state_init.NONE,
         branch=default_branch,

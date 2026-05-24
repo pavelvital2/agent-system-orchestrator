@@ -41,7 +41,7 @@ REQUIRED_MAKEFILE_COMMANDS = (
     "dashboard --root agent-system/tests/fixtures/state/valid_workspace --out /tmp/aso-stage2-dashboard-smoke.html",
     "checkpoint-preflight --root . --mode package --strict",
     "./agent-system/scripts/run_governance_smoke_tests.sh",
-    "python\" -m pip install -e .",
+    "install_aso_clean.sh --source . --venv",
     "bin/aso\" --help >/dev/null",
     "bin/aso\" status --root . --mode package",
     "bin/aso\" package-layout verify --root . --mode package --strict",
