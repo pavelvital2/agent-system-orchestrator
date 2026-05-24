@@ -8,6 +8,14 @@ from pathlib import Path
 REPO_ROOT = Path(__file__).resolve().parents[4]
 WORKFLOW = REPO_ROOT / ".github" / "workflows" / "stage1-governance.yml"
 MAKEFILE = REPO_ROOT / "Makefile"
+TASK_PACKET_TEMPLATE = REPO_ROOT / "agent-system" / "03_templates" / "TASK_PACKET_TEMPLATE.md"
+BOOTSTRAP_TASK_PACKET_TEMPLATE = REPO_ROOT / "agent-system" / "03_templates" / "BOOTSTRAP_TASK_PACKET_TEMPLATE.md"
+HANDOFF_TEMPLATE = REPO_ROOT / "agent-system" / "03_templates" / "ORCHESTRATOR_TASK_HANDOFF_TEMPLATE.md"
+TASK_PACKET_SCHEMA_RULES = REPO_ROOT / "agent-system" / "09_validators" / "TASK_PACKET_SCHEMA_VALIDATION_RULES.md"
+TASK_PACKET_SCHEMA = REPO_ROOT / "agent-system" / "09_validators" / "schemas" / "task_packet.schema.json"
+REASONING_RULES = REPO_ROOT / "agent-system" / "09_validators" / "REASONING_LEVEL_VALIDATION_RULES.md"
+LIFECYCLE_DOC = REPO_ROOT / "agent-system" / "02_runtime" / "PROFILE_AGENT_LIFECYCLE.md"
+CONVEYOR_DOC = REPO_ROOT / "agent-system" / "02_runtime" / "ORCHESTRATOR_CONVEYOR_PROTOCOL.md"
 
 
 FORBIDDEN_WORKFLOW_PATTERNS = (
@@ -81,6 +89,40 @@ class Stage2CIGovernanceTests(unittest.TestCase):
         for command in REQUIRED_MAKEFILE_COMMANDS:
             with self.subTest(command=command):
                 self.assertIn(command, makefile)
+
+    def test_agent_governance_fields_stay_in_active_templates_and_rules(self) -> None:
+        required_fields = (
+            "TASK_COMPLEXITY",
+            "REASONING_LEVEL_REQUIRED",
+            "AGENT_LIFECYCLE_POLICY",
+            "one_agent_one_task_delete_after_result",
+        )
+        required_docs = (
+            TASK_PACKET_TEMPLATE,
+            BOOTSTRAP_TASK_PACKET_TEMPLATE,
+            HANDOFF_TEMPLATE,
+            TASK_PACKET_SCHEMA_RULES,
+            TASK_PACKET_SCHEMA,
+        )
+
+        for path in required_docs:
+            text = path.read_text(encoding="utf-8")
+            for field in required_fields:
+                with self.subTest(path=path.name, field=field):
+                    self.assertIn(field, text)
+
+        reasoning_rules = REASONING_RULES.read_text(encoding="utf-8")
+        self.assertRegex(reasoning_rules, r"tester(?:.|\n)*high")
+        self.assertRegex(reasoning_rules, r"auditor(?:.|\n)*xhigh")
+        self.assertIn("above medium", reasoning_rules)
+
+        lifecycle_doc = LIFECYCLE_DOC.read_text(encoding="utf-8")
+        self.assertIn("one agent = one task = one RESULT", lifecycle_doc)
+        self.assertRegex(lifecycle_doc, r"deleted(?:.|\n)*rendered(?:.|\n)*inaccessible")
+
+        conveyor_doc = CONVEYOR_DOC.read_text(encoding="utf-8")
+        self.assertIn("orchestrator does not write", conveyor_doc)
+        self.assertRegex(conveyor_doc, r"does not check(?:.|\n)*changes semantically")
 
 
 if __name__ == "__main__":

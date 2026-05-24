@@ -12,8 +12,9 @@ agent-system/02_runtime/PROFILE_AGENT_LIFECYCLE.md
 
 That policy is authoritative for the one agent = one task = one RESULT rule,
 reuse prohibition, required lifecycle states, termination event, RESULT
-lifecycle fields, and the distinction between logical termination and physical
-deletion.
+lifecycle fields, `AGENT_LIFECYCLE_POLICY:
+one_agent_one_task_delete_after_result`, and the distinction between mandatory
+logical context deletion and environment-specific physical deletion.
 
 ## Создание агента
 
@@ -50,6 +51,7 @@ execute a checkpoint, or run live daemon behavior.
 После этого:
 
 - его контекст не используется повторно;
+- raw context is deleted or rendered inaccessible for future work;
 - новая задача не добавляется в тот же агентский контекст;
 - для новой задачи создаётся новый агент.
 - RESULT должен быть сохранён или получить deterministic `RESULT_REF`;

@@ -35,6 +35,11 @@ replace project designer reasoning, generate product questions from TZ,
 install product-intake code or a product-intake engine, run a daemon, dispatch
 live agents, execute checkpoints, generate products, collect secrets, or run
 external workers.
+The orchestrator does not write profile-agent changes and does not check
+changes semantically; it routes one fresh agent per bounded task, requires
+`TASK_COMPLEXITY`, `REASONING_LEVEL_REQUIRED`, and
+`AGENT_LIFECYCLE_POLICY`, and enforces agent termination/context deletion
+after RESULT before any next task route.
 
 The Runtime Schema sidecar contract is documented in
 `agent-system/02_runtime/RUNTIME_STATE_P2_CONTRACT.md` and packaged as

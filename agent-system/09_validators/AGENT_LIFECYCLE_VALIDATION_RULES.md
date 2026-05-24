@@ -22,6 +22,8 @@ Validators apply these rules:
 ```text
 before_dispatch:
   reject dispatch to an existing profile-agent instance
+  require task packet AGENT_LIFECYCLE_POLICY:
+    one_agent_one_task_delete_after_result
 
 after_agent_result:
   validate RESULT lifecycle fields
@@ -38,6 +40,11 @@ before_next_task_dispatch:
 ### AGENT_LIFECYCLE_001: one agent, one task
 
 Each `AGENT_INSTANCE_ID` must be associated with exactly one `TASK_ID`.
+Every dispatchable task packet must declare:
+
+```text
+AGENT_LIFECYCLE_POLICY: one_agent_one_task_delete_after_result
+```
 
 Invalid:
 
@@ -131,6 +138,7 @@ Validators must require logical termination evidence:
 ```text
 agent_instance_terminated event exists
 agent is not sent another task
+raw agent context is deleted or treated as deleted for future work
 standardized RESULT remains the authoritative output
 ```
 

@@ -88,6 +88,24 @@ bootstrap | normal | research_dependency | design_continuation | task_continuati
 <requirements_analyst | solution_architect | designer | developer | auditor | tester | technical_writer | devops_setup_engineer | release_manager | UNKNOWN>
 ```
 
+## PROPOSED_TASK_COMPLEXITY
+
+```text
+low | medium | high | xhigh | UNKNOWN
+```
+
+## PROPOSED_REASONING_LEVEL_REQUIRED
+
+```text
+low | medium | high | xhigh | UNKNOWN
+```
+
+## PROPOSED_AGENT_LIFECYCLE_POLICY
+
+```text
+one_agent_one_task_delete_after_result | UNKNOWN
+```
+
 ---
 
 ## PROPOSED_SCOPE

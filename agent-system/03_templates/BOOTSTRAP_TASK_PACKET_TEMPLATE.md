@@ -50,6 +50,12 @@ active
 bootstrap
 ```
 
+## TASK_COMPLEXITY
+
+```text
+xhigh
+```
+
 ## SUPERSEDES
 
 ```text
@@ -113,11 +119,23 @@ Rules:
   for design routing under `agent-system/07_lifecycle/BOOTSTRAP_STAGE.md`.
 - `designer` is a deprecated compatibility alias for old bootstrap packets.
 
+## AGENT_LIFECYCLE_POLICY
+
+```text
+one_agent_one_task_delete_after_result
+```
+
 ## REASONING_LEVEL
 
 ```text
 VALUE: xhigh
 OVERRIDE_REASON: NONE
+```
+
+## REASONING_LEVEL_REQUIRED
+
+```text
+xhigh
 ```
 
 ## DEPENDENCIES

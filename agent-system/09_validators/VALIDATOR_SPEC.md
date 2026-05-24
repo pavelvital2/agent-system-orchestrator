@@ -144,7 +144,9 @@ before_dispatch:
   runtime consistency
   task packet validity
   transition validity
+  one agent = one task lifecycle policy validity
   reasoning level floor validity
+  task complexity and REASONING_LEVEL_REQUIRED validity
   product capability gate validity when product readiness is claimed
   research/requester return validity when applicable
   design/gap audit evidence validity before owner question presentation
@@ -180,11 +182,17 @@ before_git_checkpoint:
 
 Reasoning-level validation is auditable evidence. Validators must check the
 dispatch record, handoff, spawn log, or orchestrator transcript for
-`REASONING_LEVEL_REQUIRED`, `REASONING_LEVEL_RESOLVED`,
-`RUNNER_CONFIG_EVIDENCE`, `REASONING_LEVEL_COMPLIANCE`, and `SPAWN_LOG_REF` or
-`HANDOFF_LOG_REF`. A requested or configured runner level below the required
-floor must fail or block the audit according to
+`TASK_COMPLEXITY`, `REASONING_LEVEL_REQUIRED`,
+`REASONING_LEVEL_RESOLVED`, `RUNNER_CONFIG_EVIDENCE`,
+`REASONING_LEVEL_COMPLIANCE`, and `SPAWN_LOG_REF` or `HANDOFF_LOG_REF`. A
+requested or configured runner level below the required floor must fail or
+block the audit according to
 `REASONING_LEVEL_VALIDATION_RULES.md`.
+
+Task packet validation must also require
+`AGENT_LIFECYCLE_POLICY: one_agent_one_task_delete_after_result`; after RESULT,
+the profile-agent context must be terminated and deleted or rendered
+inaccessible before any next profile-agent task route.
 
 ## Role enum validation baseline
 

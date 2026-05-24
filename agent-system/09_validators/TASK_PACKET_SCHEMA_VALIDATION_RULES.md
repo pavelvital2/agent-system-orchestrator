@@ -153,6 +153,7 @@ substance. The validator checks presence and non-empty content:
 TASK_ID
 TASK_STATUS
 TASK_KIND
+TASK_COMPLEXITY
 SUPERSEDES
 SUPERSEDED_BY
 CORRECTION_OF
@@ -162,7 +163,9 @@ FAILURE_TYPE
 TASK_TITLE
 TASK_TYPE
 TARGET_ROLE
+AGENT_LIFECYCLE_POLICY
 REASONING_LEVEL
+REASONING_LEVEL_REQUIRED
 DEPENDENCIES
 DEPENDENCY_STATUS
 REQUESTED_BY_ROLE
@@ -220,6 +223,9 @@ REQUESTED_BY_ROLE
 PURPOSE
 PROPOSED_TASK_KIND
 PROPOSED_TARGET_ROLE
+PROPOSED_TASK_COMPLEXITY
+PROPOSED_REASONING_LEVEL_REQUIRED
+PROPOSED_AGENT_LIFECYCLE_POLICY
 PROPOSED_SCOPE
 OPEN_QUESTIONS
 DISPATCH_STATUS
@@ -245,8 +251,13 @@ Dispatch mode must verify:
 5. `TASK_STATUS` is `active`;
 6. `TASK_TYPE` and `TARGET_ROLE` match after role alias normalization for
    profile execution tasks;
-7. `REQUIRED_DOCS` does not include `project-archive/` or deprecated documents;
-8. the file path is valid under filesystem governance.
+7. `TASK_COMPLEXITY`, `REASONING_LEVEL`, and `REASONING_LEVEL_REQUIRED` are
+   present and compatible with
+   `REASONING_LEVEL_VALIDATION_RULES.md`;
+8. `AGENT_LIFECYCLE_POLICY` is
+   `one_agent_one_task_delete_after_result`;
+9. `REQUIRED_DOCS` does not include `project-archive/` or deprecated documents;
+10. the file path is valid under filesystem governance.
 
 If any dispatch validation fails, `create_agent` is forbidden and the
 orchestrator must route to governed correction with:

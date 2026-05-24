@@ -103,6 +103,27 @@ Rules:
 
 ---
 
+## TASK_COMPLEXITY
+
+```text
+low | medium | high | xhigh
+```
+
+Rules:
+
+- `TASK_COMPLEXITY` classifies task difficulty and governance risk before
+  dispatch;
+- complexity is independent from role assignment and must not add a second
+  task or role;
+- lifecycle/state/transition changes, security/secrets policy, final
+  acceptance, cross-link validation, audit tasks, and corrections after failed
+  audit are at least `high`;
+- requirements analysis and architecture/design tasks are `xhigh` unless a
+  narrower governed task packet explicitly proves a lower floor;
+- `TASK_COMPLEXITY` participates in `REASONING_LEVEL_REQUIRED` resolution.
+
+---
+
 ## SUPERSEDES
 
 ```text
@@ -211,6 +232,27 @@ Rules:
 
 ---
 
+## AGENT_LIFECYCLE_POLICY
+
+```text
+one_agent_one_task_delete_after_result
+```
+
+Rules:
+
+- every dispatchable task packet must use this exact lifecycle policy;
+- one agent = one task = one RESULT;
+- after RESULT, the orchestrator must record the required lifecycle events,
+  terminate the profile-agent instance, and delete or render inaccessible the
+  raw agent context for future work;
+- if physical context deletion is unavailable, logical context deletion is
+  still mandatory: no further messages, no reuse, and no downstream source of
+  truth from raw agent context;
+- correction, retry, audit, and next-task work require a fresh task packet
+  where applicable and a fresh agent context.
+
+---
+
 ## REASONING_LEVEL
 
 ```text
@@ -238,6 +280,26 @@ Gate-required floors are defined in:
 ```text
 agent-system/09_validators/REASONING_LEVEL_VALIDATION_RULES.md
 ```
+
+---
+
+## REASONING_LEVEL_REQUIRED
+
+```text
+low | medium | high | xhigh
+```
+
+Rules:
+
+- `REASONING_LEVEL_REQUIRED` is the minimum runner reasoning level permitted
+  for dispatch;
+- it must be the highest applicable level among role default, task packet
+  `REASONING_LEVEL.VALUE`, gate-required floor, and `TASK_COMPLEXITY`;
+- tester tasks require at least `high`;
+- auditor tasks require `xhigh`;
+- requested or configured runner reasoning below `REASONING_LEVEL_REQUIRED`
+  makes dispatch non-compliant, invalidates the worker RESULT, and blocks
+  auditor pass, checkpoint, commit, and push.
 
 ---
 

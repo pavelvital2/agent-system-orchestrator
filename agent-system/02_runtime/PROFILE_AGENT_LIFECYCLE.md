@@ -9,11 +9,18 @@ profile-agent instance.
 
 ```text
 one agent = one task = one RESULT
+AGENT_LIFECYCLE_POLICY: one_agent_one_task_delete_after_result
 ```
 
 Reuse is forbidden. After a profile agent returns its RESULT, the orchestrator
 must close or terminate that profile-agent instance and must not send it any
 new task, correction, audit follow-up, or "also fix" request.
+
+After RESULT, the raw profile-agent context must be deleted or rendered
+inaccessible for future work. If the runner or chat environment has no
+physical deletion primitive, the orchestrator must record logical context
+deletion through the termination event: no further messages, no reuse, and no
+downstream source-of-truth status for raw context.
 
 This policy applies to every profile execution role, including auditor agents.
 Orchestrator control flow is not a profile-agent task and must not be used to
@@ -123,6 +130,7 @@ mandatory and means:
 
 - the agent receives no further messages;
 - the agent is not reused for any next task;
+- the raw agent context is deleted or treated as deleted for future work;
 - the agent context is not treated as source of truth;
 - only the standardized RESULT and lifecycle events remain authoritative;
 - any correction, retry, audit, or next task starts with a fresh profile-agent

@@ -17,6 +17,11 @@
 обязательный audit. `TARGET_ROLE: orchestrator` не даёт права выполнять эту
 работу напрямую.
 
+The orchestrator does not write profile-agent changes and does not check
+changes semantically. It may verify formal fields, run deterministic
+validators, preserve evidence, and route tester/auditor agents, but it must
+not act as implementer, tester, auditor, or documentation author.
+
 ---
 
 ## Стартовые входные данные

@@ -9,30 +9,37 @@ This document defines immutable governance rules, authority precedence, conflict
 These rules cannot be overridden by task packet, NEXT_ACTION, handoff, or agent RESULT.
 
 1. One agent receives exactly one bounded task.
-2. A completed agent context is not reused.
+2. A completed agent context is not reused; after RESULT, the profile-agent
+   context is terminated and deleted or rendered inaccessible for future work.
 3. Runtime state comes from filesystem files, not conversational memory.
 4. `NEXT_ACTION.md` contains the single next permitted action.
 5. Orchestrator does not design, implement, audit, test, document, or answer GAPs.
-6. Profile agents do not modify `project-runtime/`.
-7. Ordinary project agents do not modify `agent-system/`.
-8. Task packets must be inside `ACTIVE_DOC_ROOT` unless explicitly governed as system/bootstrap documents.
-9. Deprecated/archive documents are not active source-of-truth.
-10. solution_architect and developer pass require auditor review.
-11. Profile agents cannot declare project completion.
-12. Completion requires orchestrator finalization.
-13. Active GAPs/blockers stop dependent dispatch.
-14. Runtime/governance violations stop dispatch until correction.
-15. Workspace identity validation is mandatory before runtime initialization,
+6. The orchestrator does not write code, tests, schemas, validators, task
+   packets, package docs, project docs, release notes, or profile artifacts as
+   profile-agent work.
+7. The orchestrator does not check changes semantically; it may only run
+   deterministic validators, verify formal fields, preserve evidence, and
+   route independent tester or auditor agents.
+8. Profile agents do not modify `project-runtime/`.
+9. Ordinary project agents do not modify `agent-system/`.
+10. Task packets must be inside `ACTIVE_DOC_ROOT` unless explicitly governed as system/bootstrap documents.
+11. Deprecated/archive documents are not active source-of-truth.
+12. solution_architect and developer pass require auditor review.
+13. Profile agents cannot declare project completion.
+14. Completion requires orchestrator finalization.
+15. Active GAPs/blockers stop dependent dispatch.
+16. Runtime/governance violations stop dispatch until correction.
+17. Workspace identity validation is mandatory before runtime initialization,
     profile-agent dispatch, checkpoint, commit, or push.
-16. Repository identity is compared by canonical `EXPECTED_GIT_REMOTE` and
+18. Repository identity is compared by canonical `EXPECTED_GIT_REMOTE` and
     `ACTUAL_GIT_REMOTE`, not by raw remote strings alone.
-17. Push is forbidden unless an accepted repository lock sets
+19. Push is forbidden unless an accepted repository lock sets
     `PUSH_ALLOWED: true` for the current workspace type, canonical repository
     identity, and branch.
-18. Critical governance/runtime baseline paths must be tracked before first
+20. Critical governance/runtime baseline paths must be tracked before first
     profile-agent dispatch and first accepted checkpoint unless an explicit
     owner policy records the allowed exception.
-19. Bootstrap cannot be accepted without a valid downstream task packet,
+21. Bootstrap cannot be accepted without a valid downstream task packet,
     explicit GAP, explicit BLOCKED route, or explicit wait_for_owner route.
 
 ## Authority precedence

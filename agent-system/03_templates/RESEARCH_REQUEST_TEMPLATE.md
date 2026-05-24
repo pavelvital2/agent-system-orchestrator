@@ -34,6 +34,12 @@ active | completed | superseded | deprecated
 research_dependency
 ```
 
+## TASK_COMPLEXITY
+
+```text
+high | xhigh
+```
+
 ## TASK_TYPE
 
 ```text
@@ -46,6 +52,12 @@ requirements_analyst | solution_architect | designer | developer | auditor | tes
 <single profile execution role that will perform the research>
 ```
 
+## AGENT_LIFECYCLE_POLICY
+
+```text
+one_agent_one_task_delete_after_result
+```
+
 ## REASONING_LEVEL
 
 ```text
@@ -54,6 +66,15 @@ OVERRIDE_REASON: NONE
 ```
 
 Research dependency tasks must not use `low`.
+
+## REASONING_LEVEL_REQUIRED
+
+```text
+high | xhigh
+```
+
+`REASONING_LEVEL_REQUIRED` must be at least the highest applicable role
+default, research gate floor, and `TASK_COMPLEXITY`.
 
 ## REQUESTED_BY_ROLE
 

@@ -10,6 +10,12 @@ REASONING_LEVEL:
 VALUE: low | medium | high | xhigh
 OVERRIDE_REASON: <reason | NONE>
 
+TASK_COMPLEXITY:
+low | medium | high | xhigh
+
+AGENT_LIFECYCLE_POLICY:
+one_agent_one_task_delete_after_result
+
 DISPATCH_REASONING_RECORD:
 TARGET_ROLE: <same as ROLE>
 DISPATCH_TASK_ID: <TASK_ID>
@@ -50,6 +56,8 @@ OUT:
 
 MANDATORY_RULES:
 - Work on exactly one task.
+- One agent = one task = one RESULT; after RESULT the agent context is
+  terminated and deleted or rendered inaccessible for future work.
 - Do not change files outside scope.
 - Do not infer missing business requirements.
 - If there is a gap, return STATUS: gap.
@@ -64,7 +72,9 @@ MANDATORY_RULES:
 - Follow the assigned REASONING_LEVEL only when it satisfies role default and gate-required floor governance.
 - The handoff must record the resolved required reasoning level and runner
   configuration evidence as soon as the spawn configuration is known.
-- REASONING_LEVEL_REQUIRED must be the highest applicable level among role default, task packet REASONING_LEVEL, and gate-required floor.
+- REASONING_LEVEL_REQUIRED must be the highest applicable level among role default, task packet REASONING_LEVEL, task packet TASK_COMPLEXITY, and gate-required floor.
+- Tester handoffs require REASONING_LEVEL_REQUIRED at least high.
+- Auditor handoffs require REASONING_LEVEL_REQUIRED xhigh.
 - If the requested or configured runner reasoning level is below
   REASONING_LEVEL_REQUIRED, dispatch is non_compliant and the worker RESULT is
   invalid.

@@ -46,6 +46,29 @@ release_manager: high
 Compatibility mappings are role-default policy metadata. They do not add
 allowed `REASONING_LEVEL.VALUE` strings.
 
+Tester and auditor assignments must stay above medium. The tester floor is
+`high`; the auditor floor is `xhigh`.
+
+## Complexity floors
+
+Every dispatchable task packet must include `TASK_COMPLEXITY` and
+`REASONING_LEVEL_REQUIRED`.
+
+```yaml
+TASK_COMPLEXITY_FLOORS:
+  low: low
+  medium: medium
+  high: high
+  xhigh: xhigh
+```
+
+Complexity floors are minimums. Lifecycle/state/transition work,
+security/secrets policy, audit, correction after failed audit, final
+acceptance, and cross-link validation are at least `high`. Requirements
+analysis and architecture/design work are `xhigh` unless an explicit governed
+task packet proves a narrower lower floor without violating role defaults or
+gate floors.
+
 ## Gate-required floors
 
 ```yaml
@@ -97,6 +120,7 @@ Before spawning any profile agent, the orchestrator must resolve:
 ```text
 role_default_reasoning_level
 task_packet_reasoning_level
+task_complexity_floor
 gate_required_floor
 final_required_dispatch_level
 requested_or_configured_reasoning_level
@@ -104,7 +128,8 @@ runner_config_evidence
 ```
 
 `final_required_dispatch_level` is the highest applicable level among role
-default, task packet `REASONING_LEVEL`, and gate-required floor, using:
+default, task packet `REASONING_LEVEL`, task packet `TASK_COMPLEXITY`, and
+gate-required floor, using:
 
 ```text
 low < medium < high < xhigh
@@ -116,6 +141,7 @@ The handoff, spawn log, or orchestrator transcript must record:
 TARGET_ROLE
 TASK_ID
 TASK_PACKET
+TASK_COMPLEXITY
 REASONING_LEVEL_REQUIRED
 REASONING_LEVEL_SOURCE
 REASONING_LEVEL_RESOLVED
@@ -142,6 +168,10 @@ is invalid dispatch:
 - post-audit checkpoint is forbidden;
 - commit/push are forbidden;
 - routing must enter governed correction.
+
+The task packet field `REASONING_LEVEL_REQUIRED` must match the resolved
+minimum before dispatch. A mismatch is invalid dispatch unless the packet is
+first corrected through governed task-packet update and audit.
 
 ## Auditor compliance check
 

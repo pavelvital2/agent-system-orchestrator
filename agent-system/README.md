@@ -28,6 +28,11 @@ Profile-agent reuse is forbidden. The mandatory one agent = one task = one
 RESULT policy, lifecycle states, required termination event, and logical
 termination rules are documented in
 [PROFILE_AGENT_LIFECYCLE.md](02_runtime/PROFILE_AGENT_LIFECYCLE.md).
+After RESULT, the profile-agent context must be terminated and deleted or
+rendered inaccessible for future work; correction, audit, and next-task
+routing always use a fresh agent context. Dispatchable task packets must carry
+`TASK_COMPLEXITY`, `REASONING_LEVEL_REQUIRED`, and
+`AGENT_LIFECYCLE_POLICY`.
 
 The filesystem is the source of truth. Runtime state, gates, registries, logs, task packets, results, audit results, handoffs, and accepted artifacts are represented as files governed by the package rules.
 The top-level taxonomy is documented in
@@ -178,6 +183,9 @@ state; it does not semantically read TZ, replace project designer reasoning,
 generate product questions from TZ, install product-intake code or a
 product-intake engine, run a daemon, dispatch live agents, execute
 checkpoints, generate products, collect secrets, or run external workers.
+The orchestrator does not write profile-agent changes and does not check
+changes semantically; semantic verification is routed to tester and auditor
+agents with reasoning floors above medium.
 
 The Runtime Schema `3.1.1` contract is documented in
 `agent-system/02_runtime/RUNTIME_STATE_P2_CONTRACT.md` and packaged as

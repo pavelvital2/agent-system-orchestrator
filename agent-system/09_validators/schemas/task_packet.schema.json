@@ -9,6 +9,7 @@
     "TASK_ID",
     "TASK_STATUS",
     "TASK_KIND",
+    "TASK_COMPLEXITY",
     "SUPERSEDES",
     "SUPERSEDED_BY",
     "CORRECTION_OF",
@@ -18,7 +19,9 @@
     "TASK_TITLE",
     "TASK_TYPE",
     "TARGET_ROLE",
+    "AGENT_LIFECYCLE_POLICY",
     "REASONING_LEVEL",
+    "REASONING_LEVEL_REQUIRED",
     "DEPENDENCIES",
     "DEPENDENCY_STATUS",
     "REQUESTED_BY_ROLE",
@@ -70,6 +73,7 @@
       "type": "string",
       "enum": ["bootstrap", "normal", "research_dependency", "design_continuation", "task_continuation", "correction", "audit", "testing", "setup", "launch", "handover"]
     },
+    "TASK_COMPLEXITY": { "type": "string", "enum": ["low", "medium", "high", "xhigh"] },
     "SUPERSEDES": { "type": "string" },
     "SUPERSEDED_BY": { "type": "string" },
     "CORRECTION_OF": { "type": "string" },
@@ -88,6 +92,7 @@
       "type": "string",
       "enum": ["requirements_analyst", "solution_architect", "designer", "developer", "auditor", "tester", "technical_writer", "devops_setup_engineer", "release_manager"]
     },
+    "AGENT_LIFECYCLE_POLICY": { "type": "string", "const": "one_agent_one_task_delete_after_result" },
     "REASONING_LEVEL": {
       "type": "object",
       "additionalProperties": false,
@@ -97,6 +102,7 @@
         "OVERRIDE_REASON": { "type": "string" }
       }
     },
+    "REASONING_LEVEL_REQUIRED": { "type": "string", "enum": ["low", "medium", "high", "xhigh"] },
     "DEPENDENCIES": { "$ref": "#/$defs/listOrNone" },
     "DEPENDENCY_STATUS": { "type": "string", "enum": ["ready", "blocked", "pending", "none"] },
     "REQUESTED_BY_ROLE": { "$ref": "#/$defs/requesterRoleOrNone" },
@@ -154,6 +160,22 @@
           "RETURN_TO_REQUESTER_AFTER_AUDIT_PASS": { "const": "yes" }
         }
       }
+    },
+    {
+      "if": { "properties": { "TARGET_ROLE": { "const": "tester" } }, "required": ["TARGET_ROLE"] },
+      "then": { "properties": { "REASONING_LEVEL_REQUIRED": { "enum": ["high", "xhigh"] } } }
+    },
+    {
+      "if": { "properties": { "TARGET_ROLE": { "const": "auditor" } }, "required": ["TARGET_ROLE"] },
+      "then": { "properties": { "REASONING_LEVEL_REQUIRED": { "const": "xhigh" } } }
+    },
+    {
+      "if": { "properties": { "TASK_COMPLEXITY": { "const": "high" } }, "required": ["TASK_COMPLEXITY"] },
+      "then": { "properties": { "REASONING_LEVEL_REQUIRED": { "enum": ["high", "xhigh"] } } }
+    },
+    {
+      "if": { "properties": { "TASK_COMPLEXITY": { "const": "xhigh" } }, "required": ["TASK_COMPLEXITY"] },
+      "then": { "properties": { "REASONING_LEVEL_REQUIRED": { "const": "xhigh" } } }
     }
   ],
   "$defs": {

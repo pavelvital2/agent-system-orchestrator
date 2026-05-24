@@ -2223,3 +2223,55 @@ AUTHORIZED_BY: project_owner
 AUDIT_REQUIRED: yes
 STATUS: accepted
 ```
+
+```text
+CHANGE_ID: GOV-2026-05-24-011
+CHANGE_TITLE: TASK_ASO_P57_080_ORCHESTRATOR_AGENT_GOVERNANCE_HARDENING
+DATE: 2026-05-24
+PACKAGE_VERSION_BEFORE: 3.7.8
+PACKAGE_VERSION_AFTER: 3.7.8
+GOVERNANCE_RULESET_BEFORE: 3.7.8
+GOVERNANCE_RULESET_AFTER: 3.7.8
+RUNTIME_SCHEMA_BEFORE: 3.1.1
+RUNTIME_SCHEMA_AFTER: 3.1.1
+ARTIFACT_PACKAGE_SCHEMA_BEFORE: 1.1.0
+ARTIFACT_PACKAGE_SCHEMA_AFTER: 1.1.0
+CHANGE_TYPE: patch
+CHANGE_SUBTYPE: p57_orchestrator_agent_governance_hardening
+AFFECTED_FILES:
+- README.md
+- agent-system/README.md
+- agent-system/00_start/ORCHESTRATOR_START.md
+- agent-system/02_runtime/AGENT_LIFECYCLE.md
+- agent-system/02_runtime/GOVERNANCE_AUTHORITY.md
+- agent-system/02_runtime/ORCHESTRATOR_CONVEYOR_PROTOCOL.md
+- agent-system/02_runtime/ORCHESTRATOR_RUNTIME_LOOP.md
+- agent-system/02_runtime/PROFILE_AGENT_LIFECYCLE.md
+- agent-system/03_templates/BOOTSTRAP_TASK_PACKET_TEMPLATE.md
+- agent-system/03_templates/DESIGN_CONTINUATION_TASK_TEMPLATE.md
+- agent-system/03_templates/ORCHESTRATOR_TASK_HANDOFF_TEMPLATE.md
+- agent-system/03_templates/RESEARCH_REQUEST_TEMPLATE.md
+- agent-system/03_templates/TASK_PACKET_TEMPLATE.md
+- agent-system/03_templates/TASK_PROPOSAL_TEMPLATE.md
+- agent-system/09_validators/AGENT_LIFECYCLE_VALIDATION_RULES.md
+- agent-system/09_validators/REASONING_LEVEL_VALIDATION_RULES.md
+- agent-system/09_validators/TASK_PACKET_SCHEMA_VALIDATION_RULES.md
+- agent-system/09_validators/VALIDATOR_SPEC.md
+- agent-system/09_validators/schemas/task_packet.schema.json
+- agent-system/tools/aso/tests/test_ci_governance.py
+AFFECTED_INVARIANTS:
+- The orchestrator does not write profile-agent changes and does not check changes semantically.
+- One agent = one task = one RESULT remains mandatory for every profile-agent dispatch.
+- After RESULT, the profile-agent context must be terminated and deleted or rendered inaccessible for future work.
+- Dispatchable task packets must carry TASK_COMPLEXITY, REASONING_LEVEL_REQUIRED, and AGENT_LIFECYCLE_POLICY.
+- Tester reasoning floor is high and auditor reasoning floor is xhigh.
+AFFECTED_TRANSITIONS:
+- valid task packet -> one fresh profile-agent dispatch -> RESULT -> artifact acceptance -> AGENT_TERMINATED/context deletion -> AUDIT_ROUTE_READY.
+- invalid or missing task complexity, required reasoning, or lifecycle policy -> dispatch blocked -> governed correction.
+SCHEMA_TEMPLATE_IMPACT: template_update_required; Runtime Schema 3.1.1 and Artifact Package Schema 1.1.0 are preserved.
+MIGRATION_REQUIRED: no
+MIGRATION_NOTE: Governance hardening only; no active project-runtime migration, runtime schema version change, artifact package schema version change, live dispatch executor, checkpoint executor, daemon, product-intake engine, external worker, or product generation is introduced.
+AUTHORIZED_BY: project_owner
+AUDIT_REQUIRED: yes
+STATUS: accepted
+```

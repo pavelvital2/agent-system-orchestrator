@@ -34,6 +34,12 @@ active | completed | superseded | deprecated
 design_continuation
 ```
 
+## TASK_COMPLEXITY
+
+```text
+xhigh
+```
+
 ## TASK_TYPE
 
 ```text
@@ -46,11 +52,23 @@ solution_architect
 solution_architect
 ```
 
+## AGENT_LIFECYCLE_POLICY
+
+```text
+one_agent_one_task_delete_after_result
+```
+
 ## REASONING_LEVEL
 
 ```text
 VALUE: xhigh
 OVERRIDE_REASON: NONE
+```
+
+## REASONING_LEVEL_REQUIRED
+
+```text
+xhigh
 ```
 
 ## REQUESTED_BY_ROLE

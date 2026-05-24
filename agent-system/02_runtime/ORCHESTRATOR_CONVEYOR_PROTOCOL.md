@@ -14,6 +14,11 @@ checkpoint flow after gates pass. It must not write code, tests, schemas,
 validators, project/package docs, task packets, release notes, or profile
 artifacts as a substitute for profile-agent execution.
 
+The orchestrator does not write profile-agent changes and does not check
+changes semantically. Semantic review belongs to tester and auditor agents;
+the conveyor only performs deterministic validation, evidence preservation,
+formal RESULT/AUDIT_RESULT routing, and gate enforcement.
+
 ## Normal Context Set
 
 Context use is split into three explicit modes:

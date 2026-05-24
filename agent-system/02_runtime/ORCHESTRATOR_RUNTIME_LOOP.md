@@ -38,6 +38,11 @@ profile RESULT content, and other implementation artifacts may be changed only
 by the appropriate fresh profile agent under a valid task packet and then
 accepted only after required audit and checkpoint gates.
 
+The orchestrator does not write profile-agent changes and does not check
+changes semantically. It checks only deterministic governance shape, formal
+fields, validator output, receipts, and routing evidence; semantic change
+review belongs to tester and auditor agents.
+
 ## Runtime loop
 
 Перед каждым новым действием оркестратор обязан выполнить цикл:
@@ -431,18 +436,22 @@ informal context.
 8. Если следующий шаг требует агента:
    - before spawning a profile agent, resolve dispatch reasoning:
      `role_default_reasoning_level`, `task_packet_reasoning_level`,
-     `gate_required_floor`, `final_required_dispatch_level`, and
+     `task_complexity_floor`, `gate_required_floor`,
+     `final_required_dispatch_level`, and
      `requested_or_configured_reasoning_level` with
      `runner_config_evidence`;
    - compute `final_required_dispatch_level` as the highest applicable level
-     among role default, task packet `REASONING_LEVEL`, and gate-required
-     floor, using `low < medium < high < xhigh`;
+     among role default, task packet `REASONING_LEVEL`, task packet
+     `TASK_COMPLEXITY`, and gate-required floor, using
+     `low < medium < high < xhigh`;
    - record `TARGET_ROLE`, `TASK_ID`, `TASK_PACKET`,
-     `REASONING_LEVEL_REQUIRED`, `REASONING_LEVEL_SOURCE`,
-     `REASONING_LEVEL_RESOLVED`, `RUNNER_CONFIG_EVIDENCE`,
-     `REASONING_LEVEL_COMPLIANCE`, and
+     `TASK_COMPLEXITY`, `REASONING_LEVEL_REQUIRED`,
+     `REASONING_LEVEL_SOURCE`, `REASONING_LEVEL_RESOLVED`,
+     `RUNNER_CONFIG_EVIDENCE`, `REASONING_LEVEL_COMPLIANCE`, and
      `SPAWN_LOG_REF` or `HANDOFF_LOG_REF` in the handoff, spawn log, or
      orchestrator transcript before RESULT routing;
+   - enforce tester `REASONING_LEVEL_REQUIRED` at least `high` and auditor
+     `REASONING_LEVEL_REQUIRED` as `xhigh`;
    - do not claim knowledge of the profile agent's internal actual reasoning
      level unless the runner provides verifiable evidence;
    - if the requested or configured runner reasoning level is below required,
