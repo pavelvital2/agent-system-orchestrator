@@ -17,6 +17,7 @@ ASO_TOOL_ROOT = REPO_ROOT / "agent-system" / "tools" / "aso"
 sys.path.insert(0, str(ASO_TOOL_ROOT))
 
 from agent_system_orchestrator_aso.aso_tool import transition_engine  # noqa: E402
+from agent_system_orchestrator_aso.aso_tool import runtime_contract_fallback  # noqa: E402
 
 
 class OrchestratorRuntimeContractTests(unittest.TestCase):
@@ -33,6 +34,13 @@ class OrchestratorRuntimeContractTests(unittest.TestCase):
         self.assertEqual(contract["contract_version"], "1.0.0")
         self.assertEqual(contract["runtime_schema_version"], "3.1.1")
         self.assertEqual(contract["artifact_package_schema_version"], "1.1.0")
+
+    def test_installed_package_fallback_matches_source_contract(self) -> None:
+        contract = self._load_json("agent-system/02_runtime/ORCHESTRATOR_RUNTIME_CONTRACT.json")
+        fallback = json.loads(runtime_contract_fallback.ORCHESTRATOR_RUNTIME_CONTRACT_JSON)
+
+        self.assertEqual(fallback, contract)
+        self.assertTrue(transition_engine.validate_runtime_contract(fallback).passed)
 
     @unittest.skipIf(Draft202012Validator is None, "jsonschema is not installed")
     def test_contract_matches_json_schema(self) -> None:
@@ -74,6 +82,17 @@ class OrchestratorRuntimeContractTests(unittest.TestCase):
         context_policy = contract["routine_context_policy"]
         self.assertIn("ORCHESTRATOR_RUNTIME_CONTRACT.json", context_policy["orchestrator_must_read"])
         self.assertIn("all_role_docs", context_policy["orchestrator_must_not_read_routinely"])
+
+        handoff_context = contract["handoff_context_builder_contract"]
+        self.assertEqual(handoff_context["normal_context_mode"], "routine")
+        self.assertIn("debug", handoff_context["allowed_context_modes"])
+        self.assertIn("explain", handoff_context["allowed_context_modes"])
+        self.assertIn("agent-system/03_templates/", handoff_context["routine_handoff_excludes"])
+        self.assertIn("developer", handoff_context["target_role_doc_map"])
+        self.assertEqual(
+            handoff_context["target_role_doc_map"]["developer"],
+            "agent-system/01_roles/DEVELOPER.md",
+        )
 
     def test_roles_have_reasoning_floors_and_required_docs(self) -> None:
         contract = transition_engine.load_runtime_contract()

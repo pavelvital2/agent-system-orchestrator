@@ -37,15 +37,36 @@ TASK_TITLE:
 TASK_SOURCE:
 <path to task packet or direct instruction>
 
+CONTEXT_MODE:
+routine | debug | explain | violation_recovery
+
+RUNTIME_CONTRACT:
+- agent-system/02_runtime/ORCHESTRATOR_RUNTIME_CONTRACT.json
+  SECTIONS: <handoff_context_builder_contract.runtime_contract_required_sections>
+
+CURRENT_STATE_REFS:
+- project-runtime/state/*.json
+- project-runtime/agents/instances.jsonl
+
+CURRENT_EVENT_RESULT_ARTIFACT_REFS:
+EVENT: <event ref | NONE>
+RESULT_OR_AUDIT_RESULT: <result ref | NONE>
+ARTIFACT_MANIFEST_OR_RECEIPT: <artifact or receipt ref | NONE>
+
 TASK_PACKET_TEMPLATE:
 - agent-system/03_templates/TASK_PACKET_TEMPLATE.md
 
 UNIVERSAL_ROLE_INSTRUCTIONS:
-- <path>
+- <specific target-role doc path only>
 
 REQUIRED_DOCS:
 - <path>
 - <path>
+
+REFERENCE_DOCS:
+- <debug/explain/recovery reference path | NONE>
+REFERENCE_REASON:
+<explicit reason, validator-required reason, or NONE>
 
 SCOPE:
 IN:
@@ -79,6 +100,11 @@ MANDATORY_RULES:
   REASONING_LEVEL_REQUIRED, dispatch is non_compliant and the worker RESULT is
   invalid.
 - Do not use unaudited research as accepted input; requester return requires independent audit pass.
+- Routine context must not include the full governance corpus, all role docs,
+  all templates, full changelog, release notes, or all validator docs.
+- Reference docs are allowed only when CONTEXT_MODE is `debug`, `explain`, or
+  `violation_recovery` and REFERENCE_REASON records an explicit request or
+  validator-required reason.
 
 EXPECTED_RESULT_FORMAT:
 Use:

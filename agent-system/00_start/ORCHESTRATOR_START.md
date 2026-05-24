@@ -160,6 +160,31 @@ status/next JSON summaries, validation reports, and artifact receipts over
 routine rereads of broad governance documents. Full governance documents remain
 the debug, recovery, and correction authority.
 
+## Routine Context Minimization
+
+After bootstrap, routine orchestrator routing must use compact machine-readable
+context:
+
+1. `agent-system/02_runtime/ORCHESTRATOR_RUNTIME_CONTRACT.json`, limited to
+   the sections named by `handoff_context_builder_contract`.
+2. Current runtime state refs under `project-runtime/state/*.json` and
+   `project-runtime/agents/instances.jsonl`.
+3. The current task packet from `NEXT_ACTION.task_packet`.
+4. The current event, RESULT/AUDIT_RESULT, artifact manifest, or receipt refs
+   relevant to the active transition.
+5. The specific role doc and role-required doc tokens for the target profile
+   role only.
+
+Routine handoffs must not read the full governance corpus, all role docs, all
+templates, full changelog, release notes, or all validator docs. Reference docs
+may be attached only in explicit `debug`, `explain`, or
+`violation_recovery` mode with a recorded reason, or when a validator requires
+the reference. The read-only helper command is:
+
+```bash
+aso orchestrator context --root <workspace> --format json
+```
+
 ---
 
 ## Первичный bootstrap проекта

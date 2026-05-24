@@ -863,6 +863,46 @@ def build_parser() -> argparse.ArgumentParser:
     orchestrator_next_parser.add_argument("--json-out", metavar="PATH")
     orchestrator_next_parser.set_defaults(handler=orchestrator.run_next)
 
+    orchestrator_context_parser = orchestrator_subparsers.add_parser(
+        "context",
+        help="Build a compact routine orchestrator handoff context report.",
+        description=(
+            "Read-only context minimization report for orchestrator handoff inputs. "
+            "Routine mode emits runtime contract sections, current state refs, current "
+            "task/result/artifact refs, and target-role-specific docs. Debug, explain, "
+            "or violation-recovery reference docs require an explicit reason or "
+            "--validator-required."
+        ),
+    )
+    _add_root_argument(orchestrator_context_parser, validate=False)
+    orchestrator_context_parser.add_argument("--format", choices=("text", "json"), default="text")
+    orchestrator_context_parser.add_argument("--json-out", metavar="PATH")
+    orchestrator_context_parser.add_argument(
+        "--context-mode",
+        choices=("routine", "debug", "explain", "violation_recovery"),
+        default="routine",
+        help="Context policy mode for reference document inclusion.",
+    )
+    orchestrator_context_parser.add_argument("--target-role", metavar="ROLE")
+    orchestrator_context_parser.add_argument("--task-packet", metavar="PATH")
+    orchestrator_context_parser.add_argument("--current-event", metavar="EVENT")
+    orchestrator_context_parser.add_argument("--current-result", metavar="PATH")
+    orchestrator_context_parser.add_argument("--current-artifact", metavar="PATH")
+    orchestrator_context_parser.add_argument(
+        "--reference-doc",
+        action="append",
+        default=[],
+        metavar="PATH",
+        help="Debug/explain/recovery reference doc to include with explicit authorization.",
+    )
+    orchestrator_context_parser.add_argument("--reference-reason", metavar="TEXT")
+    orchestrator_context_parser.add_argument(
+        "--validator-required",
+        action="store_true",
+        help="Mark reference docs as required by a validator.",
+    )
+    orchestrator_context_parser.set_defaults(handler=orchestrator.run_context)
+
     record_result_parser = subparsers.add_parser(
         "record-result",
         help="Dry-run/read-only RESULT routing proposal.",

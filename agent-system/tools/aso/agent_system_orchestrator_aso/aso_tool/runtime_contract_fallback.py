@@ -1,4 +1,11 @@
-{
+"""Embedded runtime contract fallback for installed ASO packages."""
+
+from __future__ import annotations
+
+
+ORIGIN = "agent_system_orchestrator_aso.aso_tool.runtime_contract_fallback"
+
+ORCHESTRATOR_RUNTIME_CONTRACT_JSON = r"""{
   "contract_version": "1.0.0",
   "package_version": "3.7.9",
   "governance_ruleset_version": "3.7.9",
@@ -313,3 +320,4 @@
     }
   }
 }
+"""

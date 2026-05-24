@@ -8,6 +8,7 @@ from pathlib import Path
 from typing import Any, Iterable, Mapping
 
 from . import resources
+from . import runtime_contract_fallback
 
 
 CONTRACT_RELATIVE_PATH = Path("agent-system/02_runtime/ORCHESTRATOR_RUNTIME_CONTRACT.json")
@@ -133,6 +134,7 @@ def validate_runtime_contract(contract: Mapping[str, Any]) -> ContractValidation
         "audit_gate_rules",
         "checkpoint_rules",
         "routine_context_policy",
+        "handoff_context_builder_contract",
     )
     for field in required:
         if field not in contract:
@@ -207,6 +209,27 @@ def validate_runtime_contract(contract: Mapping[str, Any]) -> ContractValidation
         if not isinstance(routine_policy.get(field), list):
             errors.append(f"routine_context_policy.{field} must be a list")
 
+    handoff_context = _mapping(contract.get("handoff_context_builder_contract"))
+    if handoff_context.get("normal_context_mode") != "routine":
+        errors.append("handoff_context_builder_contract.normal_context_mode must be routine")
+    allowed_context_modes = set(_string_list(handoff_context.get("allowed_context_modes")))
+    for required_mode in ("routine", "debug", "explain", "violation_recovery"):
+        if required_mode not in allowed_context_modes:
+            errors.append(f"handoff_context_builder_contract.allowed_context_modes missing {required_mode}")
+    for field in (
+        "runtime_contract_required_sections",
+        "routine_handoff_includes",
+        "routine_handoff_excludes",
+    ):
+        if not isinstance(handoff_context.get(field), list) or not _string_list(handoff_context.get(field)):
+            errors.append(f"handoff_context_builder_contract.{field} must be a non-empty list")
+    if not _text(handoff_context.get("reference_doc_inclusion_rule")):
+        errors.append("handoff_context_builder_contract.reference_doc_inclusion_rule is required")
+    target_role_doc_map = _mapping(handoff_context.get("target_role_doc_map"))
+    for role in allowed_roles:
+        if role not in target_role_doc_map:
+            errors.append(f"handoff_context_builder_contract.target_role_doc_map missing role {role}")
+
     return ContractValidationResult(tuple(errors))
 
 
@@ -214,9 +237,13 @@ def load_runtime_contract(contract_path: str | Path | None = None) -> dict[str, 
     """Load and validate the runtime contract from an explicit path or packaged resource."""
 
     if contract_path is None:
-        resource = resources.read_resource_text(CONTRACT_RELATIVE_PATH, anchor_file=__file__)
-        raw_text = resource.text
-        origin = resource.origin
+        try:
+            resource = resources.read_resource_text(CONTRACT_RELATIVE_PATH, anchor_file=__file__)
+            raw_text = resource.text
+            origin = resource.origin
+        except FileNotFoundError:
+            raw_text = runtime_contract_fallback.ORCHESTRATOR_RUNTIME_CONTRACT_JSON
+            origin = runtime_contract_fallback.ORIGIN
     else:
         path = Path(contract_path)
         raw_text = path.read_text(encoding="utf-8")

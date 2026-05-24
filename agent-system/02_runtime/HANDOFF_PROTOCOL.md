@@ -30,6 +30,26 @@ CONSUMED_BY_RESULT
 SUPERSEDED_BY
 ```
 
+## Routine Context Builder Contract
+
+Routine orchestrator handoff context is compact and machine-readable. It is
+defined by `agent-system/02_runtime/ORCHESTRATOR_RUNTIME_CONTRACT.json` field
+`handoff_context_builder_contract`.
+
+Routine handoffs include only:
+
+- required runtime contract sections;
+- current runtime state refs;
+- current event, RESULT/AUDIT_RESULT, artifact manifest, or receipt refs;
+- current task packet;
+- the specific target role doc;
+- doc tokens required by the target role.
+
+Routine handoffs must not include the full governance corpus, all role docs,
+all templates, full changelog, release notes, or all validator docs. Reference
+docs are allowed only in `debug`, `explain`, or `violation_recovery` mode with
+an explicit reason, or when a validator marks them required.
+
 ## Status Lifecycle
 
 Allowed statuses:

@@ -21,7 +21,8 @@
     "artifact_contracts",
     "audit_gate_rules",
     "checkpoint_rules",
-    "routine_context_policy"
+    "routine_context_policy",
+    "handoff_context_builder_contract"
   ],
   "properties": {
     "contract_version": {
@@ -245,6 +246,75 @@
           "type": "array",
           "items": {
             "type": "string"
+          }
+        }
+      },
+      "additionalProperties": true
+    },
+    "handoff_context_builder_contract": {
+      "type": "object",
+      "required": [
+        "normal_context_mode",
+        "allowed_context_modes",
+        "runtime_contract_required_sections",
+        "routine_handoff_includes",
+        "routine_handoff_excludes",
+        "reference_doc_inclusion_rule",
+        "target_role_doc_map"
+      ],
+      "properties": {
+        "normal_context_mode": {
+          "const": "routine"
+        },
+        "allowed_context_modes": {
+          "type": "array",
+          "items": {
+            "enum": [
+              "routine",
+              "debug",
+              "explain",
+              "violation_recovery"
+            ]
+          },
+          "minItems": 1,
+          "uniqueItems": true
+        },
+        "runtime_contract_required_sections": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
+          "minItems": 1,
+          "uniqueItems": true
+        },
+        "routine_handoff_includes": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
+          "minItems": 1,
+          "uniqueItems": true
+        },
+        "routine_handoff_excludes": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
+          "minItems": 1,
+          "uniqueItems": true
+        },
+        "reference_doc_inclusion_rule": {
+          "type": "string",
+          "minLength": 1
+        },
+        "target_role_doc_map": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "string",
+            "minLength": 1
           }
         }
       },

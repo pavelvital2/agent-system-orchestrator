@@ -10,6 +10,12 @@ import tempfile
 import unittest
 from pathlib import Path
 
+TESTS_DIR = Path(__file__).resolve().parent
+if str(TESTS_DIR) not in sys.path:
+    sys.path.insert(0, str(TESTS_DIR))
+
+from current_source_snapshot import create_current_source_snapshot
+
 
 REPO_ROOT = Path(__file__).resolve().parents[4]
 INSTALL_SCRIPT = REPO_ROOT / "agent-system" / "scripts" / "install_aso_clean.sh"
@@ -45,6 +51,7 @@ class RealTzE2ESmokeTests(unittest.TestCase):
         with tempfile.TemporaryDirectory(prefix="aso-real-tz-e2e-") as tmp_text:
             tmp = Path(tmp_text)
             venv = tmp / "venv"
+            source_snapshot = create_current_source_snapshot(REPO_ROOT, tmp / "source-snapshot")
             source_copy = tmp / "source-copy"
             workspace = tmp / "workspace"
             workspace_input = workspace / "project-input"
@@ -57,7 +64,7 @@ class RealTzE2ESmokeTests(unittest.TestCase):
                     "bash",
                     str(INSTALL_SCRIPT),
                     "--source",
-                    str(REPO_ROOT),
+                    str(source_snapshot),
                     "--venv",
                     str(venv),
                     "--source-copy",
@@ -181,6 +188,7 @@ class RealTzE2ESmokeTests(unittest.TestCase):
         with tempfile.TemporaryDirectory(prefix="aso-real-tz-negative-") as tmp_text:
             tmp = Path(tmp_text)
             venv = tmp / "venv"
+            source_snapshot = create_current_source_snapshot(REPO_ROOT, tmp / "source-snapshot")
             source_copy = tmp / "source-copy"
             workspace = tmp / "workspace"
             workspace.mkdir()
@@ -191,7 +199,7 @@ class RealTzE2ESmokeTests(unittest.TestCase):
                     "bash",
                     str(INSTALL_SCRIPT),
                     "--source",
-                    str(REPO_ROOT),
+                    str(source_snapshot),
                     "--venv",
                     str(venv),
                     "--source-copy",

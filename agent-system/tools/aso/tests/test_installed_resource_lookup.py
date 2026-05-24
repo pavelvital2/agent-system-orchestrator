@@ -8,6 +8,12 @@ import tempfile
 import unittest
 from pathlib import Path
 
+TESTS_DIR = Path(__file__).resolve().parent
+if str(TESTS_DIR) not in sys.path:
+    sys.path.insert(0, str(TESTS_DIR))
+
+from current_source_snapshot import create_current_source_snapshot
+
 
 REPO_ROOT = Path(__file__).resolve().parents[4]
 DIRECT_CLI = REPO_ROOT / "agent-system" / "tools" / "aso" / "aso.py"
@@ -33,6 +39,7 @@ class InstalledResourceLookupTests(unittest.TestCase):
             tmp_path = Path(tmp)
             workspace = tmp_path / "workspace"
             venv = tmp_path / "venv"
+            source_snapshot = create_current_source_snapshot(REPO_ROOT, tmp_path / "source-snapshot")
             direct_json = tmp_path / "direct-plan-next.json"
             installed_json = tmp_path / "installed-plan-next.json"
             workspace.mkdir()
@@ -43,7 +50,7 @@ class InstalledResourceLookupTests(unittest.TestCase):
                     "bash",
                     str(INSTALL_SCRIPT),
                     "--source",
-                    str(REPO_ROOT),
+                    str(source_snapshot),
                     "--venv",
                     str(venv),
                     "--python",

@@ -20,6 +20,8 @@
   ],
   "accepted_artifact_packages": [],
   "rendered_views": [],
+  "context_mode": "routine",
+  "reference_docs": [],
   "context_budget": {
     "max_docs": 5,
     "max_sections_per_doc": 8,
