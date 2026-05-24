@@ -1,4 +1,4 @@
-.PHONY: install install-test install-user verify-install install-smoke e2e-real-tz-smoke test smoke doctor lint source-hygiene ci
+.PHONY: install install-test install-user verify-install install-smoke e2e-real-tz-smoke test smoke doctor lint source-contamination-guard source-hygiene ci
 
 PYTHON ?= python3
 ASO_SCRIPT := agent-system/tools/aso/aso.py
@@ -65,8 +65,12 @@ doctor:
 lint:
 	PYTHONDONTWRITEBYTECODE=1 $(PYTHON) $(ASO_SCRIPT) lint --root . --mode package --strict
 
+source-contamination-guard:
+	PYTHONDONTWRITEBYTECODE=1 bash agent-system/scripts/source_hygiene.sh
+
 source-hygiene:
 	PYTHONDONTWRITEBYTECODE=1 bash agent-system/scripts/source_hygiene.sh
 
 ci: test smoke doctor lint install-smoke
+	$(MAKE) source-contamination-guard
 	git diff --check

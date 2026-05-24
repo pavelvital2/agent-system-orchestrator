@@ -1913,3 +1913,36 @@ AUTHORIZED_BY: project_owner
 AUDIT_REQUIRED: yes
 STATUS: accepted
 ```
+
+```text
+CHANGE_ID: GOV-2026-05-24-003
+CHANGE_TITLE: ASO_P56_AUDIT_FIX_020_SOURCE_CONTAMINATION_GUARD
+DATE: 2026-05-24
+PACKAGE_VERSION_BEFORE: 3.7.7
+PACKAGE_VERSION_AFTER: 3.7.7
+GOVERNANCE_RULESET_BEFORE: 3.7.7
+GOVERNANCE_RULESET_AFTER: 3.7.7
+RUNTIME_SCHEMA_BEFORE: 3.1.1
+RUNTIME_SCHEMA_AFTER: 3.1.1
+ARTIFACT_PACKAGE_SCHEMA_BEFORE: 1.1.0
+ARTIFACT_PACKAGE_SCHEMA_AFTER: 1.1.0
+CHANGE_TYPE: patch
+CHANGE_SUBTYPE: p56_audit_fix_020_source_contamination_guard
+AFFECTED_FILES:
+- Makefile
+- agent-system/scripts/source_hygiene.sh
+- agent-system/tools/aso/tests/test_install_hygiene.py
+- agent-system/GOVERNANCE_CHANGELOG.md
+AFFECTED_INVARIANTS:
+- CI must fail on source checkout contamination from untracked Python build artifacts.
+- Local owner workflow inputs under project-input may remain untracked without failing source hygiene by themselves.
+- Source contamination checks must use git status --porcelain --untracked-files=all plus filesystem detection.
+AFFECTED_TRANSITIONS:
+- test/smoke/install-smoke validation -> source contamination guard -> diff check.
+SCHEMA_TEMPLATE_IMPACT: none; Runtime Schema 3.1.1 and Artifact Package Schema 1.1.0 are preserved.
+MIGRATION_REQUIRED: no
+MIGRATION_NOTE: CI/source hygiene hardening only; no active project-runtime migration, schema migration, transition redesign, package resource relaxation, or runtime state mutation is introduced.
+AUTHORIZED_BY: project_owner
+AUDIT_REQUIRED: yes
+STATUS: accepted
+```
