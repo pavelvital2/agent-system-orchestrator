@@ -393,6 +393,38 @@ class StateVerifyCommandTests(unittest.TestCase):
             self.assertEqual(result.returncode, 1, result.stdout + result.stderr)
             self.assertIn("SIDECAR_ENUM_VALUE_INVALID", result.stdout)
 
+    def test_project_state_not_required_readiness_statuses_fail_strict_verify(self) -> None:
+        cases = (
+            ("identity_validation_status", "PROJECT_STATE.content.identity_validation_status"),
+            ("repository_lock_status", "PROJECT_STATE.content.repository_lock_status"),
+            ("baseline_tracking_status", "PROJECT_STATE.content.baseline_tracking_status"),
+        )
+        for field, expected_detail in cases:
+            with self.subTest(field=field), tempfile.TemporaryDirectory() as tmp:
+                root = copy_valid_workspace_with_valid_tz(tmp)
+                payload = load_sidecar(root, "PROJECT_STATE.json")
+                body = payload["content"]
+                self.assertIsInstance(body, dict)
+                body[field] = "not_required"
+                write_sidecar(root, "PROJECT_STATE.json", payload)
+
+                json_out = Path(tmp) / f"state-verify-{field}.json"
+                result = run_state_verify(root, "--strict", "--json-out", str(json_out))
+
+                self.assertEqual(result.returncode, 1, result.stdout + result.stderr)
+                report = json.loads(json_out.read_text(encoding="utf-8"))
+                self.assertEqual(report["status"], "failed")
+                findings = report["findings"]
+                self.assertTrue(
+                    any(
+                        finding["rule_id"] == "SIDECAR_ENUM_VALUE_INVALID"
+                        and finding["field"] == f"content.{field}"
+                        and expected_detail in finding["details"]
+                        for finding in findings
+                    ),
+                    findings,
+                )
+
     def test_stale_next_action_action_types_fail(self) -> None:
         for action_type in ("run_audit", "checkpoint", "return_to_requester", "manual", "none"):
             with self.subTest(action_type=action_type), tempfile.TemporaryDirectory() as tmp:

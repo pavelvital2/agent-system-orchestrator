@@ -55,6 +55,9 @@ INCIDENT_MARKERS = {
 }
 CHECKPOINT_PREFLIGHT_POLICIES = {"local_only", "commit_and_push"}
 BOOTSTRAP_INPUTS = (Path("project-input/TZ.md"),)
+PROJECT_STATE_READY_IDENTITY_STATUSES = {"passed"}
+PROJECT_STATE_READY_REPOSITORY_LOCK_STATUSES = {"accepted"}
+PROJECT_STATE_READY_BASELINE_STATUSES = {"passed"}
 
 
 def _is_none(value: object) -> bool:
@@ -470,19 +473,25 @@ def _workspace_identity_ready(project_state: dict[str, object], next_action: dic
     if next_action.get("workspace_identity_required") is False:
         return True, "NEXT_ACTION.content.workspace_identity_required=false"
     status = _as_text(project_state.get("identity_validation_status"))
-    return status in {"passed", "not_required"}, f"PROJECT_STATE.content.identity_validation_status={status or 'NONE'}"
+    return (
+        status in PROJECT_STATE_READY_IDENTITY_STATUSES,
+        f"PROJECT_STATE.content.identity_validation_status={status or 'NONE'}",
+    )
 
 
 def _repository_lock_ready(project_state: dict[str, object], next_action: dict[str, object]) -> tuple[bool, str]:
     if next_action.get("repository_lock_required") is False:
         return True, "NEXT_ACTION.content.repository_lock_required=false"
     status = _as_text(project_state.get("repository_lock_status"))
-    return status in {"accepted", "passed", "not_required"}, f"PROJECT_STATE.content.repository_lock_status={status or 'NONE'}"
+    return (
+        status in PROJECT_STATE_READY_REPOSITORY_LOCK_STATUSES,
+        f"PROJECT_STATE.content.repository_lock_status={status or 'NONE'}",
+    )
 
 
 def _baseline_ready(root: Path, project_state: dict[str, object]) -> tuple[bool, str]:
     status = _as_text(project_state.get("baseline_tracking_status"))
-    if status in {"passed", "not_required"}:
+    if status in PROJECT_STATE_READY_BASELINE_STATUSES:
         return True, f"PROJECT_STATE.content.baseline_tracking_status={status}"
     if project_state.get("current_phase") == "bootstrap" and not _first_dispatch_recorded(root):
         return True, "first-bootstrap exception: no agent_task_dispatched record exists"

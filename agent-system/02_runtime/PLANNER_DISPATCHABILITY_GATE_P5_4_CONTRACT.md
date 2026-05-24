@@ -337,6 +337,23 @@ Incident, owner/GAP blocker, bootstrap, and invalid-state handling may return
 `FREEZE`, `ASK_OWNER`, `BOOTSTRAP_PREP`, `CORRECTION_REQUIRED`, `UPDATE_STATE`,
 `STOP`, or `NONE`, but not `CREATE_AGENT`.
 
+## Canonical Readiness Status Values
+
+Dispatchability readiness checks must use the canonical `PROJECT_STATE` schema
+values for the fields they read:
+
+| Check | Field | Ready values |
+| --- | --- | --- |
+| `DG54_WORKSPACE_IDENTITY_READY` | `PROJECT_STATE.content.identity_validation_status` | `passed` |
+| `DG54_REPOSITORY_LOCK_READY` | `PROJECT_STATE.content.repository_lock_status` | `accepted` |
+| `DG54_BASELINE_READY_OR_BOOTSTRAP_EXCEPTION` | `PROJECT_STATE.content.baseline_tracking_status` | `passed`, or the first-bootstrap exception when no profile-agent dispatch has been recorded |
+
+`not_required` is not a valid `PROJECT_STATE` value for those three fields and
+must not make a DG54 readiness check pass. Requirement flags such as
+`NEXT_ACTION.content.workspace_identity_required=false` and
+`NEXT_ACTION.content.repository_lock_required=false` may make the corresponding
+check pass without changing the canonical `PROJECT_STATE` status vocabulary.
+
 ## Command Output Contract
 
 `aso plan-next --json-out ...` must expose either:

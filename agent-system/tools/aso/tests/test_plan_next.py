@@ -76,6 +76,8 @@ def set_next_action(root: Path, **updates: object) -> None:
         "task_packet": "TASK_PACKET",
         "dependency_status": "DEPENDENCY_STATUS",
         "action_semantic": "ACTION_SEMANTIC",
+        "workspace_identity_required": "WORKSPACE_IDENTITY_REQUIRED",
+        "repository_lock_required": "REPOSITORY_LOCK_REQUIRED",
         "checkpoint_policy": "CHECKPOINT_POLICY",
         "checkpoint_preflight_required": "CHECKPOINT_PREFLIGHT_REQUIRED",
         "checkpoint_receipt_required": "CHECKPOINT_RECEIPT_REQUIRED",
@@ -255,6 +257,116 @@ class PlanNextCommandTests(unittest.TestCase):
             self.assertFalse(report["dispatchable"])
             reason_codes = {reason["reason_code"] for reason in report["dispatchability"]["reasons"]}
             self.assertIn("task_packet_missing", reason_codes)
+
+    def test_invalid_project_state_readiness_statuses_are_not_dispatch_ready(self) -> None:
+        cases = (
+            (
+                "identity_validation_status",
+                "DG54_WORKSPACE_IDENTITY_READY",
+                "workspace_identity_not_ready",
+            ),
+            (
+                "repository_lock_status",
+                "DG54_REPOSITORY_LOCK_READY",
+                "repository_lock_not_ready",
+            ),
+            (
+                "baseline_tracking_status",
+                "DG54_BASELINE_READY_OR_BOOTSTRAP_EXCEPTION",
+                "baseline_not_ready",
+            ),
+        )
+        for field, check_id, reason_code in cases:
+            with self.subTest(field=field), tempfile.TemporaryDirectory() as tmp:
+                root = copy_valid_workspace(tmp)
+                make_tz_valid(root)
+                set_project_state(root, **{field: "not_required"})
+                json_out = Path(tmp) / f"plan-next-{field}.json"
+
+                result = run_plan_next(root, "--strict", "--json-out", str(json_out))
+
+                self.assertEqual(result.returncode, 1, result.stdout + result.stderr)
+                report = json.loads(json_out.read_text(encoding="utf-8"))
+                self.assertEqual(report["status"], "blocked")
+                self.assertEqual(report["recommended_next_action"], "CORRECTION_REQUIRED")
+                self.assertNotEqual(report["recommended_next_action"], "CREATE_AGENT")
+                self.assertFalse(report["dispatchable"])
+                self.assertFalse(report["dispatchability"]["dispatchable"])
+                self.assertEqual(report["dispatchability"]["verdict"], "not_dispatchable")
+                checks = {
+                    check["check_id"]: check
+                    for check in report["dispatchability"]["checks"]
+                    if isinstance(check, dict)
+                }
+                self.assertIn(check_id, checks)
+                self.assertFalse(checks[check_id]["passed"])
+                self.assertEqual(checks[check_id]["reason_code"], reason_code)
+                reason_codes = {reason["reason_code"] for reason in report["dispatchability"]["reasons"]}
+                self.assertIn(reason_code, reason_codes)
+                rule_ids = {rule["rule_id"] for rule in report["blocking_rules"]}
+                self.assertIn("GOV-ACTION-SEMANTICS", rule_ids)
+
+    def test_valid_first_bootstrap_readiness_passes_without_identity_or_lock_requirements(self) -> None:
+        packet = "project-runtime/tasks/active/TASK_FIXTURE_STATE_001.md"
+        with tempfile.TemporaryDirectory() as tmp:
+            root = copy_valid_workspace(tmp)
+            make_tz_valid(root)
+            set_project_state(
+                root,
+                current_phase="bootstrap",
+                identity_validation_status="not_checked",
+                repository_lock_status="draft",
+                baseline_tracking_status="not_checked",
+            )
+            set_current_gate(
+                root,
+                gate_type="bootstrap",
+                baseline_tracking_status="not_checked",
+                required_next_role="requirements_analyst",
+            )
+            set_next_action(
+                root,
+                target_role="requirements_analyst",
+                workspace_identity_required=False,
+                repository_lock_required=False,
+            )
+            set_task(
+                root,
+                task_type="requirements_analyst",
+                task_kind="bootstrap",
+                owner_role="requirements_analyst",
+            )
+            update_task_packet_field(root, packet, "TASK_KIND", "bootstrap")
+            update_task_packet_field(root, packet, "TASK_TYPE", "requirements_analyst")
+            update_task_packet_field(root, packet, "TARGET_ROLE", "requirements_analyst")
+            json_out = Path(tmp) / "plan-next-bootstrap.json"
+
+            result = run_plan_next(root, "--strict", "--json-out", str(json_out))
+
+            self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+            report = json.loads(json_out.read_text(encoding="utf-8"))
+            self.assertEqual(report["recommended_next_action"], "CREATE_AGENT")
+            self.assertTrue(report["dispatchable"])
+            checks = {
+                check["check_id"]: check
+                for check in report["dispatchability"]["checks"]
+                if isinstance(check, dict)
+            }
+            self.assertTrue(checks["DG54_WORKSPACE_IDENTITY_READY"]["passed"])
+            self.assertIn(
+                "workspace_identity_required=false",
+                checks["DG54_WORKSPACE_IDENTITY_READY"]["evidence"],
+            )
+            self.assertTrue(checks["DG54_REPOSITORY_LOCK_READY"]["passed"])
+            self.assertIn(
+                "repository_lock_required=false",
+                checks["DG54_REPOSITORY_LOCK_READY"]["evidence"],
+            )
+            self.assertTrue(checks["DG54_BASELINE_READY_OR_BOOTSTRAP_EXCEPTION"]["passed"])
+            self.assertIn(
+                "first-bootstrap exception",
+                checks["DG54_BASELINE_READY_OR_BOOTSTRAP_EXCEPTION"]["evidence"],
+            )
 
     def test_dispatchability_gate_matrix_across_actions_roles_and_packets(self) -> None:
         packet = "project-runtime/tasks/active/TASK_FIXTURE_STATE_001.md"
