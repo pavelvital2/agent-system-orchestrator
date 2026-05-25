@@ -1539,18 +1539,47 @@ def _transition_engine_findings(sidecars: dict[str, dict[str, object]]) -> list[
     decision = transition_engine.explain_next_action_from_sidecars(contract, sidecars)
     findings: list[Finding] = []
     for engine_finding in decision.findings:
+        path = "project-runtime/state/NEXT_ACTION.json"
+        field = "content"
+        if engine_finding.rule_id.startswith("RUNTIME_LIFECYCLE"):
+            path = transition_engine.LIFECYCLE_LOG_RELATIVE_PATH.as_posix()
+            field = "event_log"
         findings.append(
             _finding(
                 engine_finding.rule_id,
                 "Transition engine rejected NEXT_ACTION",
                 engine_finding.message,
-                "project-runtime/state/NEXT_ACTION.json",
-                "content",
+                path,
+                field,
                 engine_finding.recommendation,
                 severity=engine_finding.severity,
             )
         )
     return findings
+
+
+def _reconciliation_report(sidecars: dict[str, dict[str, object]], enabled: bool) -> dict[str, object]:
+    if not enabled:
+        return {
+            "enabled": False,
+            "reason": "no current runtime schema or lifecycle log evidence",
+        }
+    try:
+        contract = transition_engine.load_runtime_contract()
+        decision = transition_engine.explain_next_action_from_sidecars(contract, sidecars)
+    except (OSError, transition_engine.RuntimeContractError) as exc:
+        return {
+            "enabled": True,
+            "status": "failed",
+            "error": str(exc),
+            "reference_docs_used": [transition_engine.CONTRACT_RELATIVE_PATH.as_posix()],
+        }
+    payload = decision.to_json()
+    payload["enabled"] = True
+    payload["status"] = "passed" if decision.allowed else "failed"
+    payload["read_only"] = True
+    payload["mutations_performed"] = False
+    return payload
 
 
 def _report(root: Path, strict: bool) -> tuple[dict[str, object], int]:
@@ -1572,7 +1601,20 @@ def _report(root: Path, strict: bool) -> tuple[dict[str, object], int]:
         )
         summary = _summary([finding])
         status, exit_code = _status(summary, strict, io_error=True)
-        return _build_report(root, strict, status, summary, [finding], {}, [], [], False, [], []), exit_code
+        return _build_report(
+            root,
+            strict,
+            status,
+            summary,
+            [finding],
+            {},
+            [],
+            [],
+            False,
+            [],
+            [],
+            {"enabled": False, "reason": "workspace root is unreadable"},
+        ), exit_code
 
     for spec in SIDECARS:
         payload, sidecar_findings = _validate_sidecar(root, spec)
@@ -1582,6 +1624,11 @@ def _report(root: Path, strict: bool) -> tuple[dict[str, object], int]:
         else:
             present.append(spec.sidecar_type)
             loaded_sidecars[spec.sidecar_type] = payload
+
+    lifecycle_log = transition_engine.load_lifecycle_log(root)
+    lifecycle_has_evidence = bool(lifecycle_log.get("events")) or bool(lifecycle_log.get("findings"))
+    if lifecycle_has_evidence:
+        loaded_sidecars["LIFECYCLE_LOG"] = lifecycle_log
 
     current_p2_state = _is_current_p2_state(loaded_sidecars, root)
     if current_p2_state:
@@ -1630,7 +1677,8 @@ def _report(root: Path, strict: bool) -> tuple[dict[str, object], int]:
     findings.extend(_artifact_package_findings(loaded_sidecars))
     findings.extend(_checkpoint_findings(root, loaded_sidecars))
     findings.extend(_bootstrap_semantic_findings(root, loaded_sidecars))
-    if current_p2_state:
+    reconciliation_enabled = current_p2_state or lifecycle_has_evidence
+    if reconciliation_enabled:
         findings.extend(_transition_engine_findings(loaded_sidecars))
     findings = sorted(findings, key=lambda item: (item.severity != "error", item.rule_id, item.path, item.field, item.details))
     summary = _summary(findings)
@@ -1647,6 +1695,7 @@ def _report(root: Path, strict: bool) -> tuple[dict[str, object], int]:
         current_p2_state,
         optional_present,
         optional_missing,
+        _reconciliation_report(loaded_sidecars, reconciliation_enabled),
     ), exit_code
 
 
@@ -1662,6 +1711,7 @@ def _build_report(
     current_p2_state: bool,
     optional_present: list[str],
     optional_missing: list[str],
+    reconciliation: dict[str, object],
 ) -> dict[str, object]:
     required_expected = (
         list(runtime_schema_contracts.REQUIRED_SIDECARS)
@@ -1698,6 +1748,7 @@ def _build_report(
             "task_registry_count": len(_task_registry(sidecars)),
         },
         "runtime_schema_contract": runtime_schema_contracts.contract_summary(),
+        "reconciliation": reconciliation,
         "read_only": True,
     }
 

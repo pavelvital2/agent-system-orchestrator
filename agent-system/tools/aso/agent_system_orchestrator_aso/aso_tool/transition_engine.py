@@ -13,7 +13,39 @@ from . import runtime_contract_fallback
 
 CONTRACT_RELATIVE_PATH = Path("agent-system/02_runtime/ORCHESTRATOR_RUNTIME_CONTRACT.json")
 SCHEMA_RELATIVE_PATH = Path("agent-system/09_validators/schemas/orchestrator_runtime_contract.schema.json")
+LIFECYCLE_LOG_RELATIVE_PATH = Path("project-runtime/agents/instances.jsonl")
 NONE_VALUES = {"", "NONE", "none", "null", "UNKNOWN"}
+LIFECYCLE_EVENT_STATES = {
+    "CREATE_AGENT_DISPATCHED": "AGENT_RUNNING",
+    "RESULT_RECEIVED": "RESULT_PENDING_ARTIFACT_ACCEPTANCE",
+    "ARTIFACT_ACCEPTED": "RESULT_ACCEPTED",
+    "AGENT_TERMINATED": "AGENT_TERMINATED",
+    "AUDIT_ROUTE_READY": "AUDIT_PENDING",
+    "AUDIT_RESULT_RECEIVED_PASS": "CHECKPOINT_ELIGIBLE",
+    "AUDIT_RESULT_RECEIVED_FAIL": "CORRECTION_REQUIRED",
+    "CORRECTION_REQUIRED": "CORRECTION_REQUIRED",
+    "CHECKPOINT_ELIGIBLE": "CHECKPOINT_ELIGIBLE",
+}
+AUDIT_RESULT_EVENTS = {
+    "AUDIT_RESULT_RECEIVED",
+    "AUDIT_RESULT_RECEIVED_PASS",
+    "AUDIT_RESULT_RECEIVED_FAIL",
+}
+AUDITOR_BOOKKEEPING_EVENTS = {
+    "ARTIFACT_ACCEPTED",
+    "AGENT_TERMINATED",
+    "AUDIT_ROUTE_READY",
+}
+LIFECYCLE_PROGRESS_STATES = {
+    "AGENT_RUNNING",
+    "RESULT_PENDING_ARTIFACT_ACCEPTANCE",
+    "RESULT_ACCEPTED",
+    "AGENT_TERMINATED",
+    "AUDIT_PENDING",
+    "CORRECTION_REQUIRED",
+    "CORRECTION_AGENT_RUNNING",
+    "CHECKPOINT_ELIGIBLE",
+}
 
 
 class RuntimeContractError(ValueError):
@@ -99,6 +131,138 @@ def _string_list(value: object) -> list[str]:
 
 def _mapping(value: object) -> dict[str, Any]:
     return dict(value) if isinstance(value, Mapping) else {}
+
+
+def _log_finding(
+    rule_id: str,
+    severity: str,
+    message: str,
+    evidence: str,
+    recommendation: str,
+) -> dict[str, str]:
+    return {
+        "rule_id": rule_id,
+        "severity": severity,
+        "message": message,
+        "evidence": evidence,
+        "recommendation": recommendation,
+    }
+
+
+def load_lifecycle_log(root: str | Path) -> dict[str, object]:
+    """Load lifecycle events for reconciliation without mutating workspace state."""
+
+    workspace_root = Path(root)
+    path = workspace_root / LIFECYCLE_LOG_RELATIVE_PATH
+    events: list[dict[str, Any]] = []
+    findings: list[dict[str, str]] = []
+    if not path.exists():
+        return {
+            "path": LIFECYCLE_LOG_RELATIVE_PATH.as_posix(),
+            "exists": False,
+            "events": events,
+            "findings": findings,
+        }
+    if not path.is_file():
+        return {
+            "path": LIFECYCLE_LOG_RELATIVE_PATH.as_posix(),
+            "exists": False,
+            "events": events,
+            "findings": [
+                _log_finding(
+                    "RUNTIME_LIFECYCLE_LOG_UNREADABLE",
+                    "error",
+                    "Lifecycle log path is not a regular file.",
+                    LIFECYCLE_LOG_RELATIVE_PATH.as_posix(),
+                    "Restore project-runtime/agents/instances.jsonl as a JSONL event log.",
+                )
+            ],
+        }
+    try:
+        lines = path.read_text(encoding="utf-8").splitlines()
+    except OSError as exc:
+        return {
+            "path": LIFECYCLE_LOG_RELATIVE_PATH.as_posix(),
+            "exists": True,
+            "events": events,
+            "findings": [
+                _log_finding(
+                    "RUNTIME_LIFECYCLE_LOG_UNREADABLE",
+                    "error",
+                    "Lifecycle log could not be read.",
+                    str(exc),
+                    "Repair lifecycle log permissions before routing next actions.",
+                )
+            ],
+        }
+
+    for line_number, raw_line in enumerate(lines, start=1):
+        if not raw_line.strip():
+            continue
+        try:
+            payload = json.loads(raw_line)
+        except json.JSONDecodeError as exc:
+            findings.append(
+                _log_finding(
+                    "RUNTIME_LIFECYCLE_LOG_JSON_INVALID",
+                    "error",
+                    "Lifecycle log contains invalid JSON.",
+                    f"{LIFECYCLE_LOG_RELATIVE_PATH.as_posix()}:{line_number}: {exc.msg}",
+                    "Repair or remove the malformed lifecycle event before routing next actions.",
+                )
+            )
+            continue
+        if not isinstance(payload, dict):
+            findings.append(
+                _log_finding(
+                    "RUNTIME_LIFECYCLE_LOG_EVENT_INVALID",
+                    "error",
+                    "Lifecycle log entry is not an object.",
+                    f"{LIFECYCLE_LOG_RELATIVE_PATH.as_posix()}:{line_number}",
+                    "Use one JSON object per lifecycle event line.",
+                )
+            )
+            continue
+        event = dict(payload)
+        event["_line"] = line_number
+        events.append(event)
+
+        result_ref = _text(event.get("result_ref"))
+        if result_ref and not _is_none(result_ref):
+            result_path = workspace_root / result_ref
+            if not result_path.is_file():
+                findings.append(
+                    _log_finding(
+                        "RUNTIME_LIFECYCLE_RESULT_REF_MISSING",
+                        "error",
+                        "Lifecycle event references a missing RESULT.",
+                        f"{LIFECYCLE_LOG_RELATIVE_PATH.as_posix()}:{line_number}; result_ref={result_ref}",
+                        "Restore the referenced RESULT artifact or repair the lifecycle event.",
+                    )
+                )
+
+        for ref_field in ("artifact_ref", "artifact_package_ref", "receipt_ref"):
+            ref = _text(event.get(ref_field))
+            if not ref or _is_none(ref):
+                continue
+            ref_path = workspace_root / ref
+            if not ref_path.exists():
+                findings.append(
+                    _log_finding(
+                        "RUNTIME_LIFECYCLE_ARTIFACT_REF_MISSING",
+                        "error",
+                        "Lifecycle event references a missing artifact or receipt.",
+                        f"{LIFECYCLE_LOG_RELATIVE_PATH.as_posix()}:{line_number}; {ref_field}={ref}",
+                        "Restore the referenced artifact/receipt or repair the lifecycle event.",
+                    )
+                )
+
+    return {
+        "path": LIFECYCLE_LOG_RELATIVE_PATH.as_posix(),
+        "exists": True,
+        "events": events,
+        "findings": findings,
+    }
 
 
 def _contract_states(contract: Mapping[str, Any]) -> set[str]:
@@ -693,14 +857,456 @@ def _has_audit_evidence(task: Mapping[str, object], sidecars: Mapping[str, Mappi
     return False
 
 
-def _infer_contract_state(
+def _lifecycle_payload(sidecars: Mapping[str, Mapping[str, object]]) -> dict[str, Any]:
+    payload = sidecars.get("LIFECYCLE_LOG")
+    if not isinstance(payload, Mapping):
+        return {}
+    content = payload.get("content")
+    if isinstance(content, Mapping):
+        return dict(content)
+    return dict(payload)
+
+
+def _lifecycle_events(sidecars: Mapping[str, Mapping[str, object]]) -> list[dict[str, Any]]:
+    payload = _lifecycle_payload(sidecars)
+    events = payload.get("events")
+    if not isinstance(events, list):
+        return []
+    return [dict(event) for event in events if isinstance(event, Mapping)]
+
+
+def _lifecycle_log_findings(sidecars: Mapping[str, Mapping[str, object]]) -> list[TransitionFinding]:
+    payload = _lifecycle_payload(sidecars)
+    raw_findings = payload.get("findings")
+    if not isinstance(raw_findings, list):
+        return []
+    findings: list[TransitionFinding] = []
+    for item in raw_findings:
+        if not isinstance(item, Mapping):
+            continue
+        findings.append(
+            _finding(
+                _text(item.get("rule_id")) or "RUNTIME_LIFECYCLE_LOG_INVALID",
+                _text(item.get("severity")) or "error",
+                _text(item.get("message")) or "Lifecycle log is invalid.",
+                _text(item.get("evidence")),
+                _text(item.get("recommendation")) or "Repair lifecycle log before routing.",
+            )
+        )
+    return findings
+
+
+def _event_line(event: Mapping[str, object]) -> str:
+    line = event.get("_line")
+    return str(line) if isinstance(line, int) else "unknown"
+
+
+def _event_task_id(event: Mapping[str, object]) -> str:
+    return _text(event.get("task_id") or event.get("task") or event.get("TASK_ID"))
+
+
+def _event_result_ref(event: Mapping[str, object]) -> str:
+    return _text(event.get("result_ref") or event.get("source_result_ref"))
+
+
+def _event_role(event: Mapping[str, object]) -> str:
+    return _text(event.get("agent_role") or event.get("role") or event.get("ROLE")).lower()
+
+
+def _raw_event_type(event: Mapping[str, object]) -> str:
+    return _text(event.get("event_type") or event.get("event") or event.get("type"))
+
+
+def _is_auditor_event(event: Mapping[str, object], event_name: str) -> bool:
+    role = _event_role(event)
+    if role == "auditor":
+        return True
+    raw_event_type = _raw_event_type(event)
+    if raw_event_type in {"AUDITOR_AGENT_TERMINATED", "auditor_agent_terminated"}:
+        return True
+    previous_event_type = _text(event.get("previous_event_type") or event.get("previous_event"))
+    if previous_event_type in {"AUDITOR_AGENT_TERMINATED", "auditor_agent_terminated"}:
+        return True
+    agent_instance_id = _text(event.get("agent_instance_id"))
+    if agent_instance_id.startswith("audit_"):
+        return True
+    return event_name in AUDIT_RESULT_EVENTS
+
+
+def _is_auditor_bookkeeping_event(event: Mapping[str, object], event_name: str) -> bool:
+    return event_name in AUDITOR_BOOKKEEPING_EVENTS and _is_auditor_event(event, event_name)
+
+
+def _contract_transition_state(contract: Mapping[str, Any], state: str, event_name: str) -> str:
+    transitions = _mapping(contract.get("state_transitions"))
+    return _text(_mapping(transitions.get(state)).get(event_name))
+
+
+def _relevant_lifecycle_events(
+    contract: Mapping[str, Any],
+    events: list[dict[str, Any]],
+    task_id: str,
+) -> list[dict[str, Any]]:
+    if task_id:
+        filtered = [
+            event
+            for event in events
+            if _event_task_id(event) == task_id
+        ]
+        if filtered:
+            return filtered
+        return []
+    return events
+
+
+def _last_lifecycle_task_id(events: list[dict[str, Any]]) -> str:
+    for event in reversed(events):
+        task_id = _event_task_id(event)
+        if task_id:
+            return task_id
+    return ""
+
+
+def _accepted_artifact_entries(sidecars: Mapping[str, Mapping[str, object]]) -> list[dict[str, Any]]:
+    artifacts = _content(sidecars, "ACCEPTED_ARTIFACTS").get("artifacts")
+    if not isinstance(artifacts, list):
+        return []
+    return [dict(item) for item in artifacts if isinstance(item, Mapping)]
+
+
+def _artifact_event_has_sidecar_entry(
+    event: Mapping[str, object],
+    entries: list[dict[str, Any]],
+) -> bool:
+    artifact_ref = _text(event.get("artifact_ref"))
+    artifact_package_ref = _text(event.get("artifact_package_ref"))
+    artifact_id = _text(event.get("artifact_id"))
+    task_id = _event_task_id(event)
+    for entry in entries:
+        if entry.get("status") != "accepted":
+            continue
+        entry_refs = {
+            _text(entry.get("artifact_ref")),
+            _text(entry.get("artifact_package_ref")),
+        }
+        if artifact_ref and artifact_ref in entry_refs:
+            return True
+        if artifact_package_ref and artifact_package_ref in entry_refs:
+            return True
+        if artifact_id and artifact_id == _text(entry.get("artifact_id")):
+            return True
+        if task_id and task_id in {_text(entry.get("source_task")), _text(entry.get("task_id"))}:
+            return True
+    return False
+
+
+def _lifecycle_sequence_findings(
+    contract: Mapping[str, Any],
+    events: list[dict[str, Any]],
+    task_id: str,
+) -> list[TransitionFinding]:
+    profile_positions: dict[str, int] = {}
+    auditor_positions: dict[str, int] = {}
+    for index, event in enumerate(events):
+        event_name = _normalize_event(contract, event)
+        if _is_auditor_event(event, event_name):
+            auditor_positions.setdefault(event_name, index)
+        else:
+            profile_positions.setdefault(event_name, index)
+
+    findings: list[TransitionFinding] = []
+    if "ARTIFACT_ACCEPTED" in profile_positions and "RESULT_RECEIVED" not in profile_positions:
+        findings.append(
+            _finding(
+                "RUNTIME_LIFECYCLE_SEQUENCE_INVALID",
+                "error",
+                "ARTIFACT_ACCEPTED exists without a prior RESULT_RECEIVED lifecycle event.",
+                f"task_id={task_id or 'NONE'}",
+                "Record RESULT_RECEIVED before ARTIFACT_ACCEPTED.",
+            )
+        )
+    if "AGENT_TERMINATED" in profile_positions:
+        if "RESULT_RECEIVED" not in profile_positions:
+            findings.append(
+                _finding(
+                    "RUNTIME_LIFECYCLE_SEQUENCE_INVALID",
+                    "error",
+                    "AGENT_TERMINATED exists without RESULT_RECEIVED.",
+                    f"task_id={task_id or 'NONE'}",
+                    "Record RESULT_RECEIVED before AGENT_TERMINATED.",
+                )
+            )
+        if "ARTIFACT_ACCEPTED" not in profile_positions:
+            findings.append(
+                _finding(
+                    "RUNTIME_LIFECYCLE_SEQUENCE_INVALID",
+                    "error",
+                    "AGENT_TERMINATED exists without ARTIFACT_ACCEPTED.",
+                    f"task_id={task_id or 'NONE'}",
+                    "Accept the artifact package before AGENT_TERMINATED.",
+                )
+            )
+    if "AUDIT_ROUTE_READY" in profile_positions and "AGENT_TERMINATED" not in profile_positions:
+        findings.append(
+            _finding(
+                "RUNTIME_LIFECYCLE_SEQUENCE_INVALID",
+                "error",
+                "AUDIT_ROUTE_READY exists without AGENT_TERMINATED.",
+                f"task_id={task_id or 'NONE'}",
+                "Record AGENT_TERMINATED before AUDIT_ROUTE_READY.",
+            )
+        )
+    audit_result_recorded = bool(AUDIT_RESULT_EVENTS & set(auditor_positions))
+    if "ARTIFACT_ACCEPTED" in auditor_positions and not audit_result_recorded:
+        findings.append(
+            _finding(
+                "RUNTIME_LIFECYCLE_SEQUENCE_INVALID",
+                "error",
+                "Auditor ARTIFACT_ACCEPTED exists without a prior AUDIT_RESULT_RECEIVED lifecycle event.",
+                f"task_id={task_id or 'NONE'}",
+                "Record AUDIT_RESULT_RECEIVED before accepting the auditor artifact package.",
+            )
+        )
+    if "AGENT_TERMINATED" in auditor_positions:
+        if not audit_result_recorded:
+            findings.append(
+                _finding(
+                    "RUNTIME_LIFECYCLE_SEQUENCE_INVALID",
+                    "error",
+                    "AUDITOR_AGENT_TERMINATED exists without AUDIT_RESULT_RECEIVED.",
+                    f"task_id={task_id or 'NONE'}",
+                    "Record AUDIT_RESULT_RECEIVED before AUDITOR_AGENT_TERMINATED.",
+                )
+            )
+        if "ARTIFACT_ACCEPTED" not in auditor_positions:
+            findings.append(
+                _finding(
+                    "RUNTIME_LIFECYCLE_SEQUENCE_INVALID",
+                    "error",
+                    "AUDITOR_AGENT_TERMINATED exists without auditor ARTIFACT_ACCEPTED.",
+                    f"task_id={task_id or 'NONE'}",
+                    "Accept the auditor artifact package before AUDITOR_AGENT_TERMINATED.",
+                )
+            )
+    if "AUDIT_ROUTE_READY" in auditor_positions and "AGENT_TERMINATED" not in auditor_positions:
+        findings.append(
+            _finding(
+                "RUNTIME_LIFECYCLE_SEQUENCE_INVALID",
+                "error",
+                "Auditor AUDIT_ROUTE_READY exists without AUDITOR_AGENT_TERMINATED.",
+                f"task_id={task_id or 'NONE'}",
+                "Record AUDITOR_AGENT_TERMINATED before auditor route readiness.",
+            )
+        )
+    return findings
+
+
+def _lifecycle_state(
+    contract: Mapping[str, Any],
     sidecars: Mapping[str, Mapping[str, object]],
-) -> tuple[str, dict[str, object]]:
+    task_id: str,
+) -> tuple[str, dict[str, object], tuple[TransitionFinding, ...]]:
+    events = _lifecycle_events(sidecars)
+    findings = _lifecycle_log_findings(sidecars)
+    if not events:
+        return "", {}, tuple(findings)
+
+    if not task_id:
+        task_id = _last_lifecycle_task_id(events)
+    relevant_events = _relevant_lifecycle_events(contract, events, task_id)
+    if not relevant_events:
+        return "", {}, tuple(findings)
+
+    event_summaries: list[dict[str, object]] = []
+    state = ""
+    for event in relevant_events:
+        event_name = _normalize_event(contract, event)
+        event_state = LIFECYCLE_EVENT_STATES.get(event_name)
+        auditor_event = _is_auditor_event(event, event_name)
+        applied = False
+        ignored_reason = ""
+        if _is_auditor_bookkeeping_event(event, event_name):
+            ignored_reason = "auditor_bookkeeping_not_task_route_state"
+        elif event_name in AUDIT_RESULT_EVENTS and event_state:
+            transition_state = _contract_transition_state(contract, state, event_name) if state else ""
+            state = transition_state or event_state
+            applied = True
+        elif event_state:
+            transition_state = _contract_transition_state(contract, state, event_name) if state else ""
+            if transition_state:
+                state = transition_state
+                applied = True
+            elif not state:
+                state = event_state
+                applied = True
+            else:
+                ignored_reason = "no_contract_transition_from_current_state"
+        event_summary = {
+            "event": event_name,
+            "line": _event_line(event),
+            "task_id": _event_task_id(event),
+            "result_ref": _event_result_ref(event),
+            "role": _event_role(event),
+            "auditor_event": auditor_event,
+            "applied_to_state": applied,
+            "state_after": state,
+        }
+        if ignored_reason:
+            event_summary["ignored_reason"] = ignored_reason
+        event_summaries.append(event_summary)
+
+    findings.extend(_lifecycle_sequence_findings(contract, relevant_events, task_id))
+    signals: dict[str, object] = {
+        "state_source": "lifecycle_log",
+        "task_id": task_id,
+        "lifecycle_event_count": len(relevant_events),
+        "latest_lifecycle_event": event_summaries[-1]["event"] if event_summaries else "",
+        "lifecycle_events": event_summaries,
+    }
+    return state, signals, tuple(findings)
+
+
+def _lifecycle_consistency_findings(
+    state: str,
+    sidecars: Mapping[str, Mapping[str, object]],
+    task: Mapping[str, object],
+    task_id: str,
+) -> list[TransitionFinding]:
+    if state not in LIFECYCLE_PROGRESS_STATES or not task_id:
+        return []
+
+    findings: list[TransitionFinding] = []
+    task_status = _text(task.get("status"))
+    if state in {
+        "RESULT_PENDING_ARTIFACT_ACCEPTANCE",
+        "RESULT_ACCEPTED",
+        "AGENT_TERMINATED",
+        "AUDIT_PENDING",
+    }:
+        if task_status in {"ready", "pending"}:
+            findings.append(
+                _finding(
+                    "RUNTIME_LIFECYCLE_TASK_REGISTRY_STALE",
+                    "error",
+                    "Lifecycle log shows progress for this task but TASK_REGISTRY still marks it pre-dispatch.",
+                    f"task_id={task_id}; lifecycle_state={state}; task_status={task_status}",
+                    "Update TASK_REGISTRY from lifecycle events or route using the transition engine derived state.",
+                )
+            )
+        if state == "RESULT_PENDING_ARTIFACT_ACCEPTANCE" and not _truthy_refs(task.get("result_refs")):
+            findings.append(
+                _finding(
+                    "RUNTIME_LIFECYCLE_RESULT_REGISTRY_STALE",
+                    "error",
+                    "RESULT_RECEIVED exists but TASK_REGISTRY has no result_refs for this task.",
+                    f"task_id={task_id}; task_status={task_status or 'NONE'}",
+                    "Record the RESULT reference in TASK_REGISTRY or reconcile state from the lifecycle log.",
+                )
+            )
+    if state == "AUDIT_PENDING" and task_status not in {"audit_pending", "audit_passed", "failed", "blocked", "completed"}:
+        findings.append(
+            _finding(
+                "RUNTIME_LIFECYCLE_TASK_REGISTRY_STALE",
+                "error",
+                "Lifecycle log has reached audit routing but TASK_REGISTRY status is not audit-aware.",
+                f"task_id={task_id}; lifecycle_state={state}; task_status={task_status or 'NONE'}",
+                "Update TASK_REGISTRY to audit_pending or reconcile from lifecycle-derived state.",
+            )
+        )
+    if state == "CHECKPOINT_ELIGIBLE" and task_status not in {"audit_passed", "checkpoint_done", "completed"}:
+        findings.append(
+            _finding(
+                "RUNTIME_LIFECYCLE_CHECKPOINT_REGISTRY_STALE",
+                "error",
+                "Audit pass lifecycle progress conflicts with TASK_REGISTRY status.",
+                f"task_id={task_id}; task_status={task_status or 'NONE'}",
+                "Record audit-pass evidence before checkpoint planning.",
+            )
+        )
+    if state == "CORRECTION_REQUIRED" and task_status not in {"failed", "blocked"}:
+        findings.append(
+            _finding(
+                "RUNTIME_LIFECYCLE_CORRECTION_REGISTRY_STALE",
+                "error",
+                "Audit fail/correction lifecycle progress conflicts with TASK_REGISTRY status.",
+                f"task_id={task_id}; task_status={task_status or 'NONE'}",
+                "Route correction and update TASK_REGISTRY to failed or blocked.",
+            )
+        )
+
+    current_gate = _content(sidecars, "CURRENT_GATE")
+    next_action = _content(sidecars, "NEXT_ACTION")
+    if (
+        state != "TASK_READY"
+        and _text(current_gate.get("task_id")) == task_id
+        and _text(current_gate.get("status")) == "open"
+        and _text(next_action.get("action_type")) == "create_agent"
+        and _text(next_action.get("task_id")) == task_id
+    ):
+        findings.append(
+            _finding(
+                "RUNTIME_LIFECYCLE_CURRENT_GATE_STALE",
+                "error",
+                "CURRENT_GATE and NEXT_ACTION still describe initial dispatch after lifecycle progress.",
+                (
+                    f"task_id={task_id}; lifecycle_state={state}; "
+                    f"gate_required_next_role={_text(current_gate.get('required_next_role')) or 'NONE'}"
+                ),
+                "Reconcile CURRENT_GATE and NEXT_ACTION from the transition engine before dispatching again.",
+            )
+        )
+
+    accepted_events = [
+        event
+        for event in _relevant_lifecycle_events(_mapping({}), _lifecycle_events(sidecars), task_id)
+        if _text(event.get("event_type") or event.get("event")) in {"ARTIFACT_ACCEPTED", "artifact_accepted"}
+    ]
+    accepted_entries = _accepted_artifact_entries(sidecars)
+    if accepted_events and isinstance(_content(sidecars, "ACCEPTED_ARTIFACTS").get("artifacts"), list):
+        for event in accepted_events:
+            if _artifact_event_has_sidecar_entry(event, accepted_entries):
+                continue
+            findings.append(
+                _finding(
+                    "RUNTIME_LIFECYCLE_ARTIFACT_SIDECAR_STALE",
+                    "error",
+                    "ARTIFACT_ACCEPTED exists but ACCEPTED_ARTIFACTS has no matching accepted entry.",
+                    f"task_id={task_id}; artifact_ref={_text(event.get('artifact_ref')) or 'NONE'}",
+                    "Update ACCEPTED_ARTIFACTS from the artifact acceptance receipt.",
+                )
+            )
+    return findings
+
+
+def _infer_contract_state(
+    contract: Mapping[str, Any] | None,
+    sidecars: Mapping[str, Mapping[str, object]],
+) -> tuple[str, dict[str, object], tuple[TransitionFinding, ...]]:
     project_state = _content(sidecars, "PROJECT_STATE")
     current_gate = _content(sidecars, "CURRENT_GATE")
     next_action = _content(sidecars, "NEXT_ACTION")
     tasks = _tasks_by_id(sidecars)
     task_id = _active_task_id(project_state, current_gate, next_action)
+    lifecycle_findings: tuple[TransitionFinding, ...] = ()
+    if contract is not None:
+        lifecycle_state, lifecycle_signals, lifecycle_findings = _lifecycle_state(contract, sidecars, task_id)
+        if lifecycle_state:
+            task_id = _text(lifecycle_signals.get("task_id")) or task_id
+            task = tasks.get(task_id, {})
+            lifecycle_signals.update(
+                {
+                    "task_status": _text(task.get("status")),
+                    "next_action_type": _text(next_action.get("action_type")),
+                    "target_role": _text(next_action.get("target_role")),
+                    "checkpoint_policy": _text(next_action.get("checkpoint_policy")),
+                    "current_phase": _text(project_state.get("current_phase")),
+                    "project_status": _text(project_state.get("project_status")),
+                }
+            )
+            findings = list(lifecycle_findings)
+            findings.extend(_lifecycle_consistency_findings(lifecycle_state, sidecars, task, task_id))
+            return lifecycle_state, lifecycle_signals, tuple(findings)
+
     task = tasks.get(task_id, {})
     task_status = _text(task.get("status"))
     action_type = _text(next_action.get("action_type"))
@@ -711,6 +1317,7 @@ def _infer_contract_state(
     project_status = _text(project_state.get("project_status"))
 
     signals: dict[str, object] = {
+        "state_source": "sidecars",
         "task_id": task_id,
         "task_status": task_status,
         "next_action_type": action_type,
@@ -721,50 +1328,50 @@ def _infer_contract_state(
     }
 
     if project_status in {"completed", "archived"} or current_phase == "completed":
-        return "TERMINAL_STOP", signals
+        return "TERMINAL_STOP", signals, lifecycle_findings
     if current_phase == "correction":
-        return "CORRECTION_REQUIRED", signals
+        return "CORRECTION_REQUIRED", signals, lifecycle_findings
     if project_status == "blocked" and action_type == "wait_for_owner":
-        return "OWNER_INPUT_REQUIRED", signals
+        return "OWNER_INPUT_REQUIRED", signals, lifecycle_findings
     if project_status == "blocked" and action_type == "correction":
-        return "CORRECTION_REQUIRED", signals
+        return "CORRECTION_REQUIRED", signals, lifecycle_findings
     if task_status in {"failed", "blocked"}:
-        return "CORRECTION_REQUIRED", signals
+        return "CORRECTION_REQUIRED", signals, lifecycle_findings
     if task_status in {"audit_passed", "checkpoint_done", "completed"} or _has_audit_evidence(task, sidecars, task_id):
-        return "CHECKPOINT_ELIGIBLE", signals
+        return "CHECKPOINT_ELIGIBLE", signals, lifecycle_findings
     if checkpoint_policy in {"local_only", "commit_and_push"} or checkpoint_preflight_required:
-        return "CHECKPOINT_ELIGIBLE", signals
+        return "CHECKPOINT_ELIGIBLE", signals, lifecycle_findings
     if task_status == "audit_pending":
-        return "AUDIT_PENDING", signals
+        return "AUDIT_PENDING", signals, lifecycle_findings
     if task_status == "running":
         if _truthy_refs(task.get("result_refs")):
-            return "RESULT_PENDING_ARTIFACT_ACCEPTANCE", signals
-        return "AGENT_RUNNING", signals
+            return "RESULT_PENDING_ARTIFACT_ACCEPTANCE", signals, lifecycle_findings
+        return "AGENT_RUNNING", signals, lifecycle_findings
     if task_status in {"ready", "pending"}:
-        return "TASK_READY", signals
+        return "TASK_READY", signals, lifecycle_findings
     if action_type == "wait_for_owner":
-        return "OWNER_INPUT_REQUIRED", signals
+        return "OWNER_INPUT_REQUIRED", signals, lifecycle_findings
     if action_type == "stop":
-        return "TERMINAL_STOP", signals
+        return "TERMINAL_STOP", signals, lifecycle_findings
     if action_type == "correction":
-        return "CORRECTION_REQUIRED", signals
+        return "CORRECTION_REQUIRED", signals, lifecycle_findings
     if action_type == "create_agent" and target_role == "auditor":
-        return "AGENT_TERMINATED", signals
+        return "AGENT_TERMINATED", signals, lifecycle_findings
     if action_type == "create_agent":
-        return "TASK_READY", signals
+        return "TASK_READY", signals, lifecycle_findings
     if action_type == "route_result" and target_role == "auditor":
-        return "AUDIT_PENDING", signals
+        return "AUDIT_PENDING", signals, lifecycle_findings
     if action_type == "route_result":
-        return "AGENT_RUNNING", signals
+        return "AGENT_RUNNING", signals, lifecycle_findings
     if action_type == "finalize":
-        return "CHECKPOINT_ELIGIBLE", signals
+        return "CHECKPOINT_ELIGIBLE", signals, lifecycle_findings
     if action_type == "update_state":
-        return "RESULT_PENDING_ARTIFACT_ACCEPTANCE", signals
-    return "CORRECTION_REQUIRED", signals
+        return "RESULT_PENDING_ARTIFACT_ACCEPTANCE", signals, lifecycle_findings
+    return "CORRECTION_REQUIRED", signals, lifecycle_findings
 
 
 def infer_contract_state_from_sidecars(sidecars: Mapping[str, Mapping[str, object]]) -> str:
-    state, _signals = _infer_contract_state(sidecars)
+    state, _signals, _findings = _infer_contract_state(None, sidecars)
     return state
 
 
@@ -803,7 +1410,7 @@ def explain_next_action_from_sidecars(
     contract: Mapping[str, Any],
     sidecars: Mapping[str, Mapping[str, object]],
 ) -> TransitionDecision:
-    state, signals = _infer_contract_state(sidecars)
+    state, signals, inference_findings = _infer_contract_state(contract, sidecars)
     next_action_content = _content(sidecars, "NEXT_ACTION")
     task_id = _text(signals.get("task_id"))
     task_packet = _text(next_action_content.get("task_packet"))
@@ -818,7 +1425,7 @@ def explain_next_action_from_sidecars(
     expected = _text(derived_action.get("recommended_next_action"))
     actual = recommendation_from_next_action_content(next_action_content)
 
-    findings: list[TransitionFinding] = []
+    findings: list[TransitionFinding] = list(inference_findings)
     if not _recommendations_match(contract, expected, actual):
         findings.append(
             _finding(
@@ -854,7 +1461,7 @@ def explain_next_action_from_sidecars(
             "stored_recommended_next_action": actual,
         },
         transition_selected={
-            "derivation": "sidecars",
+            "derivation": signals.get("state_source", "sidecars"),
             "state": state,
             "expected_recommended_next_action": expected,
         },

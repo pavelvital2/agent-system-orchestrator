@@ -9,7 +9,7 @@ import sys
 from dataclasses import dataclass
 from pathlib import Path
 
-from . import mode_guard, package_checks, repair_hints
+from . import mode_guard, package_checks, repair_hints, state_verify
 
 
 EXIT_OK = 0
@@ -280,6 +280,40 @@ def _findings(root: Path, files: dict[str, RuntimeFile], push_values: dict[str, 
             )
         )
 
+    findings.extend(_state_reconciliation_findings(root))
+    return findings
+
+
+def _state_reconciliation_findings(root: Path) -> list[Finding]:
+    state_root = root / "project-runtime" / "state"
+    lifecycle_log = root / "project-runtime" / "agents" / "instances.jsonl"
+    if not state_root.is_dir() and not lifecycle_log.exists():
+        return []
+
+    report, _exit_code = state_verify._report(root, False)
+    raw_findings = report.get("findings")
+    if not isinstance(raw_findings, list):
+        return []
+
+    findings: list[Finding] = []
+    for item in raw_findings:
+        if not isinstance(item, dict):
+            continue
+        rule_id = str(item.get("rule_id", ""))
+        if not rule_id.startswith("RUNTIME_"):
+            continue
+        severity = str(item.get("severity", "error")) or "error"
+        path = str(item.get("path", "")) or "project-runtime/state/NEXT_ACTION.json"
+        findings.append(
+            Finding(
+                rule_id=rule_id,
+                severity=severity,
+                title=str(item.get("title", "")) or "Runtime state reconciliation failed",
+                details=str(item.get("details", "") or item.get("message", "")),
+                files=[path],
+                recommendation=str(item.get("recommendation", "")) or "Run aso state verify for the full reconciliation report.",
+            )
+        )
     return findings
 
 

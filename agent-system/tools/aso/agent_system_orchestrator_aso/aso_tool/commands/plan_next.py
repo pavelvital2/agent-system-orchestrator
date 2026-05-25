@@ -122,6 +122,9 @@ def _load_sidecars(root: Path) -> dict[str, dict[str, object]]:
             continue
         if isinstance(payload, dict):
             sidecars[spec.sidecar_type] = payload
+    lifecycle_log = transition_engine.load_lifecycle_log(root)
+    if lifecycle_log.get("events") or lifecycle_log.get("findings"):
+        sidecars["LIFECYCLE_LOG"] = lifecycle_log
     return sidecars
 
 
@@ -858,6 +861,15 @@ def _plan(
         "NONE",
         "blocked",
     )
+    transition_evidence = _transition_engine_evidence(sidecars)
+    transition_selected = transition_evidence.get("transition_selected")
+    derived_next_action = transition_evidence.get("next_action")
+    lifecycle_derived = (
+        isinstance(transition_selected, dict)
+        and transition_selected.get("derivation") == "lifecycle_log"
+        and isinstance(derived_next_action, dict)
+    )
+    routing_next_action = dict(next_action)
 
     if rules_evidence.get("load_error"):
         blocking_rules.append(
@@ -924,6 +936,41 @@ def _plan(
                 "route=repair_bootstrap_state/create_or_reference_bootstrap_task_packet",
             )
         )
+    elif lifecycle_derived and isinstance(derived_next_action, dict):
+        routing_next_action.update(derived_next_action)
+        action_type = _as_text(routing_next_action.get("action_type"))
+        target_role = _as_text(routing_next_action.get("target_role"))
+        task_id = _as_text(routing_next_action.get("task_id")) or task_id
+        task_packet = _as_text(routing_next_action.get("task_packet")) or task_packet
+        task = tasks.get(task_id, {})
+        audit_evidence = _audit_pass_evidence(root, sidecars, task, task_id)
+        recommended_next_action = (
+            _as_text(derived_next_action.get("recommended_next_action"))
+            or transition_engine.recommendation_from_next_action_content(routing_next_action)
+        )
+        if action_type == "create_agent":
+            dispatchability = can_dispatch_agent(
+                root,
+                action_type,
+                target_role,
+                task_id,
+                task_packet,
+                routing_next_action,
+                project_state,
+                current_gate,
+                task,
+                blocking_rules,
+            )
+            target_role = str(dispatchability["target_role"])
+        else:
+            dispatchability = _non_dispatchability(
+                action_type,
+                target_role,
+                task_id,
+                task_packet,
+                recommended_next_action,
+                _non_dispatch_status(action_type, recommended_next_action),
+            )
     elif _is_checkpoint_attempt(next_action):
         if audit_evidence["present"]:
             recommended_next_action = "CHECKPOINT_PREFLIGHT"
@@ -1066,6 +1113,11 @@ def _plan(
                 "action_semantic": next_action.get("action_semantic", ""),
                 "checkpoint_policy": next_action.get("checkpoint_policy", ""),
                 "blocked_by": next_action.get("blocked_by", []),
+                "routing_source": "transition_engine" if lifecycle_derived else "stored",
+                "stored_action_type": next_action.get("action_type", ""),
+                "stored_target_role": next_action.get("target_role", ""),
+                "routing_action_type": routing_next_action.get("action_type", ""),
+                "routing_target_role": routing_next_action.get("target_role", ""),
             },
             "task": {
                 "task_id": task_id,
@@ -1074,7 +1126,7 @@ def _plan(
                 "audit_refs": task.get("audit_refs", []),
             },
             "audit_pass_evidence": audit_evidence,
-            "transition_engine": _transition_engine_evidence(sidecars),
+            "transition_engine": transition_evidence,
         },
     }
 
