@@ -294,6 +294,7 @@ def validate_runtime_contract(contract: Mapping[str, Any]) -> ContractValidation
         "next_actions_by_state",
         "required_docs_by_role",
         "reasoning_floor_by_role",
+        "dispatch_receipt_contract",
         "artifact_contracts",
         "audit_gate_rules",
         "checkpoint_rules",
@@ -357,6 +358,30 @@ def validate_runtime_contract(contract: Mapping[str, Any]) -> ContractValidation
             errors.append(f"required_docs_by_role missing role {role}")
         if role not in reasoning_by_role:
             errors.append(f"reasoning_floor_by_role missing role {role}")
+
+    dispatch_receipt = _mapping(contract.get("dispatch_receipt_contract"))
+    if not dispatch_receipt:
+        errors.append("dispatch_receipt_contract must be an object")
+    else:
+        if dispatch_receipt.get("receipt_ref_template") != "project-runtime/agents/dispatches/<AGENT_INSTANCE_ID>.json":
+            errors.append("dispatch_receipt_contract.receipt_ref_template must be project-runtime/agents/dispatches/<AGENT_INSTANCE_ID>.json")
+        if dispatch_receipt.get("runner") != "external_codex_cli":
+            errors.append("dispatch_receipt_contract.runner must be external_codex_cli")
+        if dispatch_receipt.get("live_dispatch_performed_by_aso") is not False:
+            errors.append("dispatch_receipt_contract.live_dispatch_performed_by_aso must be false")
+        for field in (
+            "schema_ref",
+            "template_ref",
+            "runner_semantics",
+            "external_runner_command_template",
+            "writer_command_template",
+        ):
+            if not _text(dispatch_receipt.get(field)):
+                errors.append(f"dispatch_receipt_contract.{field} is required")
+        required_receipt_fields = set(_string_list(dispatch_receipt.get("required_fields")))
+        for field in ("runner", "model", "reasoning_effort", "prompt_ref", "task_id", "role", "started_at", "handoff_ref"):
+            if field not in required_receipt_fields:
+                errors.append(f"dispatch_receipt_contract.required_fields missing {field}")
 
     artifact_contracts = _mapping(contract.get("artifact_contracts"))
     if artifact_contracts.get("candidate_manifest_canonical") != "manifest.json":

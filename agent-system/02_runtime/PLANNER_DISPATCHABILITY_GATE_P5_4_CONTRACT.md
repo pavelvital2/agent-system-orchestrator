@@ -156,6 +156,14 @@ reason codes, and the canonical invalid tuple.
       "source": "TASK_REGISTRY.content.tasks[task_id]"
     },
     {
+      "name": "resolved_reasoning_level",
+      "source": "ORCHESTRATOR_RUNTIME_CONTRACT.reasoning_floor_by_role + task packet TASK_COMPLEXITY/REASONING_LEVEL_REQUIRED"
+    },
+    {
+      "name": "dispatch_receipt_contract",
+      "source": "agent-system/09_validators/schemas/dispatch_receipt.schema.json"
+    },
+    {
       "name": "workspace_identity_status",
       "source": "PROJECT_STATE.content.identity_validation_status"
     },
@@ -198,6 +206,14 @@ reason codes, and the canonical invalid tuple.
       "reason_code_on_fail": "task_packet_not_dispatch_valid"
     },
     {
+      "check_id": "DG54_REASONING_FLOOR_RESOLVED",
+      "reason_code_on_fail": "reasoning_floor_unresolved"
+    },
+    {
+      "check_id": "DG54_BOOTSTRAP_REASONING_FIELDS_PRESENT",
+      "reason_code_on_fail": "bootstrap_reasoning_fields_missing"
+    },
+    {
       "check_id": "DG54_TASK_REGISTRY_COMPATIBLE",
       "reason_code_on_fail": "task_registry_incompatible"
     },
@@ -230,6 +246,8 @@ reason codes, and the canonical invalid tuple.
     "task_packet_none",
     "task_packet_missing",
     "task_packet_not_dispatch_valid",
+    "reasoning_floor_unresolved",
+    "bootstrap_reasoning_fields_missing",
     "task_registry_incompatible",
     "current_gate_blocks_dispatch",
     "blocking_rules_present",
@@ -243,6 +261,8 @@ reason codes, and the canonical invalid tuple.
     "recommended_next_action_CREATE_AGENT_requires_non_auditor_profile_role",
     "recommended_next_action_CREATE_AGENT_requires_task_id_present",
     "recommended_next_action_CREATE_AGENT_requires_task_packet_present_and_dispatch_valid",
+    "recommended_next_action_CREATE_AGENT_requires_resolved_reasoning_level",
+    "recommended_next_action_CREATE_AGENT_requires_dispatch_receipt_contract",
     "recommended_next_action_CREATE_AGENT_requires_no_failed_required_checks",
     "recommended_next_action_CREATE_AGENT_must_not_perform_live_dispatch"
   ],
@@ -385,6 +405,9 @@ The dispatchability evidence must include:
 - `action_class`;
 - `task_id`;
 - `task_packet`;
+- `resolved_reasoning_level` and `reasoning_source`;
+- dispatch receipt schema, receipt path template, writer command template, and
+  external runner command template;
 - `checks[]` with stable `check_id`, `passed`, `severity`, `reason_code`, and
   `evidence`;
 - `reasons[]` with stable `reason_code`, `message`, and `input_ref`;
@@ -395,6 +418,25 @@ If `recommended_next_action` is `CREATE_AGENT`, all required checks must pass,
 must be `profile_execution`, `action_class` must be `dispatch`, `target_role`
 must be a non-auditor profile execution role, `task_id` and `task_packet` must
 not be a none value, and `live_dispatch_performed` must be `false`.
+
+For every dispatchable recommendation, the report must also name the required
+dispatch receipt path template:
+
+```text
+project-runtime/agents/dispatches/<AGENT_INSTANCE_ID>.json
+```
+
+ASO does not execute Codex directly in this P58 boundary. The external dispatch
+contract is:
+
+```text
+codex exec -C <WORKSPACE_ROOT> -m <MODEL> -c model_reasoning_effort="<REASONING_EFFORT>" - < <PROMPT_REF>
+```
+
+The orchestrator or external launcher must write a `DISPATCH_RECEIPT`
+conforming to `agent-system/09_validators/schemas/dispatch_receipt.schema.json`
+before profile-agent execution evidence is accepted.
+
 The JSON Schema rejects CREATE_AGENT reports that violate those report-level
 invariants. Implementation validators remain responsible for proving filesystem
 facts and runtime facts behind those checks, including task packet existence,

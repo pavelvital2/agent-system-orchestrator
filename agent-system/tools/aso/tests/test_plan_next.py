@@ -251,6 +251,12 @@ class PlanNextCommandTests(unittest.TestCase):
             self.assertEqual(report["dispatchability"]["reasons"], [])
             self.assertEqual(report["target_role"], "developer")
             self.assertEqual(report["task_packet"], "project-runtime/tasks/active/TASK_FIXTURE_STATE_001.md")
+            self.assertEqual(report["resolved_reasoning_level"], "high")
+            self.assertEqual(report["reasoning_source"], "runtime_contract.reasoning_floor_by_role")
+            self.assertEqual(report["dispatchability"]["resolved_reasoning_level"], "high")
+            self.assertEqual(report["dispatchability"]["dispatch_receipt_ref_template"], "project-runtime/agents/dispatches/<AGENT_INSTANCE_ID>.json")
+            self.assertTrue(report["dispatch_receipt"]["required"])
+            self.assertIn("codex exec", report["dispatch_receipt"]["external_runner_command_template"])
             self.assertEqual(report["blocking_rules"], [])
             self.assertEqual(mtimes_before, {path: path.stat().st_mtime_ns for path in tracked})
 

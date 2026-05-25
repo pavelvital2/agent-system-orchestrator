@@ -18,6 +18,7 @@ from .commands import (
     dashboard,
     dag,
     design,
+    dispatch,
     doctor,
     incident_fixture,
     intake,
@@ -402,6 +403,84 @@ def build_parser() -> argparse.ArgumentParser:
         help="Write the bootstrap receipt JSON to PATH.",
     )
     intake_bootstrap_parser.set_defaults(handler=intake.run_bootstrap)
+
+    dispatch_parser = subparsers.add_parser(
+        "dispatch",
+        help="Dispatch receipt proposal and writer commands.",
+        description=(
+            "Build or write machine-readable dispatch receipts for externally "
+            "invoked profile-agent runners. These commands do not execute Codex "
+            "or perform live dispatch."
+        ),
+    )
+    dispatch_subparsers = dispatch_parser.add_subparsers(dest="dispatch_command", metavar="COMMAND")
+    dispatch_receipt_parser = dispatch_subparsers.add_parser(
+        "receipt",
+        help="Propose or write a dispatch receipt for an external runner.",
+        description=(
+            "Records runner, model, reasoning effort, prompt, handoff, task, "
+            "role, and start time under project-runtime/agents/dispatches/"
+            "<AGENT_INSTANCE_ID>.json when --confirm-write is supplied."
+        ),
+    )
+    _add_root_argument(dispatch_receipt_parser, validate=False)
+    dispatch_receipt_parser.add_argument("--agent-instance-id", required=True, metavar="ID")
+    dispatch_receipt_parser.add_argument("--task-id", required=True, metavar="TASK_ID")
+    dispatch_receipt_parser.add_argument(
+        "--role",
+        required=True,
+        choices=(
+            "requirements_analyst",
+            "solution_architect",
+            "designer",
+            "developer",
+            "auditor",
+            "tester",
+            "technical_writer",
+            "devops_setup_engineer",
+            "release_manager",
+        ),
+    )
+    dispatch_receipt_parser.add_argument(
+        "--runner",
+        default="external_codex_cli",
+        choices=("external_codex_cli",),
+        help="External runner contract used for this dispatch receipt.",
+    )
+    dispatch_receipt_parser.add_argument(
+        "--model",
+        default="UNKNOWN",
+        help="Model used by the external runner, or UNKNOWN when config default is used.",
+    )
+    dispatch_receipt_parser.add_argument(
+        "--reasoning-effort",
+        required=True,
+        choices=("low", "medium", "high", "xhigh"),
+    )
+    dispatch_receipt_parser.add_argument("--prompt-ref", required=True, metavar="PATH")
+    dispatch_receipt_parser.add_argument("--handoff-ref", required=True, metavar="PATH")
+    dispatch_receipt_parser.add_argument(
+        "--started-at",
+        metavar="RFC3339_UTC",
+        help="UTC timestamp with Z suffix. Defaults to current UTC.",
+    )
+    dispatch_receipt_parser.add_argument(
+        "--confirm-write",
+        action="store_true",
+        help="Write the receipt under project-runtime/agents/dispatches/.",
+    )
+    dispatch_receipt_parser.add_argument(
+        "--json-out",
+        metavar="PATH",
+        help="Write the receipt report to /tmp/... or project-runtime/reports/.",
+    )
+    dispatch_receipt_parser.add_argument(
+        "--format",
+        choices=("json", "text"),
+        default="text",
+        help="Output format for stdout when --json-out is not used (default: text).",
+    )
+    dispatch_receipt_parser.set_defaults(handler=dispatch.run_receipt)
 
     validate_rules_parser = subparsers.add_parser(
         "validate-rules",

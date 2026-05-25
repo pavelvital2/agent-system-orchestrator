@@ -18,6 +18,7 @@
     "next_actions_by_state",
     "required_docs_by_role",
     "reasoning_floor_by_role",
+    "dispatch_receipt_contract",
     "artifact_contracts",
     "audit_gate_rules",
     "checkpoint_rules",
@@ -175,6 +176,46 @@
           "maximum"
         ]
       }
+    },
+    "dispatch_receipt_contract": {
+      "type": "object",
+      "required": [
+        "schema_ref",
+        "template_ref",
+        "receipt_ref_template",
+        "required_fields",
+        "runner",
+        "runner_semantics",
+        "external_runner_command_template",
+        "writer_command_template",
+        "live_dispatch_performed_by_aso"
+      ],
+      "properties": {
+        "schema_ref": { "type": "string", "minLength": 1 },
+        "template_ref": { "type": "string", "minLength": 1 },
+        "receipt_ref_template": {
+          "type": "string",
+          "const": "project-runtime/agents/dispatches/<AGENT_INSTANCE_ID>.json"
+        },
+        "required_fields": {
+          "type": "array",
+          "items": { "type": "string", "minLength": 1 },
+          "minItems": 1,
+          "uniqueItems": true
+        },
+        "runner": {
+          "type": "string",
+          "enum": ["external_codex_cli"]
+        },
+        "runner_semantics": { "type": "string", "minLength": 1 },
+        "external_runner_command_template": {
+          "type": "string",
+          "minLength": 1
+        },
+        "writer_command_template": { "type": "string", "minLength": 1 },
+        "live_dispatch_performed_by_aso": { "const": false }
+      },
+      "additionalProperties": true
     },
     "artifact_contracts": {
       "type": "object",

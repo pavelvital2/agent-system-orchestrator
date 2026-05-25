@@ -11,6 +11,7 @@ from typing import Any
 
 from . import state_verify
 from .. import correction_routing
+from .. import dispatch_receipts
 from .. import result_parser
 from .. import resources
 from .. import transition_engine
@@ -44,6 +45,20 @@ NON_DISPATCH_ACTION_TYPES = {
     "route_result": "ROUTE_RESULT",
 }
 TASK_PACKET_REQUIRED_FIELDS = {"TASK_ID", "TASK_KIND", "TASK_TYPE", "TARGET_ROLE"}
+BOOTSTRAP_TASK_PACKET_REQUIRED_FIELDS = {
+    "TASK_COMPLEXITY",
+    "REASONING_LEVEL_REQUIRED",
+    "AGENT_LIFECYCLE_POLICY",
+    "RESULT_CONTRACT",
+    "EVIDENCE_REQUIREMENTS",
+    "EXPECTED_ARTIFACT_PACKAGE",
+}
+TASK_COMPLEXITY_FLOORS = {
+    "low": "low",
+    "medium": "medium",
+    "high": "high",
+    "xhigh": "xhigh",
+}
 INCIDENT_MARKERS = {
     "incident",
     "incident_recovery",
@@ -461,6 +476,70 @@ def _task_packet_dispatch_valid(
     return True, "task packet has dispatch identity fields"
 
 
+def _safe_runtime_contract() -> dict[str, Any]:
+    try:
+        return transition_engine.load_runtime_contract()
+    except (OSError, transition_engine.RuntimeContractError):
+        return {}
+
+
+def _level_rank(level: str) -> int:
+    return dispatch_receipts.LEVEL_RANK.get(level, -1)
+
+
+def _reasoning_resolution(
+    target_role: str,
+    packet_fields: dict[str, str],
+) -> dict[str, object]:
+    contract = _safe_runtime_contract()
+    target_role = _normalize_profile_role(target_role)
+    reasoning_by_role = contract.get("reasoning_floor_by_role")
+    role_floor = ""
+    if isinstance(reasoning_by_role, dict):
+        role_value = reasoning_by_role.get(target_role)
+        if isinstance(role_value, str):
+            role_floor = role_value.strip()
+    complexity = packet_fields.get("TASK_COMPLEXITY", "").strip()
+    complexity_floor = TASK_COMPLEXITY_FLOORS.get(complexity, "")
+    packet_required = packet_fields.get("REASONING_LEVEL_REQUIRED", "").strip()
+
+    candidates: list[tuple[int, int, str, str]] = []
+    for priority, source, level in (
+        (1, "runtime_contract.reasoning_floor_by_role", role_floor),
+        (2, "task_packet.TASK_COMPLEXITY", complexity_floor),
+        (3, "task_packet.REASONING_LEVEL_REQUIRED", packet_required),
+    ):
+        rank = _level_rank(level)
+        if rank >= 0:
+            candidates.append((rank, priority, level, source))
+    if candidates:
+        _, _, resolved, source = max(candidates)
+    else:
+        resolved = "NONE"
+        source = "unresolved"
+    return {
+        "resolved_reasoning_level": resolved,
+        "reasoning_source": source,
+        "reasoning_inputs": {
+            "role": target_role or "NONE",
+            "role_floor": role_floor or "NONE",
+            "task_complexity": complexity or "NONE",
+            "task_complexity_floor": complexity_floor or "NONE",
+            "task_packet_required": packet_required or "NONE",
+        },
+    }
+
+
+def _bootstrap_reasoning_fields_present(task_packet: str, packet_fields: dict[str, str]) -> tuple[bool, str]:
+    is_bootstrap = task_packet.startswith("project-runtime/bootstrap/")
+    if not is_bootstrap:
+        return True, "non-bootstrap task packet; bootstrap-only metadata check not applicable"
+    missing = sorted(field for field in BOOTSTRAP_TASK_PACKET_REQUIRED_FIELDS if _is_none(packet_fields.get(field)))
+    if missing:
+        return False, f"missing bootstrap task packet fields: {', '.join(missing)}"
+    return True, "bootstrap task packet includes reasoning, lifecycle, result, evidence, and artifact metadata"
+
+
 def _task_registry_compatible(
     task: dict[str, object],
     task_id: str,
@@ -655,6 +734,29 @@ def can_dispatch_agent(
         "NEXT_ACTION.content.task_packet",
     )
 
+    reasoning = _reasoning_resolution(target_role, packet_fields)
+    _gate_check(
+        checks,
+        reasons,
+        "DG54_REASONING_FLOOR_RESOLVED",
+        str(reasoning["resolved_reasoning_level"]) in dispatch_receipts.LEVEL_RANK,
+        "reasoning_floor_unresolved",
+        json.dumps(reasoning, sort_keys=True),
+        "Dispatch reasoning floor could not be resolved from the runtime contract and task packet",
+        "ORCHESTRATOR_RUNTIME_CONTRACT.reasoning_floor_by_role",
+    )
+    bootstrap_fields_present, bootstrap_fields_evidence = _bootstrap_reasoning_fields_present(task_packet, packet_fields)
+    _gate_check(
+        checks,
+        reasons,
+        "DG54_BOOTSTRAP_REASONING_FIELDS_PRESENT",
+        bootstrap_fields_present,
+        "bootstrap_reasoning_fields_missing",
+        bootstrap_fields_evidence,
+        "Bootstrap task packet lacks required dispatch reasoning, lifecycle, result, evidence, or artifact metadata",
+        "NEXT_ACTION.content.task_packet",
+    )
+
     registry_compatible, registry_evidence = _task_registry_compatible(
         task,
         task_id,
@@ -762,6 +864,15 @@ def can_dispatch_agent(
         "checks": checks,
         "reasons": reasons,
         "live_dispatch_performed": False,
+        "resolved_reasoning_level": reasoning["resolved_reasoning_level"],
+        "reasoning_source": reasoning["reasoning_source"],
+        "reasoning_inputs": reasoning["reasoning_inputs"],
+        "dispatch_receipt_required": dispatchable,
+        "dispatch_receipt_schema_ref": dispatch_receipts.SCHEMA_RELATIVE_PATH,
+        "dispatch_receipt_ref_template": dispatch_receipts.RECEIPT_REF_TEMPLATE,
+        "external_runner_command_template": dispatch_receipts.EXTERNAL_RUNNER_COMMAND_TEMPLATE,
+        "receipt_writer_command_template": dispatch_receipts.WRITER_COMMAND_TEMPLATE,
+        "runner_semantics": dispatch_receipts.RUNNER_SEMANTICS,
     }
 
 
@@ -805,6 +916,15 @@ def _non_dispatchability(
             )
         ],
         "live_dispatch_performed": False,
+        "resolved_reasoning_level": "NONE",
+        "reasoning_source": "not_dispatchable",
+        "reasoning_inputs": {},
+        "dispatch_receipt_required": False,
+        "dispatch_receipt_schema_ref": dispatch_receipts.SCHEMA_RELATIVE_PATH,
+        "dispatch_receipt_ref_template": dispatch_receipts.RECEIPT_REF_TEMPLATE,
+        "external_runner_command_template": dispatch_receipts.EXTERNAL_RUNNER_COMMAND_TEMPLATE,
+        "receipt_writer_command_template": dispatch_receipts.WRITER_COMMAND_TEMPLATE,
+        "runner_semantics": dispatch_receipts.RUNNER_SEMANTICS,
     }
 
 
@@ -1118,6 +1238,14 @@ def _plan(
         status = str(dispatchability["status"])
     else:
         status = "ready"
+    resolved_reasoning_level = str(dispatchability.get("resolved_reasoning_level") or "NONE")
+    reasoning_source = str(dispatchability.get("reasoning_source") or "NONE")
+    dispatch_receipt = dispatch_receipts.dispatch_receipt_plan(
+        task_id=task_id,
+        role=target_role,
+        reasoning_effort=resolved_reasoning_level,
+        required=bool(dispatchability.get("dispatchable")),
+    )
     return {
         "tool": "aso",
         "command": "plan-next",
@@ -1134,6 +1262,9 @@ def _plan(
         "target_role": target_role,
         "task_id": task_id,
         "task_packet": task_packet,
+        "resolved_reasoning_level": resolved_reasoning_level,
+        "reasoning_source": reasoning_source,
+        "dispatch_receipt": dispatch_receipt,
         "correction_routing": correction_route,
         "blocking_rules": blocking_rules,
         "evidence": {
@@ -1183,6 +1314,7 @@ def _print_text(report: dict[str, object]) -> None:
     print(f"Recommended next action: {report['recommended_next_action']}")
     print(f"Target role: {report['target_role'] or 'NONE'}")
     print(f"Task packet: {report['task_packet'] or 'NONE'}")
+    print(f"Resolved reasoning level: {report.get('resolved_reasoning_level') or 'NONE'}")
     blocking_rules = report.get("blocking_rules", [])
     count = len(blocking_rules) if isinstance(blocking_rules, list) else 0
     print(f"Blocking rules: {count}")

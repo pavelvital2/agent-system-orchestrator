@@ -124,6 +124,7 @@ task_complexity_floor
 gate_required_floor
 final_required_dispatch_level
 requested_or_configured_reasoning_level
+dispatch_receipt_ref
 runner_config_evidence
 ```
 
@@ -145,9 +146,10 @@ TASK_COMPLEXITY
 REASONING_LEVEL_REQUIRED
 REASONING_LEVEL_SOURCE
 REASONING_LEVEL_RESOLVED
+DISPATCH_RECEIPT_REF
 RUNNER_CONFIG_EVIDENCE
 REASONING_LEVEL_COMPLIANCE
-SPAWN_LOG_REF or HANDOFF_LOG_REF
+HANDOFF_LOG_REF
 ```
 
 Allowed `REASONING_LEVEL_SOURCE` values are:
@@ -173,13 +175,32 @@ The task packet field `REASONING_LEVEL_REQUIRED` must match the resolved
 minimum before dispatch. A mismatch is invalid dispatch unless the packet is
 first corrected through governed task-packet update and audit.
 
+## Dispatch Receipt Evidence
+
+P58 dispatches are external-runner dispatches. Before profile-agent execution,
+the orchestrator or external launcher must write:
+
+```text
+project-runtime/agents/dispatches/<AGENT_INSTANCE_ID>.json
+```
+
+The dispatch receipt must conform to:
+
+```text
+agent-system/09_validators/schemas/dispatch_receipt.schema.json
+```
+
+It must record runner, model when known, reasoning_effort, prompt_ref, task_id,
+role, started_at, and handoff_ref. ASO does not infer runner reasoning from
+stderr or terminal output.
+
 ## Auditor compliance check
 
 The auditor must verify reasoning-level execution compliance from task packet,
 role defaults, gate-required floor, and available runner configuration evidence
-from spawn log, handoff, or orchestrator transcript. The system must not claim
-knowledge of the agent's internal reasoning level unless the runner provides
-verifiable evidence.
+from the dispatch receipt. The system must not claim knowledge of the agent's
+internal reasoning level from stderr, terminal scrollback, or unverifiable
+runner text.
 
 Auditor validation must check:
 
@@ -189,7 +210,7 @@ role default
 gate-required floor
 requested or configured runner reasoning level
 no downgrade below required level
-evidence from spawn log, handoff, or orchestrator transcript
+evidence from dispatch receipt and handoff
 ```
 
 If the requested or configured runner reasoning level is lower than the
@@ -200,6 +221,7 @@ Auditor evidence must record:
 
 ```text
 REASONING_LEVEL_COMPLIANCE: passed | failed | blocked
+DISPATCH_RECEIPT_REF: project-runtime/agents/dispatches/<AGENT_INSTANCE_ID>.json
 ```
 
 If checkpoint preflight or later deterministic routing detects a

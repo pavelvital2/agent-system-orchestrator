@@ -119,6 +119,12 @@ class IntakeBootstrapCommandTests(unittest.TestCase):
             packet_text = packet.read_text(encoding="utf-8")
             self.assertIn("Do not implement product logic", packet_text)
             self.assertIn("project-input/TZ.md", packet_text)
+            self.assertIn("TASK_COMPLEXITY: xhigh", packet_text)
+            self.assertIn("REASONING_LEVEL_REQUIRED: xhigh", packet_text)
+            self.assertIn("AGENT_LIFECYCLE_POLICY: one_agent_one_task_delete_after_result", packet_text)
+            self.assertIn("RESULT_CONTRACT: agent-system/03_templates/AGENT_RESULT_TEMPLATE.md", packet_text)
+            self.assertIn("EVIDENCE_REQUIREMENTS: dispatch receipt", packet_text)
+            self.assertIn("EXPECTED_ARTIFACT_PACKAGE: project-runtime/artifacts/candidates/TASK_BOOTSTRAP_REQUIREMENTS_ANALYST_001/manifest.json", packet_text)
             self.assertIn(
                 "project-runtime/artifacts/candidates/TASK_BOOTSTRAP_REQUIREMENTS_ANALYST_001/manifest.json",
                 packet_text,
@@ -139,6 +145,9 @@ class IntakeBootstrapCommandTests(unittest.TestCase):
             self.assertEqual(plan_report["recommended_next_action"], "CREATE_AGENT")
             self.assertTrue(plan_report["dispatchable"])
             self.assertEqual(plan_report["target_role"], "requirements_analyst")
+            self.assertEqual(plan_report["resolved_reasoning_level"], "xhigh")
+            self.assertEqual(plan_report["reasoning_source"], "task_packet.REASONING_LEVEL_REQUIRED")
+            self.assertTrue(plan_report["dispatch_receipt"]["required"])
 
     def test_bootstrap_is_idempotent_for_same_state(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:

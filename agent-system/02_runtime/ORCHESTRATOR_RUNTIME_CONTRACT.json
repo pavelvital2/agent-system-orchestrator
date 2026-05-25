@@ -218,6 +218,26 @@
     "auditor": "xhigh",
     "technical_writer": "medium"
   },
+  "dispatch_receipt_contract": {
+    "schema_ref": "agent-system/09_validators/schemas/dispatch_receipt.schema.json",
+    "template_ref": "agent-system/03_templates/dispatch_receipt.template.json",
+    "receipt_ref_template": "project-runtime/agents/dispatches/<AGENT_INSTANCE_ID>.json",
+    "required_fields": [
+      "runner",
+      "model",
+      "reasoning_effort",
+      "prompt_ref",
+      "task_id",
+      "role",
+      "started_at",
+      "handoff_ref"
+    ],
+    "runner": "external_codex_cli",
+    "runner_semantics": "ASO records dispatch evidence for an externally invoked Codex CLI run; ASO does not execute the runner, daemonize work, or mutate task outputs.",
+    "external_runner_command_template": "codex exec -C <WORKSPACE_ROOT> -m <MODEL> -c model_reasoning_effort=\"<REASONING_EFFORT>\" - < <PROMPT_REF>",
+    "writer_command_template": "python3 agent-system/tools/aso/aso.py dispatch receipt --root <WORKSPACE_ROOT> --agent-instance-id <AGENT_INSTANCE_ID> --task-id <TASK_ID> --role <ROLE> --reasoning-effort <REASONING_EFFORT> --prompt-ref <PROMPT_REF> --handoff-ref <HANDOFF_REF> --runner external_codex_cli --model <MODEL_OR_UNKNOWN> --confirm-write",
+    "live_dispatch_performed_by_aso": false
+  },
   "artifact_contracts": {
     "candidate_manifest_canonical": "manifest.json",
     "candidate_manifest_legacy_aliases": [
@@ -278,6 +298,7 @@
       "next_actions_by_state",
       "required_docs_by_role",
       "reasoning_floor_by_role",
+      "dispatch_receipt_contract",
       "artifact_contracts",
       "audit_gate_rules",
       "checkpoint_rules",

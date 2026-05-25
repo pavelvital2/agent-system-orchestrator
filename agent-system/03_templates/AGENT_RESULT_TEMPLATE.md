@@ -236,6 +236,7 @@ RUNTIME_MUTATION_STATUS
 EVIDENCE_STATUS
 SECRET_EXPOSURE_STATUS
 REASONING_LEVEL_COMPLIANCE
+DISPATCH_RECEIPT_REF
 VALIDATED_TASK_PACKETS
 ```
 
@@ -248,6 +249,11 @@ AUDITED_RESULT_REF
 RESULT_REF
 ACCEPTED_RESULT_REF
 ```
+
+Auditors must validate `REASONING_LEVEL_COMPLIANCE` from the dispatch receipt
+at `project-runtime/agents/dispatches/<AGENT_INSTANCE_ID>.json`. They must not
+use stderr, terminal scrollback, or unverifiable runner claims as reasoning
+evidence.
 
 New audit result files should use:
 

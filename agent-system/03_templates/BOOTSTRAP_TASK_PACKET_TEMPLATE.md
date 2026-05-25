@@ -304,6 +304,21 @@ Do not derive role document paths by lower-case `TARGET_ROLE` interpolation.
 - BOOTSTRAP_CONTINUATION_REF: path or route reference
 ```
 
+## RESULT_CONTRACT
+
+```text
+agent-system/03_templates/AGENT_RESULT_TEMPLATE.md
+```
+
+Rules:
+
+- the profile-agent RESULT must include the assigned `TASK_ID`, `ROLE`, and
+  `AGENT_INSTANCE_ID`;
+- `REUSE_ALLOWED` must be `false`;
+- `AGENT_TERMINATION_REQUIRED` must be `true`;
+- profile-agent execution evidence must be tied to a dispatch receipt before
+  the RESULT can pass audit.
+
 ## ALLOWED_FILE_CHANGES
 
 For `requirements_analyst`:
@@ -354,6 +369,14 @@ For `solution_architect`:
 - list read documents;
 - list changed files or NONE;
 - provide scope and forbidden-change verification.
+- cite dispatch receipt project-runtime/agents/dispatches/<AGENT_INSTANCE_ID>.json;
+- cite candidate artifact package manifest when an artifact package is created.
+```
+
+## EXPECTED_ARTIFACT_PACKAGE
+
+```text
+project-runtime/artifacts/candidates/TASK_BOOTSTRAP_<TARGET_ROLE>_001/manifest.json
 ```
 
 ## SETUP_HOOKS

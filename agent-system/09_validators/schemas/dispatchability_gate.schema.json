@@ -94,7 +94,28 @@
       "type": "array",
       "items": { "$ref": "#/$defs/reason" }
     },
-    "live_dispatch_performed": { "type": "boolean", "const": false }
+    "live_dispatch_performed": { "type": "boolean", "const": false },
+    "resolved_reasoning_level": {
+      "type": "string",
+      "enum": ["low", "medium", "high", "xhigh", "NONE"]
+    },
+    "reasoning_source": { "type": "string" },
+    "reasoning_inputs": {
+      "type": "object",
+      "additionalProperties": true
+    },
+    "dispatch_receipt_required": { "type": "boolean" },
+    "dispatch_receipt_schema_ref": { "type": "string" },
+    "dispatch_receipt_ref_template": {
+      "type": "string",
+      "const": "project-runtime/agents/dispatches/<AGENT_INSTANCE_ID>.json"
+    },
+    "external_runner_command_template": {
+      "type": "string",
+      "const": "codex exec -C <WORKSPACE_ROOT> -m <MODEL> -c model_reasoning_effort=\"<REASONING_EFFORT>\" - < <PROMPT_REF>"
+    },
+    "receipt_writer_command_template": { "type": "string" },
+    "runner_semantics": { "type": "string" }
   },
   "allOf": [
     {
@@ -262,6 +283,26 @@
             "type": "object",
             "required": ["check_id", "passed"],
             "properties": {
+              "check_id": { "const": "DG54_REASONING_FLOOR_RESOLVED" },
+              "passed": { "const": true }
+            }
+          }
+        },
+        {
+          "contains": {
+            "type": "object",
+            "required": ["check_id", "passed"],
+            "properties": {
+              "check_id": { "const": "DG54_BOOTSTRAP_REASONING_FIELDS_PRESENT" },
+              "passed": { "const": true }
+            }
+          }
+        },
+        {
+          "contains": {
+            "type": "object",
+            "required": ["check_id", "passed"],
+            "properties": {
               "check_id": { "const": "DG54_TASK_REGISTRY_COMPATIBLE" },
               "passed": { "const": true }
             }
@@ -334,6 +375,8 @@
             "DG54_TASK_PACKET_PRESENT",
             "DG54_TASK_PACKET_EXISTS",
             "DG54_TASK_PACKET_DISPATCH_VALID",
+            "DG54_REASONING_FLOOR_RESOLVED",
+            "DG54_BOOTSTRAP_REASONING_FIELDS_PRESENT",
             "DG54_TASK_REGISTRY_COMPATIBLE",
             "DG54_CURRENT_GATE_PERMITS_DISPATCH",
             "DG54_NO_BLOCKING_RULES",
@@ -369,6 +412,8 @@
         "task_packet_none",
         "task_packet_missing",
         "task_packet_not_dispatch_valid",
+        "reasoning_floor_unresolved",
+        "bootstrap_reasoning_fields_missing",
         "task_registry_incompatible",
         "current_gate_blocks_dispatch",
         "blocking_rules_present",

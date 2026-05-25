@@ -178,8 +178,14 @@ def _task_packet_text(tz_path: str) -> str:
 TASK_ID: {TASK_ID}
 TASK_STATUS: ready
 TASK_KIND: bootstrap
+TASK_COMPLEXITY: xhigh
 TASK_TYPE: {TARGET_ROLE}
 TARGET_ROLE: {TARGET_ROLE}
+AGENT_LIFECYCLE_POLICY: one_agent_one_task_delete_after_result
+REASONING_LEVEL_REQUIRED: xhigh
+RESULT_CONTRACT: agent-system/03_templates/AGENT_RESULT_TEMPLATE.md
+EVIDENCE_REQUIREMENTS: dispatch receipt, RESULT evidence, candidate artifact package manifest
+EXPECTED_ARTIFACT_PACKAGE: project-runtime/artifacts/candidates/{TASK_ID}/manifest.json
 ```
 
 ## Purpose
@@ -205,6 +211,21 @@ Create the first bounded requirements analysis from the raw TZ document.
 - Primary output: P5 candidate artifact package manifest at `project-runtime/artifacts/candidates/{TASK_ID}/manifest.json` with traceability to `{tz_path}`.
 - Explicit conflict, ambiguity, and owner-question notes when present.
 - Optional secondary/compatibility evidence under `project-runtime/results/**` only if still needed by the result workflow.
+
+## RESULT_CONTRACT
+
+- The profile-agent RESULT must follow `agent-system/03_templates/AGENT_RESULT_TEMPLATE.md`.
+- The RESULT must use `TASK_ID: {TASK_ID}`, `ROLE: {TARGET_ROLE}`, `REUSE_ALLOWED: false`, and `AGENT_TERMINATION_REQUIRED: true`.
+
+## EVIDENCE_REQUIREMENTS
+
+- Dispatch evidence must exist before execution at `project-runtime/agents/dispatches/<AGENT_INSTANCE_ID>.json`.
+- The dispatch receipt must record runner, model when known, reasoning_effort `xhigh`, prompt_ref, task_id, role, started_at, and handoff_ref.
+- The RESULT must cite the candidate artifact package manifest and scope verification evidence.
+
+## EXPECTED_ARTIFACT_PACKAGE
+
+- `project-runtime/artifacts/candidates/{TASK_ID}/manifest.json`
 
 ## Allowed File Changes
 

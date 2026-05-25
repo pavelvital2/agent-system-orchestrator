@@ -104,6 +104,34 @@ class OrchestratorRuntimeContractTests(unittest.TestCase):
                 self.assertIn(role, contract["required_docs_by_role"])
                 self.assertGreater(len(contract["required_docs_by_role"][role]), 0)
 
+    def test_contract_defines_external_dispatch_receipt_contract(self) -> None:
+        contract = transition_engine.load_runtime_contract()
+        receipt_contract = contract["dispatch_receipt_contract"]
+
+        self.assertEqual(
+            receipt_contract["schema_ref"],
+            "agent-system/09_validators/schemas/dispatch_receipt.schema.json",
+        )
+        self.assertEqual(
+            receipt_contract["receipt_ref_template"],
+            "project-runtime/agents/dispatches/<AGENT_INSTANCE_ID>.json",
+        )
+        self.assertEqual(receipt_contract["runner"], "external_codex_cli")
+        self.assertFalse(receipt_contract["live_dispatch_performed_by_aso"])
+        self.assertIn("model_reasoning_effort", receipt_contract["external_runner_command_template"])
+        self.assertTrue(
+            {
+                "runner",
+                "model",
+                "reasoning_effort",
+                "prompt_ref",
+                "task_id",
+                "role",
+                "started_at",
+                "handoff_ref",
+            }.issubset(set(receipt_contract["required_fields"]))
+        )
+
 
 if __name__ == "__main__":
     unittest.main()
