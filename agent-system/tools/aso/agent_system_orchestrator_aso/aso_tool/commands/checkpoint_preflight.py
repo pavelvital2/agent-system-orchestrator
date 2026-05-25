@@ -8,6 +8,7 @@ import subprocess
 import sys
 from pathlib import Path
 
+from .. import result_parser
 from . import package_checks, plan_next, state_verify
 
 
@@ -251,6 +252,7 @@ def _current_gate_audit_evidence(sidecars: dict[str, dict[str, object]]) -> list
 
 
 def _audit_pass_evidence(
+    root: Path,
     sidecars: dict[str, dict[str, object]],
     task: dict[str, object],
     task_id: str,
@@ -259,8 +261,13 @@ def _audit_pass_evidence(
     task_audit_refs = _truthy_string_list(task.get("audit_refs"))
     artifact_audit_refs = _artifact_audit_refs(sidecars, task_id)
     current_gate_refs = _current_gate_audit_evidence(sidecars)
+    audit_refs = [*task_audit_refs, *artifact_audit_refs, *current_gate_refs]
+    parsed_evidence = result_parser.inspect_audit_references(root, audit_refs, task_id=task_id, strict=True)
     audit_status_passed = task_status == "audit_passed"
-    present = bool(task_audit_refs or artifact_audit_refs or current_gate_refs)
+    invalid_refs = parsed_evidence["invalid_refs"]
+    unparsed_refs = parsed_evidence["unparsed_refs"]
+    passed_refs = parsed_evidence["passed_refs"]
+    present = bool(passed_refs) and not invalid_refs and not unparsed_refs
     return {
         "present": present,
         "task_status": task_status,
@@ -268,6 +275,10 @@ def _audit_pass_evidence(
         "task_audit_refs": task_audit_refs,
         "accepted_artifact_audit_refs": artifact_audit_refs,
         "current_gate_audit_evidence_refs": current_gate_refs,
+        "parsed_audit_results": parsed_evidence["parsed_refs"],
+        "passed_audit_refs": passed_refs,
+        "invalid_audit_results": invalid_refs,
+        "unparsed_audit_refs": unparsed_refs,
     }
 
 
@@ -304,7 +315,7 @@ def _workspace_report(root: Path, strict: bool) -> tuple[dict[str, object], int]
     task_id = _as_text(next_action.get("task_id"))
     task = tasks.get(task_id, {})
     blockers = _active_blockers(project_state, next_action)
-    audit_evidence = _audit_pass_evidence(sidecars, task, task_id)
+    audit_evidence = _audit_pass_evidence(root, sidecars, task, task_id)
     is_checkpoint_attempt = plan_next._is_checkpoint_attempt(next_action)
     checkpoint_eligibility = _as_text(project_state.get("checkpoint_eligibility"))
     checkpoint_eligibility_status = _as_text(project_state.get("checkpoint_eligibility_status"))
@@ -338,6 +349,26 @@ def _workspace_report(root: Path, strict: bool) -> tuple[dict[str, object], int]
                 "Checkpoint preflight is blocked because audit-pass evidence is absent.",
                 f"task_id={task_id or 'NONE'}; task_status={audit_evidence['task_status'] or 'NONE'}",
                 recommendation="Run and accept the required audit before checkpoint preflight can be eligible.",
+            )
+        )
+
+    if audit_evidence["invalid_audit_results"]:
+        blocking_rules.append(
+            _blocking_rule(
+                "GOV-CHECKPOINT-AUDIT-GATE",
+                "Checkpoint preflight is blocked because parsed AUDIT_RESULT evidence is not a pass for this task.",
+                json.dumps(audit_evidence["invalid_audit_results"], sort_keys=True),
+                recommendation="Record an auditor AUDIT_RESULT with STATUS: pass for the task before checkpointing.",
+            )
+        )
+
+    if audit_evidence["unparsed_audit_refs"]:
+        blocking_rules.append(
+            _blocking_rule(
+                "GOV-CHECKPOINT-AUDIT-GATE",
+                "Checkpoint preflight is blocked because AUDIT_RESULT evidence references are missing or unreadable.",
+                json.dumps(audit_evidence["unparsed_audit_refs"], sort_keys=True),
+                recommendation="Restore the referenced AUDIT_RESULT file or record a new passing auditor AUDIT_RESULT.",
             )
         )
 

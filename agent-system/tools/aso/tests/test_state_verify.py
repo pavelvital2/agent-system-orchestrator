@@ -506,6 +506,90 @@ class StateVerifyCommandTests(unittest.TestCase):
             self.assertEqual(result.returncode, 1, result.stdout + result.stderr)
             self.assertIn("SIDECAR_CHECKPOINT_POLICY_INVALID", result.stdout)
 
+    def test_next_action_checkpoint_blocks_missing_audit_result_ref(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = copy_valid_workspace_with_valid_tz(tmp)
+            missing_ref = "project-runtime/results/audit/AUDIT_RESULT_TASK_FIXTURE_STATE_001_ATTEMPT_404.md"
+            payload = load_sidecar(root, "NEXT_ACTION.json")
+            content = payload["content"]
+            self.assertIsInstance(content, dict)
+            content["checkpoint_policy"] = "commit_and_push"
+            content["checkpoint_preflight_required"] = True
+            content["checkpoint_receipt_required"] = True
+            content["checkpoint_receipt_ref"] = "project-runtime/checkpoints/CHECKPOINT_ELIGIBILITY_TASK_FIXTURE_STATE_001_1.md"
+            write_sidecar(root, "NEXT_ACTION.json", payload)
+
+            task_payload = load_sidecar(root, "TASK_REGISTRY.json")
+            task_content = task_payload["content"]
+            self.assertIsInstance(task_content, dict)
+            tasks = task_content["tasks"]
+            self.assertIsInstance(tasks, list)
+            self.assertIsInstance(tasks[0], dict)
+            tasks[0]["status"] = "audit_passed"
+            tasks[0]["audit_refs"] = [missing_ref]
+            write_sidecar(root, "TASK_REGISTRY.json", task_payload)
+            json_out = Path(tmp) / "state-verify.json"
+
+            result = run_state_verify(root, "--strict", "--json-out", str(json_out))
+
+            self.assertEqual(result.returncode, 1, result.stdout + result.stderr)
+            report = json.loads(json_out.read_text(encoding="utf-8"))
+            findings = report["findings"]
+            self.assertTrue(
+                any(
+                    finding["rule_id"] == "SIDECAR_CHECKPOINT_AUDIT_RESULT_INVALID"
+                    and missing_ref in finding["details"]
+                    and "unparsed_refs" in finding["details"]
+                    for finding in findings
+                ),
+                findings,
+            )
+
+    def test_next_action_checkpoint_blocks_non_utf8_audit_result_ref(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = copy_valid_workspace_with_valid_tz(tmp)
+            audit_ref = "project-runtime/results/audit/AUDIT_RESULT_TASK_FIXTURE_STATE_001_ATTEMPT_001.md"
+            audit_path = root / audit_ref
+            audit_path.parent.mkdir(parents=True)
+            audit_path.write_bytes(b"\xff\xfe\xfa")
+            payload = load_sidecar(root, "NEXT_ACTION.json")
+            content = payload["content"]
+            self.assertIsInstance(content, dict)
+            content["checkpoint_policy"] = "commit_and_push"
+            content["checkpoint_preflight_required"] = True
+            content["checkpoint_receipt_required"] = True
+            content["checkpoint_receipt_ref"] = "project-runtime/checkpoints/CHECKPOINT_ELIGIBILITY_TASK_FIXTURE_STATE_001_1.md"
+            write_sidecar(root, "NEXT_ACTION.json", payload)
+
+            task_payload = load_sidecar(root, "TASK_REGISTRY.json")
+            task_content = task_payload["content"]
+            self.assertIsInstance(task_content, dict)
+            tasks = task_content["tasks"]
+            self.assertIsInstance(tasks, list)
+            self.assertIsInstance(tasks[0], dict)
+            tasks[0]["status"] = "audit_passed"
+            tasks[0]["audit_refs"] = [audit_ref]
+            write_sidecar(root, "TASK_REGISTRY.json", task_payload)
+            json_out = Path(tmp) / "state-verify.json"
+
+            result = run_state_verify(root, "--strict", "--json-out", str(json_out))
+
+            self.assertEqual(result.returncode, 1, result.stdout + result.stderr)
+            self.assertNotIn("Traceback", result.stdout + result.stderr)
+            report = json.loads(json_out.read_text(encoding="utf-8"))
+            findings = report["findings"]
+            self.assertTrue(
+                any(
+                    finding["rule_id"] == "SIDECAR_CHECKPOINT_AUDIT_RESULT_INVALID"
+                    and audit_ref in finding["details"]
+                    and "audit_result_unreadable" in finding["details"]
+                    and "UnicodeDecodeError" in finding["details"]
+                    and "invalid_refs" in finding["details"]
+                    for finding in findings
+                ),
+                findings,
+            )
+
     def test_active_open_bootstrap_with_terminal_stop_fails(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             root = copy_p2_valid_workspace(tmp)

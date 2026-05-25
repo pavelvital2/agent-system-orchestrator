@@ -10,6 +10,7 @@ from pathlib import Path
 from typing import Any
 
 from . import state_verify
+from .. import result_parser
 from .. import resources
 from .. import transition_engine
 
@@ -198,6 +199,7 @@ def _current_gate_audit_evidence(sidecars: dict[str, dict[str, object]]) -> list
 
 
 def _audit_pass_evidence(
+    root: Path,
     sidecars: dict[str, dict[str, object]],
     task: dict[str, object],
     task_id: str,
@@ -206,13 +208,22 @@ def _audit_pass_evidence(
     task_audit_refs = _truthy_string_list(task.get("audit_refs"))
     artifact_audit_refs = _accepted_artifact_audit_refs(sidecars, task_id)
     current_gate_refs = _current_gate_audit_evidence(sidecars)
-    present = bool(task_audit_refs or artifact_audit_refs or current_gate_refs)
+    audit_refs = [*task_audit_refs, *artifact_audit_refs, *current_gate_refs]
+    parsed_evidence = result_parser.inspect_audit_references(root, audit_refs, task_id=task_id, strict=True)
+    invalid_refs = parsed_evidence["invalid_refs"]
+    unparsed_refs = parsed_evidence["unparsed_refs"]
+    passed_refs = parsed_evidence["passed_refs"]
+    present = bool(passed_refs) and not invalid_refs and not unparsed_refs
     return {
         "present": present,
         "task_status": task_status,
         "task_audit_refs": task_audit_refs,
         "accepted_artifact_audit_refs": artifact_audit_refs,
         "current_gate_audit_evidence_refs": current_gate_refs,
+        "parsed_audit_results": parsed_evidence["parsed_refs"],
+        "passed_audit_refs": passed_refs,
+        "invalid_audit_results": invalid_refs,
+        "unparsed_audit_refs": unparsed_refs,
     }
 
 
@@ -835,7 +846,7 @@ def _plan(
     target_role = _as_text(next_action.get("target_role"))
     task_packet = _as_text(next_action.get("task_packet"))
     blockers = _active_blockers(project_state, next_action)
-    audit_evidence = _audit_pass_evidence(sidecars, task, task_id)
+    audit_evidence = _audit_pass_evidence(root, sidecars, task, task_id)
 
     blocking_rules = _state_verify_blockers(rules, verify_report)
     recommended_next_action = "NONE"
@@ -948,6 +959,24 @@ def _plan(
                     f"task_id={task_id or 'NONE'}",
                 )
             )
+            if audit_evidence["invalid_audit_results"]:
+                blocking_rules.append(
+                    _rule(
+                        rules,
+                        "GOV-CHECKPOINT-AUDIT-GATE",
+                        "Parsed AUDIT_RESULT evidence is not a pass for this task.",
+                        json.dumps(audit_evidence["invalid_audit_results"], sort_keys=True),
+                    )
+                )
+            if audit_evidence["unparsed_audit_refs"]:
+                blocking_rules.append(
+                    _rule(
+                        rules,
+                        "GOV-CHECKPOINT-AUDIT-GATE",
+                        "AUDIT_RESULT evidence references are missing or unreadable.",
+                        json.dumps(audit_evidence["unparsed_audit_refs"], sort_keys=True),
+                    )
+                )
     elif verify_exit_code != 0 and action_type != "create_agent":
         recommended_next_action = "NONE"
         dispatchability = _non_dispatchability(

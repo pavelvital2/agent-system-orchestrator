@@ -10,6 +10,7 @@ from pathlib import Path
 from typing import Any
 
 from .. import runtime_schema_contracts
+from .. import result_parser
 from .. import transition_engine
 
 
@@ -17,43 +18,10 @@ EXIT_OK = 0
 EXIT_FINDINGS = 1
 EXIT_IO_ERROR = 3
 
-RESULT_STATUSES = {"pass", "fail", "blocked", "gap"}
-PROFILE_ROLES = {
-    "requirements_analyst",
-    "solution_architect",
-    "designer",
-    "developer",
-    "tester",
-    "technical_writer",
-    "devops_setup_engineer",
-    "release_manager",
-}
-VALID_ROLES = PROFILE_ROLES | {"auditor"}
-REQUIRED_RESULT_FIELDS = (
-    "STATUS",
-    "TASK_ID",
-    "AGENT_INSTANCE_ID",
-    "ROLE",
-    "TASK",
-    "SUMMARY",
-    "READ_DOCS",
-    "READ_INPUTS",
-    "CHANGED_FILES",
-    "CREATED_FILES",
-    "DELETED_FILES",
-    "COMMANDS_RUN",
-    "TESTS_RUN",
-    "EVIDENCE",
-    "SCOPE_VERIFICATION",
-    "FORBIDDEN_CHANGES_CHECK",
-    "RISKS",
-    "LIMITATIONS",
-    "BLOCKERS",
-    "GAPS",
-    "NEXT_RECOMMENDED_ACTION",
-    "REUSE_ALLOWED",
-    "AGENT_TERMINATION_REQUIRED",
-)
+RESULT_STATUSES = result_parser.RESULT_STATUSES
+PROFILE_ROLES = result_parser.PROFILE_ROLES
+VALID_ROLES = result_parser.VALID_ROLES
+REQUIRED_RESULT_FIELDS = result_parser.REQUIRED_RESULT_FIELDS
 BYPASS_ACTION_MARKERS = {
     "CHECKPOINT",
     "CHECKPOINT_PREFLIGHT",
@@ -120,14 +88,18 @@ class Rule:
     severity: str
     message: str
     evidence: str
+    reason_code: str = ""
 
     def to_json(self) -> dict[str, str]:
-        return {
+        payload = {
             "rule_id": self.rule_id,
             "severity": self.severity,
             "message": self.message,
             "evidence": self.evidence,
         }
+        if self.reason_code:
+            payload["reason_code"] = self.reason_code
+        return payload
 
 
 def _read_result(path: Path) -> tuple[str, list[Rule]]:
@@ -145,73 +117,23 @@ def _read_result(path: Path) -> tuple[str, list[Rule]]:
 
 
 def _parse_result_fields(text: str) -> dict[str, Any]:
-    fields: dict[str, Any] = {}
-    current_key: str | None = None
-    current_list: list[str] = []
-
-    def flush_list() -> None:
-        nonlocal current_key, current_list
-        if current_key is not None:
-            fields[current_key] = current_list if current_list else "NONE"
-        current_key = None
-        current_list = []
-
-    for raw_line in text.splitlines():
-        line = raw_line.rstrip()
-        match = re.match(r"^([A-Z0-9_]+):\s*(.*?)\s*$", line)
-        if match:
-            flush_list()
-            key = match.group(1)
-            value = match.group(2).strip()
-            if value:
-                fields[key] = value
-            else:
-                current_key = key
-                current_list = []
-            continue
-
-        if current_key is not None:
-            stripped = line.strip()
-            if stripped.startswith("- "):
-                current_list.append(stripped[2:].strip())
-            elif stripped:
-                current_list.append(stripped)
-
-    flush_list()
-    return fields
+    return dict(result_parser.parse_result(text).fields)
 
 
 def _as_string(fields: dict[str, Any], key: str) -> str:
-    value = fields.get(key)
-    return value.strip() if isinstance(value, str) else ""
+    return result_parser.as_string(fields, key)
 
 
 def _as_list(fields: dict[str, Any], key: str) -> list[str]:
-    value = fields.get(key)
-    if isinstance(value, list):
-        return [item.strip() for item in value if isinstance(item, str) and item.strip()]
-    if isinstance(value, str) and value.strip() and value.strip().upper() != "NONE":
-        return [value.strip()]
-    return []
+    return result_parser.as_list(fields, key)
 
 
 def _bool_field(fields: dict[str, Any], key: str) -> bool | None:
-    value = _as_string(fields, key).lower()
-    if value == "true":
-        return True
-    if value == "false":
-        return False
-    return None
+    return result_parser.bool_field(fields, key)
 
 
 def _file_suggests_audit(path: Path, text: str) -> bool:
-    first_heading = ""
-    for line in text.splitlines():
-        stripped = line.strip()
-        if stripped.startswith("#"):
-            first_heading = stripped.upper()
-            break
-    return path.name.startswith("AUDIT_RESULT_") or "AUDIT_RESULT" in first_heading
+    return result_parser.file_suggests_audit(path, text)
 
 
 def _result_type(path: Path, text: str, role: str) -> str:
@@ -221,12 +143,7 @@ def _result_type(path: Path, text: str, role: str) -> str:
 
 
 def _source_result_refs(fields: dict[str, Any]) -> list[str]:
-    refs: list[str] = []
-    for item in _as_list(fields, "EVIDENCE") + _as_list(fields, "SCOPE_VERIFICATION"):
-        match = re.search(r"SOURCE_RESULT_REF:\s*(\S+)", item)
-        if match:
-            refs.append(match.group(1))
-    return refs
+    return list(result_parser.audit_details_from_fields(fields).source_result_refs)
 
 
 def _claimed_next_actions(fields: dict[str, Any]) -> list[str]:
@@ -396,10 +313,24 @@ def _blocking_rule(rule_id: str, message: str, evidence: str) -> Rule:
     return Rule(rule_id, "error", message, evidence)
 
 
-def _validate_common(path: Path, text: str, fields: dict[str, Any], strict: bool) -> list[Rule]:
+def _validate_common(
+    path: Path,
+    text: str,
+    fields: dict[str, Any],
+    parsed: result_parser.ParsedResult,
+    strict: bool,
+) -> list[Rule]:
     errors: list[Rule] = []
     if not text.strip():
-        errors.append(Rule("RESULT_FORMAT_001", "error", "Result file is empty.", str(path)))
+        errors.append(
+            Rule(
+                "RESULT_FORMAT_001",
+                "error",
+                "Result file is empty.",
+                str(path),
+                result_parser.REASON_MALFORMED_SECTION,
+            )
+        )
         return errors
     lines = text.splitlines()
     first_line = next((line.strip() for line in lines if line.strip()), "")
@@ -410,10 +341,26 @@ def _validate_common(path: Path, text: str, fields: dict[str, Any], strict: bool
                 "error",
                 "Result file must start with the canonical RESULT: or AUDIT_RESULT: marker.",
                 first_line or str(path),
+                result_parser.REASON_MALFORMED_SECTION,
             )
         )
     if not strict:
         return errors
+
+    for issue in parsed.issues:
+        if issue.reason_code != result_parser.REASON_MALFORMED_SECTION:
+            continue
+        if issue.evidence == first_line:
+            continue
+        errors.append(
+            Rule(
+                "RESULT_FORMAT_002",
+                issue.severity,
+                issue.message,
+                issue.evidence,
+                issue.reason_code,
+            )
+        )
 
     for field in REQUIRED_RESULT_FIELDS:
         if field not in fields:
@@ -423,6 +370,7 @@ def _validate_common(path: Path, text: str, fields: dict[str, Any], strict: bool
                     "error",
                     "Strict RESULT parsing requires every template field.",
                     field,
+                    result_parser.IDENTITY_REASON_BY_FIELD.get(field, "missing_required_field"),
                 )
             )
 
@@ -434,6 +382,7 @@ def _validate_common(path: Path, text: str, fields: dict[str, Any], strict: bool
                 "error",
                 "STATUS must be one of pass, fail, blocked, or gap.",
                 f"STATUS={status or 'MISSING'}",
+                result_parser.REASON_MISSING_STATUS if not status else "invalid_status",
             )
         )
 
@@ -445,6 +394,7 @@ def _validate_common(path: Path, text: str, fields: dict[str, Any], strict: bool
                 "error",
                 "ROLE must be a canonical profile role or auditor.",
                 f"ROLE={role or 'MISSING'}",
+                result_parser.REASON_MISSING_ROLE if not role else "invalid_role",
             )
         )
 
@@ -692,10 +642,11 @@ def _transition_not_run_evidence(reason: str) -> dict[str, object]:
 
 def build_report(result_path: Path, strict: bool) -> tuple[dict[str, Any], int]:
     text, io_errors = _read_result(result_path)
-    fields = _parse_result_fields(text) if text else {}
-    role = _as_string(fields, "ROLE")
-    result_type = _result_type(result_path, text, role) if text else "unknown"
-    validation_errors = [*io_errors, *_validate_common(result_path, text, fields, strict)]
+    parsed = result_parser.parse_result(text, path=result_path, strict=strict) if text else result_parser.parse_result("")
+    fields = dict(parsed.fields)
+    role = parsed.role
+    result_type = parsed.result_type if text else "unknown"
+    validation_errors = [*io_errors, *_validate_common(result_path, text, fields, parsed, strict)]
 
     recommended_next_action = "NONE"
     checkpoint_candidate = False
@@ -757,6 +708,7 @@ def build_report(result_path: Path, strict: bool) -> tuple[dict[str, Any], int]:
             "source_result_refs": _source_result_refs(fields),
             "claimed_next_actions": _claimed_next_actions(fields),
             "parsed_fields": sorted(fields),
+            "audit_result": parsed.audit.to_json() if result_type == "audit_result" else {},
             "transition_engine": transition_evidence,
         },
     }, exit_code

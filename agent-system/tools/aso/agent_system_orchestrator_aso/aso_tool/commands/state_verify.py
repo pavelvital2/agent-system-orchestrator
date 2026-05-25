@@ -11,6 +11,7 @@ from pathlib import Path
 from typing import Iterable
 
 from .. import runtime_schema_contracts
+from .. import result_parser
 from .. import transition_engine
 from . import repair_hints
 
@@ -1305,12 +1306,16 @@ def _artifact_package_findings(sidecars: dict[str, dict[str, object]]) -> list[F
 
 
 def _truthy_refs(value: object) -> bool:
+    return bool(_truthy_ref_values(value))
+
+
+def _truthy_ref_values(value: object) -> list[str]:
     if not isinstance(value, list):
-        return False
-    return any(isinstance(item, str) and item.strip() and item.strip() not in NONE_VALUES for item in value)
+        return []
+    return [item.strip() for item in value if isinstance(item, str) and item.strip() and item.strip() not in NONE_VALUES]
 
 
-def _checkpoint_findings(sidecars: dict[str, dict[str, object]]) -> list[Finding]:
+def _checkpoint_findings(root: Path, sidecars: dict[str, dict[str, object]]) -> list[Finding]:
     next_action = _content(sidecars, "NEXT_ACTION")
     checkpoint_policy = next_action.get("checkpoint_policy")
     checkpoint_attempt = checkpoint_policy in {"local_only", "commit_and_push"} or next_action.get("checkpoint_receipt_required") is True
@@ -1325,8 +1330,29 @@ def _checkpoint_findings(sidecars: dict[str, dict[str, object]]) -> list[Finding
         return []
 
     status = task.get("status")
-    has_audit_ref = _truthy_refs(task.get("audit_refs"))
-    if status in {"audit_passed", "checkpoint_done", "completed"} or has_audit_ref:
+    audit_refs = _truthy_ref_values(task.get("audit_refs"))
+    audit_inspection = result_parser.inspect_audit_references(root, audit_refs, task_id=task_id, strict=True)
+    invalid_refs = audit_inspection["invalid_refs"]
+    unparsed_refs = audit_inspection["unparsed_refs"]
+    passed_refs = audit_inspection["passed_refs"]
+    if invalid_refs or unparsed_refs:
+        return [
+            _finding(
+                "SIDECAR_CHECKPOINT_AUDIT_RESULT_INVALID",
+                "Checkpoint audit evidence is not a passing AUDIT_RESULT",
+                json.dumps(
+                    {
+                        "invalid_refs": invalid_refs,
+                        "unparsed_refs": unparsed_refs,
+                    },
+                    sort_keys=True,
+                ),
+                "project-runtime/state/TASK_REGISTRY.json",
+                "content.tasks[].audit_refs",
+                "Record an auditor AUDIT_RESULT with STATUS: pass for the task before a checkpoint action.",
+            )
+        ]
+    if passed_refs:
         return []
 
     return [
@@ -1335,7 +1361,8 @@ def _checkpoint_findings(sidecars: dict[str, dict[str, object]]) -> list[Finding
             "NEXT_ACTION checkpoint attempt lacks audit-pass evidence",
             (
                 "NEXT_ACTION requests a checkpoint-capable policy, "
-                f"but TASK_REGISTRY task {task_id} has no audit-pass status or audit_refs evidence."
+                f"but TASK_REGISTRY task {task_id} has no parsed passing AUDIT_RESULT evidence. "
+                f"status={status or 'NONE'}; audit_refs={audit_refs}"
             ),
             "project-runtime/state/NEXT_ACTION.json",
             "content.checkpoint_policy",
@@ -1601,7 +1628,7 @@ def _report(root: Path, strict: bool) -> tuple[dict[str, object], int]:
 
     findings.extend(_reference_findings(loaded_sidecars))
     findings.extend(_artifact_package_findings(loaded_sidecars))
-    findings.extend(_checkpoint_findings(loaded_sidecars))
+    findings.extend(_checkpoint_findings(root, loaded_sidecars))
     findings.extend(_bootstrap_semantic_findings(root, loaded_sidecars))
     if current_p2_state:
         findings.extend(_transition_engine_findings(loaded_sidecars))

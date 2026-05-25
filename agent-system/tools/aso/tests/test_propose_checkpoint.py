@@ -14,6 +14,49 @@ REPO_ROOT = Path(__file__).resolve().parents[4]
 CLI = ASO_DIR / "aso.py"
 FIXTURE_ROOT = REPO_ROOT / "agent-system" / "tests" / "fixtures" / "state"
 P2_VALID_WORKSPACE = FIXTURE_ROOT / "p2_valid_workspace"
+AUDIT_PASS_REF = "project-runtime/results/audit/AUDIT_RESULT_TASK_CHECKPOINT_001_ATTEMPT_001.md"
+AUDIT_PASS_RESULT = """AUDIT_RESULT:
+STATUS: pass
+TASK_ID: TASK_CHECKPOINT_001
+AGENT_INSTANCE_ID: audit_TASK_CHECKPOINT_001_attempt_001
+ROLE: auditor
+TASK: TASK_CHECKPOINT_001
+SUMMARY:
+Audit passed.
+READ_DOCS:
+- NONE
+READ_INPUTS:
+- NONE
+CHANGED_FILES:
+- NONE
+CREATED_FILES:
+- NONE
+DELETED_FILES:
+- NONE
+COMMANDS_RUN:
+- NONE
+TESTS_RUN:
+- NONE
+EVIDENCE:
+- SOURCE_RESULT_REF: project-runtime/results/worker/RESULT_TASK_CHECKPOINT_001_ATTEMPT_001.md
+- CHANGED_FILES_SCOPE_STATUS: passed
+SCOPE_VERIFICATION:
+- TASK_PACKET_SCHEMA_STATUS: passed
+FORBIDDEN_CHANGES_CHECK:
+- FORBIDDEN_PATH_STATUS: passed
+RISKS:
+- NONE
+LIMITATIONS:
+- NONE
+BLOCKERS:
+- NONE
+GAPS:
+- NONE
+NEXT_RECOMMENDED_ACTION:
+- CHECKPOINT_PREFLIGHT
+REUSE_ALLOWED: false
+AGENT_TERMINATION_REQUIRED: true
+"""
 
 if str(ASO_DIR) not in sys.path:
     sys.path.insert(0, str(ASO_DIR))
@@ -53,6 +96,11 @@ def workspace_files(root: Path) -> set[str]:
 
 
 def make_checkpoint_attempt(root: Path, *, audit_passed: bool) -> None:
+    if audit_passed:
+        audit_path = root / AUDIT_PASS_REF
+        audit_path.parent.mkdir(parents=True)
+        audit_path.write_text(AUDIT_PASS_RESULT, encoding="utf-8")
+
     next_action = load_sidecar(root, "NEXT_ACTION.json")
     next_content = next_action["content"]
     assert isinstance(next_content, dict)
@@ -72,7 +120,7 @@ def make_checkpoint_attempt(root: Path, *, audit_passed: bool) -> None:
     registry_content["tasks"] = [
         {
             "accepted_files": [],
-            "audit_refs": ["project-runtime/audits/AUDIT_TASK_CHECKPOINT_001_PASS.md"] if audit_passed else [],
+            "audit_refs": [AUDIT_PASS_REF] if audit_passed else [],
             "branch": "NONE",
             "checkpoint_ref": "NONE",
             "commit_hash": "NONE",
@@ -108,7 +156,7 @@ def make_checkpoint_attempt(root: Path, *, audit_passed: bool) -> None:
             "artifact_id": "ARTIFACT-TASK-CHECKPOINT-001",
             "artifact_ref": "agent-system/tools/aso/aso.py",
             "artifact_type": "code",
-            "audit_ref": "project-runtime/audits/AUDIT_TASK_CHECKPOINT_001_PASS.md" if audit_passed else "NONE",
+            "audit_ref": AUDIT_PASS_REF if audit_passed else "NONE",
             "branch": "NONE",
             "checkpoint_ref": "NONE",
             "commit_hash": "NONE",

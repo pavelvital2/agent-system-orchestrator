@@ -4,11 +4,12 @@ from __future__ import annotations
 
 import argparse
 import json
-import re
 import sys
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any
+
+from .. import result_parser
 
 
 EXIT_OK = 0
@@ -25,23 +26,12 @@ def _read_text(path: Path) -> tuple[str, str | None]:
 
 
 def _parse_fields(text: str) -> dict[str, str]:
+    parsed = result_parser.parse_result(text)
     fields: dict[str, str] = {}
-    pending_key: str | None = None
-    for raw_line in text.splitlines():
-        line = raw_line.strip()
-        match = re.match(r"^([A-Z0-9_]+):\s*(.*?)\s*$", line)
-        if match:
-            key = match.group(1)
-            value = match.group(2).strip()
-            if value:
-                fields.setdefault(key, value)
-                pending_key = None
-            else:
-                pending_key = key
-            continue
-        if pending_key is not None and line and not line.startswith(("#", "- ", "```")):
-            fields.setdefault(pending_key, line)
-            pending_key = None
+    for key in parsed.fields:
+        value = result_parser.as_string(parsed.fields, key)
+        if value:
+            fields[key] = value
     return fields
 
 
@@ -76,14 +66,24 @@ def _result_received_event_name(role: str) -> str:
     return "AUDIT_RESULT_RECEIVED" if role == "auditor" else "RESULT_RECEIVED"
 
 
-def _error(rule_id: str, message: str, path: str, recommendation: str) -> dict[str, str]:
-    return {
+def _error(
+    rule_id: str,
+    message: str,
+    path: str,
+    recommendation: str,
+    *,
+    reason_code: str = "",
+) -> dict[str, str]:
+    payload = {
         "rule_id": rule_id,
         "severity": "error",
         "message": message,
         "path": path,
         "recommendation": recommendation,
     }
+    if reason_code:
+        payload["reason_code"] = reason_code
+    return payload
 
 
 def _load_existing_events(path: Path) -> list[dict[str, Any]]:
@@ -127,16 +127,31 @@ def _validate_request(root: Path, result_path: Path) -> tuple[dict[str, Any], li
     if error:
         findings.append(_error("LIFECYCLE_RESULT_IO_001", f"RESULT is unreadable: {error}", str(result_path), "Pass --from-result pointing at an existing RESULT Markdown file."))
         return {}, findings
-    fields = _parse_fields(text)
-    task_id = fields.get("TASK_ID", "")
-    role = fields.get("ROLE", "")
-    agent_id = fields.get("AGENT_INSTANCE_ID", "")
-    status = fields.get("STATUS", "")
+    parsed = result_parser.parse_result(text, path=result_path)
+    fields = parsed.fields
+    task_id = parsed.task_id
+    role = parsed.role
+    agent_id = parsed.agent_instance_id
+    status = parsed.status
     result_ref = _rel(root, result_path)
 
-    for field_name, value in (("TASK_ID", task_id), ("ROLE", role), ("AGENT_INSTANCE_ID", agent_id), ("STATUS", status)):
+    identity_fields = (
+        ("TASK_ID", task_id, result_parser.REASON_MISSING_TASK_ID),
+        ("ROLE", role, result_parser.REASON_MISSING_ROLE),
+        ("AGENT_INSTANCE_ID", agent_id, result_parser.REASON_MISSING_AGENT_INSTANCE_ID),
+        ("STATUS", status, result_parser.REASON_MISSING_STATUS),
+    )
+    for field_name, value, reason_code in identity_fields:
         if _is_none(value):
-            findings.append(_error("LIFECYCLE_RESULT_FORMAT_001", f"RESULT is missing {field_name}.", result_ref, "Use a complete AGENT_RESULT_TEMPLATE.md or AUDIT_RESULT template."))
+            findings.append(
+                _error(
+                    "LIFECYCLE_RESULT_FORMAT_001",
+                    f"RESULT is missing {field_name}.",
+                    result_ref,
+                    "Use a complete AGENT_RESULT_TEMPLATE.md or AUDIT_RESULT template.",
+                    reason_code=reason_code,
+                )
+            )
     if role not in {
         "requirements_analyst",
         "solution_architect",
@@ -149,9 +164,9 @@ def _validate_request(root: Path, result_path: Path) -> tuple[dict[str, Any], li
         "release_manager",
     }:
         findings.append(_error("LIFECYCLE_RESULT_FORMAT_002", f"RESULT ROLE={role or 'MISSING'} is not a supported agent role.", result_ref, "Record a canonical profile role or auditor before termination."))
-    if fields.get("REUSE_ALLOWED", "").lower() != "false":
+    if result_parser.as_string(fields, "REUSE_ALLOWED").lower() != "false":
         findings.append(_error("LIFECYCLE_RESULT_FORMAT_003", "RESULT must declare REUSE_ALLOWED: false.", result_ref, "Set REUSE_ALLOWED: false before terminating the agent instance."))
-    if fields.get("AGENT_TERMINATION_REQUIRED", "").lower() != "true":
+    if result_parser.as_string(fields, "AGENT_TERMINATION_REQUIRED").lower() != "true":
         findings.append(_error("LIFECYCLE_RESULT_FORMAT_004", "RESULT must declare AGENT_TERMINATION_REQUIRED: true.", result_ref, "Set AGENT_TERMINATION_REQUIRED: true before recording termination."))
     if not result_path.exists():
         findings.append(_error("LIFECYCLE_RESULT_IO_002", "RESULT path does not exist.", result_ref, "Write the RESULT artifact before recording termination."))
