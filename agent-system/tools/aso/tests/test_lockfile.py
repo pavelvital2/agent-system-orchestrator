@@ -80,6 +80,19 @@ class LockfileHelperTests(unittest.TestCase):
 
         self.assertTrue(result.ok, result.to_json())
 
+    def test_legacy_compatible_p57_package_version_passes_validation(self) -> None:
+        generated = lockfile.generate_lockfile(
+            project_name="Demo Project",
+            project_slug="demo-project",
+            repo_url=None,
+            package_version="3.7.8",
+            runtime_schema="3.1.1",
+        )
+
+        result = lockfile.validate_lockfile(generated)
+
+        self.assertTrue(result.ok, result.to_json())
+
     def test_mixed_compatible_version_tuples_fail_validation(self) -> None:
         cases = (
             ("3.2.0", "3.1.0"),
@@ -195,7 +208,7 @@ class LockfileHelperTests(unittest.TestCase):
         schema_versions = set(aso_engine_properties["version"]["enum"])
         schema_tuples_set = set(schema_tuples)
         source_supported_tuples = set(lockfile.COMPATIBLE_ENGINE_VERSION_TUPLES)
-        self.assertEqual(schema_versions - set(lockfile.COMPATIBLE_PACKAGE_VERSIONS), {"3.7.9"})
+        self.assertEqual(schema_versions, set(lockfile.COMPATIBLE_PACKAGE_VERSIONS))
         self.assertTrue(
             set(aso_engine_properties["runtime_schema"]["enum"]).issubset(lockfile.COMPATIBLE_RUNTIME_SCHEMA_VERSIONS)
         )
@@ -203,7 +216,7 @@ class LockfileHelperTests(unittest.TestCase):
             aso_engine_properties["engine_mode"]["enum"],
             list(lockfile.SUPPORTED_ENGINE_MODES),
         )
-        self.assertEqual(schema_tuples_set - source_supported_tuples, {("3.7.9", "3.1.1")})
+        self.assertEqual(schema_tuples_set, source_supported_tuples)
 
     @unittest.skipIf(Draft202012Validator is None, "jsonschema is not installed")
     def test_machine_readable_schema_rejects_mixed_version_tuples(self) -> None:

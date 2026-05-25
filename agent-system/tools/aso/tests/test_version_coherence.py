@@ -1,7 +1,11 @@
 from __future__ import annotations
 
 import json
+import os
 import re
+import subprocess
+import sys
+import tempfile
 import tomllib
 import unittest
 from importlib import util
@@ -9,10 +13,20 @@ from pathlib import Path
 
 
 REPO_ROOT = Path(__file__).resolve().parents[4]
+ASO_TOOL_ROOT = REPO_ROOT / "agent-system" / "tools" / "aso"
+CLI = ASO_TOOL_ROOT / "aso.py"
 
 
 RUNTIME_CONTRACT = REPO_ROOT / "agent-system" / "02_runtime" / "ORCHESTRATOR_RUNTIME_CONTRACT.json"
 WRAPPER_INIT = REPO_ROOT / "agent-system" / "tools" / "aso" / "agent_system_orchestrator_aso" / "__init__.py"
+PACKAGED_CROSS_LINK_RULES = (
+    ASO_TOOL_ROOT
+    / "agent_system_orchestrator_aso"
+    / "resources"
+    / "agent-system"
+    / "09_validators"
+    / "CROSS_LINK_VALIDATION_RULES.md"
+)
 ACTIVE_SCHEMA_FILES = (
     "agent-system/09_validators/schemas/runtime_state_3_1_0.contract.json",
     "agent-system/09_validators/schemas/schema_manifest.schema.json",
@@ -29,6 +43,13 @@ ACTIVE_TEMPLATE_FILES = (
     "agent-system/03_templates/proposal_artifact.template.json",
     "agent-system/03_templates/apply_receipt.template.json",
 )
+
+if str(ASO_TOOL_ROOT) not in sys.path:
+    sys.path.insert(0, str(ASO_TOOL_ROOT))
+
+from agent_system_orchestrator_aso.aso_tool import lockfile  # noqa: E402
+from agent_system_orchestrator_aso.aso_tool import runtime_contract_fallback  # noqa: E402
+from agent_system_orchestrator_aso.aso_tool import runtime_schema_contracts  # noqa: E402
 
 
 def _load_json(relpath: str | Path) -> dict[str, object]:
@@ -50,6 +71,20 @@ def _schema_const(schema: dict[str, object], *path: str) -> str:
     return current
 
 
+def _run_aso(*args: str) -> subprocess.CompletedProcess[str]:
+    env = os.environ.copy()
+    env["PYTHONDONTWRITEBYTECODE"] = "1"
+    env["PYTHONPATH"] = str(ASO_TOOL_ROOT)
+    return subprocess.run(
+        [sys.executable, str(CLI), *args],
+        cwd=REPO_ROOT,
+        check=False,
+        text=True,
+        capture_output=True,
+        env=env,
+    )
+
+
 class VersionCoherenceTests(unittest.TestCase):
     def setUp(self) -> None:
         contract = _load_json(RUNTIME_CONTRACT)
@@ -58,14 +93,32 @@ class VersionCoherenceTests(unittest.TestCase):
         self.runtime_schema_version = str(contract["runtime_schema_version"])
         self.artifact_schema_version = str(contract["artifact_package_schema_version"])
 
+    def test_active_runtime_constants_match_current_contract_tuple(self) -> None:
+        fallback = json.loads(runtime_contract_fallback.ORCHESTRATOR_RUNTIME_CONTRACT_JSON)
+
+        self.assertEqual(runtime_schema_contracts.ACTIVE_PACKAGE_VERSION, self.package_version)
+        self.assertEqual(runtime_schema_contracts.ACTIVE_GOVERNANCE_RULESET_VERSION, self.governance_version)
+        self.assertEqual(runtime_schema_contracts.ACTIVE_RUNTIME_SCHEMA_VERSION, self.runtime_schema_version)
+        self.assertEqual(
+            runtime_schema_contracts.ACTIVE_ARTIFACT_PACKAGE_SCHEMA_VERSION,
+            self.artifact_schema_version,
+        )
+        self.assertEqual(lockfile.PACKAGE_VERSION, self.package_version)
+        self.assertEqual(lockfile.RUNTIME_SCHEMA_VERSION, self.runtime_schema_version)
+        self.assertEqual(fallback["package_version"], self.package_version)
+        self.assertEqual(fallback["governance_ruleset_version"], self.governance_version)
+        self.assertNotEqual(runtime_schema_contracts.ACTIVE_PACKAGE_VERSION, "3.7.8")
+        self.assertNotEqual(runtime_schema_contracts.ACTIVE_GOVERNANCE_RULESET_VERSION, "3.7.8")
+
     def test_package_metadata_matches_runtime_contract(self) -> None:
         pyproject = tomllib.loads((REPO_ROOT / "pyproject.toml").read_text(encoding="utf-8"))
         package_versioning = (REPO_ROOT / "agent-system" / "PACKAGE_VERSIONING.md").read_text(encoding="utf-8")
         authority_map = (REPO_ROOT / "agent-system" / "02_runtime" / "CONTRACT_AUTHORITY_MAP.md").read_text(
             encoding="utf-8"
         )
-        cross_link_rules = (REPO_ROOT / "agent-system" / "09_validators" / "CROSS_LINK_VALIDATION_RULES.md").read_text(
-            encoding="utf-8"
+        cross_link_rule_paths = (
+            REPO_ROOT / "agent-system" / "09_validators" / "CROSS_LINK_VALIDATION_RULES.md",
+            PACKAGED_CROSS_LINK_RULES,
         )
 
         self.assertEqual(pyproject["project"]["version"], self.package_version)
@@ -79,8 +132,61 @@ class VersionCoherenceTests(unittest.TestCase):
         self.assertIn(f"CURRENT_GOVERNANCE_RULESET_VERSION: {self.governance_version}", package_versioning)
         self.assertIn(f"package_version: {self.package_version}", authority_map)
         self.assertIn(f"governance_ruleset_version: {self.governance_version}", authority_map)
-        self.assertIn(f"CURRENT_PACKAGE_VERSION: {self.package_version}", cross_link_rules)
-        self.assertIn(f"CURRENT_GOVERNANCE_RULESET_VERSION: {self.governance_version}", cross_link_rules)
+        for path in cross_link_rule_paths:
+            with self.subTest(cross_link_rules=path):
+                cross_link_rules = path.read_text(encoding="utf-8")
+                self.assertIn(f"CURRENT_PACKAGE_VERSION: {self.package_version}", cross_link_rules)
+                self.assertIn(f"CURRENT_GOVERNANCE_RULESET_VERSION: {self.governance_version}", cross_link_rules)
+                self.assertNotIn("CURRENT_PACKAGE_VERSION: 3.7.8", cross_link_rules)
+                self.assertNotIn("CURRENT_GOVERNANCE_RULESET_VERSION: 3.7.8", cross_link_rules)
+
+    def test_generated_state_and_lockfile_use_active_tuple_without_stale_output(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+
+            init = _run_aso(
+                "state",
+                "init",
+                "--root",
+                str(root),
+                "--project-name",
+                "Version Coherence",
+                "--project-slug",
+                "version-coherence",
+                "--confirm-write",
+                "--deterministic-timestamps",
+            )
+            generated_lockfile = lockfile.generate_lockfile(
+                project_name="Version Coherence",
+                project_slug="version-coherence",
+                repo_url=None,
+            )
+            lockfile_validation = lockfile.validate_lockfile(generated_lockfile)
+
+            self.assertEqual(init.returncode, 0, init.stdout + init.stderr)
+            self.assertTrue(lockfile_validation.ok, lockfile_validation.to_json())
+            project_state = _load_json(root / "project-runtime" / "state" / "PROJECT_STATE.json")
+            schema_manifest = _load_json(root / "project-runtime" / "state" / "SCHEMA_MANIFEST.json")
+            project_state_content = project_state["content"]
+            schema_manifest_content = schema_manifest["content"]
+            self.assertIsInstance(project_state_content, dict)
+            self.assertIsInstance(schema_manifest_content, dict)
+            self.assertEqual(project_state_content["package_version"], self.package_version)
+            self.assertEqual(project_state_content["governance_ruleset_version"], self.governance_version)
+            self.assertEqual(schema_manifest_content["package_version"], self.package_version)
+            self.assertEqual(generated_lockfile["aso_engine"]["version"], self.package_version)  # type: ignore[index]
+
+            generated_outputs = {
+                "state_init_receipt": init.stdout,
+                "project_state": json.dumps(project_state, sort_keys=True),
+                "schema_manifest": json.dumps(schema_manifest, sort_keys=True),
+                "aso_lock": lockfile.lockfile_json(generated_lockfile),
+            }
+            for label, text in generated_outputs.items():
+                with self.subTest(output=label):
+                    self.assertNotIn('"package_version": "3.7.8"', text)
+                    self.assertNotIn('"governance_ruleset_version": "3.7.8"', text)
+                    self.assertNotIn('"version": "3.7.8"', text)
 
     def test_active_schemas_and_templates_use_current_versions(self) -> None:
         runtime_contract = _load_json("agent-system/09_validators/schemas/runtime_state_3_1_0.contract.json")
