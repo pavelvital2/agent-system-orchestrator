@@ -4,6 +4,7 @@ import json
 import re
 import tomllib
 import unittest
+from importlib import util
 from pathlib import Path
 
 
@@ -11,6 +12,7 @@ REPO_ROOT = Path(__file__).resolve().parents[4]
 
 
 RUNTIME_CONTRACT = REPO_ROOT / "agent-system" / "02_runtime" / "ORCHESTRATOR_RUNTIME_CONTRACT.json"
+WRAPPER_INIT = REPO_ROOT / "agent-system" / "tools" / "aso" / "agent_system_orchestrator_aso" / "__init__.py"
 ACTIVE_SCHEMA_FILES = (
     "agent-system/09_validators/schemas/runtime_state_3_1_0.contract.json",
     "agent-system/09_validators/schemas/schema_manifest.schema.json",
@@ -67,6 +69,12 @@ class VersionCoherenceTests(unittest.TestCase):
         )
 
         self.assertEqual(pyproject["project"]["version"], self.package_version)
+        spec = util.spec_from_file_location("agent_system_orchestrator_aso", WRAPPER_INIT)
+        self.assertIsNotNone(spec)
+        self.assertIsNotNone(spec.loader)
+        wrapper = util.module_from_spec(spec)
+        spec.loader.exec_module(wrapper)
+        self.assertEqual(wrapper.__version__, self.package_version)
         self.assertIn(f"CURRENT_PACKAGE_VERSION: {self.package_version}", package_versioning)
         self.assertIn(f"CURRENT_GOVERNANCE_RULESET_VERSION: {self.governance_version}", package_versioning)
         self.assertIn(f"package_version: {self.package_version}", authority_map)
