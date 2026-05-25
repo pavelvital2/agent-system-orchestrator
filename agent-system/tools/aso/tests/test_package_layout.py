@@ -27,6 +27,15 @@ def _readme_text() -> str:
     )
 
 
+def _direct_wrapper_text() -> str:
+    return (
+        "import sys\n"
+        "from agent_system_orchestrator_aso.aso_tool.aso import build_parser, main\n"
+        'if __name__ == "__main__":\n'
+        "    sys.exit(main())\n"
+    )
+
+
 def _pyproject(where: str = "agent-system/tools/aso") -> str:
     return (
         "[project]\n"
@@ -78,12 +87,7 @@ def _minimal_layout_fixture(root: Path) -> None:
     package = aso_root / "agent_system_orchestrator_aso"
     _write(
         aso_root / "aso.py",
-        (
-            "import sys\n"
-            "from agent_system_orchestrator_aso.aso_tool.aso import build_parser, main\n"
-            'if __name__ == "__main__":\n'
-            "    sys.exit(main())\n"
-        ),
+        _direct_wrapper_text(),
     )
     _write(package / "__init__.py", "\n")
     _write(package / "cli.py", "from .aso_tool.aso import main\n")
@@ -116,13 +120,18 @@ def _minimal_layout_fixture(root: Path) -> None:
         "agent-system/ORCHESTRATOR_RUNTIME_CONTRACT.json": b"{}\n",
         "agent-system/02_runtime/ORCHESTRATOR_RUNTIME_CONTRACT.json": b"{}\n",
         "agent-system/09_validators/VALIDATOR_SPEC.md": b"# Validators\n",
-        "agent-system/tools/aso/aso.py": b"print('ok')\n",
+        "agent-system/09_validators/rules/governance_rules.json": b"{}\n",
+        "agent-system/tools/aso/aso.py": _direct_wrapper_text().encode("utf-8"),
     }
     resources_root = package / "resources"
     for relpath, data in resource_files.items():
         target = resources_root / relpath
         target.parent.mkdir(parents=True, exist_ok=True)
         target.write_bytes(data)
+        if relpath != "agent-system/ORCHESTRATOR_RUNTIME_CONTRACT.json":
+            source_target = root / relpath
+            source_target.parent.mkdir(parents=True, exist_ok=True)
+            source_target.write_bytes(data)
     _write(resources_root / "RESOURCE_MANIFEST.json", _resource_manifest(resource_files))
     _write(
         root / ".github" / "workflows" / "governance.yml",
@@ -230,6 +239,18 @@ class PackageLayoutTests(unittest.TestCase):
 
         self.assertEqual(result.returncode, 1, result.stderr)
         self.assertIn("LINT_PKG_006", {finding["rule_id"] for finding in report["findings"]})
+
+    def test_packaged_resource_root_source_drift_fails(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            _minimal_layout_fixture(root)
+            _write(root / "agent-system" / "02_runtime" / "ORCHESTRATOR_RUNTIME_CONTRACT.json", '{"drift": true}\n')
+
+            result = _run_package_layout(root)
+            report = json.loads(result.stdout)
+
+        self.assertEqual(result.returncode, 1, result.stderr)
+        self.assertIn("PACKAGE_RESOURCES_005", {finding["rule_id"] for finding in report["findings"]})
 
 
 if __name__ == "__main__":

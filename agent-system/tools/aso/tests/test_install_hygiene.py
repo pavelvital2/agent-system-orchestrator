@@ -17,6 +17,7 @@ from current_source_snapshot import create_current_source_snapshot
 
 REPO_ROOT = Path(__file__).resolve().parents[4]
 INSTALL_SCRIPT = REPO_ROOT / "agent-system" / "scripts" / "install_aso_clean.sh"
+INSTALLED_CLI_SMOKE_SCRIPT = REPO_ROOT / "agent-system" / "scripts" / "installed_cli_smoke.sh"
 SOURCE_HYGIENE_SCRIPT = REPO_ROOT / "agent-system" / "scripts" / "source_hygiene.sh"
 INSTALLED_RESOURCE_TEST = REPO_ROOT / "agent-system" / "tools" / "aso" / "tests" / "test_installed_resource_lookup.py"
 
@@ -203,6 +204,24 @@ exit 1
         self.assertIn("\"$venv_aso\" status --root \"$source_root\" --mode package", script)
         self.assertIn("\"$venv_aso\" project create --local --target", script)
         self.assertIn("\"$venv_aso\" project verify-clean --root", script)
+
+    def test_installed_cli_smoke_covers_package_factory_and_state_paths(self) -> None:
+        script = INSTALLED_CLI_SMOKE_SCRIPT.read_text(encoding="utf-8")
+
+        self.assertIn("status --root \"$package_root\" --mode package", script)
+        self.assertIn("doctor --root \"$package_root\" --mode package --strict", script)
+        self.assertIn("package-layout verify --root \"$package_root\" --mode package --strict", script)
+        self.assertIn("--engine-mode reference", script)
+        self.assertIn("--engine-mode vendored", script)
+        self.assertIn("state init", script)
+        self.assertIn("intake bootstrap", script)
+        self.assertIn("state verify", script)
+        self.assertIn("plan-next", script)
+        self.assertIn("agent-system/00_start/ORCHESTRATOR_START.md", script)
+        self.assertIn("agent-system/ORCHESTRATOR_RUNTIME_CONTRACT.json", script)
+        self.assertIn("agent-system/tools/aso/aso.py", script)
+        self.assertIn("site-packages", script)
+        self.assertIn("build dist", script)
 
     def test_installed_resource_lookup_does_not_install_from_live_checkout(self) -> None:
         test_source = INSTALLED_RESOURCE_TEST.read_text(encoding="utf-8")

@@ -19,12 +19,24 @@ MANIFEST_IN_TEXT = (
     "agent_system_orchestrator_aso/resources/agent-system\n"
 )
 
+MINIMAL_ASO_WRAPPER = (
+    "import sys\n"
+    "from agent_system_orchestrator_aso.aso_tool.aso import build_parser, main\n"
+    'if __name__ == "__main__":\n'
+    "    sys.exit(main())\n"
+).encode("utf-8")
 MINIMAL_RESOURCE_FILES = {
     "agent-system/00_start/ORCHESTRATOR_START.md": b"# Start\n",
     "agent-system/ORCHESTRATOR_RUNTIME_CONTRACT.json": b"{}\n",
     "agent-system/02_runtime/ORCHESTRATOR_RUNTIME_CONTRACT.json": b"{}\n",
     "agent-system/09_validators/VALIDATOR_SPEC.md": b"# Validators\n",
-    "agent-system/tools/aso/aso.py": b"print('ok')\n",
+    "agent-system/09_validators/rules/governance_rules.json": b"{}\n",
+    "agent-system/tools/aso/aso.py": MINIMAL_ASO_WRAPPER,
+}
+ROOT_SYNC_RESOURCE_FILES = {
+    relpath: data
+    for relpath, data in MINIMAL_RESOURCE_FILES.items()
+    if relpath != "agent-system/ORCHESTRATOR_RUNTIME_CONTRACT.json"
 }
 
 
@@ -72,6 +84,10 @@ def write_minimal_package_resources(package_root: Path) -> list[Path]:
         paths.append(_write_bytes(resources_root / relpath, data))
     paths.append(_write(resources_root / "RESOURCE_MANIFEST.json", _resource_manifest(MINIMAL_RESOURCE_FILES)))
     return paths
+
+
+def write_minimal_source_resources(root: Path) -> list[Path]:
+    return [_write_bytes(root / relpath, data) for relpath, data in ROOT_SYNC_RESOURCE_FILES.items()]
 
 
 def write_resource_manifest_in(root: Path) -> Path:

@@ -4,6 +4,7 @@ PYTHON ?= python3
 ASO_SCRIPT := agent-system/tools/aso/aso.py
 VENV ?= .venv
 ASO_BIN := $(VENV)/bin/aso
+INSTALLED_CLI_SMOKE := agent-system/scripts/installed_cli_smoke.sh
 
 install:
 	$(PYTHON) -m pip install -e .
@@ -29,17 +30,30 @@ verify-install:
 	PYTHONDONTWRITEBYTECODE=1 "$(ASO_BIN)" package-layout verify --root . --strict
 
 install-smoke:
+	set -e; \
 	tmp_dir="$$(mktemp -d)"; \
 	trap 'rm -rf "$$tmp_dir"' EXIT; \
 	PYTHONDONTWRITEBYTECODE=1 bash agent-system/scripts/install_aso_clean.sh --source . --venv "$$tmp_dir/venv" --python "$(PYTHON)"; \
-	PYTHONDONTWRITEBYTECODE=1 "$$tmp_dir/venv/bin/aso" --help >/dev/null; \
-	PYTHONDONTWRITEBYTECODE=1 "$$tmp_dir/venv/bin/aso" status --root . --mode package; \
-	PYTHONDONTWRITEBYTECODE=1 "$$tmp_dir/venv/bin/aso" project create --local --target "$$tmp_dir/project" --name "ASO Install Smoke" --slug "aso-install-smoke" >/dev/null; \
-	PYTHONDONTWRITEBYTECODE=1 "$$tmp_dir/venv/bin/aso" project verify-clean --root "$$tmp_dir/project" --strict >/dev/null; \
-	PYTHONDONTWRITEBYTECODE=1 "$$tmp_dir/venv/bin/aso" package-layout verify --root . --mode package --strict; \
-	PYTHONDONTWRITEBYTECODE=1 "$$tmp_dir/venv/bin/python" -c "import importlib.metadata as md, json, pathlib; import agent_system_orchestrator_aso, agent_system_orchestrator_aso.cli as cli; dist = md.distribution('agent-system-orchestrator'); direct_url = json.loads(dist.read_text('direct_url.json') or '{}'); source = pathlib.Path(agent_system_orchestrator_aso.__file__).resolve().as_posix(); assert direct_url.get('dir_info', {}).get('editable') is not True, direct_url; assert '/site-packages/agent_system_orchestrator_aso/__init__.py' in source, source; assert callable(cli.main), cli.main; print(source)"
+	PYTHONDONTWRITEBYTECODE=1 bash "$(INSTALLED_CLI_SMOKE)" --aso "$$tmp_dir/venv/bin/aso" --package-root . --work-dir "$$tmp_dir/clean-console"; \
+	PYTHONDONTWRITEBYTECODE=1 "$$tmp_dir/venv/bin/python" -c "import importlib.metadata as md, json, pathlib; import agent_system_orchestrator_aso, agent_system_orchestrator_aso.cli as cli; dist = md.distribution('agent-system-orchestrator'); direct_url = json.loads(dist.read_text('direct_url.json') or '{}'); source = pathlib.Path(agent_system_orchestrator_aso.__file__).resolve().as_posix(); assert direct_url.get('dir_info', {}).get('editable') is not True, direct_url; assert '/site-packages/agent_system_orchestrator_aso/__init__.py' in source, source; assert callable(cli.main), cli.main; print(source)"; \
+	build_src="$$tmp_dir/build-source"; \
+	dist_dir="$$tmp_dir/dist"; \
+	mkdir -p "$$build_src" "$$dist_dir"; \
+	git archive --format=tar HEAD | tar -x -C "$$build_src"; \
+	"$(PYTHON)" -m venv "$$tmp_dir/build-venv"; \
+	PYTHONDONTWRITEBYTECODE=1 "$$tmp_dir/build-venv/bin/python" -m pip install -U pip setuptools wheel build; \
+	PYTHONDONTWRITEBYTECODE=1 "$$tmp_dir/build-venv/bin/python" -m build "$$build_src" --outdir "$$dist_dir"; \
+	"$(PYTHON)" -m venv "$$tmp_dir/wheel-venv"; \
+	PYTHONDONTWRITEBYTECODE=1 "$$tmp_dir/wheel-venv/bin/python" -m pip install -U pip setuptools wheel; \
+	PYTHONDONTWRITEBYTECODE=1 "$$tmp_dir/wheel-venv/bin/python" -m pip install "$$dist_dir"/*.whl; \
+	PYTHONDONTWRITEBYTECODE=1 bash "$(INSTALLED_CLI_SMOKE)" --aso "$$tmp_dir/wheel-venv/bin/aso" --package-root "$$build_src" --work-dir "$$tmp_dir/wheel-console"; \
+	"$(PYTHON)" -m venv "$$tmp_dir/sdist-venv"; \
+	PYTHONDONTWRITEBYTECODE=1 "$$tmp_dir/sdist-venv/bin/python" -m pip install -U pip setuptools wheel; \
+	PYTHONDONTWRITEBYTECODE=1 "$$tmp_dir/sdist-venv/bin/python" -m pip install "$$dist_dir"/*.tar.gz; \
+	PYTHONDONTWRITEBYTECODE=1 bash "$(INSTALLED_CLI_SMOKE)" --aso "$$tmp_dir/sdist-venv/bin/aso" --package-root "$$build_src" --work-dir "$$tmp_dir/sdist-console"
 
 install-test-smoke:
+	set -e; \
 	tmp_dir="$$(mktemp -d)"; \
 	trap 'rm -rf "$$tmp_dir"' EXIT; \
 	PYTHONDONTWRITEBYTECODE=1 bash agent-system/scripts/install_aso_clean.sh --source . --venv "$$tmp_dir/venv" --python "$(PYTHON)" --with-test; \

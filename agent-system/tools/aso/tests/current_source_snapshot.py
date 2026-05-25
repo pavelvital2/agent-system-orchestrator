@@ -6,7 +6,7 @@ from pathlib import Path
 
 
 FORBIDDEN_ROOTS = ("project-input/", "project-runtime/", "project-archive/", ".venv/")
-ALLOWED_UNTRACKED_PATHS = ("MANIFEST.in",)
+ALLOWED_UNTRACKED_PATHS = ("MANIFEST.in", "agent-system/scripts/installed_cli_smoke.sh")
 ALLOWED_UNTRACKED_PREFIXES = (
     "agent-system/tools/aso/agent_system_orchestrator_aso/aso_tool/",
     "agent-system/tools/aso/agent_system_orchestrator_aso/resources/",

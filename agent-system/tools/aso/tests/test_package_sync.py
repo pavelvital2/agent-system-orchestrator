@@ -12,7 +12,12 @@ TESTS_DIR = Path(__file__).resolve().parent
 if str(TESTS_DIR) not in sys.path:
     sys.path.insert(0, str(TESTS_DIR))
 
-from package_fixture_helpers import PYPROJECT_RESOURCE_DATA, write_minimal_package_resources, write_resource_manifest_in
+from package_fixture_helpers import (
+    PYPROJECT_RESOURCE_DATA,
+    write_minimal_package_resources,
+    write_minimal_source_resources,
+    write_resource_manifest_in,
+)
 
 
 CLI = Path(__file__).resolve().parents[1] / "aso.py"
@@ -66,6 +71,7 @@ def _minimal_layout_fixture(root: Path) -> None:
         + PYPROJECT_RESOURCE_DATA,
     )
     write_minimal_package_resources(package)
+    write_minimal_source_resources(root)
     write_resource_manifest_in(root)
     readme = (
         "ASO CLI path: agent-system/tools/aso/aso.py\n"

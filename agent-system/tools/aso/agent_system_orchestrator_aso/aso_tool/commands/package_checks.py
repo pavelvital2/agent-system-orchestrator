@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import hashlib
+import json
 import os
 import re
 import subprocess
@@ -61,6 +63,12 @@ LEGACY_TOP_LEVEL_TREE_RELPATHS = (
 CONSOLE_ENTRYPOINT = "agent_system_orchestrator_aso.cli:main"
 WORKFLOW_DIR_RELPATH = ".github/workflows"
 WORKFLOW_TRIGGER_MARKERS = ("upgrade/",)
+RESOURCE_SOURCE_SYNC_RELPATHS = (
+    "agent-system/00_start/ORCHESTRATOR_START.md",
+    "agent-system/02_runtime/ORCHESTRATOR_RUNTIME_CONTRACT.json",
+    "agent-system/tools/aso/aso.py",
+    "agent-system/09_validators/rules/governance_rules.json",
+)
 
 
 @dataclass(frozen=True)
@@ -458,6 +466,92 @@ def _check_packaged_resources(
                 "; ".join(check.errors[:10]),
                 [CANONICAL_RESOURCES_RELPATH],
                 "Regenerate the packaged resource tree and RESOURCE_MANIFEST.json from a clean ASO source tree.",
+            )
+        )
+        return
+
+    _check_root_resource_sync(root, resources_root, findings)
+
+
+def _check_root_resource_sync(root: Path, resources_root: Path, findings: list[Finding]) -> None:
+    if not all(
+        (root / relpath).exists()
+        for relpath in (
+            "agent-system/00_start",
+            "agent-system/02_runtime",
+            "agent-system/09_validators",
+        )
+    ):
+        return
+
+    manifest_path = resources_root / resources.RESOURCE_MANIFEST
+    try:
+        manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    except (OSError, UnicodeDecodeError, json.JSONDecodeError) as exc:
+        findings.append(
+            Finding(
+                "PACKAGE_RESOURCES_002",
+                "error",
+                "Packaged ASO resource manifest is unreadable",
+                f"{manifest_path.relative_to(root).as_posix()}: {exc}",
+                [CANONICAL_RESOURCES_RELPATH],
+                "Restore a readable packaged resource manifest.",
+            )
+        )
+        return
+
+    manifest_files = manifest.get("files") if isinstance(manifest, dict) else None
+    if not isinstance(manifest_files, dict):
+        findings.append(
+            Finding(
+                "PACKAGE_RESOURCES_002",
+                "error",
+                "Packaged ASO resource manifest is invalid",
+                "RESOURCE_MANIFEST.json files entry is missing or invalid.",
+                [CANONICAL_RESOURCES_RELPATH],
+                "Regenerate RESOURCE_MANIFEST.json from a clean ASO source tree.",
+            )
+        )
+        return
+
+    mismatches: list[str] = []
+    for relpath in RESOURCE_SOURCE_SYNC_RELPATHS:
+        source_path = root / relpath
+        packaged_path = resources_root / relpath
+        if not source_path.is_file():
+            mismatches.append(f"{relpath} missing from root source")
+            continue
+        if not packaged_path.is_file():
+            mismatches.append(f"{relpath} missing from packaged resources")
+            continue
+        metadata = manifest_files.get(relpath)
+        if not isinstance(metadata, dict):
+            mismatches.append(f"{relpath} missing from resource manifest")
+            continue
+        try:
+            source_data = source_path.read_bytes()
+            packaged_data = packaged_path.read_bytes()
+        except OSError as exc:
+            mismatches.append(f"{relpath} could not be read: {exc}")
+            continue
+        source_hash = hashlib.sha256(source_data).hexdigest()
+        packaged_hash = hashlib.sha256(packaged_data).hexdigest()
+        manifest_hash = metadata.get("sha256")
+        manifest_size = metadata.get("size")
+        if source_data != packaged_data or source_hash != packaged_hash:
+            mismatches.append(f"{relpath} root sha256={source_hash} packaged sha256={packaged_hash}")
+        if manifest_hash != packaged_hash or manifest_size != len(packaged_data):
+            mismatches.append(f"{relpath} manifest metadata does not match packaged resource")
+
+    if mismatches:
+        findings.append(
+            Finding(
+                "PACKAGE_RESOURCES_005",
+                "error",
+                "Packaged ASO resources differ from root source resources",
+                "; ".join(mismatches[:10]),
+                RESOURCE_SOURCE_SYNC_RELPATHS,
+                "Regenerate packaged ASO resources from the root source tree before building wheels or sdists.",
             )
         )
 
