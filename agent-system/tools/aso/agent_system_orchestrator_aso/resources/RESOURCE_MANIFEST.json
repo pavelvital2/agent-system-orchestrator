@@ -1601,8 +1601,8 @@
       "size": 53278
     },
     "agent-system/tools/aso/agent_system_orchestrator_aso/aso_tool/commands/project.py": {
-      "sha256": "14a091560025fc2f9c728b9c1248fd1b3bd4ea8aed93b3e9c0866c1e54a77ba4",
-      "size": 49948
+      "sha256": "8e199b6c034e2cac90b52df54a6e2aa1fcd7ba09318323aa654abce9c9ec56e9",
+      "size": 55567
     },
     "agent-system/tools/aso/agent_system_orchestrator_aso/aso_tool/commands/propose_checkpoint.py": {
       "sha256": "02bc565f96a799fe60d20ecb6dfa557822565fba0b234f5d019bf25c418c3660",
@@ -1673,8 +1673,8 @@
       "size": 19066
     },
     "agent-system/tools/aso/agent_system_orchestrator_aso/aso_tool/lockfile.py": {
-      "sha256": "c1a960c9030a9471fbdcb93adce48564dc84f423059df08c987f4127fb8f5080",
-      "size": 14282
+      "sha256": "a5073020d4afefde48e8ee36c9199d34744eae6e628b99710111c973373270db",
+      "size": 16163
     },
     "agent-system/tools/aso/agent_system_orchestrator_aso/aso_tool/models/__init__.py": {
       "sha256": "7cf6de072195ec4068a2f11f236ea91a22e523f53ff404b29579e1dd1113397c",
@@ -1921,8 +1921,8 @@
       "size": 32219
     },
     "agent-system/tools/aso/tests/test_lockfile.py": {
-      "sha256": "023b10892b373946db6779fa0106a3c89f2aa97f22ca14445250c48a212dc246",
-      "size": 10141
+      "sha256": "11a80239b23d118a19eba0d72d89b6872d27cc376e1fd01546916290e13143db",
+      "size": 11470
     },
     "agent-system/tools/aso/tests/test_orchestrator_context_minimization.py": {
       "sha256": "d3a5228c3749406ec4475f512c29a7f008b83fc36b86aaf72fab515ad4aa6237",
@@ -1957,8 +1957,8 @@
       "size": 51494
     },
     "agent-system/tools/aso/tests/test_project.py": {
-      "sha256": "6a248c539622a3944f31f6385708f7d3fb4a7634057a53cec0a152ebf4d72a64",
-      "size": 56736
+      "sha256": "f83a2becdd842c1915162ca8d408dd78a059fa0feb17ec6ebbc646eabbe6f383",
+      "size": 59536
     },
     "agent-system/tools/aso/tests/test_proposal_contracts.py": {
       "sha256": "5e125e3bdb534c15285facb95d944dd4d4c7eec0dfcf5e0fd9d255b51b3ab1fd",

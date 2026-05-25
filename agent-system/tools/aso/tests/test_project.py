@@ -352,8 +352,10 @@ class ProjectCommandTests(unittest.TestCase):
         self.assertEqual(plan["engine_mode"], "reference")
         self.assertEqual(plan["repo_owner"], "example")
         self.assertEqual(plan["repo_name"], "demo")
+        self.assertEqual(plan["repo_url"], "https://github.com/example/demo.git")
         self.assertEqual(plan["visibility"], "private")
         self.assertEqual(plan["branch"], "main")
+        self.assertEqual(plan["planned_state_init"]["repo_url"], "https://github.com/example/demo.git")
         self.assertEqual(
             plan["planned_local_files"],
             [".gitignore", "README.md", "aso.lock", "project-archive/", "project-input/", "project-runtime/"],
@@ -458,6 +460,7 @@ class ProjectCommandTests(unittest.TestCase):
         self.assertEqual(result.returncode, 0, result.stderr)
         self.assertEqual(plan["repo_owner"], "example")
         self.assertEqual(plan["repo_name"], "demo")
+        self.assertEqual(plan["repo_url"], "https://github.com/example/demo.git")
         self.assertEqual(plan["engine_mode"], "reference")
         self.assertIn("planned_state_init", plan)
         self.assertEqual(plan["planned_state_init"]["runtime_schema_version"], "3.1.1")
@@ -533,13 +536,16 @@ class ProjectCommandTests(unittest.TestCase):
                 env_overrides={"PATH": f"{fake_bin}:{os.environ['PATH']}"},
             )
             receipt = json.loads(receipt_path.read_text(encoding="utf-8"))
+            lock = json.loads((target / lockfile.LOCKFILE_NAME).read_text(encoding="utf-8"))
 
         self.assertEqual(result.returncode, 0, result.stderr)
         self.assertEqual(receipt["repository"], "example/demo")
+        self.assertEqual(receipt["repo_url"], "https://github.com/example/demo.git")
         self.assertEqual(receipt["commit"], "fakecommit123")
         self.assertEqual(receipt["tracked_paths"], [".gitignore", "README.md", "aso.lock"])
         self.assertFalse(receipt["runtime_state_initialized"])
         self.assertEqual(receipt["runtime_state_files"], 0)
+        self.assertEqual(lock["project"]["repo_url"], "https://github.com/example/demo.git")
         self.assertFalse((target / "agent-system").exists())
 
     def test_create_github_real_publish_with_fake_tools_failure_paths(self) -> None:
@@ -826,14 +832,17 @@ class ProjectCommandTests(unittest.TestCase):
                 result = project.run_create(args)
 
             receipt = json.loads(receipt_path.read_text(encoding="utf-8"))
+            lock = json.loads((target / lockfile.LOCKFILE_NAME).read_text(encoding="utf-8"))
 
         self.assertEqual(result, 0)
         self.assertIn("ASO project GitHub publish: PASS", stdout.getvalue())
         self.assertEqual(receipt["repository"], "example/demo")
+        self.assertEqual(receipt["repo_url"], "https://github.com/example/demo.git")
         self.assertEqual(receipt["commit"], "abc123")
         self.assertEqual(receipt["tracked_paths"], [".gitignore", "README.md", "aso.lock"])
         self.assertEqual(receipt["pre_publish_verify_clean"], "pass")
         self.assertEqual(receipt["post_publish_verify_clean"], "pass")
+        self.assertEqual(lock["project"]["repo_url"], "https://github.com/example/demo.git")
         self.assertIn(
             ["/fake/bin/gh", "repo", "create", "example/demo", "--private", "--source", str(target), "--remote", "origin", "--push"],
             calls,
@@ -1103,6 +1112,51 @@ class ProjectCommandTests(unittest.TestCase):
         self.assertEqual(report["gitignore_status"], "pass")
         self.assertEqual(report["tracked_forbidden_paths"], [])
         self.assertEqual(report["nested_git_paths"], [])
+
+    def test_verify_clean_strict_fails_when_git_origin_has_null_lock_repo_url(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp) / "github-origin-null-lock"
+            project.create_project(
+                target=root,
+                project_name="GitHub Origin Null Lock",
+                project_slug="github-origin-null-lock",
+                repo_url=None,
+                engine_mode="reference",
+            )
+            _init_git(root)
+            subprocess.run(
+                ["git", "-C", str(root), "remote", "add", "origin", "git@github.com:example/demo.git"],
+                check=True,
+                capture_output=True,
+            )
+
+            result = _run_cli(["project", "verify-clean", "--root", str(root), "--strict"])
+
+        self.assertEqual(result.returncode, 1)
+        self.assertIn("PROJECT_VERIFY_CLEAN_011", result.stdout)
+        self.assertIn("Git origin requires aso.lock project.repo_url", result.stdout)
+
+    def test_verify_clean_strict_accepts_normalized_ssh_origin_for_https_lock_repo_url(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp) / "github-origin-normalized"
+            project.create_project(
+                target=root,
+                project_name="GitHub Origin Normalized",
+                project_slug="github-origin-normalized",
+                repo_url="https://github.com/example/demo.git",
+                engine_mode="reference",
+            )
+            _init_git(root)
+            subprocess.run(
+                ["git", "-C", str(root), "remote", "add", "origin", "git@github.com:example/demo.git"],
+                check=True,
+                capture_output=True,
+            )
+
+            result = _run_cli(["project", "verify-clean", "--root", str(root), "--strict"])
+
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        self.assertIn("ASO project verify-clean: PASS", result.stdout)
 
     def test_verify_clean_non_strict_reports_violations_without_failing(self) -> None:
         result = _run_cli(["project", "verify-clean", "--root", str(FIXTURES / "invalid_missing_gitignore")])

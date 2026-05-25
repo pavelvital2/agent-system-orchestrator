@@ -46,6 +46,32 @@ class LockfileHelperTests(unittest.TestCase):
             list(lockfile.REQUIRED_PUBLICATION_ROOTS),
         )
 
+    def test_generate_lockfile_records_source_provenance_without_schema_bump(self) -> None:
+        vendored_hash = "sha256:" + ("a" * 64)
+        generated = lockfile.generate_lockfile(
+            project_name="Demo Project",
+            project_slug="demo-project",
+            repo_url="https://github.com/example/demo-project.git",
+            source_repository="git@github.com:example/agent-system-orchestrator.git",
+            source_branch="main",
+            source_commit="abc123",
+            source_dirty=False,
+            vendored_tree_hash=vendored_hash,
+        )
+
+        result = lockfile.validate_lockfile(generated)
+        aso_engine = generated["aso_engine"]
+
+        self.assertTrue(result.ok, result.to_json())
+        self.assertEqual(generated["lockfile_version"], "1.0")
+        self.assertEqual(aso_engine["version"], lockfile.PACKAGE_VERSION)
+        self.assertEqual(aso_engine["runtime_schema"], lockfile.RUNTIME_SCHEMA_VERSION)
+        self.assertEqual(aso_engine["source_repository"], "git@github.com:example/agent-system-orchestrator.git")
+        self.assertEqual(aso_engine["source_branch"], "main")
+        self.assertEqual(aso_engine["source_commit"], "abc123")
+        self.assertFalse(aso_engine["source_dirty"])
+        self.assertEqual(aso_engine["vendored_tree_hash"], vendored_hash)
+
     def test_generate_lockfile_accepts_reference_engine_mode(self) -> None:
         generated = lockfile.generate_lockfile(
             project_name="Reference Project",

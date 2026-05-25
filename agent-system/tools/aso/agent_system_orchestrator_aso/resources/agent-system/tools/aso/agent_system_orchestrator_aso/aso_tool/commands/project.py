@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import re
 import shutil
@@ -10,9 +11,9 @@ import subprocess
 import sys
 from dataclasses import dataclass
 from pathlib import Path
+from urllib.parse import urlparse
 
 from .. import lockfile, resources
-from . import state_init, state_render
 
 
 EXIT_OK = 0
@@ -154,7 +155,7 @@ def run_verify_clean(args: argparse.Namespace) -> int:
     """Run `aso project verify-clean`."""
 
     root = Path(str(args.root)).expanduser()
-    report = verify_clean(root)
+    report = verify_clean(root, strict=bool(args.strict))
     _print_verify_clean_text(report)
     if args.json_out and not _write_json(args.json_out, report):
         return EXIT_IO_ERROR
@@ -196,7 +197,8 @@ def run_create(args: object) -> int:
     print(f"Package version: {lockfile.PACKAGE_VERSION}")
     print(f"Runtime schema: {lockfile.RUNTIME_SCHEMA_VERSION}")
     print(f"Runtime state: {'initialized' if summary.runtime_state_initialized else 'not initialized'}")
-    print(f"Runtime markdown views: materialized ({summary.runtime_markdown_views})")
+    materialized = "materialized" if summary.runtime_markdown_views else "not materialized"
+    print(f"Runtime markdown views: {materialized} ({summary.runtime_markdown_views})")
     print("Created entries:")
     for entry in summary.created_entries:
         print(f"- {entry}")
@@ -205,10 +207,14 @@ def run_create(args: object) -> int:
     if args.engine_mode == lockfile.DEFAULT_ENGINE_MODE:
         print(
             "PYTHONDONTWRITEBYTECODE=1 python3 "
-            f"{summary.target / 'agent-system/tools/aso/aso.py'} status --root {summary.target} --mode workspace"
+            f"{summary.target / 'agent-system/tools/aso/aso.py'} state init --root {summary.target} "
+            "--tz project-input/TZ_REAL.md --confirm-write"
         )
     else:
-        print(f"PYTHONDONTWRITEBYTECODE=1 aso status --root {summary.target} --mode workspace")
+        print(
+            f"PYTHONDONTWRITEBYTECODE=1 aso state init --root {summary.target} "
+            "--tz project-input/TZ_REAL.md --confirm-write"
+        )
     return EXIT_OK
 
 
@@ -310,6 +316,7 @@ def publish_github_project(
     repo_text = _validate_github_repo(repo)
     if visibility not in {"public", "private", "internal"}:
         raise PublishError("visibility must be one of public, private, or internal")
+    repo_url = _canonical_github_repo_url(owner_text, repo_text)
 
     git_exe = _required_executable("git")
     gh_exe = _required_executable("gh")
@@ -321,11 +328,11 @@ def publish_github_project(
         project_name=project_name,
         project_slug=project_slug,
         profile=profile,
-        repo_url=None,
+        repo_url=repo_url,
         default_branch=default_branch,
         engine_mode=engine_mode,
     )
-    pre_report = verify_clean(target)
+    pre_report = verify_clean(target, strict=True)
     _raise_for_verify_clean_failure(pre_report, phase="pre-publish")
 
     trackable_paths = _trackable_generated_paths(engine_mode=engine_mode)
@@ -350,7 +357,7 @@ def publish_github_project(
         label="gh repo create",
     )
 
-    post_report = verify_clean(target)
+    post_report = verify_clean(target, strict=True)
     _raise_for_verify_clean_failure(post_report, phase="post-publish")
 
     return {
@@ -361,6 +368,7 @@ def publish_github_project(
         "profile": profile,
         "engine_mode": engine_mode,
         "repository": f"{owner_text}/{repo_text}",
+        "repo_url": repo_url,
         "repo_owner": owner_text,
         "repo_name": repo_text,
         "visibility": visibility,
@@ -374,7 +382,7 @@ def publish_github_project(
     }
 
 
-def verify_clean(root: Path) -> dict[str, object]:
+def verify_clean(root: Path, *, strict: bool = False) -> dict[str, object]:
     """Build a read-only clean generated project verification report."""
 
     root = root.expanduser()
@@ -392,7 +400,7 @@ def verify_clean(root: Path) -> dict[str, object]:
 
     lock_report = _verify_lockfile(root, violations)
     gitignore_status, missing_gitignore_entries = _verify_gitignore(root, violations)
-    repo_report = _verify_git_repository_metadata(root, lock_report["lockfile"], violations)
+    repo_report = _verify_git_repository_metadata(root, lock_report["lockfile"], violations, strict=strict)
     nested_git_paths = _nested_agent_system_git_paths(root)
     if nested_git_paths:
         violations.append(
@@ -421,6 +429,7 @@ def verify_clean(root: Path) -> dict[str, object]:
     return {
         "tool": "aso",
         "command": "project verify-clean",
+        "strict": strict,
         "status": status,
         "root": str(root),
         "lockfile_status": lock_report["status"],
@@ -467,16 +476,10 @@ def create_project(
     if target.exists() and any(target.iterdir()):
         raise ValueError(f"target must be empty: {target}")
 
+    source = _resolve_lockfile_source(engine_mode=engine_mode, source_agent_system=source_agent_system)
+    source_provenance = _source_provenance_for_lockfile(source)
+
     target.mkdir(parents=True, exist_ok=True)
-    lock = lockfile.generate_lockfile(
-        project_name=project_name,
-        project_slug=project_slug,
-        profile=profile,
-        repo_url=repo_url,
-        default_branch=default_branch,
-        engine_mode=engine_mode,
-    )
-    lockfile.write_lockfile(target / lockfile.LOCKFILE_NAME, lock)
     (target / ".gitignore").write_text(_gitignore_text(), encoding="utf-8")
     (target / "README.md").write_text(
         _readme_text(project_name=project_name, project_slug=project_slug, engine_mode=engine_mode),
@@ -488,14 +491,6 @@ def create_project(
 
     copied_files = 0
     skipped_paths: tuple[str, ...] = ()
-    runtime_state_files, runtime_markdown_views = _initialize_runtime_state(
-        root=target,
-        project_name=project_name,
-        project_slug=project_slug,
-        profile=profile,
-        repo_url=repo_url,
-        default_branch=default_branch,
-    )
     created_entries = [
         ".gitignore",
         "README.md",
@@ -504,24 +499,44 @@ def create_project(
         "project-input/",
         "project-runtime/",
     ]
+    vendored_tree_hash: str | None = None
     if engine_mode == lockfile.DEFAULT_ENGINE_MODE:
-        source = _resolve_vendored_agent_system(source_agent_system)
+        if source is None:
+            raise ValueError("vendored engine mode requires an agent-system source")
         copied_files, skipped_paths = _copy_vendored_agent_system(source, target / "agent-system")
+        vendored_tree_hash = _directory_tree_hash(target / "agent-system")
         created_entries.insert(2, "agent-system/")
+
+    lock = lockfile.generate_lockfile(
+        project_name=project_name,
+        project_slug=project_slug,
+        profile=profile,
+        repo_url=repo_url,
+        default_branch=default_branch,
+        engine_mode=engine_mode,
+        vendored_tree_hash=vendored_tree_hash,
+        **source_provenance,
+    )
+    lockfile.write_lockfile(target / lockfile.LOCKFILE_NAME, lock)
 
     return CreateSummary(
         target=target,
         created_entries=tuple(created_entries),
         copied_files=copied_files,
         skipped_paths=skipped_paths,
-        runtime_state_initialized=True,
-        runtime_state_files=runtime_state_files,
-        runtime_markdown_views=runtime_markdown_views,
+        runtime_state_initialized=False,
+        runtime_state_files=0,
+        runtime_markdown_views=0,
     )
 
 
 def _write_bootstrap_inputs(root: Path) -> None:
-    (root / "project-input" / "TZ.md").write_text("# TZ\n\nTIMEZONE: Europe/Moscow\n", encoding="utf-8")
+    (root / "project-input" / "README.md").write_text(
+        "# Project Input\n\n"
+        "Place the real owner-supplied TZ Markdown file in this directory before runtime bootstrap.\n"
+        "Then run `aso state init --tz project-input/<real-tz-file>.md --confirm-write`.\n",
+        encoding="utf-8",
+    )
 
 
 def build_github_dry_run_plan(
@@ -552,6 +567,7 @@ def build_github_dry_run_plan(
     repo_text = _validate_github_repo(repo)
     if visibility not in {"public", "private", "internal"}:
         raise ValueError("visibility must be one of public, private, or internal")
+    repo_url = _canonical_github_repo_url(owner_text, repo_text)
 
     local_files = list(_planned_local_files(engine_mode=engine_mode))
     trackable_paths = [path.rstrip("/") for path in local_files if path not in {"project-archive/", "project-input/", "project-runtime/"}]
@@ -566,6 +582,7 @@ def build_github_dry_run_plan(
         "engine_mode": engine_mode,
         "repo_owner": owner_text,
         "repo_name": repo_text,
+        "repo_url": repo_url,
         "visibility": visibility,
         "branch": default_branch,
         "planned_local_files": local_files,
@@ -574,7 +591,7 @@ def build_github_dry_run_plan(
             project_name=project_name,
             project_slug=project_slug,
             profile=profile,
-            repo_url=None,
+            repo_url=repo_url,
             default_branch=default_branch,
         ),
         "planned_git_commands": [
@@ -789,12 +806,17 @@ def _verify_git_repository_metadata(
     root: Path,
     lock: dict[str, object] | None,
     violations: list[dict[str, object]],
+    *,
+    strict: bool,
 ) -> dict[str, object]:
     git: dict[str, object] = {
         "is_root_git_repo": False,
         "toplevel": None,
         "branch": None,
         "origin": None,
+        "origin_normalized": None,
+        "lockfile_repo_url": None,
+        "lockfile_repo_url_normalized": None,
         "error": None,
     }
     tracked_forbidden_paths: list[str] = []
@@ -831,6 +853,7 @@ def _verify_git_repository_metadata(
     origin = _git_value(root, ["remote", "get-url", "origin"])
     git["branch"] = branch or None
     git["origin"] = origin or None
+    git["origin_normalized"] = _normalize_git_url_for_compare(origin)
 
     metadata_status = "pass"
     project_metadata = lock.get("project") if isinstance(lock, dict) else None
@@ -849,13 +872,34 @@ def _verify_git_repository_metadata(
             )
 
         expected_origin = project_metadata.get("repo_url")
-        if isinstance(expected_origin, str) and expected_origin.strip() and origin and origin != expected_origin:
+        git["lockfile_repo_url"] = expected_origin if isinstance(expected_origin, str) else None
+        git["lockfile_repo_url_normalized"] = _normalize_git_url_for_compare(expected_origin)
+        if origin and strict and not (isinstance(expected_origin, str) and expected_origin.strip()):
+            metadata_status = "fail"
+            violations.append(
+                _violation(
+                    "PROJECT_VERIFY_CLEAN_011",
+                    "Git origin requires aso.lock project.repo_url in strict mode",
+                    f"origin {origin}, lockfile repo_url {expected_origin}",
+                    "Record the generated project repository URL in aso.lock or remove the unintended origin.",
+                    path="aso.lock",
+                )
+            )
+        elif (
+            isinstance(expected_origin, str)
+            and expected_origin.strip()
+            and origin
+            and not _git_urls_normalized_equal(origin, expected_origin)
+        ):
             metadata_status = "fail"
             violations.append(
                 _violation(
                     "PROJECT_VERIFY_CLEAN_010",
                     "Git origin conflicts with aso.lock project.repo_url",
-                    f"expected {expected_origin}, actual {origin}",
+                    (
+                        f"expected {expected_origin} ({_normalize_git_url_for_compare(expected_origin)}), "
+                        f"actual {origin} ({_normalize_git_url_for_compare(origin)})"
+                    ),
                     "Point origin at the generated project repository or update the lock metadata intentionally.",
                     path="aso.lock",
                 )
@@ -1085,46 +1129,6 @@ def _planned_local_files(*, engine_mode: str) -> tuple[str, ...]:
     return tuple(entries)
 
 
-def _initialize_runtime_state(
-    *,
-    root: Path,
-    project_name: str,
-    project_slug: str,
-    profile: str,
-    repo_url: str | None,
-    default_branch: str,
-) -> tuple[int, int]:
-    sidecars = state_init._initial_sidecars(
-        root=root,
-        project_name=project_name,
-        project_slug=project_slug,
-        tz_path=state_init.CANONICAL_TZ_PATH,
-        profile=profile,
-        repo_url=repo_url or state_init.NONE,
-        branch=default_branch,
-        package_version=lockfile.PACKAGE_VERSION,
-        runtime_schema_version=lockfile.RUNTIME_SCHEMA_VERSION,
-        probe_git=False,
-    )
-    state_root = root / "project-runtime" / "state"
-    ok, detail = state_init._validate_existing_state(state_root, sidecars)
-    if not ok:
-        raise ValueError(f"runtime state init refused: {detail}")
-    wrote, write_detail = state_init._write_sidecars(state_root, sidecars)
-    if not wrote:
-        raise ValueError(f"runtime state init failed: {write_detail}")
-    materialize_report, materialize_exit = state_render.materialize_compatibility_views(root)
-    if materialize_exit != state_render.EXIT_OK:
-        raise ValueError(f"runtime markdown materialization failed: {materialize_report.get('findings', [])}")
-    materialize_summary = materialize_report.get("summary")
-    views_written = (
-        materialize_summary.get("views_written")
-        if isinstance(materialize_summary, dict)
-        else None
-    )
-    return len(sidecars), int(views_written) if isinstance(views_written, int) else 0
-
-
 def _planned_state_init(
     *,
     target: Path,
@@ -1136,9 +1140,11 @@ def _planned_state_init(
 ) -> dict[str, object]:
     state_root = target / "project-runtime" / "state"
     return {
-        "enabled_for_local_create": True,
+        "enabled_for_local_create": False,
         "dry_run": True,
         "writes_performed": False,
+        "requires_explicit_tz": True,
+        "reason": "project create does not initialize runtime state before a real TZ is supplied",
         "project_name": project_name,
         "project_slug": project_slug,
         "profile": profile,
@@ -1147,10 +1153,7 @@ def _planned_state_init(
         "package_version": lockfile.PACKAGE_VERSION,
         "runtime_schema_version": lockfile.RUNTIME_SCHEMA_VERSION,
         "state_root": str(state_root),
-        "planned_writes": [
-            str(state_root / filename)
-            for filename in state_init.SIDECAR_FILENAMES
-        ],
+        "planned_writes": [],
         "publication_boundary": {
             "ignored_root": "project-runtime/",
             "tracked": False,
@@ -1191,10 +1194,135 @@ def _normalize_repo_url(value: object) -> str | None:
     return text
 
 
+def _optional_text(value: object) -> str | None:
+    if value is None:
+        return None
+    text = str(value).strip()
+    return text or None
+
+
+def _canonical_github_repo_url(owner: str, repo: str) -> str:
+    return f"https://github.com/{owner}/{repo}.git"
+
+
+def _normalize_git_url_for_compare(value: object) -> str | None:
+    text = _normalize_repo_url(value)
+    if text is None:
+        return None
+    text = text.rstrip("/")
+    host = ""
+    path = ""
+
+    scp_like = re.fullmatch(r"(?:[^@/\s]+@)?([^:/\s]+):/?(.+)", text)
+    if scp_like and "://" not in text:
+        host = scp_like.group(1)
+        path = scp_like.group(2)
+    else:
+        parsed = urlparse(text)
+        if parsed.scheme and parsed.netloc:
+            host = parsed.hostname or parsed.netloc.rsplit("@", 1)[-1].split(":", 1)[0]
+            path = parsed.path
+        else:
+            return text.removesuffix(".git")
+
+    normalized_path = path.strip("/")
+    if normalized_path.endswith(".git"):
+        normalized_path = normalized_path[:-4]
+    normalized_path = normalized_path.rstrip("/")
+    if not host or not normalized_path:
+        return text.removesuffix(".git")
+    return f"{host.lower()}/{normalized_path}"
+
+
+def _git_urls_normalized_equal(left: object, right: object) -> bool:
+    return _normalize_git_url_for_compare(left) == _normalize_git_url_for_compare(right)
+
+
 @dataclass(frozen=True)
 class VendoredAgentSystemSource:
     root: object
     origin: str
+
+
+def _resolve_lockfile_source(
+    *,
+    engine_mode: str,
+    source_agent_system: Path | None,
+) -> VendoredAgentSystemSource | None:
+    if engine_mode == lockfile.DEFAULT_ENGINE_MODE:
+        return _resolve_vendored_agent_system(source_agent_system)
+
+    if source_agent_system is not None:
+        source = source_agent_system.expanduser()
+        _assert_agent_system_source(source, origin=str(source))
+        return VendoredAgentSystemSource(source, str(source))
+
+    source = _find_source_agent_system(Path(__file__))
+    if source is None:
+        return None
+    _assert_agent_system_source(source, origin=str(source))
+    return VendoredAgentSystemSource(source, str(source))
+
+
+def _source_provenance_for_lockfile(source: VendoredAgentSystemSource | None) -> dict[str, object]:
+    provenance: dict[str, object] = {
+        "source_repository": None,
+        "source_branch": None,
+        "source_commit": None,
+        "source_dirty": None,
+    }
+    if source is None or not isinstance(source.root, Path):
+        return provenance
+
+    source_root = source.root.resolve(strict=False)
+    git_root = _git_toplevel(source_root)
+    if git_root is None:
+        return provenance
+
+    provenance["source_repository"] = _normalize_repo_url(_git_value(git_root, ["remote", "get-url", "origin"]))
+    provenance["source_branch"] = _optional_text(_git_value(git_root, ["branch", "--show-current"]))
+    provenance["source_commit"] = _optional_text(_git_value(git_root, ["rev-parse", "HEAD"]))
+    provenance["source_dirty"] = _git_dirty(git_root, source_root)
+    return provenance
+
+
+def _git_dirty(git_root: Path, source_root: Path) -> bool | None:
+    command = ["git", "-C", str(git_root), "status", "--porcelain", "--untracked-files=all"]
+    try:
+        relative_source = source_root.relative_to(git_root)
+    except ValueError:
+        relative_source = None
+    if relative_source is not None:
+        command.extend(["--", relative_source.as_posix()])
+
+    try:
+        result = subprocess.run(
+            command,
+            check=False,
+            text=True,
+            capture_output=True,
+            timeout=10,
+        )
+    except (FileNotFoundError, subprocess.TimeoutExpired, OSError):
+        return None
+    if result.returncode != 0:
+        return None
+    return bool(result.stdout.strip())
+
+
+def _directory_tree_hash(root: Path) -> str:
+    digest = hashlib.sha256()
+    for path in sorted(root.rglob("*"), key=lambda item: item.relative_to(root).as_posix()):
+        relative = path.relative_to(root).as_posix()
+        if path.is_dir():
+            digest.update(f"dir\0{relative}\0".encode("utf-8"))
+            continue
+        if not path.is_file():
+            continue
+        data = path.read_bytes()
+        digest.update(f"file\0{relative}\0{len(data)}\0".encode("utf-8"))
+        digest.update(data)
+    return f"sha256:{digest.hexdigest()}"
 
 
 def _default_source_agent_system() -> Path:
@@ -1277,7 +1405,10 @@ def _gitignore_text() -> str:
 def _readme_text(*, project_name: str, project_slug: str, engine_mode: str) -> str:
     commands = (
         (
-            "PYTHONDONTWRITEBYTECODE=1 python3 agent-system/tools/aso/aso.py state render --root . --confirm-write",
+            "# First add the real owner-supplied TZ Markdown at project-input/TZ_REAL.md.",
+            "PYTHONDONTWRITEBYTECODE=1 python3 agent-system/tools/aso/aso.py state init --root . --tz project-input/TZ_REAL.md --confirm-write",
+            "PYTHONDONTWRITEBYTECODE=1 python3 agent-system/tools/aso/aso.py intake bootstrap --root . --tz project-input/TZ_REAL.md --target-role requirements_analyst --confirm-write",
+            "PYTHONDONTWRITEBYTECODE=1 python3 agent-system/tools/aso/aso.py plan-next --root . --strict",
             "PYTHONDONTWRITEBYTECODE=1 python3 agent-system/tools/aso/aso.py status --root . --mode workspace",
             "PYTHONDONTWRITEBYTECODE=1 python3 agent-system/tools/aso/aso.py lint --root . --mode workspace --strict",
             "PYTHONDONTWRITEBYTECODE=1 python3 agent-system/tools/aso/aso.py doctor --root . --mode workspace --strict",
@@ -1286,7 +1417,10 @@ def _readme_text(*, project_name: str, project_slug: str, engine_mode: str) -> s
         if engine_mode == lockfile.DEFAULT_ENGINE_MODE
         else (
             "PYTHONDONTWRITEBYTECODE=1 aso project verify-clean --root . --strict",
-            "PYTHONDONTWRITEBYTECODE=1 aso state render --root . --confirm-write",
+            "# First add the real owner-supplied TZ Markdown at project-input/TZ_REAL.md.",
+            "PYTHONDONTWRITEBYTECODE=1 aso state init --root . --tz project-input/TZ_REAL.md --confirm-write",
+            "PYTHONDONTWRITEBYTECODE=1 aso intake bootstrap --root . --tz project-input/TZ_REAL.md --target-role requirements_analyst --confirm-write",
+            "PYTHONDONTWRITEBYTECODE=1 aso plan-next --root . --strict",
             "PYTHONDONTWRITEBYTECODE=1 aso status --root . --mode workspace",
             "PYTHONDONTWRITEBYTECODE=1 aso lint --root . --mode workspace --strict",
             "PYTHONDONTWRITEBYTECODE=1 aso doctor --root . --mode workspace --strict",

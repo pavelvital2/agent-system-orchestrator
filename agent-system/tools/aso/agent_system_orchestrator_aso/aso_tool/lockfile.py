@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import re
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -57,6 +58,7 @@ RULE_UNSUPPORTED_ENGINE_MODE = "ASO_LOCK_009"
 RULE_PUBLICATION_ROOT_MISSING = "ASO_LOCK_010"
 RULE_UNSUPPORTED_PACKAGE_NAME = "ASO_LOCK_011"
 RULE_UNSUPPORTED_PACKAGE_VERSION = "ASO_LOCK_012"
+SHA256_RE = re.compile(r"sha256:[a-f0-9]{64}\Z")
 
 
 @dataclass(frozen=True)
@@ -114,20 +116,33 @@ def generate_lockfile(
     package_source: str = PACKAGE_SOURCE,
     runtime_schema: str = RUNTIME_SCHEMA_VERSION,
     engine_mode: str = DEFAULT_ENGINE_MODE,
+    source_repository: str | None = None,
+    source_branch: str | None = None,
+    source_commit: str | None = None,
+    source_dirty: bool | None = None,
+    vendored_tree_hash: str | None = None,
     ignored_roots: tuple[str, ...] = REQUIRED_PUBLICATION_ROOTS,
     forbidden_tracked_roots: tuple[str, ...] = REQUIRED_PUBLICATION_ROOTS,
 ) -> dict[str, object]:
     """Build the canonical Project Factory lockfile dictionary."""
 
+    aso_engine: dict[str, object] = {
+        "package_name": PACKAGE_NAME,
+        "version": package_version,
+        "runtime_schema": runtime_schema,
+        "source": package_source,
+        "engine_mode": engine_mode,
+        "source_repository": source_repository,
+        "source_branch": source_branch,
+        "source_commit": source_commit,
+        "source_dirty": source_dirty,
+    }
+    if engine_mode == DEFAULT_ENGINE_MODE:
+        aso_engine["vendored_tree_hash"] = vendored_tree_hash
+
     return {
         "lockfile_version": LOCKFILE_VERSION,
-        "aso_engine": {
-            "package_name": PACKAGE_NAME,
-            "version": package_version,
-            "runtime_schema": runtime_schema,
-            "source": package_source,
-            "engine_mode": engine_mode,
-        },
+        "aso_engine": aso_engine,
         "project": {
             "name": project_name,
             "slug": project_slug,
@@ -378,6 +393,42 @@ def _validate_aso_engine(aso_engine: dict[str, object], findings: list[LockfileF
                 "$.aso_engine.engine_mode",
                 f"aso_engine.engine_mode must be one of {', '.join(SUPPORTED_ENGINE_MODES)}.",
                 engine_mode,
+            )
+        )
+
+    for key in ("source_repository", "source_branch", "source_commit"):
+        value = aso_engine.get(key)
+        if value is not None and not _is_non_empty_string(value):
+            findings.append(
+                _finding(
+                    RULE_INVALID_FIELD,
+                    f"$.aso_engine.{key}",
+                    f"aso_engine.{key} must be a non-empty string or null.",
+                    value,
+                )
+            )
+
+    source_dirty = aso_engine.get("source_dirty")
+    if source_dirty is not None and not isinstance(source_dirty, bool):
+        findings.append(
+            _finding(
+                RULE_INVALID_FIELD,
+                "$.aso_engine.source_dirty",
+                "aso_engine.source_dirty must be a boolean or null.",
+                type(source_dirty).__name__,
+            )
+        )
+
+    vendored_tree_hash = aso_engine.get("vendored_tree_hash")
+    if vendored_tree_hash is not None and (
+        not isinstance(vendored_tree_hash, str) or SHA256_RE.fullmatch(vendored_tree_hash) is None
+    ):
+        findings.append(
+            _finding(
+                RULE_INVALID_FIELD,
+                "$.aso_engine.vendored_tree_hash",
+                "aso_engine.vendored_tree_hash must be a sha256 digest or null.",
+                vendored_tree_hash,
             )
         )
 
