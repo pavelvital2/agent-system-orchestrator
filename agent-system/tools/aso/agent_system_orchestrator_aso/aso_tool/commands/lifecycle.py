@@ -9,6 +9,7 @@ from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any
 
+from .. import correction_routing
 from .. import result_parser
 
 
@@ -58,12 +59,38 @@ def _legacy_event_name(role: str) -> str:
     return "auditor_agent_terminated" if role == "auditor" else "agent_instance_terminated"
 
 
-def _next_allowed_action(role: str) -> str:
-    return "checkpoint_preflight" if role == "auditor" else "audit_route"
+def _next_allowed_action(role: str, status: str = "") -> str:
+    if role == "auditor":
+        return "correction_required" if status in {"fail", "blocked", "gap"} else "checkpoint_preflight"
+    return "audit_route"
 
 
 def _result_received_event_name(role: str) -> str:
     return "AUDIT_RESULT_RECEIVED" if role == "auditor" else "RESULT_RECEIVED"
+
+
+def _artifact_package_required(fields: dict[str, Any]) -> bool:
+    value = result_parser.as_string(fields, "ARTIFACT_PACKAGE_REQUIRED").lower()
+    return value in {"true", "yes", "required"}
+
+
+def _result_receipt(root: Path, result_path: Path, parsed: result_parser.ParsedResult) -> dict[str, object]:
+    result_ref = _rel(root, result_path)
+    receipt: dict[str, object] = {
+        "receipt_type": "AUDIT_RESULT_RECEIPT" if parsed.result_type == "audit_result" else "RESULT_RECEIPT",
+        "result_ref": result_ref,
+        "result_type": parsed.result_type,
+        "task_id": parsed.task_id,
+        "agent_instance_id": parsed.agent_instance_id,
+        "role": parsed.role,
+        "status": parsed.status,
+        "reuse_allowed": parsed.bool_field("REUSE_ALLOWED"),
+        "agent_termination_required": parsed.bool_field("AGENT_TERMINATION_REQUIRED") is True,
+        "artifact_package_required": _artifact_package_required(dict(parsed.fields)),
+    }
+    if parsed.result_type == "audit_result":
+        receipt["audit_result"] = parsed.audit.to_json()
+    return receipt
 
 
 def _error(
@@ -134,6 +161,7 @@ def _validate_request(root: Path, result_path: Path) -> tuple[dict[str, Any], li
     agent_id = parsed.agent_instance_id
     status = parsed.status
     result_ref = _rel(root, result_path)
+    receipt = _result_receipt(root, result_path, parsed)
 
     identity_fields = (
         ("TASK_ID", task_id, result_parser.REASON_MISSING_TASK_ID),
@@ -180,11 +208,17 @@ def _validate_request(root: Path, result_path: Path) -> tuple[dict[str, Any], li
         "role": role,
         "agent_instance_id": agent_id,
         "result_ref": result_ref,
+        "result_type": parsed.result_type,
+        "status": status,
+        "result_status": status,
+        "receipt_type": receipt["receipt_type"],
+        "result_receipt": receipt,
+        "artifact_package_required": receipt["artifact_package_required"],
         "termination_reason": "result_submitted",
         "terminated_at": terminated_at,
         "timestamp_utc": terminated_at,
         "created_by": "orchestrator",
-        "next_allowed_action": _next_allowed_action(role),
+        "next_allowed_action": _next_allowed_action(role, status),
         "reuse_allowed": False,
     }
     return event, findings
@@ -195,6 +229,7 @@ def _validate_result_received_request(root: Path, result_path: Path) -> tuple[di
     if not termination_event:
         return {}, findings
     received_at = _now_utc()
+    receipt = dict(termination_event.get("result_receipt", {}))
     event = {
         "event": "agent_result_received",
         "event_type": _result_received_event_name(str(termination_event.get("role", ""))),
@@ -203,6 +238,12 @@ def _validate_result_received_request(root: Path, result_path: Path) -> tuple[di
         "role": termination_event["role"],
         "agent_instance_id": termination_event["agent_instance_id"],
         "result_ref": termination_event["result_ref"],
+        "result_type": termination_event["result_type"],
+        "status": termination_event["status"],
+        "result_status": termination_event["result_status"],
+        "receipt_type": receipt["receipt_type"],
+        "result_receipt": receipt,
+        "artifact_package_required": receipt["artifact_package_required"],
         "received_at": received_at,
         "timestamp_utc": received_at,
         "created_by": "orchestrator",
@@ -288,7 +329,12 @@ def _sequence_findings(events: list[dict[str, Any]], event: dict[str, Any]) -> l
         return findings
 
     accepted_events = _matching_accepted_events(events, event)
-    if not accepted_events:
+    auditor_receipt_without_required_package = (
+        str(event.get("role", "")) == "auditor"
+        and str(event.get("result_type", "")) == "audit_result"
+        and event.get("artifact_package_required") is not True
+    )
+    if not accepted_events and not auditor_receipt_without_required_package:
         findings.append(
             _error(
                 "LIFECYCLE_SEQUENCE_002",
@@ -328,12 +374,22 @@ def run_receive_result(args: argparse.Namespace) -> int:
     if not args.confirm_write:
         findings.append(_error("LIFECYCLE_CONFIRM_WRITE_REQUIRED", "writes require --confirm-write.", "project-runtime/agents/instances.jsonl", "Rerun with --confirm-write after reviewing the RESULT."))
 
+    correction_route = {}
+    if event and event.get("result_type") == "audit_result" and event.get("status") == "fail":
+        parsed = result_parser.parse_result_file(result_path)
+        correction_route = correction_routing.from_parsed_audit_result(
+            root=root,
+            result_path=result_path,
+            parsed=parsed,
+        )
+
     report = {
         "tool": "aso",
         "command": "lifecycle receive-result",
         "root": str(root),
         "status": "blocked" if findings else "written",
         "event": event,
+        "correction_routing": correction_route,
         "event_log": "project-runtime/agents/instances.jsonl",
         "findings": findings,
         "mutations_performed": False,
@@ -373,31 +429,42 @@ def run_terminate_agent(args: argparse.Namespace) -> int:
     artifact_ids = [str(item["artifact_id"]) for item in accepted_events]
     artifact_refs = [str(item["artifact_ref"]) for item in accepted_events]
     receipt_refs = [str(item["receipt_ref"]) for item in accepted_events]
+    correction_route = {}
     if event:
         event["artifact_ids"] = artifact_ids
         event["artifact_refs"] = artifact_refs
         event["artifact_receipt_refs"] = receipt_refs
+        if event.get("result_type") == "audit_result" and event.get("status") == "fail":
+            parsed = result_parser.parse_result_file(result_path)
+            correction_route = correction_routing.from_parsed_audit_result(
+                root=root,
+                result_path=result_path,
+                parsed=parsed,
+            )
         terminated_at = str(event["timestamp_utc"])
         ready_at = (
             datetime.fromisoformat(terminated_at.replace("Z", "+00:00")) + timedelta(seconds=1)
         ).replace(microsecond=0).isoformat().replace("+00:00", "Z")
-        audit_ready_event = {
-            "event": "audit_route_ready",
-            "event_type": "AUDIT_ROUTE_READY",
-            "task_id": event["task_id"],
-            "agent_role": event["agent_role"],
-            "role": event["role"],
-            "agent_instance_id": event["agent_instance_id"],
-            "result_ref": event["result_ref"],
-            "artifact_ids": artifact_ids,
-            "artifact_refs": artifact_refs,
-            "artifact_receipt_refs": receipt_refs,
-            "ready_at": ready_at,
-            "timestamp_utc": ready_at,
-            "created_by": "orchestrator",
-            "previous_event_type": event["event_type"],
-            "next_allowed_action": _next_allowed_action(str(event.get("role", ""))),
-        }
+        if event.get("role") == "auditor" and event.get("status") == "fail":
+            audit_ready_event = {}
+        else:
+            audit_ready_event = {
+                "event": "audit_route_ready",
+                "event_type": "AUDIT_ROUTE_READY",
+                "task_id": event["task_id"],
+                "agent_role": event["agent_role"],
+                "role": event["role"],
+                "agent_instance_id": event["agent_instance_id"],
+                "result_ref": event["result_ref"],
+                "artifact_ids": artifact_ids,
+                "artifact_refs": artifact_refs,
+                "artifact_receipt_refs": receipt_refs,
+                "ready_at": ready_at,
+                "timestamp_utc": ready_at,
+                "created_by": "orchestrator",
+                "previous_event_type": event["event_type"],
+                "next_allowed_action": _next_allowed_action(str(event.get("role", "")), str(event.get("status", ""))),
+            }
     else:
         audit_ready_event = {}
 
@@ -408,6 +475,7 @@ def run_terminate_agent(args: argparse.Namespace) -> int:
         "status": "blocked" if findings else "written",
         "event": event,
         "audit_route_ready_event": audit_ready_event,
+        "correction_routing": correction_route,
         "event_log": "project-runtime/agents/instances.jsonl",
         "findings": findings,
         "mutations_performed": False,
@@ -420,7 +488,8 @@ def run_terminate_agent(args: argparse.Namespace) -> int:
         events_path.parent.mkdir(parents=True, exist_ok=True)
         with events_path.open("a", encoding="utf-8") as handle:
             handle.write(json.dumps(event, sort_keys=True) + "\n")
-            handle.write(json.dumps(audit_ready_event, sort_keys=True) + "\n")
+            if audit_ready_event:
+                handle.write(json.dumps(audit_ready_event, sort_keys=True) + "\n")
     except OSError as exc:
         print(f"aso lifecycle terminate-agent: failed to write event: {exc}", file=sys.stderr)
         return EXIT_IO_ERROR

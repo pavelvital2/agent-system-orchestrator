@@ -10,6 +10,7 @@ from pathlib import Path
 from typing import Any
 
 from . import state_verify
+from .. import correction_routing
 from .. import result_parser
 from .. import resources
 from .. import transition_engine
@@ -228,6 +229,17 @@ def _audit_pass_evidence(
         "invalid_audit_results": invalid_refs,
         "unparsed_audit_refs": unparsed_refs,
     }
+
+
+def _audit_fail_correction_route(
+    root: Path,
+    audit_evidence: dict[str, object],
+    transition_evidence: dict[str, object],
+) -> dict[str, object]:
+    route = correction_routing.from_audit_inspection(root, audit_evidence.get("invalid_audit_results"))
+    if route:
+        return route
+    return correction_routing.from_transition_evidence(root, transition_evidence)
 
 
 def _rule(
@@ -864,6 +876,7 @@ def _plan(
     transition_evidence = _transition_engine_evidence(sidecars)
     transition_selected = transition_evidence.get("transition_selected")
     derived_next_action = transition_evidence.get("next_action")
+    correction_route: dict[str, object] = {}
     lifecycle_derived = (
         isinstance(transition_selected, dict)
         and transition_selected.get("derivation") == "lifecycle_log"
@@ -948,6 +961,8 @@ def _plan(
             _as_text(derived_next_action.get("recommended_next_action"))
             or transition_engine.recommendation_from_next_action_content(routing_next_action)
         )
+        if recommended_next_action == "CORRECTION_REQUIRED":
+            correction_route = _audit_fail_correction_route(root, audit_evidence, transition_evidence)
         if action_type == "create_agent":
             dispatchability = can_dispatch_agent(
                 root,
@@ -983,21 +998,49 @@ def _plan(
                 "blocked",
             )
         else:
-            target_role = "auditor"
-            dispatchability = can_dispatch_agent(
-                root,
-                "create_agent",
-                target_role,
-                task_id,
-                task_packet,
-                next_action,
-                project_state,
-                current_gate,
-                task,
-                [],
-            )
-            recommended_next_action = str(dispatchability["recommended_next_action"])
-            target_role = str(dispatchability["target_role"])
+            correction_route = _audit_fail_correction_route(root, audit_evidence, transition_evidence)
+            if correction_route:
+                recommended_next_action = "CORRECTION_REQUIRED"
+                target_role = "orchestrator"
+                dispatchability = _non_dispatchability(
+                    "correction",
+                    target_role,
+                    task_id,
+                    "NONE",
+                    recommended_next_action,
+                    "correction_required",
+                    reasons=[
+                        _reason(
+                            "audit_result_status_fail",
+                            "AUDIT_RESULT STATUS fail routes correction and blocks checkpoint preflight",
+                            "TASK_REGISTRY.content.tasks[].audit_refs",
+                        )
+                    ],
+                )
+                blocking_rules.append(
+                    _rule(
+                        rules,
+                        "GOV-AUDIT-FAIL-NO-CHECKPOINT",
+                        "AUDIT_RESULT STATUS fail routes correction and blocks checkpoint preflight.",
+                        str(correction_route.get("source_audit_result_ref", "NONE")),
+                    )
+                )
+            else:
+                target_role = "auditor"
+                dispatchability = can_dispatch_agent(
+                    root,
+                    "create_agent",
+                    target_role,
+                    task_id,
+                    task_packet,
+                    next_action,
+                    project_state,
+                    current_gate,
+                    task,
+                    [],
+                )
+                recommended_next_action = str(dispatchability["recommended_next_action"])
+                target_role = str(dispatchability["target_role"])
             blocking_rules.append(
                 _rule(
                     rules,
@@ -1091,6 +1134,7 @@ def _plan(
         "target_role": target_role,
         "task_id": task_id,
         "task_packet": task_packet,
+        "correction_routing": correction_route,
         "blocking_rules": blocking_rules,
         "evidence": {
             "state_verify": {
@@ -1126,6 +1170,7 @@ def _plan(
                 "audit_refs": task.get("audit_refs", []),
             },
             "audit_pass_evidence": audit_evidence,
+            "correction_routing": correction_route,
             "transition_engine": transition_evidence,
         },
     }

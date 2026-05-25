@@ -1240,8 +1240,10 @@ def _expected_termination_event_type(role: str) -> str:
     return "AUDITOR_AGENT_TERMINATED" if role == "auditor" else "AGENT_TERMINATED"
 
 
-def _expected_next_allowed_action(role: str) -> str:
-    return "checkpoint_preflight" if role == "auditor" else "audit_route"
+def _expected_next_allowed_action(role: str, status: str = "") -> str:
+    if role == "auditor":
+        return "correction_required" if status in {"fail", "blocked", "gap"} else "checkpoint_preflight"
+    return "audit_route"
 
 
 def _matching_result_received_event(
@@ -1309,7 +1311,11 @@ def _valid_termination_event(
         if str(event.get("created_by", "")).strip() != "orchestrator":
             issues.append("created_by invalid")
             continue
-        if str(event.get("next_allowed_action", "")).strip() != _expected_next_allowed_action(role):
+        expected_next_action = _expected_next_allowed_action(
+            role,
+            str(result_fields.get("STATUS", "")).strip().lower(),
+        )
+        if str(event.get("next_allowed_action", "")).strip() != expected_next_action:
             issues.append("next_allowed_action invalid")
             continue
         if str(event.get("reuse_allowed", "false")).strip().lower() not in {"false", ""}:

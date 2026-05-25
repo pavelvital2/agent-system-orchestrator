@@ -8,7 +8,7 @@ import subprocess
 import sys
 from pathlib import Path
 
-from .. import result_parser
+from .. import correction_routing, result_parser
 from . import package_checks, plan_next, state_verify
 
 
@@ -316,6 +316,7 @@ def _workspace_report(root: Path, strict: bool) -> tuple[dict[str, object], int]
     task = tasks.get(task_id, {})
     blockers = _active_blockers(project_state, next_action)
     audit_evidence = _audit_pass_evidence(root, sidecars, task, task_id)
+    correction_route = correction_routing.from_audit_inspection(root, audit_evidence.get("invalid_audit_results"))
     is_checkpoint_attempt = plan_next._is_checkpoint_attempt(next_action)
     checkpoint_eligibility = _as_text(project_state.get("checkpoint_eligibility"))
     checkpoint_eligibility_status = _as_text(project_state.get("checkpoint_eligibility_status"))
@@ -361,6 +362,15 @@ def _workspace_report(root: Path, strict: bool) -> tuple[dict[str, object], int]
                 recommendation="Record an auditor AUDIT_RESULT with STATUS: pass for the task before checkpointing.",
             )
         )
+        if correction_route:
+            blocking_rules.append(
+                _blocking_rule(
+                    "GOV-AUDIT-FAIL-NO-CHECKPOINT",
+                    "Checkpoint preflight is blocked because AUDIT_RESULT STATUS fail routes correction.",
+                    str(correction_route.get("source_audit_result_ref", "NONE")),
+                    recommendation="Route correction from the failed audit before checkpointing.",
+                )
+            )
 
     if audit_evidence["unparsed_audit_refs"]:
         blocking_rules.append(
@@ -438,6 +448,7 @@ def _workspace_report(root: Path, strict: bool) -> tuple[dict[str, object], int]
         "mutations_performed": False,
         "blocking_rules": blocking_rules,
         "warnings": warnings,
+        "correction_routing": correction_route,
         "summary": _summary(blocking_rules, warnings),
         "evidence": {
             "state_verify": {
@@ -461,6 +472,7 @@ def _workspace_report(root: Path, strict: bool) -> tuple[dict[str, object], int]
                 "active_blockers": project_state.get("active_blockers", []),
             },
             "audit_pass_evidence": audit_evidence,
+            "correction_routing": correction_route,
             "script_integration": {
                 "checkpoint_preflight_sh_invoked": False,
                 "reason": "Workspace mode reads state sidecars directly and does not invoke the shell preflight.",

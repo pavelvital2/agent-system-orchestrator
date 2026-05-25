@@ -913,6 +913,10 @@ def _event_role(event: Mapping[str, object]) -> str:
     return _text(event.get("agent_role") or event.get("role") or event.get("ROLE")).lower()
 
 
+def _event_status(event: Mapping[str, object]) -> str:
+    return _text(event.get("status") or event.get("result_status") or event.get("audit_status")).lower()
+
+
 def _raw_event_type(event: Mapping[str, object]) -> str:
     return _text(event.get("event_type") or event.get("event") or event.get("type"))
 
@@ -1078,16 +1082,6 @@ def _lifecycle_sequence_findings(
                     "Record AUDIT_RESULT_RECEIVED before AUDITOR_AGENT_TERMINATED.",
                 )
             )
-        if "ARTIFACT_ACCEPTED" not in auditor_positions:
-            findings.append(
-                _finding(
-                    "RUNTIME_LIFECYCLE_SEQUENCE_INVALID",
-                    "error",
-                    "AUDITOR_AGENT_TERMINATED exists without auditor ARTIFACT_ACCEPTED.",
-                    f"task_id={task_id or 'NONE'}",
-                    "Accept the auditor artifact package before AUDITOR_AGENT_TERMINATED.",
-                )
-            )
     if "AUDIT_ROUTE_READY" in auditor_positions and "AGENT_TERMINATED" not in auditor_positions:
         findings.append(
             _finding(
@@ -1147,6 +1141,7 @@ def _lifecycle_state(
             "task_id": _event_task_id(event),
             "result_ref": _event_result_ref(event),
             "role": _event_role(event),
+            "status": _event_status(event),
             "auditor_event": auditor_event,
             "applied_to_state": applied,
             "state_after": state,

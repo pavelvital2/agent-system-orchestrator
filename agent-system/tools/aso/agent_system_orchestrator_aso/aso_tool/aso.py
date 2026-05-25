@@ -969,10 +969,10 @@ def build_parser() -> argparse.ArgumentParser:
         "terminate-agent",
         help="Record an agent termination event after RESULT receipt.",
         description=(
-            "Validate a RESULT artifact, require RESULT_RECEIVED and ARTIFACT_ACCEPTED "
-            "predecessor events, then append AGENT_TERMINATED and AUDIT_ROUTE_READY "
-            "lifecycle events to project-runtime/agents/instances.jsonl. Writes require "
-            "--confirm-write."
+            "Validate a RESULT artifact, require RESULT_RECEIVED and profile artifact "
+            "acceptance where applicable, then append termination lifecycle evidence to "
+            "project-runtime/agents/instances.jsonl. Failed AUDIT_RESULT termination "
+            "routes correction and does not emit AUDIT_ROUTE_READY. Writes require --confirm-write."
         ),
     )
     _add_root_argument(terminate_agent_parser, validate=False)

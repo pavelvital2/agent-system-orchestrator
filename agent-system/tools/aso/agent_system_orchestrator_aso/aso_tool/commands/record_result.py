@@ -9,7 +9,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
-from .. import runtime_schema_contracts
+from .. import correction_routing, runtime_schema_contracts
 from .. import result_parser
 from .. import transition_engine
 
@@ -80,6 +80,7 @@ RESULT_PACKAGE_CONSTANTS = {
     "reuse_allowed": False,
     "agent_termination_required": True,
 }
+TASK_PACKET_REQUIRED_FIELDS = {"TASK_ID", "TASK_KIND", "TASK_TYPE", "TARGET_ROLE"}
 
 
 @dataclass(frozen=True)
@@ -274,6 +275,87 @@ def _accepted_result_package(root: Path, fields: dict[str, Any], result_path: Pa
     return False, detail
 
 
+def _task_packet_ref_path(root: Path | None, task_packet_ref: str) -> tuple[Path | None, str]:
+    if root is None:
+        return None, "result is not inside a workspace"
+    if not task_packet_ref or task_packet_ref.upper() == "NONE":
+        return None, "BOOTSTRAP_CONTINUATION_REF is missing"
+    path = Path(task_packet_ref)
+    if path.is_absolute():
+        return None, "BOOTSTRAP_CONTINUATION_REF must be workspace-relative"
+    candidate = root / path
+    try:
+        candidate.resolve(strict=False).relative_to(root.resolve(strict=False))
+    except ValueError:
+        return None, "BOOTSTRAP_CONTINUATION_REF resolves outside workspace"
+    if not candidate.is_file():
+        return None, f"downstream task packet does not exist: {task_packet_ref}"
+    return candidate, ""
+
+
+def _task_packet_fields(path: Path) -> dict[str, str]:
+    try:
+        text = path.read_text(encoding="utf-8")
+    except OSError:
+        return {}
+    fields: dict[str, str] = {}
+    for match in re.finditer(r"^([A-Z][A-Z0-9_]*):\s*(.*?)\s*$", text, flags=re.MULTILINE):
+        fields.setdefault(match.group(1), match.group(2))
+    if "# TASK PROPOSAL" in text or "DISPATCH_STATUS: non_dispatchable" in text:
+        fields["__NON_DISPATCHABLE_PROPOSAL__"] = "true"
+    if "# TASK PACKET" in text:
+        fields["__TASK_PACKET_MARKER__"] = "true"
+    return fields
+
+
+def _dispatchable_downstream_packet(root: Path | None, task_packet_ref: str) -> tuple[bool, str]:
+    path, path_error = _task_packet_ref_path(root, task_packet_ref)
+    if path_error:
+        return False, path_error
+    assert path is not None
+    fields = _task_packet_fields(path)
+    if fields.get("__NON_DISPATCHABLE_PROPOSAL__") == "true":
+        return False, "BOOTSTRAP_CONTINUATION_REF points at a TASK_PROPOSAL, not a dispatchable task packet"
+    if fields.get("__TASK_PACKET_MARKER__") != "true":
+        return False, "downstream task packet is missing # TASK PACKET marker"
+    missing = sorted(TASK_PACKET_REQUIRED_FIELDS - set(fields))
+    if missing:
+        return False, f"downstream task packet missing required fields: {', '.join(missing)}"
+    target_role = fields.get("TARGET_ROLE", "")
+    if target_role not in VALID_ROLES:
+        return False, f"downstream task packet TARGET_ROLE={target_role or 'NONE'} is not dispatchable"
+    return True, f"dispatchable downstream task packet exists: {task_packet_ref}"
+
+
+def _bootstrap_continuation_evidence(root: Path | None, fields: dict[str, Any]) -> tuple[dict[str, object], Rule | None]:
+    status = _as_string(fields, "BOOTSTRAP_CONTINUATION_STATUS").lower()
+    ref = _as_string(fields, "BOOTSTRAP_CONTINUATION_REF")
+    if status != "downstream_task_packet":
+        return {
+            "claimed": bool(status),
+            "status": status or "NONE",
+            "ref": ref or "NONE",
+            "dispatchable_downstream_task_packet": False,
+            "verification": "not_applicable",
+        }, None
+
+    dispatchable, detail = _dispatchable_downstream_packet(root, ref)
+    evidence = {
+        "claimed": True,
+        "status": status,
+        "ref": ref or "NONE",
+        "dispatchable_downstream_task_packet": dispatchable,
+        "verification": detail,
+    }
+    if dispatchable:
+        return evidence, None
+    return evidence, _blocking_rule(
+        "GOV-BOOTSTRAP-CONTINUATION-DOWNSTREAM-PACKET",
+        "BOOTSTRAP_CONTINUATION_STATUS claims downstream_task_packet but no dispatchable downstream task packet exists.",
+        detail,
+    )
+
+
 def _has_matching_termination(root: Path, fields: dict[str, Any], result_path: Path) -> bool:
     events_path = root / "project-runtime" / "agents" / "instances.jsonl"
     if not events_path.is_file():
@@ -451,17 +533,17 @@ def _route_guardrails(
     suppress_route = False
 
     if result_type == "audit_result":
-        if strict and not terminated:
-            validation_errors.append(
-                Rule(
-                    "RESULT_LIFECYCLE_001",
-                    "error",
-                    "Audit RESULT cannot route to checkpoint preflight before auditor termination event.",
-                    "Run aso lifecycle terminate-agent --root WORKSPACE --from-result RESULT_PATH --confirm-write before checkpoint preflight.",
-                )
-            )
-            return blocking_rules, validation_errors, True
         if status == "pass":
+            if strict and not terminated:
+                validation_errors.append(
+                    Rule(
+                        "RESULT_LIFECYCLE_001",
+                        "error",
+                        "Audit RESULT cannot route to checkpoint preflight before auditor termination event.",
+                        "Run aso lifecycle terminate-agent --root WORKSPACE --from-result RESULT_PATH --confirm-write before checkpoint preflight.",
+                    )
+                )
+                return blocking_rules, validation_errors, True
             refs = _source_result_refs(fields)
             if strict and not refs:
                 validation_errors.append(
@@ -654,12 +736,21 @@ def build_report(result_path: Path, strict: bool) -> tuple[dict[str, Any], int]:
     accepted_result_package = True
     accepted_result_package_detail = "not required"
     transition_evidence = _transition_not_run_evidence("pre_route_validation_errors")
+    root = None if io_errors else _result_root(result_path)
+    bootstrap_continuation = {
+        "claimed": False,
+        "status": "NONE",
+        "ref": "NONE",
+        "dispatchable_downstream_task_packet": False,
+        "verification": "not_applicable",
+    }
+    correction_route: dict[str, object] = {}
     if not io_errors and not validation_errors:
-        root = _result_root(result_path)
         terminated = True if root is None else _has_matching_termination(root, fields, result_path)
         if root is not None and result_type == "profile_result" and role in PROFILE_ROLES:
             accepted_result_package, accepted_result_package_detail = _accepted_result_package(root, fields, result_path)
         transition_evidence, canonical_next_action, transition_errors = _canonical_transition_route(fields, result_type)
+        bootstrap_continuation, bootstrap_rule = _bootstrap_continuation_evidence(root, fields)
         blocking_rules, route_errors, route_suppressed = _route_guardrails(
             fields,
             result_type,
@@ -668,11 +759,23 @@ def build_report(result_path: Path, strict: bool) -> tuple[dict[str, Any], int]:
             accepted_result_package=accepted_result_package,
             accepted_result_package_detail=accepted_result_package_detail,
         )
+        if bootstrap_rule is not None:
+            blocking_rules.append(bootstrap_rule)
         validation_errors.extend(route_errors)
         validation_errors.extend(transition_errors)
         if not route_suppressed and not transition_errors:
             recommended_next_action = canonical_next_action
             checkpoint_candidate = recommended_next_action == "CHECKPOINT_PREFLIGHT"
+        if bootstrap_rule is not None:
+            recommended_next_action = "CORRECTION_REQUIRED"
+            checkpoint_candidate = False
+            transition_evidence["route_override"] = "bootstrap_continuation_missing_dispatchable_downstream_task_packet"
+        if result_type == "audit_result" and parsed.status == "fail":
+            correction_route = correction_routing.from_parsed_audit_result(
+                root=root,
+                result_path=result_path,
+                parsed=parsed,
+            )
         transition_evidence["command_recommended_next_action"] = recommended_next_action
         if route_suppressed or transition_errors:
             transition_evidence["route_suppressed_by"] = (
@@ -698,6 +801,7 @@ def build_report(result_path: Path, strict: bool) -> tuple[dict[str, Any], int]:
         "audit_required": audit_required,
         "checkpoint_candidate": checkpoint_candidate,
         "recommended_next_action": recommended_next_action,
+        "correction_routing": correction_route,
         "blocking_rules": [rule.to_json() for rule in blocking_rules],
         "validation_errors": [rule.to_json() for rule in validation_errors],
         "evidence": {
@@ -707,8 +811,10 @@ def build_report(result_path: Path, strict: bool) -> tuple[dict[str, Any], int]:
             "accepted_result_package_ref": accepted_result_package_detail if accepted_result_package else "",
             "source_result_refs": _source_result_refs(fields),
             "claimed_next_actions": _claimed_next_actions(fields),
+            "bootstrap_continuation": bootstrap_continuation,
             "parsed_fields": sorted(fields),
             "audit_result": parsed.audit.to_json() if result_type == "audit_result" else {},
+            "correction_routing": correction_route,
             "transition_engine": transition_evidence,
         },
     }, exit_code
