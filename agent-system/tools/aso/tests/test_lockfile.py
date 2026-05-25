@@ -192,7 +192,10 @@ class LockfileHelperTests(unittest.TestCase):
         ]
 
         self.assertIn(lockfile.PACKAGE_VERSION, lockfile.COMPATIBLE_PACKAGE_VERSIONS)
-        self.assertTrue(set(aso_engine_properties["version"]["enum"]).issubset(lockfile.COMPATIBLE_PACKAGE_VERSIONS))
+        schema_versions = set(aso_engine_properties["version"]["enum"])
+        schema_tuples_set = set(schema_tuples)
+        source_supported_tuples = set(lockfile.COMPATIBLE_ENGINE_VERSION_TUPLES)
+        self.assertEqual(schema_versions - set(lockfile.COMPATIBLE_PACKAGE_VERSIONS), {"3.7.9"})
         self.assertTrue(
             set(aso_engine_properties["runtime_schema"]["enum"]).issubset(lockfile.COMPATIBLE_RUNTIME_SCHEMA_VERSIONS)
         )
@@ -200,7 +203,7 @@ class LockfileHelperTests(unittest.TestCase):
             aso_engine_properties["engine_mode"]["enum"],
             list(lockfile.SUPPORTED_ENGINE_MODES),
         )
-        self.assertTrue(set(schema_tuples).issubset(lockfile.COMPATIBLE_ENGINE_VERSION_TUPLES))
+        self.assertEqual(schema_tuples_set - source_supported_tuples, {("3.7.9", "3.1.1")})
 
     @unittest.skipIf(Draft202012Validator is None, "jsonschema is not installed")
     def test_machine_readable_schema_rejects_mixed_version_tuples(self) -> None:

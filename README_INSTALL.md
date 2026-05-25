@@ -65,7 +65,7 @@ validation remains stdlib-only for its packaged schema/contract checks; the
 installer must still verify the canonical package from this checkout, not a
 root-level duplicate Python tree.
 
-This install document covers package version `3.7.8` with runtime schema
+This install document covers package version `3.7.9` with runtime schema
 `3.1.1` and artifact package schema `1.1.0`. P57 documents ASO workflow
 readiness through installed real-TZ intake/bootstrap and read-only plan-next
 dispatchability while preserving the Runtime State sidecar schema, the artifact

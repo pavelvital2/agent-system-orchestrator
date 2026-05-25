@@ -20,8 +20,8 @@ filesystem-governed ASO helper CLI at `agent-system/tools/aso/aso.py`: most
 commands are read-only diagnostics or dry-run proposals, while Project Factory
 commands may create generated projects only within explicit target paths.
 
-This P57 governance documentation authority sync records the active package
-metadata as the governed `3.7.8` package/governance tuple with runtime schema
+This P58 schema/template version sync records the active package
+metadata as the governed `3.7.9` package/governance tuple with runtime schema
 `3.1.1` and artifact package schema `1.1.0`. It preserves installed real-TZ
 intake guidance, release validation evidence, clean install semantics, source
 hygiene, and CI E2E smoke coverage;
@@ -252,7 +252,7 @@ Runtime State P2 command surfaces formalize JSON sidecars under
 `project-runtime/state/`. `project-runtime/state/*.json` sidecars are canonical
 for Runtime Schema `3.1.1`; Markdown runtime files are generated compatibility
 views and report outputs are diagnostics generated from JSON. The active package
-version is `3.7.8` and the active runtime schema version is `3.1.1`.
+version is `3.7.9` and the active runtime schema version is `3.1.1`.
 
 ```text
 python3 agent-system/tools/aso/aso.py validate-rules --root . --strict

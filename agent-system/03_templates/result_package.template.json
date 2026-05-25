@@ -1,8 +1,8 @@
 {
   "package_id": "RESULT_PACKAGE_TASK_TEMPLATE_ATTEMPT_001",
   "schema_version": "1.0.0",
-  "package_version": "3.7.3",
-  "governance_ruleset_version": "3.7.3",
+  "package_version": "3.7.9",
+  "governance_ruleset_version": "3.7.9",
   "runtime_schema_version": "3.1.1",
   "artifact_package_schema_version": "1.1.0",
   "result_ref": "project-runtime/results/worker/RESULT_TASK_TEMPLATE_ATTEMPT_001.md",

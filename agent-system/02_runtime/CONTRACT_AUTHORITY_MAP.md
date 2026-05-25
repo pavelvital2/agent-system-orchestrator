@@ -16,6 +16,7 @@ for the same runtime, artifact, bootstrap, or planner contract surface.
 | P5.5 | Historical package metadata and validator/readiness documentation | Stabilizes active authority references and CI/package smoke coverage. | Clarifies existing authority only; does not add runtime semantics, daemon mode, live dispatch, checkpoint execution, or duplicate contract files. |
 | P5.6 | Historical package metadata, release validation docs, installed real-TZ workflow docs, and audit hardening evidence | Records real-TZ installed-orchestrator validation, safe install/intake operator guidance, source hygiene, clean install semantics, and CI E2E smoke coverage. | Documentation, metadata, test, and validation hardening only; does not add runtime semantics, daemon mode, live dispatch, checkpoint execution, product generation, or duplicate contract files. |
 | P57 | Package metadata `3.7.8`, this map, runtime authority documentation, and state render write-boundary documentation | Aligns active package/governance authority and removes runtime source-of-truth contradictions. | Documentation and metadata authority sync only; Runtime Schema `3.1.1` and Artifact Package Schema `1.1.0` are preserved. |
+| P58 | Package metadata `3.7.9`, active schema/template constants, and version-coherence validation | Aligns active package/governance pins across runtime manifests, artifact schemas, structured artifact templates, result/audit templates, and proposal/apply templates. | Metadata and template/schema sync only; Runtime Schema `3.1.1` and Artifact Package Schema `1.1.0` are preserved. |
 
 ## Runtime Schema Contract File Authority
 
@@ -40,11 +41,11 @@ map in the same change.
 
 ## Current Version Tuple
 
-The active P57 tuple is:
+The active P58 tuple is:
 
 ```text
-package_version: 3.7.8
-governance_ruleset_version: 3.7.8
+package_version: 3.7.9
+governance_ruleset_version: 3.7.9
 runtime_schema_version: 3.1.1
 artifact_package_schema_version: 1.1.0
 ```
@@ -53,5 +54,5 @@ This tuple is metadata and validation authority only. It does not authorize
 runtime mutation, profile-agent dispatch, daemon execution, checkpoint
 execution, publication, or workspace state migration.
 
-The active P57 tuple supersedes prior P5.6 package/governance baselines without
+The active P58 tuple supersedes prior P57 package/governance baselines without
 changing Runtime Schema `3.1.1` or Artifact Package Schema `1.1.0`.

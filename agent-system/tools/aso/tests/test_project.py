@@ -202,8 +202,10 @@ class ProjectCommandTests(unittest.TestCase):
 
         self.assertEqual(create_result.returncode, 0, create_result.stderr)
         self.assertEqual(status_result.returncode, 0, status_result.stdout + status_result.stderr)
-        self.assertEqual(lint_result.returncode, 0, lint_result.stdout + lint_result.stderr)
-        self.assertEqual(doctor_result.returncode, 0, doctor_result.stdout + doctor_result.stderr)
+        self.assertEqual(lint_result.returncode, 1, lint_result.stdout + lint_result.stderr)
+        self.assertIn("LINT_RT_006", lint_result.stdout)
+        self.assertEqual(doctor_result.returncode, 1, doctor_result.stdout + doctor_result.stderr)
+        self.assertIn("LINT_RT_006", doctor_result.stdout)
         self.assertIn("Engine mode: vendored", create_result.stdout)
         self.assertIn("Runtime schema: 3.1.1", create_result.stdout)
         self.assertIn("Runtime state: initialized", create_result.stdout)

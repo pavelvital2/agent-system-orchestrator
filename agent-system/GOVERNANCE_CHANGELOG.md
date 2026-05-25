@@ -2313,3 +2313,59 @@ AUTHORIZED_BY: project_owner
 AUDIT_REQUIRED: yes
 STATUS: accepted
 ```
+
+```text
+CHANGE_ID: GOV-2026-05-25-080
+CHANGE_TITLE: TASK_ASO_P58_080_SCHEMA_TEMPLATE_VERSION_SYNC
+DATE: 2026-05-25
+PACKAGE_VERSION_BEFORE: 3.7.8
+PACKAGE_VERSION_AFTER: 3.7.9
+GOVERNANCE_RULESET_BEFORE: 3.7.8
+GOVERNANCE_RULESET_AFTER: 3.7.9
+RUNTIME_SCHEMA_BEFORE: 3.1.1
+RUNTIME_SCHEMA_AFTER: 3.1.1
+ARTIFACT_PACKAGE_SCHEMA_BEFORE: 1.1.0
+ARTIFACT_PACKAGE_SCHEMA_AFTER: 1.1.0
+CHANGE_TYPE: patch
+CHANGE_SUBTYPE: p58_schema_template_version_sync
+AFFECTED_FILES:
+- README.md
+- README_INSTALL.md
+- pyproject.toml
+- agent-system/README.md
+- agent-system/PACKAGE_VERSIONING.md
+- agent-system/GOVERNANCE_CHANGELOG.md
+- agent-system/02_runtime/CONTRACT_AUTHORITY_MAP.md
+- agent-system/09_validators/CROSS_LINK_VALIDATION_RULES.md
+- agent-system/09_validators/schemas/apply_receipt.schema.json
+- agent-system/09_validators/schemas/aso_lock.schema.json
+- agent-system/09_validators/schemas/audit_result_package.schema.json
+- agent-system/09_validators/schemas/proposal_artifact.schema.json
+- agent-system/09_validators/schemas/result_package.schema.json
+- agent-system/09_validators/schemas/runtime_state_3_1_0.contract.json
+- agent-system/09_validators/schemas/schema_manifest.schema.json
+- agent-system/09_validators/schemas/structured_artifact.schema.json
+- agent-system/03_templates/apply_receipt.template.json
+- agent-system/03_templates/audit_result_package.template.json
+- agent-system/03_templates/proposal_artifact.template.json
+- agent-system/03_templates/result_package.template.json
+- agent-system/03_templates/structured_artifact.template.json
+- agent-system/tools/aso/tests/test_cli_mode_guard.py
+- agent-system/tools/aso/tests/test_contract_authority_map.py
+- agent-system/tools/aso/tests/test_lockfile.py
+- agent-system/tools/aso/tests/test_packaging.py
+- agent-system/tools/aso/tests/test_project.py
+- agent-system/tools/aso/tests/test_version_coherence.py
+AFFECTED_INVARIANTS:
+- Active package/governance tuple is 3.7.9 / 3.7.9 while Runtime Schema 3.1.1 and Artifact Package Schema 1.1.0 are preserved.
+- Active schemas/templates must not require stale 3.7.3 or 3.7.8 package/governance values unless a contract explicitly marks them as legacy-compatible.
+- Runtime SCHEMA_MANIFEST schema, runtime contract metadata, result/audit package schemas, structured artifact templates, and proposal/apply templates use the active package tuple.
+AFFECTED_TRANSITIONS:
+- P58 tasks 010-070 accepted -> schema/template version sync -> version-coherence validation.
+SCHEMA_TEMPLATE_IMPACT: schema_template_metadata_update_only; Runtime Schema 3.1.1 and Artifact Package Schema 1.1.0 are preserved.
+MIGRATION_REQUIRED: no
+MIGRATION_NOTE: Package/governance metadata sync only; no active project-runtime migration, runtime sidecar schema semantics change, artifact package schema version change, live dispatch executor, checkpoint executor, daemon, product-intake engine, external worker, product generation, or secret collection is introduced.
+AUTHORIZED_BY: project_owner
+AUDIT_REQUIRED: yes
+STATUS: accepted
+```

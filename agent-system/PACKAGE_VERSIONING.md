@@ -19,8 +19,8 @@ RUNTIME_SCHEMA_VERSION:
 ## Active version constants
 
 ```text
-CURRENT_PACKAGE_VERSION: 3.7.8
-CURRENT_GOVERNANCE_RULESET_VERSION: 3.7.8
+CURRENT_PACKAGE_VERSION: 3.7.9
+CURRENT_GOVERNANCE_RULESET_VERSION: 3.7.9
 CURRENT_RUNTIME_SCHEMA_VERSION: 3.1.1
 ARTIFACT_PACKAGE_SCHEMA_VERSION: 1.1.0
 ```
@@ -511,6 +511,23 @@ CI observation before any claim about that newer HEAD. Final real-TZ readiness
 criteria are documented by P57, but final real-TZ acceptance remains outside
 the release patch until explicitly instructed by the owner after P57 merge
 readiness and remote CI evidence.
+
+The ASO P58 schema/template version sync installs:
+
+```text
+CURRENT_PACKAGE_VERSION: 3.7.9
+CURRENT_GOVERNANCE_RULESET_VERSION: 3.7.9
+CURRENT_RUNTIME_SCHEMA_VERSION: 3.1.1
+ARTIFACT_PACKAGE_SCHEMA_VERSION: 1.1.0
+DESIGN_GAP_GOVERNANCE_SCHEMA_VERSION: 1.0.0
+```
+
+This patch removes stale current package/governance pins from active runtime
+schema metadata, artifact package schemas, structured artifact templates,
+result/audit package templates, and proposal/apply templates. Runtime Schema
+`3.1.1` and Artifact Package Schema `1.1.0` are preserved. Older package
+versions remain documented only as historical or legacy-compatible contract
+entries.
 
 ## Version semantics
 

@@ -77,8 +77,8 @@ def _write_runtime(root: Path) -> None:
         json.dumps(
             {
                 "project_slug": "demo-project",
-                "package_version": "3.7.8",
-                "governance_ruleset_version": "3.7.8",
+                "package_version": "3.7.9",
+                "governance_ruleset_version": "3.7.9",
                 "runtime_schema_version": "3.1.1",
             },
             indent=2,
