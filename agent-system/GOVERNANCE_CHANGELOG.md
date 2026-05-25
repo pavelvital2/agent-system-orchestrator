@@ -2369,3 +2369,38 @@ AUTHORIZED_BY: project_owner
 AUDIT_REQUIRED: yes
 STATUS: accepted
 ```
+
+```text
+CHANGE_ID: GOV-2026-05-25-110
+CHANGE_TITLE: TASK_ASO_P58_110_RELEASE_VALIDATION_AND_EVIDENCE
+DATE: 2026-05-25
+PACKAGE_VERSION_BEFORE: 3.7.9
+PACKAGE_VERSION_AFTER: 3.7.9
+GOVERNANCE_RULESET_BEFORE: 3.7.9
+GOVERNANCE_RULESET_AFTER: 3.7.9
+RUNTIME_SCHEMA_BEFORE: 3.1.1
+RUNTIME_SCHEMA_AFTER: 3.1.1
+ARTIFACT_PACKAGE_SCHEMA_BEFORE: 1.1.0
+ARTIFACT_PACKAGE_SCHEMA_AFTER: 1.1.0
+CHANGE_TYPE: patch
+CHANGE_SUBTYPE: p58_release_validation_and_evidence
+AFFECTED_FILES:
+- agent-system/GOVERNANCE_CHANGELOG.md
+- agent-system/PACKAGE_VERSIONING.md
+- agent-system/11_release/ASO_P58_REAL_E2E_LIFECYCLE_HARDENING_V3_7_9_RELEASE_NOTES.md
+- agent-system/11_release/ASO_P58_REAL_E2E_LIFECYCLE_HARDENING_V3_7_9_VALIDATION_REPORT.md
+- agent-system/11_release/ASO_P58_REAL_E2E_LIFECYCLE_HARDENING_V3_7_9_REMOTE_CI_EVIDENCE.md
+AFFECTED_INVARIANTS:
+- Active package/governance tuple remains 3.7.9 / 3.7.9 while Runtime Schema 3.1.1 and Artifact Package Schema 1.1.0 are preserved.
+- P58 release validation must reference canonical task packet IDs, regression coverage, tuple-coherence evidence, forbidden-root evidence, source hygiene, and remote CI evidence.
+- Task 110 release evidence remains confined to release docs, changelog, and package-versioning metadata authorized by the task packet.
+- Post-push remote CI evidence must not be fabricated before the final pushed HEAD has a completed successful GitHub Actions run.
+AFFECTED_TRANSITIONS:
+- P58 tasks 010-100 accepted -> release validation docs -> local validation -> final push -> remote CI evidence observation.
+SCHEMA_TEMPLATE_IMPACT: none; Runtime Schema 3.1.1 and Artifact Package Schema 1.1.0 are preserved.
+MIGRATION_REQUIRED: no
+MIGRATION_NOTE: Release validation, evidence documentation, and tuple metadata coherence only; no active project-runtime migration, runtime schema change, artifact package schema change, live dispatch executor, checkpoint executor, daemon, product-intake engine, external worker, product generation, or secret collection is introduced.
+AUTHORIZED_BY: project_owner
+AUDIT_REQUIRED: yes
+STATUS: accepted
+```

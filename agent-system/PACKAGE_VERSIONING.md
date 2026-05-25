@@ -529,6 +529,19 @@ result/audit package templates, and proposal/apply templates. Runtime Schema
 versions remain documented only as historical or legacy-compatible contract
 entries.
 
+P58 final release validation evidence is recorded in:
+
+```text
+agent-system/11_release/ASO_P58_REAL_E2E_LIFECYCLE_HARDENING_V3_7_9_RELEASE_NOTES.md
+agent-system/11_release/ASO_P58_REAL_E2E_LIFECYCLE_HARDENING_V3_7_9_VALIDATION_REPORT.md
+agent-system/11_release/ASO_P58_REAL_E2E_LIFECYCLE_HARDENING_V3_7_9_REMOTE_CI_EVIDENCE.md
+```
+
+The remote CI evidence file records the selector for the final pushed HEAD.
+Committing post-push run identifiers would create a newer HEAD, so final
+GitHub Actions run details are selected and reported after push rather than
+committed back into release evidence.
+
 ## Version semantics
 
 ```text
