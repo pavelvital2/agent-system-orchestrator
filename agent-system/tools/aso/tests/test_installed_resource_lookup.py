@@ -63,6 +63,8 @@ class InstalledResourceLookupTests(unittest.TestCase):
             self.assertEqual(_git_status(), status_before)
 
             installed_aso = venv / "bin" / "aso"
+            (workspace / "project-input").mkdir()
+            (workspace / "project-input" / "TZ.md").write_text("# TZ\n\nInstalled resource lookup.\n", encoding="utf-8")
             status_before_installed_init = _git_status()
             init = _run(
                 [
@@ -71,6 +73,8 @@ class InstalledResourceLookupTests(unittest.TestCase):
                     "init",
                     "--root",
                     str(workspace),
+                    "--tz",
+                    "project-input/TZ.md",
                     "--confirm-write",
                     "--json-out",
                     str(tmp_path / "state-init.json"),

@@ -30,10 +30,20 @@ def write_tz_file(root: Path) -> None:
     tz_file.write_text("Europe/Moscow\n", encoding="utf-8")
 
 
+def write_placeholder_tz_file(root: Path) -> None:
+    tz_file = root / "project-input" / "TZ.md"
+    tz_file.parent.mkdir(parents=True, exist_ok=True)
+    tz_file.write_text(
+        "# TZ Placeholder\n\nSTATUS: placeholder\nMUST_REPLACE_BEFORE_LIFECYCLE: true\n",
+        encoding="utf-8",
+    )
+
+
 class StateInitCommandTests(unittest.TestCase):
     def test_dry_run_prints_plan_and_writes_no_files(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
+            write_tz_file(root)
 
             result = run_aso(
                 "state",
@@ -44,6 +54,8 @@ class StateInitCommandTests(unittest.TestCase):
                 "Dry Run",
                 "--project-slug",
                 "dry-run",
+                "--tz",
+                "project-input/TZ.md",
                 "--dry-run",
             )
 
@@ -51,13 +63,57 @@ class StateInitCommandTests(unittest.TestCase):
             plan = json.loads(result.stdout)
             self.assertTrue(plan["dry_run"])
             self.assertEqual(plan["status"], "planned")
-            self.assertEqual(len(plan["writes"]), 10)
-            self.assertEqual(list(root.iterdir()), [])
+            self.assertEqual(len(plan["writes"]), 9)
+            self.assertFalse((root / "project-runtime").exists())
+
+    def test_confirm_write_without_real_tz_is_refused(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+
+            result = run_aso(
+                "state",
+                "init",
+                "--root",
+                str(root),
+                "--project-name",
+                "Missing TZ",
+                "--project-slug",
+                "missing-tz",
+                "--confirm-write",
+            )
+
+            self.assertEqual(result.returncode, 2, result.stdout + result.stderr)
+            self.assertIn("--tz is required when project-input/TZ.md is absent", result.stderr)
+            self.assertFalse((root / "project-runtime").exists())
+
+    def test_placeholder_tz_is_refused(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            write_placeholder_tz_file(root)
+
+            result = run_aso(
+                "state",
+                "init",
+                "--root",
+                str(root),
+                "--project-name",
+                "Placeholder TZ",
+                "--project-slug",
+                "placeholder-tz",
+                "--tz",
+                "project-input/TZ.md",
+                "--confirm-write",
+            )
+
+            self.assertEqual(result.returncode, 2, result.stdout + result.stderr)
+            self.assertIn("placeholder TZ document", result.stderr)
+            self.assertFalse((root / "project-runtime").exists())
 
     def test_dry_run_json_out_writes_valid_plan_without_target_state_files(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp) / "workspace"
             root.mkdir()
+            write_tz_file(root)
             json_out = Path(tmp) / "state-init-plan.json"
 
             result = run_aso(
@@ -69,6 +125,8 @@ class StateInitCommandTests(unittest.TestCase):
                 "Dry Run JSON",
                 "--project-slug",
                 "dry-run-json",
+                "--tz",
+                "project-input/TZ.md",
                 "--dry-run",
                 "--json-out",
                 str(json_out),
@@ -84,6 +142,7 @@ class StateInitCommandTests(unittest.TestCase):
     def test_confirm_write_creates_current_sidecars_that_verify_strict(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
+            write_tz_file(root)
 
             init = run_aso(
                 "state",
@@ -94,6 +153,8 @@ class StateInitCommandTests(unittest.TestCase):
                 "Init Test",
                 "--project-slug",
                 "init-test",
+                "--tz",
+                "project-input/TZ.md",
                 "--confirm-write",
             )
             verify = run_aso("state", "verify", "--root", str(root), "--strict")
@@ -108,7 +169,7 @@ class StateInitCommandTests(unittest.TestCase):
                 (root / "project-runtime" / "state" / "NEXT_ACTION.json").read_text(encoding="utf-8")
             )
             self.assertEqual(project_state["content"]["tz_path"], "project-input/TZ.md")
-            self.assertEqual(tz_file.read_text(encoding="utf-8"), "# TZ\n\nTIMEZONE: UTC\n")
+            self.assertEqual(tz_file.read_text(encoding="utf-8"), "Europe/Moscow\n")
             self.assertEqual(next_action["content"]["action_semantic"], "normal")
             self.assertNotEqual(next_action["content"]["action_type"], "stop")
             sidecars = sorted((root / "project-runtime" / "state").glob("*.json"))
@@ -122,6 +183,7 @@ class StateInitCommandTests(unittest.TestCase):
     def test_deterministic_timestamps_flag_uses_regression_timestamp(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
+            write_tz_file(root)
 
             init = run_aso(
                 "state",
@@ -132,6 +194,8 @@ class StateInitCommandTests(unittest.TestCase):
                 "Deterministic Init",
                 "--project-slug",
                 "deterministic-init",
+                "--tz",
+                "project-input/TZ.md",
                 "--confirm-write",
                 "--deterministic-timestamps",
             )
@@ -186,6 +250,7 @@ class StateInitCommandTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp) / "workspace"
             root.mkdir()
+            write_tz_file(root)
             json_out = Path(tmp) / "state-init-receipt.json"
 
             init = run_aso(
@@ -197,6 +262,8 @@ class StateInitCommandTests(unittest.TestCase):
                 "Receipt Test",
                 "--project-slug",
                 "receipt-test",
+                "--tz",
+                "project-input/TZ.md",
                 "--confirm-write",
                 "--json-out",
                 str(json_out),
@@ -206,7 +273,7 @@ class StateInitCommandTests(unittest.TestCase):
             receipt = json.loads(json_out.read_text(encoding="utf-8"))
             self.assertFalse(receipt["dry_run"])
             self.assertEqual(receipt["status"], "written")
-            self.assertEqual(receipt["write_result"], "wrote default TZ document; wrote state sidecars")
+            self.assertEqual(receipt["write_result"], "existing TZ document preserved; wrote state sidecars")
             self.assertEqual(json.loads(init.stdout), receipt)
 
     def test_confirm_write_preserves_existing_tz_document(self) -> None:

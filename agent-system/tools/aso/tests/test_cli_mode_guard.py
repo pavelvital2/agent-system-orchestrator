@@ -8,6 +8,12 @@ import tempfile
 import unittest
 from pathlib import Path
 
+TESTS_DIR = Path(__file__).resolve().parent
+if str(TESTS_DIR) not in sys.path:
+    sys.path.insert(0, str(TESTS_DIR))
+
+from package_fixture_helpers import PYPROJECT_RESOURCE_DATA, write_minimal_package_resources, write_resource_manifest_in
+
 
 CLI = Path(__file__).resolve().parents[1] / "aso.py"
 
@@ -131,9 +137,12 @@ def _write_package_fixture(root: Path) -> None:
             "[tool.setuptools.packages.find]\n"
             'where = ["agent-system/tools/aso"]\n'
             'include = ["agent_system_orchestrator_aso*"]\n'
-        ),
+        )
+        + PYPROJECT_RESOURCE_DATA,
         encoding="utf-8",
     )
+    write_minimal_package_resources(package)
+    write_resource_manifest_in(root)
     (root / ".gitignore").write_text(
         "/project-runtime/\n/project-input/\n/project-archive/\n",
         encoding="utf-8",

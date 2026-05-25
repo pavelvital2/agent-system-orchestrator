@@ -179,6 +179,17 @@ def make_tz_valid(root: Path) -> None:
     update_markdown_field(root, "PROJECT_STATE.md", "TZ_PATH", "project-input/TZ.md")
 
 
+def make_tz_placeholder(root: Path) -> None:
+    tz_dir = root / "project-input"
+    tz_dir.mkdir(exist_ok=True)
+    (tz_dir / "TZ.md").write_text(
+        "# TZ Placeholder\n\nSTATUS: placeholder\nMUST_REPLACE_BEFORE_LIFECYCLE: true\n",
+        encoding="utf-8",
+    )
+    set_project_state(root, tz_path="project-input/TZ.md")
+    update_markdown_field(root, "PROJECT_STATE.md", "TZ_PATH", "project-input/TZ.md")
+
+
 def set_task(root: Path, **updates: object) -> None:
     payload = load_sidecar(root, "TASK_REGISTRY.json")
     body = content(payload)
@@ -259,6 +270,20 @@ class PlanNextCommandTests(unittest.TestCase):
             self.assertIn("codex exec", report["dispatch_receipt"]["external_runner_command_template"])
             self.assertEqual(report["blocking_rules"], [])
             self.assertEqual(mtimes_before, {path: path.stat().st_mtime_ns for path in tracked})
+
+    def test_placeholder_tz_blocks_dispatchability(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = copy_valid_workspace(tmp)
+            make_tz_placeholder(root)
+            json_out = Path(tmp) / "plan-next-placeholder.json"
+
+            result = run_plan_next(root, "--strict", "--json-out", str(json_out))
+
+            self.assertEqual(result.returncode, 1, result.stdout + result.stderr)
+            report = json.loads(json_out.read_text(encoding="utf-8"))
+            self.assertEqual(report["status"], "blocked")
+            self.assertFalse(report["dispatchable"])
+            self.assertIn("placeholder TZ document", json.dumps(report["blocking_rules"]))
 
     def test_correction_orchestrator_none_is_not_dispatchable(self) -> None:
         root = FIXTURE_ROOT / "p2_valid_workspace"

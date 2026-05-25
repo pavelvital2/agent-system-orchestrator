@@ -30,6 +30,16 @@ def write_tz(root: Path, relpath: str = "project-input/TZ_REAL.md") -> Path:
     return path
 
 
+def write_placeholder_tz(root: Path, relpath: str = "project-input/TZ.md") -> Path:
+    path = root / relpath
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(
+        "# TZ Placeholder\n\nSTATUS: placeholder\nMUST_REPLACE_BEFORE_LIFECYCLE: true\n",
+        encoding="utf-8",
+    )
+    return path
+
+
 def state_init(root: Path, tz_path: str = "project-input/TZ_REAL.md") -> subprocess.CompletedProcess[str]:
     return run_aso(
         "state",
@@ -277,6 +287,31 @@ class IntakeBootstrapCommandTests(unittest.TestCase):
 
             self.assertEqual(result.returncode, 2, result.stdout + result.stderr)
             self.assertIn("workspace-local", result.stderr)
+
+    def test_placeholder_tz_is_rejected(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp) / "workspace"
+            root.mkdir()
+            write_tz(root)
+            self.assertEqual(state_init(root).returncode, 0)
+            write_placeholder_tz(root)
+
+            result = run_aso(
+                "intake",
+                "bootstrap",
+                "--root",
+                str(root),
+                "--tz",
+                "project-input/TZ.md",
+                "--target-role",
+                "requirements_analyst",
+                "--confirm-write",
+                "--deterministic-timestamps",
+            )
+
+            self.assertEqual(result.returncode, 2, result.stdout + result.stderr)
+            self.assertIn("placeholder TZ document", result.stderr)
+            self.assertFalse((root / "project-runtime/bootstrap").exists())
 
 
 if __name__ == "__main__":

@@ -7,6 +7,12 @@ import tempfile
 import unittest
 from pathlib import Path
 
+TESTS_DIR = Path(__file__).resolve().parent
+if str(TESTS_DIR) not in sys.path:
+    sys.path.insert(0, str(TESTS_DIR))
+
+from package_fixture_helpers import PYPROJECT_RESOURCE_DATA, write_minimal_package_resources, write_resource_manifest_in
+
 
 CLI = Path(__file__).resolve().parents[1] / "aso.py"
 
@@ -178,7 +184,8 @@ aso = "agent_system_orchestrator_aso.cli:main"
 [tool.setuptools.packages.find]
 where = ["agent-system/tools/aso"]
 include = ["agent_system_orchestrator_aso*"]
-""",
+"""
+        + PYPROJECT_RESOURCE_DATA,
         "Makefile": """.PHONY: test smoke doctor lint
 
 test:
@@ -235,6 +242,12 @@ on:
         path.parent.mkdir(parents=True, exist_ok=True)
         path.write_text(text, encoding="utf-8")
         paths.append(path)
+    paths.extend(
+        write_minimal_package_resources(
+            root / "agent-system" / "tools" / "aso" / "agent_system_orchestrator_aso"
+        )
+    )
+    paths.append(write_resource_manifest_in(root))
     project_input = root / "project-input"
     project_input.mkdir()
     local_note = project_input / "local-task.md"
@@ -391,9 +404,19 @@ PUSH_ALLOWED: false
     def test_workspace_doctor_reports_bootstrap_repair_hints(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
-            init = run_aso("state", "init", "--root", str(root), "--project-slug", "doctor-bsr", "--confirm-write")
             (root / "project-input").mkdir(exist_ok=True)
             (root / "project-input" / "TZ.md").write_text("# TZ\n\nTIMEZONE: Europe/Moscow\n", encoding="utf-8")
+            init = run_aso(
+                "state",
+                "init",
+                "--root",
+                str(root),
+                "--project-slug",
+                "doctor-bsr",
+                "--tz",
+                "project-input/TZ.md",
+                "--confirm-write",
+            )
             render = run_aso("state", "render", "--root", str(root), "--confirm-write")
             project_state = root / "project-runtime" / "state" / "PROJECT_STATE.json"
             project_payload = json.loads(project_state.read_text(encoding="utf-8"))

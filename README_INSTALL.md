@@ -245,17 +245,20 @@ Runtime State P2 state commands should be available after install:
 
 ```text
 aso state --help
-aso state init --root /tmp/aso-state-demo --project-name "State Demo" --project-slug state-demo --profile generic --repo-url none --branch main --dry-run --json-out /tmp/aso-state-init-plan.json
-aso state init --root /tmp/aso-state-demo --project-name "State Demo" --project-slug state-demo --profile generic --repo-url none --branch main --confirm-write --json-out /tmp/aso-state-init-receipt.json
+mkdir -p /tmp/aso-state-demo/project-input
+cp /path/to/TZ_REAL.md /tmp/aso-state-demo/project-input/TZ_REAL.md
+aso state init --root /tmp/aso-state-demo --project-name "State Demo" --project-slug state-demo --profile generic --repo-url none --branch main --tz project-input/TZ_REAL.md --dry-run --json-out /tmp/aso-state-init-plan.json
+aso state init --root /tmp/aso-state-demo --project-name "State Demo" --project-slug state-demo --profile generic --repo-url none --branch main --tz project-input/TZ_REAL.md --confirm-write --json-out /tmp/aso-state-init-receipt.json
 aso state verify --root /tmp/aso-state-demo --strict --json-out /tmp/aso-state-verify.json
 aso state render --root /tmp/aso-state-demo --format markdown --out /tmp/aso-state-render.md
 aso state migrate --root agent-system/tests/fixtures/state/valid_workspace --to 3.1.1 --dry-run --json-out /tmp/aso-state-migrate-plan.json
 ```
 
-`aso state init --dry-run` writes no files. Confirmed initialization requires
-`--confirm-write` and writes only local ignored workspace sidecars under
-`project-runtime/state/`. Confirmed runtime writes use current UTC timestamps
-by default; `--deterministic-timestamps` is reserved for tests and fixtures.
+`aso state init --dry-run` writes no files. Confirmed initialization requires a
+real workspace-local TZ document passed with `--tz` and `--confirm-write`, and
+writes only local ignored workspace sidecars under `project-runtime/state/`.
+Confirmed runtime writes use current UTC timestamps by default;
+`--deterministic-timestamps` is reserved for tests and fixtures.
 `aso state migrate --dry-run` emits a deterministic plan for compatible legacy
 sidecars; confirmed migration requires
 `--confirm-write`, fails closed on malformed or ambiguous input, and records
@@ -325,7 +328,10 @@ access:
 ```text
 aso project create --local --engine-mode vendored --target /tmp/demo-vendored --name "Demo Vendored" --slug demo-vendored --profile generic --repo-url none --branch main
 aso project verify-clean --root /tmp/demo-vendored --strict
-python3 /tmp/demo-vendored/agent-system/tools/aso/aso.py state render --root /tmp/demo-vendored --confirm-write
+cp /path/to/TZ_REAL.md /tmp/demo-vendored/project-input/TZ_REAL.md
+python3 /tmp/demo-vendored/agent-system/tools/aso/aso.py state init --root /tmp/demo-vendored --tz project-input/TZ_REAL.md --confirm-write
+python3 /tmp/demo-vendored/agent-system/tools/aso/aso.py intake bootstrap --root /tmp/demo-vendored --tz project-input/TZ_REAL.md --target-role requirements_analyst --confirm-write
+python3 /tmp/demo-vendored/agent-system/tools/aso/aso.py plan-next --root /tmp/demo-vendored --strict
 python3 /tmp/demo-vendored/agent-system/tools/aso/aso.py status --root /tmp/demo-vendored --mode workspace
 python3 /tmp/demo-vendored/agent-system/tools/aso/aso.py lint --root /tmp/demo-vendored --mode workspace --strict
 python3 /tmp/demo-vendored/agent-system/tools/aso/aso.py doctor --root /tmp/demo-vendored --mode workspace --strict
@@ -337,7 +343,10 @@ Create and verify a local reference generated project without vendoring
 ```text
 aso project create --local --engine-mode reference --target /tmp/demo-reference --name "Demo Reference" --slug demo-reference --profile generic --repo-url https://github.com/OWNER/demo-reference.git --branch main
 aso project verify-clean --root /tmp/demo-reference --strict
-aso state render --root /tmp/demo-reference --confirm-write
+cp /path/to/TZ_REAL.md /tmp/demo-reference/project-input/TZ_REAL.md
+aso state init --root /tmp/demo-reference --tz project-input/TZ_REAL.md --confirm-write
+aso intake bootstrap --root /tmp/demo-reference --tz project-input/TZ_REAL.md --target-role requirements_analyst --confirm-write
+aso plan-next --root /tmp/demo-reference --strict
 aso status --root /tmp/demo-reference --mode workspace
 aso lint --root /tmp/demo-reference --mode workspace --strict
 aso doctor --root /tmp/demo-reference --mode workspace --strict

@@ -9,7 +9,7 @@ import sys
 from pathlib import Path
 from typing import Any
 
-from . import state_verify
+from . import state_init, state_verify
 from .. import correction_routing
 from .. import dispatch_receipts
 from .. import handoff_artifacts
@@ -303,6 +303,54 @@ def _state_verify_blockers(
                     "GOV-ACTION-SEMANTICS",
                     "Verified state has blocking findings; planner will not recommend a mutating action.",
                     f"{rule_id}: {finding.get('details', '')}",
+                )
+            )
+    return blockers
+
+
+def _workspace_relative_path(value: str) -> Path | None:
+    if not value or value in NONE_VALUES:
+        return None
+    path = Path(value)
+    if path.is_absolute() or ".." in path.parts:
+        return None
+    return path
+
+
+def _placeholder_tz_blockers(
+    root: Path,
+    rules: dict[str, dict[str, object]],
+    project_state: dict[str, object],
+    next_action: dict[str, object],
+) -> list[dict[str, object]]:
+    candidates: list[Path] = []
+    state_tz = _workspace_relative_path(_as_text(project_state.get("tz_path")))
+    if state_tz is not None:
+        candidates.append(state_tz)
+    required_docs = next_action.get("required_project_docs")
+    if isinstance(required_docs, list):
+        for item in required_docs:
+            if isinstance(item, str):
+                relpath = _workspace_relative_path(item.strip())
+                if relpath is not None:
+                    candidates.append(relpath)
+    candidates.extend(BOOTSTRAP_INPUTS)
+
+    blockers: list[dict[str, object]] = []
+    seen: set[str] = set()
+    for relpath in candidates:
+        relpath_text = relpath.as_posix()
+        if relpath_text in seen or not (root / relpath).is_file():
+            continue
+        seen.add(relpath_text)
+        placeholder, detail = state_init.tz_placeholder_status(root, relpath)
+        if placeholder:
+            blockers.append(
+                _rule(
+                    rules,
+                    "GOV-ACTION-SEMANTICS",
+                    "Placeholder TZ input cannot be used for lifecycle planning.",
+                    detail,
                 )
             )
     return blockers
@@ -991,6 +1039,7 @@ def _plan(
     audit_evidence = _audit_pass_evidence(root, sidecars, task, task_id)
 
     blocking_rules = _state_verify_blockers(rules, verify_report)
+    blocking_rules.extend(_placeholder_tz_blockers(root, rules, project_state, next_action))
     recommended_next_action = "NONE"
     dispatchability: dict[str, object] = _non_dispatchability(
         action_type,

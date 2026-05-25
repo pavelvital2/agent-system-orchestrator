@@ -12,7 +12,6 @@ from dataclasses import dataclass
 from pathlib import Path
 
 from .. import lockfile, resources
-from . import state_init, state_render
 
 
 EXIT_OK = 0
@@ -196,7 +195,8 @@ def run_create(args: object) -> int:
     print(f"Package version: {lockfile.PACKAGE_VERSION}")
     print(f"Runtime schema: {lockfile.RUNTIME_SCHEMA_VERSION}")
     print(f"Runtime state: {'initialized' if summary.runtime_state_initialized else 'not initialized'}")
-    print(f"Runtime markdown views: materialized ({summary.runtime_markdown_views})")
+    materialized = "materialized" if summary.runtime_markdown_views else "not materialized"
+    print(f"Runtime markdown views: {materialized} ({summary.runtime_markdown_views})")
     print("Created entries:")
     for entry in summary.created_entries:
         print(f"- {entry}")
@@ -205,10 +205,14 @@ def run_create(args: object) -> int:
     if args.engine_mode == lockfile.DEFAULT_ENGINE_MODE:
         print(
             "PYTHONDONTWRITEBYTECODE=1 python3 "
-            f"{summary.target / 'agent-system/tools/aso/aso.py'} status --root {summary.target} --mode workspace"
+            f"{summary.target / 'agent-system/tools/aso/aso.py'} state init --root {summary.target} "
+            "--tz project-input/TZ_REAL.md --confirm-write"
         )
     else:
-        print(f"PYTHONDONTWRITEBYTECODE=1 aso status --root {summary.target} --mode workspace")
+        print(
+            f"PYTHONDONTWRITEBYTECODE=1 aso state init --root {summary.target} "
+            "--tz project-input/TZ_REAL.md --confirm-write"
+        )
     return EXIT_OK
 
 
@@ -488,14 +492,6 @@ def create_project(
 
     copied_files = 0
     skipped_paths: tuple[str, ...] = ()
-    runtime_state_files, runtime_markdown_views = _initialize_runtime_state(
-        root=target,
-        project_name=project_name,
-        project_slug=project_slug,
-        profile=profile,
-        repo_url=repo_url,
-        default_branch=default_branch,
-    )
     created_entries = [
         ".gitignore",
         "README.md",
@@ -514,14 +510,19 @@ def create_project(
         created_entries=tuple(created_entries),
         copied_files=copied_files,
         skipped_paths=skipped_paths,
-        runtime_state_initialized=True,
-        runtime_state_files=runtime_state_files,
-        runtime_markdown_views=runtime_markdown_views,
+        runtime_state_initialized=False,
+        runtime_state_files=0,
+        runtime_markdown_views=0,
     )
 
 
 def _write_bootstrap_inputs(root: Path) -> None:
-    (root / "project-input" / "TZ.md").write_text("# TZ\n\nTIMEZONE: Europe/Moscow\n", encoding="utf-8")
+    (root / "project-input" / "README.md").write_text(
+        "# Project Input\n\n"
+        "Place the real owner-supplied TZ Markdown file in this directory before runtime bootstrap.\n"
+        "Then run `aso state init --tz project-input/<real-tz-file>.md --confirm-write`.\n",
+        encoding="utf-8",
+    )
 
 
 def build_github_dry_run_plan(
@@ -1085,46 +1086,6 @@ def _planned_local_files(*, engine_mode: str) -> tuple[str, ...]:
     return tuple(entries)
 
 
-def _initialize_runtime_state(
-    *,
-    root: Path,
-    project_name: str,
-    project_slug: str,
-    profile: str,
-    repo_url: str | None,
-    default_branch: str,
-) -> tuple[int, int]:
-    sidecars = state_init._initial_sidecars(
-        root=root,
-        project_name=project_name,
-        project_slug=project_slug,
-        tz_path=state_init.CANONICAL_TZ_PATH,
-        profile=profile,
-        repo_url=repo_url or state_init.NONE,
-        branch=default_branch,
-        package_version=lockfile.PACKAGE_VERSION,
-        runtime_schema_version=lockfile.RUNTIME_SCHEMA_VERSION,
-        probe_git=False,
-    )
-    state_root = root / "project-runtime" / "state"
-    ok, detail = state_init._validate_existing_state(state_root, sidecars)
-    if not ok:
-        raise ValueError(f"runtime state init refused: {detail}")
-    wrote, write_detail = state_init._write_sidecars(state_root, sidecars)
-    if not wrote:
-        raise ValueError(f"runtime state init failed: {write_detail}")
-    materialize_report, materialize_exit = state_render.materialize_compatibility_views(root)
-    if materialize_exit != state_render.EXIT_OK:
-        raise ValueError(f"runtime markdown materialization failed: {materialize_report.get('findings', [])}")
-    materialize_summary = materialize_report.get("summary")
-    views_written = (
-        materialize_summary.get("views_written")
-        if isinstance(materialize_summary, dict)
-        else None
-    )
-    return len(sidecars), int(views_written) if isinstance(views_written, int) else 0
-
-
 def _planned_state_init(
     *,
     target: Path,
@@ -1136,9 +1097,11 @@ def _planned_state_init(
 ) -> dict[str, object]:
     state_root = target / "project-runtime" / "state"
     return {
-        "enabled_for_local_create": True,
+        "enabled_for_local_create": False,
         "dry_run": True,
         "writes_performed": False,
+        "requires_explicit_tz": True,
+        "reason": "project create does not initialize runtime state before a real TZ is supplied",
         "project_name": project_name,
         "project_slug": project_slug,
         "profile": profile,
@@ -1147,10 +1110,7 @@ def _planned_state_init(
         "package_version": lockfile.PACKAGE_VERSION,
         "runtime_schema_version": lockfile.RUNTIME_SCHEMA_VERSION,
         "state_root": str(state_root),
-        "planned_writes": [
-            str(state_root / filename)
-            for filename in state_init.SIDECAR_FILENAMES
-        ],
+        "planned_writes": [],
         "publication_boundary": {
             "ignored_root": "project-runtime/",
             "tracked": False,
@@ -1277,7 +1237,10 @@ def _gitignore_text() -> str:
 def _readme_text(*, project_name: str, project_slug: str, engine_mode: str) -> str:
     commands = (
         (
-            "PYTHONDONTWRITEBYTECODE=1 python3 agent-system/tools/aso/aso.py state render --root . --confirm-write",
+            "# First add the real owner-supplied TZ Markdown at project-input/TZ_REAL.md.",
+            "PYTHONDONTWRITEBYTECODE=1 python3 agent-system/tools/aso/aso.py state init --root . --tz project-input/TZ_REAL.md --confirm-write",
+            "PYTHONDONTWRITEBYTECODE=1 python3 agent-system/tools/aso/aso.py intake bootstrap --root . --tz project-input/TZ_REAL.md --target-role requirements_analyst --confirm-write",
+            "PYTHONDONTWRITEBYTECODE=1 python3 agent-system/tools/aso/aso.py plan-next --root . --strict",
             "PYTHONDONTWRITEBYTECODE=1 python3 agent-system/tools/aso/aso.py status --root . --mode workspace",
             "PYTHONDONTWRITEBYTECODE=1 python3 agent-system/tools/aso/aso.py lint --root . --mode workspace --strict",
             "PYTHONDONTWRITEBYTECODE=1 python3 agent-system/tools/aso/aso.py doctor --root . --mode workspace --strict",
@@ -1286,7 +1249,10 @@ def _readme_text(*, project_name: str, project_slug: str, engine_mode: str) -> s
         if engine_mode == lockfile.DEFAULT_ENGINE_MODE
         else (
             "PYTHONDONTWRITEBYTECODE=1 aso project verify-clean --root . --strict",
-            "PYTHONDONTWRITEBYTECODE=1 aso state render --root . --confirm-write",
+            "# First add the real owner-supplied TZ Markdown at project-input/TZ_REAL.md.",
+            "PYTHONDONTWRITEBYTECODE=1 aso state init --root . --tz project-input/TZ_REAL.md --confirm-write",
+            "PYTHONDONTWRITEBYTECODE=1 aso intake bootstrap --root . --tz project-input/TZ_REAL.md --target-role requirements_analyst --confirm-write",
+            "PYTHONDONTWRITEBYTECODE=1 aso plan-next --root . --strict",
             "PYTHONDONTWRITEBYTECODE=1 aso status --root . --mode workspace",
             "PYTHONDONTWRITEBYTECODE=1 aso lint --root . --mode workspace --strict",
             "PYTHONDONTWRITEBYTECODE=1 aso doctor --root . --mode workspace --strict",

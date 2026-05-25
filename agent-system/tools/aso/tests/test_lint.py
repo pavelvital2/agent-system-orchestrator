@@ -7,6 +7,12 @@ import tempfile
 import unittest
 from pathlib import Path
 
+TESTS_DIR = Path(__file__).resolve().parent
+if str(TESTS_DIR) not in sys.path:
+    sys.path.insert(0, str(TESTS_DIR))
+
+from package_fixture_helpers import PYPROJECT_RESOURCE_DATA, write_minimal_package_resources, write_resource_manifest_in
+
 
 CLI = Path(__file__).resolve().parents[1] / "aso.py"
 
@@ -249,9 +255,12 @@ def write_package_fixture(root: Path, *, include_untracked_input: bool = False) 
             "[tool.setuptools.packages.find]\n"
             'where = ["agent-system/tools/aso"]\n'
             'include = ["agent_system_orchestrator_aso*"]\n'
-        ),
+        )
+        + PYPROJECT_RESOURCE_DATA,
         encoding="utf-8",
     )
+    write_minimal_package_resources(package)
+    write_resource_manifest_in(root)
     (root / ".gitignore").write_text(
         "/project-runtime/\n/project-input/\n/project-archive/\n",
         encoding="utf-8",
@@ -353,9 +362,19 @@ class LintCommandTests(unittest.TestCase):
     def test_lint_strict_reports_invalid_tz_path_from_state_sidecar(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
-            init = run_aso("state", "init", "--root", str(root), "--project-slug", "bad-tz", "--confirm-write")
             (root / "project-input").mkdir(exist_ok=True)
             (root / "project-input" / "TZ.md").write_text("# TZ\n\nTIMEZONE: Europe/Moscow\n", encoding="utf-8")
+            init = run_aso(
+                "state",
+                "init",
+                "--root",
+                str(root),
+                "--project-slug",
+                "bad-tz",
+                "--tz",
+                "project-input/TZ.md",
+                "--confirm-write",
+            )
             render = run_aso("state", "render", "--root", str(root), "--confirm-write")
             project_state = root / "project-runtime" / "state" / "PROJECT_STATE.json"
             payload = json.loads(project_state.read_text(encoding="utf-8"))

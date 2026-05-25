@@ -143,6 +143,8 @@ class VersionCoherenceTests(unittest.TestCase):
     def test_generated_state_and_lockfile_use_active_tuple_without_stale_output(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
+            (root / "project-input").mkdir()
+            (root / "project-input" / "TZ.md").write_text("# TZ\n\nVersion coherence.\n", encoding="utf-8")
 
             init = _run_aso(
                 "state",
@@ -153,6 +155,8 @@ class VersionCoherenceTests(unittest.TestCase):
                 "Version Coherence",
                 "--project-slug",
                 "version-coherence",
+                "--tz",
+                "project-input/TZ.md",
                 "--confirm-write",
                 "--deterministic-timestamps",
             )

@@ -27,6 +27,12 @@ def run_aso(*args: str) -> subprocess.CompletedProcess[str]:
     )
 
 
+def write_tz_file(root: Path) -> None:
+    tz_path = root / "project-input" / "TZ.md"
+    tz_path.parent.mkdir(parents=True, exist_ok=True)
+    tz_path.write_text("# TZ\n\nTIMEZONE: Europe/Moscow\n", encoding="utf-8")
+
+
 class StateRenderCommandTests(unittest.TestCase):
     def test_materialized_view_types_cover_state_init_sidecars(self) -> None:
         init_sidecar_types = {filename.removesuffix(".json") for filename in state_init.SIDECAR_FILENAMES}
@@ -48,6 +54,7 @@ class StateRenderCommandTests(unittest.TestCase):
         with tempfile.TemporaryDirectory(dir="/tmp") as tmp:
             root = Path(tmp) / "workspace"
             root.mkdir()
+            write_tz_file(root)
             init = run_aso(
                 "state",
                 "init",
@@ -57,10 +64,10 @@ class StateRenderCommandTests(unittest.TestCase):
                 "Render Test",
                 "--project-slug",
                 "render-test",
+                "--tz",
+                "project-input/TZ.md",
                 "--confirm-write",
             )
-            (root / "project-input").mkdir(exist_ok=True)
-            (root / "project-input" / "TZ.md").write_text("# TZ\n\nTIMEZONE: Europe/Moscow\n", encoding="utf-8")
             out = Path(tmp) / "state-report.md"
 
             first = run_aso("state", "render", "--root", str(root), "--format", "markdown", "--out", str(out))
@@ -79,9 +86,18 @@ class StateRenderCommandTests(unittest.TestCase):
         with tempfile.TemporaryDirectory(dir="/tmp") as tmp:
             root = Path(tmp) / "workspace"
             root.mkdir()
-            init = run_aso("state", "init", "--root", str(root), "--project-slug", "json-render", "--confirm-write")
-            (root / "project-input").mkdir(exist_ok=True)
-            (root / "project-input" / "TZ.md").write_text("# TZ\n\nTIMEZONE: Europe/Moscow\n", encoding="utf-8")
+            write_tz_file(root)
+            init = run_aso(
+                "state",
+                "init",
+                "--root",
+                str(root),
+                "--project-slug",
+                "json-render",
+                "--tz",
+                "project-input/TZ.md",
+                "--confirm-write",
+            )
             out = root / "project-runtime" / "rendered" / "state-report.json"
 
             result = run_aso("state", "render", "--root", str(root), "--format", "json", "--out", str(out))
@@ -149,7 +165,18 @@ class StateRenderCommandTests(unittest.TestCase):
         with tempfile.TemporaryDirectory(dir="/tmp") as tmp:
             root = Path(tmp) / "workspace"
             root.mkdir()
-            init = run_aso("state", "init", "--root", str(root), "--project-slug", "bad-out", "--confirm-write")
+            write_tz_file(root)
+            init = run_aso(
+                "state",
+                "init",
+                "--root",
+                str(root),
+                "--project-slug",
+                "bad-out",
+                "--tz",
+                "project-input/TZ.md",
+                "--confirm-write",
+            )
             out = root / "project-runtime" / "state-report.md"
 
             result = run_aso("state", "render", "--root", str(root), "--out", str(out))
@@ -162,6 +189,7 @@ class StateRenderCommandTests(unittest.TestCase):
         with tempfile.TemporaryDirectory(dir="/tmp") as tmp:
             root = Path(tmp) / "workspace"
             root.mkdir()
+            write_tz_file(root)
             init = run_aso(
                 "state",
                 "init",
@@ -171,10 +199,10 @@ class StateRenderCommandTests(unittest.TestCase):
                 "Materialize Test",
                 "--project-slug",
                 "materialize-test",
+                "--tz",
+                "project-input/TZ.md",
                 "--confirm-write",
             )
-            (root / "project-input").mkdir(exist_ok=True)
-            (root / "project-input" / "TZ.md").write_text("# TZ\n\nTIMEZONE: Europe/Moscow\n", encoding="utf-8")
             lint_json = Path(tmp) / "lint-before.json"
             before_lint = run_aso(
                 "lint",
@@ -238,7 +266,18 @@ class StateRenderCommandTests(unittest.TestCase):
         with tempfile.TemporaryDirectory(dir="/tmp") as tmp:
             root = Path(tmp) / "workspace"
             root.mkdir()
-            init = run_aso("state", "init", "--root", str(root), "--project-slug", "bad-combo", "--confirm-write")
+            write_tz_file(root)
+            init = run_aso(
+                "state",
+                "init",
+                "--root",
+                str(root),
+                "--project-slug",
+                "bad-combo",
+                "--tz",
+                "project-input/TZ.md",
+                "--confirm-write",
+            )
             result = run_aso(
                 "state",
                 "render",

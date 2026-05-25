@@ -8,6 +8,12 @@ import tempfile
 import unittest
 from pathlib import Path
 
+TESTS_DIR = Path(__file__).resolve().parent
+if str(TESTS_DIR) not in sys.path:
+    sys.path.insert(0, str(TESTS_DIR))
+
+from package_fixture_helpers import PYPROJECT_RESOURCE_DATA, write_minimal_package_resources, write_resource_manifest_in
+
 
 CLI = Path(__file__).resolve().parents[1] / "aso.py"
 
@@ -56,8 +62,11 @@ def _minimal_layout_fixture(root: Path) -> None:
             "[tool.setuptools.packages.find]\n"
             'where = ["agent-system/tools/aso"]\n'
             'include = ["agent_system_orchestrator_aso*"]\n'
-        ),
+        )
+        + PYPROJECT_RESOURCE_DATA,
     )
+    write_minimal_package_resources(package)
+    write_resource_manifest_in(root)
     readme = (
         "ASO CLI path: agent-system/tools/aso/aso.py\n"
         "Use --mode package for package mode and --mode workspace for workspace mode.\n"
