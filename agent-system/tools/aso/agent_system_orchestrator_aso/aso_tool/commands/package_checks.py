@@ -14,7 +14,7 @@ from .. import resources
 try:
     import tomllib
 except ModuleNotFoundError:  # pragma: no cover - Python < 3.11 fallback
-    tomllib = None
+    import tomli as tomllib
 
 
 GENERATED_ROOTS = ("project-runtime", "project-input", "project-archive")
@@ -57,11 +57,6 @@ LEGACY_TOP_LEVEL_TREE_RELPATHS = (
     "agent-system/tools/aso/models",
     "agent-system/tools/aso/parsers",
     "agent-system/tools/aso/rules",
-)
-PYPROJECT_DISCOVERY_MARKERS = (
-    'aso = "agent_system_orchestrator_aso.cli:main"',
-    'where = ["agent-system/tools/aso"]',
-    'include = ["agent_system_orchestrator_aso*"]',
 )
 CONSOLE_ENTRYPOINT = "agent_system_orchestrator_aso.cli:main"
 WORKFLOW_DIR_RELPATH = ".github/workflows"
@@ -307,101 +302,86 @@ def _check_package_layout(
         )
         return
 
-    if tomllib is not None:
-        try:
-            metadata = tomllib.loads(pyproject_text)
-        except tomllib.TOMLDecodeError as exc:
-            findings.append(
-                Finding(
-                    "PACKAGE_LAYOUT_006",
-                    "error",
-                    "pyproject.toml is invalid",
-                    f"pyproject.toml could not be parsed: {exc}.",
-                    ["pyproject.toml"],
-                    "Restore valid pyproject.toml package discovery metadata.",
-                )
-            )
-            return
-
-        project = metadata.get("project", {})
-        scripts = project.get("scripts", {}) if isinstance(project, dict) else {}
-        aso_entrypoint = scripts.get("aso") if isinstance(scripts, dict) else None
-        tool = metadata.get("tool", {})
-        setuptools = tool.get("setuptools", {}) if isinstance(tool, dict) else {}
-        packages = setuptools.get("packages", {}) if isinstance(setuptools, dict) else {}
-        find_config = packages.get("find", {}) if isinstance(packages, dict) else {}
-        where = find_config.get("where", []) if isinstance(find_config, dict) else []
-        include = find_config.get("include", []) if isinstance(find_config, dict) else []
-        package_data = setuptools.get("package-data", {}) if isinstance(setuptools, dict) else {}
-        resource_package_data = (
-            package_data.get("agent_system_orchestrator_aso.resources")
-            if isinstance(package_data, dict)
-            else None
-        )
-
-        if aso_entrypoint != CONSOLE_ENTRYPOINT:
-            findings.append(
-                Finding(
-                    "PACKAGE_LAYOUT_007",
-                    "error",
-                    "Console script entrypoint is not canonical",
-                    f"pyproject.toml project.scripts.aso must be {CONSOLE_ENTRYPOINT!r}.",
-                    ["pyproject.toml"],
-                    "Point the aso console script at agent_system_orchestrator_aso.cli:main.",
-                )
-            )
-        if CANONICAL_PACKAGE_RELPATH.rsplit("/", 1)[0] not in where:
-            findings.append(
-                Finding(
-                    "PACKAGE_LAYOUT_006",
-                    "error",
-                    "pyproject package discovery root is not canonical",
-                    "pyproject.toml must set tool.setuptools.packages.find.where to agent-system/tools/aso.",
-                    ["pyproject.toml"],
-                    "Point setuptools package discovery at agent-system/tools/aso.",
-                )
-            )
-        if "agent_system_orchestrator_aso*" not in include:
-            findings.append(
-                Finding(
-                    "PACKAGE_LAYOUT_006",
-                    "error",
-                    "pyproject package include pattern is not canonical",
-                    "pyproject.toml must include agent_system_orchestrator_aso* packages.",
-                    ["pyproject.toml"],
-                    "Keep setuptools package discovery limited to agent_system_orchestrator_aso*.",
-                )
-            )
-        if (
-            not isinstance(resource_package_data, list)
-            or "RESOURCE_MANIFEST.json" not in resource_package_data
-            or "agent-system/**/*" not in resource_package_data
-        ):
-            findings.append(
-                Finding(
-                    "PACKAGE_RESOURCES_003",
-                    "error",
-                    "Resource package data is incomplete",
-                    (
-                        "pyproject.toml must include RESOURCE_MANIFEST.json and agent-system/**/* "
-                        "for agent_system_orchestrator_aso.resources package data."
-                    ),
-                    ["pyproject.toml"],
-                    "Declare complete ASO resource package data so wheels include vendored Project Factory resources.",
-                )
-            )
-        return
-
-    missing_markers = [marker for marker in PYPROJECT_DISCOVERY_MARKERS if marker not in pyproject_text]
-    if missing_markers:
+    try:
+        metadata = tomllib.loads(pyproject_text)
+    except tomllib.TOMLDecodeError as exc:
         findings.append(
             Finding(
                 "PACKAGE_LAYOUT_006",
                 "error",
-                "pyproject package discovery is not canonical",
-                f"pyproject.toml is missing: {', '.join(missing_markers)}.",
+                "pyproject.toml is invalid",
+                f"pyproject.toml could not be parsed: {exc}.",
                 ["pyproject.toml"],
-                "Point setuptools package discovery at agent-system/tools/aso and keep the aso console script entrypoint.",
+                "Restore valid pyproject.toml package discovery metadata.",
+            )
+        )
+        return
+
+    project = metadata.get("project", {})
+    scripts = project.get("scripts", {}) if isinstance(project, dict) else {}
+    aso_entrypoint = scripts.get("aso") if isinstance(scripts, dict) else None
+    tool = metadata.get("tool", {})
+    setuptools = tool.get("setuptools", {}) if isinstance(tool, dict) else {}
+    packages = setuptools.get("packages", {}) if isinstance(setuptools, dict) else {}
+    find_config = packages.get("find", {}) if isinstance(packages, dict) else {}
+    where = find_config.get("where", []) if isinstance(find_config, dict) else []
+    include = find_config.get("include", []) if isinstance(find_config, dict) else []
+    package_data = setuptools.get("package-data", {}) if isinstance(setuptools, dict) else {}
+    resource_package_data = (
+        package_data.get("agent_system_orchestrator_aso.resources")
+        if isinstance(package_data, dict)
+        else None
+    )
+
+    if aso_entrypoint != CONSOLE_ENTRYPOINT:
+        findings.append(
+            Finding(
+                "PACKAGE_LAYOUT_007",
+                "error",
+                "Console script entrypoint is not canonical",
+                f"pyproject.toml project.scripts.aso must be {CONSOLE_ENTRYPOINT!r}.",
+                ["pyproject.toml"],
+                "Point the aso console script at agent_system_orchestrator_aso.cli:main.",
+            )
+        )
+    if CANONICAL_PACKAGE_RELPATH.rsplit("/", 1)[0] not in where:
+        findings.append(
+            Finding(
+                "PACKAGE_LAYOUT_006",
+                "error",
+                "pyproject package discovery root is not canonical",
+                "pyproject.toml must set tool.setuptools.packages.find.where to agent-system/tools/aso.",
+                ["pyproject.toml"],
+                "Point setuptools package discovery at agent-system/tools/aso.",
+            )
+        )
+    if "agent_system_orchestrator_aso*" not in include:
+        findings.append(
+            Finding(
+                "PACKAGE_LAYOUT_006",
+                "error",
+                "pyproject package include pattern is not canonical",
+                "pyproject.toml must include agent_system_orchestrator_aso* packages.",
+                ["pyproject.toml"],
+                "Keep setuptools package discovery limited to agent_system_orchestrator_aso*.",
+            )
+        )
+    if (
+        not isinstance(resource_package_data, list)
+        or "RESOURCE_MANIFEST.json" not in resource_package_data
+        or "agent-system/**/*" not in resource_package_data
+    ):
+        findings.append(
+            Finding(
+                "PACKAGE_RESOURCES_003",
+                "error",
+                "Resource package data is incomplete",
+                (
+                    "pyproject.toml must include RESOURCE_MANIFEST.json and agent-system/**/* "
+                    "for agent_system_orchestrator_aso.resources package data."
+                ),
+                ["pyproject.toml"],
+                "Declare complete ASO resource package data so wheels include vendored Project Factory resources.",
             )
         )
 

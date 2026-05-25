@@ -6,10 +6,14 @@ import re
 import subprocess
 import sys
 import tempfile
-import tomllib
 import unittest
 from importlib import util
 from pathlib import Path
+
+try:
+    import tomllib
+except ModuleNotFoundError:  # pragma: no cover - Python 3.10 fallback
+    import tomli as tomllib
 
 
 REPO_ROOT = Path(__file__).resolve().parents[4]

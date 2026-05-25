@@ -3,10 +3,14 @@ from __future__ import annotations
 import subprocess
 import sys
 import unittest
-import tomllib
 from importlib import import_module
 from importlib import metadata
 from pathlib import Path
+
+try:
+    import tomllib
+except ModuleNotFoundError:  # pragma: no cover - Python 3.10 fallback
+    import tomli as tomllib
 
 
 REPO_ROOT = Path(__file__).resolve().parents[4]
@@ -57,6 +61,12 @@ class PackagingCommandTests(unittest.TestCase):
         test_extra = pyproject["project"]["optional-dependencies"]["test"]
 
         self.assertIn("jsonschema>=4.22", test_extra)
+
+    def test_python_310_toml_parser_runtime_dependency_is_conditional(self) -> None:
+        pyproject = tomllib.loads((REPO_ROOT / "pyproject.toml").read_text(encoding="utf-8"))
+        dependencies = pyproject["project"]["dependencies"]
+
+        self.assertIn('tomli>=2; python_version < "3.11"', dependencies)
 
     def test_schema_test_environment_has_jsonschema_available(self) -> None:
         try:
@@ -170,6 +180,8 @@ class PackagingCommandTests(unittest.TestCase):
         self.assertIn("md.version('jsonschema')", makefile)
         self.assertIn("bin/aso\" --help >/dev/null", makefile)
         self.assertIn("bin/aso\" status --root . --mode package", makefile)
+        self.assertIn("project create --local --target", makefile)
+        self.assertIn("project verify-clean --root", makefile)
         self.assertIn("bin/aso\" package-layout verify --root . --mode package --strict", makefile)
         self.assertIn("agent_system_orchestrator_aso.cli", makefile)
         self.assertIn("/site-packages/agent_system_orchestrator_aso/__init__.py", makefile)
@@ -179,6 +191,19 @@ class PackagingCommandTests(unittest.TestCase):
         self.assertIn("$(MAKE) install-test-smoke", makefile)
         self.assertIn("$(MAKE) e2e-real-tz-smoke", makefile)
         self.assertIn("$(MAKE) source-contamination-guard", makefile)
+
+    def test_editable_installers_use_isolated_dependency_install(self) -> None:
+        for relpath in ("install.sh", "install.ps1"):
+            with self.subTest(relpath=relpath):
+                installer = (REPO_ROOT / relpath).read_text(encoding="utf-8")
+
+                self.assertNotIn("--system-site-packages", installer)
+                self.assertNotIn("--no-deps", installer)
+                self.assertNotIn("--no-build-isolation", installer)
+                self.assertIn("pip install --upgrade pip setuptools wheel", installer)
+                self.assertIn("install -e .", installer)
+                self.assertIn("project create --local --target", installer)
+                self.assertIn("project verify-clean --root", installer)
 
 
 if __name__ == "__main__":

@@ -62,7 +62,7 @@ if [ ! -f "pyproject.toml" ] || [ ! -f "agent-system/tools/aso/aso.py" ]; then
   exit 1
 fi
 
-"$python_bin" -m venv --system-site-packages "$venv_dir"
+"$python_bin" -m venv "$venv_dir"
 
 venv_python="$venv_dir/bin/python"
 venv_pip="$venv_dir/bin/pip"
@@ -73,20 +73,8 @@ if [ ! -x "$venv_python" ] || [ ! -x "$venv_pip" ]; then
   exit 1
 fi
 
-"$venv_python" - <<'PY'
-import setuptools
-import re
-
-match = re.match(r"^(\d+)", setuptools.__version__)
-major = int(match.group(1)) if match else 0
-if major < 68:
-    raise SystemExit(
-        "setuptools>=68 is required for local editable install; "
-        f"found {setuptools.__version__}"
-    )
-PY
-
-"$venv_pip" install --no-deps --no-build-isolation -e .
+PYTHONDONTWRITEBYTECODE=1 "$venv_python" -m pip install --upgrade pip setuptools wheel
+PYTHONDONTWRITEBYTECODE=1 "$venv_pip" install -e .
 
 if [ "$verify_install" -eq 1 ]; then
   if [ ! -x "$venv_aso" ]; then
@@ -98,6 +86,10 @@ if [ "$verify_install" -eq 1 ]; then
   PYTHONDONTWRITEBYTECODE=1 "$venv_aso" status --root . --mode package >/dev/null
   PYTHONDONTWRITEBYTECODE=1 "$venv_aso" project create --help >/dev/null
   PYTHONDONTWRITEBYTECODE=1 "$venv_aso" project verify-clean --help >/dev/null
+  project_smoke_dir="$(mktemp -d "${TMPDIR:-/tmp}/aso-install-project-smoke.XXXXXX")"
+  trap 'rm -rf "$project_smoke_dir"' EXIT
+  PYTHONDONTWRITEBYTECODE=1 "$venv_aso" project create --local --target "$project_smoke_dir/project" --name "ASO Install Smoke" --slug "aso-install-smoke" >/dev/null
+  PYTHONDONTWRITEBYTECODE=1 "$venv_aso" project verify-clean --root "$project_smoke_dir/project" --strict >/dev/null
   PYTHONDONTWRITEBYTECODE=1 "$venv_aso" package-layout verify --root . --strict
 fi
 

@@ -8,7 +8,9 @@ version = "3.7.9"
 description = "Filesystem-governed Agent System Orchestrator package with read-only ASO helper CLI."
 readme = "README.md"
 requires-python = ">=3.10"
-dependencies = []
+dependencies = [
+    "tomli>=2; python_version < \"3.11\"",
+]
 
 [project.optional-dependencies]
 test = [

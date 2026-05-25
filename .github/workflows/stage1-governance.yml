@@ -17,9 +17,16 @@ permissions:
 
 jobs:
   package-governance:
-    name: Package governance checks
+    name: Package governance checks (${{ matrix.python-version }})
     runs-on: ubuntu-latest
     timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version:
+          - "3.10"
+          - "3.11"
+          - "3.12"
     env:
       PYTHONDONTWRITEBYTECODE: "1"
       PYTHONUNBUFFERED: "1"
@@ -29,8 +36,20 @@ jobs:
         with:
           persist-credentials: false
 
-      - name: Show Python version
-        run: python3 --version
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Install ASO test dependencies
+        run: |
+          bash agent-system/scripts/install_aso_clean.sh \
+            --source . \
+            --venv "$RUNNER_TEMP/aso-ci-test-venv" \
+            --python python \
+            --fresh \
+            --with-test \
+            --skip-verify
 
       - name: CI governance checks
-        run: make ci
+        run: make ci PYTHON="$RUNNER_TEMP/aso-ci-test-venv/bin/python"

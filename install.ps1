@@ -35,7 +35,7 @@ if (!(Test-Path "pyproject.toml") -or !(Test-Path "agent-system/tools/aso/aso.py
     throw "install.ps1: run from the agent-system-orchestrator repository root"
 }
 
-& $Python -m venv --system-site-packages $Venv
+& $Python -m venv $Venv
 
 $VenvPython = Join-Path $Venv "Scripts/python.exe"
 $VenvPip = Join-Path $Venv "Scripts/pip.exe"
@@ -45,20 +45,8 @@ if (!(Test-Path $VenvPython) -or !(Test-Path $VenvPip)) {
     throw "install.ps1: virtual environment was not created correctly at $Venv"
 }
 
-& $VenvPython -c @"
-import re
-import setuptools
-
-match = re.match(r"^(\d+)", setuptools.__version__)
-major = int(match.group(1)) if match else 0
-if major < 68:
-    raise SystemExit(
-        "setuptools>=68 is required for local editable install; "
-        f"found {setuptools.__version__}"
-    )
-"@
-
-& $VenvPip install --no-deps --no-build-isolation -e .
+& $VenvPython -m pip install --upgrade pip setuptools wheel
+& $VenvPip install -e .
 
 if (!$SkipVerify) {
     if (!(Test-Path $VenvAso)) {
@@ -70,6 +58,16 @@ if (!$SkipVerify) {
     & $VenvAso status --root . --mode package | Out-Null
     & $VenvAso project create --help | Out-Null
     & $VenvAso project verify-clean --help | Out-Null
+    $ProjectSmokeDir = Join-Path ([System.IO.Path]::GetTempPath()) ("aso-install-project-smoke-" + [System.Guid]::NewGuid().ToString("N"))
+    try {
+        & $VenvAso project create --local --target (Join-Path $ProjectSmokeDir "project") --name "ASO Install Smoke" --slug "aso-install-smoke" | Out-Null
+        & $VenvAso project verify-clean --root (Join-Path $ProjectSmokeDir "project") --strict | Out-Null
+    }
+    finally {
+        if (Test-Path $ProjectSmokeDir) {
+            Remove-Item -Recurse -Force $ProjectSmokeDir
+        }
+    }
     & $VenvAso package-layout verify --root . --strict
 }
 

@@ -20,6 +20,10 @@ verify-install:
 	PYTHONDONTWRITEBYTECODE=1 "$(ASO_BIN)" status --root . --mode package
 	PYTHONDONTWRITEBYTECODE=1 "$(ASO_BIN)" project create --help >/dev/null
 	PYTHONDONTWRITEBYTECODE=1 "$(ASO_BIN)" project verify-clean --help >/dev/null
+	tmp_dir="$$(mktemp -d)"; \
+	trap 'rm -rf "$$tmp_dir"' EXIT; \
+	PYTHONDONTWRITEBYTECODE=1 "$(ASO_BIN)" project create --local --target "$$tmp_dir/project" --name "ASO Install Smoke" --slug "aso-install-smoke" >/dev/null; \
+	PYTHONDONTWRITEBYTECODE=1 "$(ASO_BIN)" project verify-clean --root "$$tmp_dir/project" --strict >/dev/null
 	PYTHONDONTWRITEBYTECODE=1 "$(ASO_BIN)" lint --root . --mode package --strict
 	PYTHONDONTWRITEBYTECODE=1 "$(ASO_BIN)" doctor --root . --mode package --strict
 	PYTHONDONTWRITEBYTECODE=1 "$(ASO_BIN)" package-layout verify --root . --strict
@@ -30,6 +34,8 @@ install-smoke:
 	PYTHONDONTWRITEBYTECODE=1 bash agent-system/scripts/install_aso_clean.sh --source . --venv "$$tmp_dir/venv" --python "$(PYTHON)"; \
 	PYTHONDONTWRITEBYTECODE=1 "$$tmp_dir/venv/bin/aso" --help >/dev/null; \
 	PYTHONDONTWRITEBYTECODE=1 "$$tmp_dir/venv/bin/aso" status --root . --mode package; \
+	PYTHONDONTWRITEBYTECODE=1 "$$tmp_dir/venv/bin/aso" project create --local --target "$$tmp_dir/project" --name "ASO Install Smoke" --slug "aso-install-smoke" >/dev/null; \
+	PYTHONDONTWRITEBYTECODE=1 "$$tmp_dir/venv/bin/aso" project verify-clean --root "$$tmp_dir/project" --strict >/dev/null; \
 	PYTHONDONTWRITEBYTECODE=1 "$$tmp_dir/venv/bin/aso" package-layout verify --root . --mode package --strict; \
 	PYTHONDONTWRITEBYTECODE=1 "$$tmp_dir/venv/bin/python" -c "import importlib.metadata as md, json, pathlib; import agent_system_orchestrator_aso, agent_system_orchestrator_aso.cli as cli; dist = md.distribution('agent-system-orchestrator'); direct_url = json.loads(dist.read_text('direct_url.json') or '{}'); source = pathlib.Path(agent_system_orchestrator_aso.__file__).resolve().as_posix(); assert direct_url.get('dir_info', {}).get('editable') is not True, direct_url; assert '/site-packages/agent_system_orchestrator_aso/__init__.py' in source, source; assert callable(cli.main), cli.main; print(source)"
 
@@ -38,6 +44,8 @@ install-test-smoke:
 	trap 'rm -rf "$$tmp_dir"' EXIT; \
 	PYTHONDONTWRITEBYTECODE=1 bash agent-system/scripts/install_aso_clean.sh --source . --venv "$$tmp_dir/venv" --python "$(PYTHON)" --with-test; \
 	PYTHONDONTWRITEBYTECODE=1 "$$tmp_dir/venv/bin/aso" --help >/dev/null; \
+	PYTHONDONTWRITEBYTECODE=1 "$$tmp_dir/venv/bin/aso" project create --local --target "$$tmp_dir/project" --name "ASO Install Smoke" --slug "aso-install-smoke" >/dev/null; \
+	PYTHONDONTWRITEBYTECODE=1 "$$tmp_dir/venv/bin/aso" project verify-clean --root "$$tmp_dir/project" --strict >/dev/null; \
 	PYTHONDONTWRITEBYTECODE=1 "$$tmp_dir/venv/bin/python" -c "import importlib.metadata as md; import jsonschema; assert md.version('jsonschema'); assert jsonschema.__name__ == 'jsonschema'; print(md.version('jsonschema'))"
 
 e2e-real-tz-smoke:

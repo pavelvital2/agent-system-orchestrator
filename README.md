@@ -173,9 +173,11 @@ isolated source archive with `agent-system/scripts/install_aso_clean.sh`,
 verifies `aso --help`, `aso status --root . --mode package`, strict
 package-layout verification, and imports the installed
 `agent_system_orchestrator_aso` package from virtualenv `site-packages`.
-`make install-test-smoke` repeats the clean install with `--with-test` and
-imports `jsonschema` from that temporary virtual environment, proving the
-supported test extra rather than relying on an ambient global package.
+`make install-test-smoke` repeats the clean install with `--with-test`, imports
+`jsonschema` from that temporary virtual environment, and runs an installed
+Project Factory local create plus `verify-clean` smoke. Python 3.10 installs
+receive the conditional `tomli` runtime dependency for TOML parsing; Python
+3.11+ uses stdlib `tomllib`.
 
 For local console-script use from this repository:
 

@@ -30,7 +30,14 @@ FORBIDDEN_WORKFLOW_PATTERNS = (
 )
 
 REQUIRED_WORKFLOW_COMMANDS = (
-    "make ci",
+    "actions/setup-python",
+    'python-version: ${{ matrix.python-version }}',
+    "- \"3.10\"",
+    "install_aso_clean.sh",
+    "--venv \"$RUNNER_TEMP/aso-ci-test-venv\"",
+    "--with-test",
+    "--skip-verify",
+    'make ci PYTHON="$RUNNER_TEMP/aso-ci-test-venv/bin/python"',
 )
 
 REQUIRED_MAKEFILE_COMMANDS = (
@@ -68,6 +75,7 @@ class Stage2CIGovernanceTests(unittest.TestCase):
         self.assertIn("uses: actions/checkout@v5", workflow)
         self.assertNotIn("uses: actions/checkout@v4", workflow)
         self.assertIn("persist-credentials: false", workflow)
+        self.assertNotIn('python -m pip install -e ".[test]"', workflow)
         for command in REQUIRED_WORKFLOW_COMMANDS:
             with self.subTest(command=command):
                 self.assertIn(command, workflow)

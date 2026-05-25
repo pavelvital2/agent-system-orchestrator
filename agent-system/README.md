@@ -443,8 +443,10 @@ fixtures, rule validation, state sidecar verification, dry-run next-action
 planning, static dashboard rendering to `/tmp`, checkpoint preflight, and the
 local Stage 3 diagnostics. `make install-smoke` performs a clean isolated
 install from a source archive. `make install-test-smoke` repeats that clean
-install with the supported `[test]` extra and imports `jsonschema` from the
-temporary virtual environment instead of relying on an ambient global package.
+install with the supported `[test]` extra, imports `jsonschema` from the
+temporary virtual environment, and runs an installed Project Factory local
+create plus `verify-clean` smoke. Python 3.10 receives the conditional `tomli`
+runtime dependency for TOML parsing while Python 3.11+ uses stdlib `tomllib`.
 `make ci` runs `test`, `smoke`, `doctor`, `lint`, clean install smoke, clean
 `[test]` install smoke, real-TZ E2E smoke, source contamination guard, and
 `git diff --check`. The GitHub Actions workflow runs the same `make ci`

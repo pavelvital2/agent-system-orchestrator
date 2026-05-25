@@ -10,15 +10,10 @@ from . import repair_hints
 try:
     import tomllib
 except ModuleNotFoundError:  # pragma: no cover - Python < 3.11 fallback
-    tomllib = None
+    import tomli as tomllib
 
 
 PACKAGE_ROOT = "agent-system/tools/aso"
-PACKAGE_PYPROJECT_MARKERS = (
-    'aso = "agent_system_orchestrator_aso.cli:main"',
-    'where = ["agent-system/tools/aso"]',
-    'include = ["agent_system_orchestrator_aso*"]',
-)
 WORKSPACE_STATE_GLOBS = (
     "project-runtime/state/*.json",
     "project-runtime/PROJECT_STATE.md",
@@ -168,24 +163,21 @@ def _is_aso_pyproject(path: Path) -> bool:
     except OSError:
         return False
 
-    if tomllib is not None:
-        try:
-            metadata = tomllib.loads(text)
-        except tomllib.TOMLDecodeError:
-            return False
-        project = metadata.get("project", {})
-        scripts = project.get("scripts", {}) if isinstance(project, dict) else {}
-        aso_entrypoint = scripts.get("aso") if isinstance(scripts, dict) else None
-        tool = metadata.get("tool", {})
-        setuptools = tool.get("setuptools", {}) if isinstance(tool, dict) else {}
-        packages = setuptools.get("packages", {}) if isinstance(setuptools, dict) else {}
-        find_config = packages.get("find", {}) if isinstance(packages, dict) else {}
-        where = find_config.get("where", []) if isinstance(find_config, dict) else []
-        include = find_config.get("include", []) if isinstance(find_config, dict) else []
-        return (
-            aso_entrypoint == "agent_system_orchestrator_aso.cli:main"
-            and "agent-system/tools/aso" in where
-            and "agent_system_orchestrator_aso*" in include
-        )
-
-    return all(marker in text for marker in PACKAGE_PYPROJECT_MARKERS)
+    try:
+        metadata = tomllib.loads(text)
+    except tomllib.TOMLDecodeError:
+        return False
+    project = metadata.get("project", {})
+    scripts = project.get("scripts", {}) if isinstance(project, dict) else {}
+    aso_entrypoint = scripts.get("aso") if isinstance(scripts, dict) else None
+    tool = metadata.get("tool", {})
+    setuptools = tool.get("setuptools", {}) if isinstance(tool, dict) else {}
+    packages = setuptools.get("packages", {}) if isinstance(setuptools, dict) else {}
+    find_config = packages.get("find", {}) if isinstance(packages, dict) else {}
+    where = find_config.get("where", []) if isinstance(find_config, dict) else []
+    include = find_config.get("include", []) if isinstance(find_config, dict) else []
+    return (
+        aso_entrypoint == "agent_system_orchestrator_aso.cli:main"
+        and "agent-system/tools/aso" in where
+        and "agent_system_orchestrator_aso*" in include
+    )

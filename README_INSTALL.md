@@ -58,12 +58,11 @@ package, and verifies the installed `aso` command. It uses local Python
 packaging only; it does not require secrets, GitHub credentials, remote
 repository access, dispatch authority, checkpoint execution, commit, push, or
 publication rights.
-On POSIX systems, `install.sh` creates the virtual environment with
-`--system-site-packages` so existing environment-provided packaging tools such
-as `setuptools` can satisfy the editable install bootstrap. ASO runtime
-validation remains stdlib-only for its packaged schema/contract checks; the
-installer must still verify the canonical package from this checkout, not a
-root-level duplicate Python tree.
+On POSIX systems, `install.sh` creates an isolated virtual environment,
+upgrades `pip`, `setuptools`, and `wheel` inside that environment, and installs
+ASO with normal dependency and build isolation behavior. The installer must
+still verify the canonical package from this checkout, not a root-level
+duplicate Python tree.
 
 This install document covers package version `3.7.9` with runtime schema
 `3.1.1` and artifact package schema `1.1.0`. P57 documents ASO workflow
@@ -96,8 +95,11 @@ python3 -m pip install -e ".[test]"
 PYTHONDONTWRITEBYTECODE=1 python3 -m unittest discover -s agent-system/tools/aso/tests
 ```
 
-The `test` extra includes `jsonschema>=4.22`, which is required by the schema
-and dispatchability contract tests.
+The runtime dependencies include `tomli>=2` only on Python versions older than
+3.11 so installed Python 3.10 commands can parse TOML through the same
+`tomllib` interface used on newer Python versions. The `test` extra includes
+`jsonschema>=4.22`, which is required by the schema and dispatchability
+contract tests.
 
 Installed `aso` commands resolve required governance resources from packaged
 package data, not from the virtualenv root or the current working directory.
@@ -233,12 +235,15 @@ must cite accepted artifact packages or rendered views under
 `project-runtime/rendered/`; raw agent context is not accepted project truth.
 `AUDIT_ROUTE_READY` does not dispatch live agents or execute checkpoints.
 
-Project Factory help should also be available after install:
+Project Factory help and a local create/verify-clean smoke should also be
+available after install:
 
 ```text
 aso project create --help
 aso project verify-clean --help
 aso wizard --help
+aso project create --local --target /tmp/aso-install-project-smoke --name "ASO Install Smoke" --slug aso-install-smoke
+aso project verify-clean --root /tmp/aso-install-project-smoke --strict
 ```
 
 Runtime State P2 state commands should be available after install:
