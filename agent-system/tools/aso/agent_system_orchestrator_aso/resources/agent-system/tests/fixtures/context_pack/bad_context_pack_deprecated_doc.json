@@ -1,0 +1,23 @@
+{
+  "task_id": "TASK_BAD_DEPRECATED_DOC",
+  "required_docs": [
+    {
+      "path": "agent-system/tests/fixtures/context_pack/deprecated_context_doc.md",
+      "sections": [
+        "Deprecated Context"
+      ],
+      "why_needed": "Invalid deprecated context"
+    }
+  ],
+  "forbidden_docs": [
+    "project-archive/"
+  ],
+  "source_of_truth": [
+    "agent-system/tests/fixtures/context_pack/deprecated_context_doc.md"
+  ],
+  "context_budget": {
+    "max_docs": 3,
+    "max_sections_per_doc": 4,
+    "max_chars_total": 5000
+  }
+}

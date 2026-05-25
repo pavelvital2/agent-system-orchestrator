@@ -1,0 +1,28 @@
+{
+  "schema_version": "1.0",
+  "registry_id": "invalid-duplicate-fixture",
+  "rules": [
+    {
+      "id": "GOV-FIXTURE-DUPLICATE",
+      "severity": "error",
+      "source_docs": [
+        "agent-system/09_validators/RESULT_VALIDATION_RULES.md"
+      ],
+      "check_target": "profile_agent_result",
+      "trigger": "first duplicate fixture rule",
+      "expected_action": "validate_schema",
+      "rationale": "This fixture rule is structurally valid except for duplicate ID coverage."
+    },
+    {
+      "id": "GOV-FIXTURE-DUPLICATE",
+      "severity": "warning",
+      "source_docs": [
+        "agent-system/09_validators/RESULT_VALIDATION_RULES.md"
+      ],
+      "check_target": "profile_agent_result",
+      "trigger": "second duplicate fixture rule",
+      "expected_action": "warn",
+      "rationale": "This fixture rule intentionally duplicates the first rule ID."
+    }
+  ]
+}

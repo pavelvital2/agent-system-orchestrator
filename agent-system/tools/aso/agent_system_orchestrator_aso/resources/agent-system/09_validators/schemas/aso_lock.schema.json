@@ -1,0 +1,177 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://agent-system.local/schemas/aso_lock.schema.json",
+  "title": "aso.lock",
+  "description": "Project Factory and Safe Proposal / Apply P3 lockfile contract for generated ASO project workspaces. Accepted engine tuples are active P58 3.7.9/3.1.1 plus legacy-compatible P57 3.7.8/3.1.1, legacy-compatible P5.3 3.7.3/3.1.1, legacy-compatible P5.2 3.7.2/3.1.0, legacy-compatible P5.1 3.7.1/3.1.0, legacy-compatible P4.1 3.6.1/3.1.0, legacy-compatible P4 3.6.0/3.1.0, legacy-compatible P3 3.5.0/3.1.0, legacy-compatible P2 3.4.0/3.1.0, legacy-compatible P1 3.3.0/3.0.0, and legacy-compatible P0 3.2.0/3.0.0.",
+  "type": "object",
+  "additionalProperties": true,
+  "required": [
+    "lockfile_version",
+    "aso_engine",
+    "project",
+    "publication_boundary"
+  ],
+  "properties": {
+    "lockfile_version": { "type": "string", "const": "1.0" },
+    "aso_engine": { "$ref": "#/$defs/aso_engine" },
+    "project": { "$ref": "#/$defs/project" },
+    "publication_boundary": { "$ref": "#/$defs/publication_boundary" }
+  },
+  "$defs": {
+    "aso_engine": {
+      "type": "object",
+      "additionalProperties": true,
+      "required": [
+        "package_name",
+        "version",
+        "runtime_schema",
+        "source",
+        "engine_mode"
+      ],
+      "properties": {
+        "package_name": { "type": "string", "const": "agent-system-orchestrator" },
+        "version": { "type": "string", "enum": ["3.7.9", "3.7.8", "3.7.3", "3.7.2", "3.7.1", "3.6.1", "3.6.0", "3.5.0", "3.4.0", "3.3.0", "3.2.0"] },
+        "runtime_schema": { "type": "string", "enum": ["3.1.1", "3.1.0", "3.0.0"] },
+        "source": { "type": "string", "minLength": 1 },
+        "engine_mode": { "type": "string", "enum": ["vendored", "reference"] }
+      },
+      "oneOf": [
+        {
+          "properties": {
+            "version": { "const": "3.7.9" },
+            "runtime_schema": { "const": "3.1.1" }
+          }
+        },
+        {
+          "properties": {
+            "version": { "const": "3.7.8" },
+            "runtime_schema": { "const": "3.1.1" }
+          }
+        },
+        {
+          "properties": {
+            "version": { "const": "3.7.3" },
+            "runtime_schema": { "const": "3.1.1" }
+          }
+        },
+        {
+          "properties": {
+            "version": { "const": "3.7.2" },
+            "runtime_schema": { "const": "3.1.0" }
+          }
+        },
+        {
+          "properties": {
+            "version": { "const": "3.7.1" },
+            "runtime_schema": { "const": "3.1.0" }
+          }
+        },
+        {
+          "properties": {
+            "version": { "const": "3.6.1" },
+            "runtime_schema": { "const": "3.1.0" }
+          }
+        },
+        {
+          "properties": {
+            "version": { "const": "3.6.0" },
+            "runtime_schema": { "const": "3.1.0" }
+          }
+        },
+        {
+          "properties": {
+            "version": { "const": "3.5.0" },
+            "runtime_schema": { "const": "3.1.0" }
+          }
+        },
+        {
+          "properties": {
+            "version": { "const": "3.4.0" },
+            "runtime_schema": { "const": "3.1.0" }
+          }
+        },
+        {
+          "properties": {
+            "version": { "const": "3.3.0" },
+            "runtime_schema": { "const": "3.0.0" }
+          }
+        },
+        {
+          "properties": {
+            "version": { "const": "3.2.0" },
+            "runtime_schema": { "const": "3.0.0" }
+          }
+        }
+      ]
+    },
+    "project": {
+      "type": "object",
+      "additionalProperties": true,
+      "required": [
+        "name",
+        "slug",
+        "profile",
+        "repo_url",
+        "default_branch"
+      ],
+      "properties": {
+        "name": { "type": "string", "minLength": 1 },
+        "slug": { "type": "string", "minLength": 1 },
+        "profile": { "type": "string", "minLength": 1, "default": "generic" },
+        "repo_url": {
+          "oneOf": [
+            { "type": "string" },
+            { "type": "null" }
+          ]
+        },
+        "default_branch": { "type": "string", "minLength": 1, "default": "main" }
+      }
+    },
+    "publication_boundary": {
+      "type": "object",
+      "additionalProperties": true,
+      "required": [
+        "ignored_roots",
+        "forbidden_tracked_roots"
+      ],
+      "properties": {
+        "ignored_roots": {
+          "type": "array",
+          "items": { "type": "string" },
+          "contains": { "const": "project-input/" }
+        },
+        "forbidden_tracked_roots": {
+          "type": "array",
+          "items": { "type": "string" },
+          "contains": { "const": "project-input/" }
+        }
+      },
+      "allOf": [
+        {
+          "properties": {
+            "ignored_roots": {
+              "allOf": [
+                { "contains": { "const": "project-input/" } },
+                { "contains": { "const": "project-runtime/" } },
+                { "contains": { "const": "project-archive/" } },
+                { "contains": { "const": ".venv/" } }
+              ]
+            }
+          }
+        },
+        {
+          "properties": {
+            "forbidden_tracked_roots": {
+              "allOf": [
+                { "contains": { "const": "project-input/" } },
+                { "contains": { "const": "project-runtime/" } },
+                { "contains": { "const": "project-archive/" } },
+                { "contains": { "const": ".venv/" } }
+              ]
+            }
+          }
+        }
+      ]
+    }
+  }
+}

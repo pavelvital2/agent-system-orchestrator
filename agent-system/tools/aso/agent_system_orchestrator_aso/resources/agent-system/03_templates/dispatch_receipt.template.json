@@ -1,0 +1,18 @@
+{
+  "receipt_type": "DISPATCH_RECEIPT",
+  "schema_version": "1.0.0",
+  "agent_instance_id": "<AGENT_INSTANCE_ID>",
+  "task_id": "<TASK_ID>",
+  "role": "<PROFILE_ROLE>",
+  "runner": "external_codex_cli",
+  "runner_semantics": "ASO records dispatch evidence for an externally invoked Codex CLI run; ASO does not execute the runner, daemonize work, or mutate task outputs.",
+  "model": "<MODEL_OR_UNKNOWN>",
+  "reasoning_effort": "<low|medium|high|xhigh>",
+  "prompt_ref": "<PROMPT_REF>",
+  "handoff_ref": "<HANDOFF_REF>",
+  "started_at": "<RFC3339_UTC>",
+  "receipt_ref": "project-runtime/agents/dispatches/<AGENT_INSTANCE_ID>.json",
+  "receipt_path": "project-runtime/agents/dispatches/<AGENT_INSTANCE_ID>.json",
+  "external_runner_command_template": "codex exec -C <WORKSPACE_ROOT> -m <MODEL> -c model_reasoning_effort=\"<REASONING_EFFORT>\" - < <PROMPT_REF>",
+  "live_dispatch_performed_by_aso": false
+}

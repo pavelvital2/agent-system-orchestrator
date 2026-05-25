@@ -1,0 +1,118 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://aso.local/state/workspace_identity.schema.json",
+  "title": "WORKSPACE_IDENTITY sidecar",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "sidecar_type",
+    "markdown_source",
+    "state_revision",
+    "updated_at",
+    "updated_by",
+    "content"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": "2.0.0"
+    },
+    "sidecar_type": {
+      "const": "WORKSPACE_IDENTITY"
+    },
+    "markdown_source": {
+      "const": "project-runtime/WORKSPACE_IDENTITY.md"
+    },
+    "state_revision": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "updated_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "updated_by": {
+      "type": "string",
+      "minLength": 1
+    },
+    "content": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "workspace_id",
+        "project_slug",
+        "workspace_type",
+        "expected_git_remote",
+        "actual_git_remote",
+        "expected_branch",
+        "actual_branch",
+        "identity_validation_status",
+        "repository_lock_status",
+        "push_allowed",
+        "validated_at",
+        "validation_errors"
+      ],
+      "properties": {
+        "workspace_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "project_slug": {
+          "type": "string",
+          "minLength": 1
+        },
+        "workspace_type": {
+          "type": "string",
+          "enum": [
+            "package_repository",
+            "project_workspace",
+            "test_fixture"
+          ]
+        },
+        "expected_git_remote": {
+          "type": "string"
+        },
+        "actual_git_remote": {
+          "type": "string"
+        },
+        "expected_branch": {
+          "type": "string",
+          "minLength": 1
+        },
+        "actual_branch": {
+          "type": "string",
+          "minLength": 1
+        },
+        "identity_validation_status": {
+          "type": "string",
+          "enum": [
+            "passed",
+            "failed",
+            "pending"
+          ]
+        },
+        "repository_lock_status": {
+          "type": "string",
+          "enum": [
+            "passed",
+            "failed",
+            "pending"
+          ]
+        },
+        "push_allowed": {
+          "type": "boolean"
+        },
+        "validated_at": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "validation_errors": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,95 @@
+{
+  "package_id": "AUDIT_RESULT_PACKAGE_TASK_TEMPLATE_ATTEMPT_001",
+  "schema_version": "1.0.0",
+  "package_version": "3.7.9",
+  "governance_ruleset_version": "3.7.9",
+  "runtime_schema_version": "3.1.1",
+  "artifact_package_schema_version": "1.1.0",
+  "audit_result_ref": "project-runtime/results/audit/AUDIT_RESULT_TASK_TEMPLATE_ATTEMPT_001.md",
+  "audited_result_package_ref": "project-runtime/artifacts/accepted/RESULT_PACKAGE_TASK_TEMPLATE_ATTEMPT_001.json",
+  "audited_result_acceptance_status": "accepted",
+  "audited_result_ref": "project-runtime/results/worker/RESULT_TASK_TEMPLATE_ATTEMPT_001.md",
+  "task_id": "TASK_TEMPLATE",
+  "agent_instance_id": "audit_TASK_TEMPLATE_attempt_001",
+  "status": "pass",
+  "audit_scope": [
+    "RESULT package schema fields",
+    "changed file scope",
+    "forbidden workspace-local roots"
+  ],
+  "mandatory_checks": [
+    {
+      "check_id": "CHANGED_FILES_SCOPE_STATUS",
+      "status": "passed",
+      "evidence": "Template has no changed files."
+    },
+    {
+      "check_id": "TASK_PACKET_SCHEMA_STATUS",
+      "status": "not_applicable",
+      "evidence": "No task packet is included in this template."
+    },
+    {
+      "check_id": "REPOSITORY_IDENTITY_STATUS",
+      "status": "not_applicable",
+      "evidence": "Template does not inspect or mutate repository identity."
+    },
+    {
+      "check_id": "FORBIDDEN_PATH_STATUS",
+      "status": "passed",
+      "evidence": "Template references no publishable artifact under workspace-local roots."
+    },
+    {
+      "check_id": "RUNTIME_MUTATION_STATUS",
+      "status": "passed",
+      "evidence": "Template performs no runtime mutation."
+    },
+    {
+      "check_id": "EVIDENCE_STATUS",
+      "status": "passed",
+      "evidence": "Template includes placeholder audit evidence."
+    },
+    {
+      "check_id": "SECRET_EXPOSURE_STATUS",
+      "status": "passed",
+      "evidence": "Template contains no secrets."
+    },
+    {
+      "check_id": "REASONING_LEVEL_COMPLIANCE",
+      "status": "not_applicable",
+      "evidence": "Template does not execute a task packet."
+    },
+    {
+      "check_id": "VALIDATED_TASK_PACKETS",
+      "status": "not_applicable",
+      "evidence": "Template changes no task packet files."
+    }
+  ],
+  "findings": "NONE",
+  "changed_files": "NONE",
+  "created_files": "NONE",
+  "deleted_files": "NONE",
+  "evidence": [
+    "AUDIT_STATUS: passed"
+  ],
+  "scope_verification": [
+    "No checkpoint, commit, push, dispatch, storage, or lifecycle mutation is authorized by this package template."
+  ],
+  "forbidden_changes_check": [
+    "Workspace-local roots are excluded from publishable package artifacts."
+  ],
+  "risks": "NONE",
+  "limitations": "NONE",
+  "blockers": "NONE",
+  "next_recommended_action": [
+    "CHECKPOINT_PREFLIGHT"
+  ],
+  "reuse_allowed": false,
+  "agent_termination_required": true,
+  "validation": {
+    "status": "not_run",
+    "validators": "NONE",
+    "notes": [
+      "Template only. It does not authorize checkpoint execution."
+    ]
+  }
+}

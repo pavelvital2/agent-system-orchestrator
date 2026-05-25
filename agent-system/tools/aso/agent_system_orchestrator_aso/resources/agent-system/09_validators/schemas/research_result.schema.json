@@ -1,0 +1,51 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://agent-system.local/schemas/research_result.schema.json",
+  "title": "RESEARCH_RESULT_EXTENSION",
+  "description": "Machine-readable sidecar for agent-system/03_templates/RESEARCH_RESULT_TEMPLATE.md. Apply with result.schema.json when the dispatch context has TASK_KIND: research_dependency.",
+  "type": "object",
+  "additionalProperties": true,
+  "required": [
+    "RESEARCH_QUESTION_ID",
+    "RESEARCH_SUMMARY",
+    "SOURCES_USED",
+    "EVIDENCE_MATRIX",
+    "UNRESOLVED_FINDINGS",
+    "DESIGN_OR_TASK_IMPLICATIONS",
+    "RECOMMENDED_NEXT_ACTION"
+  ],
+  "properties": {
+    "RESEARCH_QUESTION_ID": { "type": "string", "minLength": 1 },
+    "RESEARCH_SUMMARY": { "$ref": "#/$defs/listOrNone" },
+    "SOURCES_USED": { "$ref": "#/$defs/listOrNone" },
+    "EVIDENCE_MATRIX": {
+      "oneOf": [
+        { "const": "NONE" },
+        { "type": "array", "minItems": 1, "items": { "$ref": "#/$defs/researchEvidenceRow" } }
+      ]
+    },
+    "UNRESOLVED_FINDINGS": { "$ref": "#/$defs/listOrNone" },
+    "DESIGN_OR_TASK_IMPLICATIONS": { "$ref": "#/$defs/listOrNone" },
+    "RECOMMENDED_NEXT_ACTION": { "$ref": "#/$defs/listOrNone" }
+  },
+  "$defs": {
+    "listOrNone": {
+      "oneOf": [
+        { "const": "NONE" },
+        { "type": "array", "items": { "type": "string" } }
+      ]
+    },
+    "researchEvidenceRow": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["QUESTION", "SOURCE", "FINDING", "CONFIDENCE", "LIMITATION"],
+      "properties": {
+        "QUESTION": { "type": "string" },
+        "SOURCE": { "type": "string" },
+        "FINDING": { "type": "string" },
+        "CONFIDENCE": { "type": "string", "enum": ["low", "default", "high", "maximum"] },
+        "LIMITATION": { "type": "string" }
+      }
+    }
+  }
+}

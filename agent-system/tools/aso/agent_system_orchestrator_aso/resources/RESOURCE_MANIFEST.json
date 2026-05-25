@@ -1,0 +1,2055 @@
+{
+  "files": {
+    "agent-system/00_start/ORCHESTRATOR_START.md": {
+      "sha256": "5b07ab33849453740979399b7d5aea6cd837b14aec0bc6454dba3764e40e6596",
+      "size": 17051
+    },
+    "agent-system/01_roles/AUDITOR.md": {
+      "sha256": "1adbdd65423118611e2f4d761a0241b62e96f5d57798fc5fd4d0fa08311430c0",
+      "size": 15762
+    },
+    "agent-system/01_roles/DESIGNER.md": {
+      "sha256": "a4435f57a04ba117db0bc0a9d89d8ccf3e569928174034afbf35d5bc834aac64",
+      "size": 1006
+    },
+    "agent-system/01_roles/DEVELOPER.md": {
+      "sha256": "82d377751b140aeaad5d32f3a16b71d90631e54b1b65a12308083c0a89edd9ba",
+      "size": 8928
+    },
+    "agent-system/01_roles/DEVOPS_SETUP_ENGINEER.md": {
+      "sha256": "3adef833281f3e85cf335e6117c2f2b79d7d10747347c5ec669d6ffe3e948bb5",
+      "size": 3613
+    },
+    "agent-system/01_roles/ORCHESTRATOR.md": {
+      "sha256": "7bf6989b9f4d0fc40dccfaa5f94d11cd7e82ab62a554bc6e4af4e5a704be232b",
+      "size": 8558
+    },
+    "agent-system/01_roles/PROJECT_DESIGNER.md": {
+      "sha256": "1e867ffd3c884f80198d766a6fe018290b51636339dac92ed38b9307372477ba",
+      "size": 5746
+    },
+    "agent-system/01_roles/RELEASE_MANAGER.md": {
+      "sha256": "3a831a8adc5f65e9ddce2e8a28029262f362732e22d216de90b96101d63701a1",
+      "size": 3745
+    },
+    "agent-system/01_roles/REQUIREMENTS_ANALYST.md": {
+      "sha256": "4fc7edb591482e046729f4e547025d1a649954ea06adf4c34791a012a1e8c47a",
+      "size": 3945
+    },
+    "agent-system/01_roles/SOLUTION_ARCHITECT.md": {
+      "sha256": "e05525cbf6338b963eb7f6059a4a8b87485020cac2c73d2ed4ed9aca5c761a97",
+      "size": 6876
+    },
+    "agent-system/01_roles/TECHNICAL_WRITER.md": {
+      "sha256": "85025c1d90dac0dc7807dd49b548d2b8f3c53be506a7c0d630c1422d21b0b5e9",
+      "size": 10563
+    },
+    "agent-system/01_roles/TESTER.md": {
+      "sha256": "2a7bd9c9dadd5972799d776fd03e95301aa8057c0c84c6f156bc3bf191954562",
+      "size": 10287
+    },
+    "agent-system/02_runtime/ACCEPTED_STATE_LOCKING.md": {
+      "sha256": "7fcc3f2276014cbeb232f5f83471f2ca6b701946afdd0af7869c7458a2c80cf7",
+      "size": 1933
+    },
+    "agent-system/02_runtime/ACTION_STATE_SEMANTICS.md": {
+      "sha256": "1251e6b28ccb26461a9b904024f745f648dbc62a4a60ee5ddb6da74dd5d405de",
+      "size": 4560
+    },
+    "agent-system/02_runtime/AGENT_LIFECYCLE.md": {
+      "sha256": "fb01ca512539cee606f1bf2ad85d12fb65340b743dcb02f0c49e223f0fe050b8",
+      "size": 4843
+    },
+    "agent-system/02_runtime/ALLOWED_ORCHESTRATOR_ACTIONS.md": {
+      "sha256": "54bd8f82b30ef941c107db7598053d00baeb813b7e1fac9c5485a38a2645b98b",
+      "size": 6607
+    },
+    "agent-system/02_runtime/ARTIFACT_PACKAGE_MODEL_P5_1_CORRECTION_CONTRACT.md": {
+      "sha256": "c65025beb5c8ef975a5d98fcbc9583a268675437fad3684198f38da2a6de0f49",
+      "size": 1571
+    },
+    "agent-system/02_runtime/ARTIFACT_PACKAGE_MODEL_P5_CONTRACT.md": {
+      "sha256": "fa3937a3080dc2a5eb2796af1695c99221bb3c3c7e33c0072182c19a2c27ee6a",
+      "size": 4518
+    },
+    "agent-system/02_runtime/ARTIFACT_PACKAGE_SCHEMA_P5_1_0_CONTRACT.md": {
+      "sha256": "18bd7eb9ced7eb71d657f47d810add0e3530ca9f9a879b0bc57856dbf588d004",
+      "size": 4896
+    },
+    "agent-system/02_runtime/ARTIFACT_STORAGE_P5_CONTRACT.md": {
+      "sha256": "8806720dc6d724f002ea3408de9768fc7a990ecb989ed5c7d82b6f97337d30e9",
+      "size": 4110
+    },
+    "agent-system/02_runtime/BOOTSTRAP_STATE_RECONCILIATION_P5_2_CONTRACT.md": {
+      "sha256": "30acb04f9fdd3cc1efdfcf12bdc7a1e2730ef9c27998371eb0d671013bab5e54",
+      "size": 2519
+    },
+    "agent-system/02_runtime/CANONICAL_JSON_STATE.md": {
+      "sha256": "5527ad6af8cdf8be14136bc4a9b4a10c599be394d88260eee5a0d8ae43403c59",
+      "size": 7068
+    },
+    "agent-system/02_runtime/CANONICAL_JSON_STATE_PREPARATION.md": {
+      "sha256": "ed95395345ce2cbdb281d596e53ba349752847d97a1e35a19128f42a9284bc0d",
+      "size": 9276
+    },
+    "agent-system/02_runtime/CONTRACT_AUTHORITY_MAP.md": {
+      "sha256": "fb8ac796b6096a0d63af5f2aed06fd4fdae2e4ddc68a593e61fad70eae1d24e3",
+      "size": 4615
+    },
+    "agent-system/02_runtime/CORRECTED_BOOTSTRAP_SEQUENCE_P4_1.md": {
+      "sha256": "35fd464668758e226f67009c87aa00bd61598db1a2ae0adaf90b6f6ba00d71a6",
+      "size": 4201
+    },
+    "agent-system/02_runtime/FILESYSTEM_GOVERNANCE.md": {
+      "sha256": "85dd201171c9bc9da1164fc2af624fb08ac22902a30ebd8661b7c2ed0535fd5f",
+      "size": 30034
+    },
+    "agent-system/02_runtime/GOVERNANCE_AUTHORITY.md": {
+      "sha256": "40f49da53b1ddbced5222dee0e6d120092489cc2ef253af4608c1824814ee906",
+      "size": 6312
+    },
+    "agent-system/02_runtime/HANDOFF_PROTOCOL.md": {
+      "sha256": "d6715a44127ac525cfc96f5b8e7a424abd3d69a95398bf1cf767591d94c2ea14",
+      "size": 6170
+    },
+    "agent-system/02_runtime/INCIDENT_RECOVERY.md": {
+      "sha256": "2609b3f3326b97ccc0582ae862ff2a3a3f0461ff4ab4de29a765d845475f16b5",
+      "size": 9849
+    },
+    "agent-system/02_runtime/ORCHESTRATOR_CONVEYOR_PROTOCOL.md": {
+      "sha256": "a4ab7a23ad4951b5fffd6954b41279b46effda7833976125018e2b8f20c18f80",
+      "size": 4580
+    },
+    "agent-system/02_runtime/ORCHESTRATOR_RUNTIME_CONTRACT.json": {
+      "sha256": "8d9bc3e62e32dfa1f36a6cb20a76378ac30f48cc04ed76f1fd2d11f8b9253dc1",
+      "size": 12167
+    },
+    "agent-system/02_runtime/ORCHESTRATOR_RUNTIME_LOOP.md": {
+      "sha256": "ceb54eb0491d8ad4a7e7c46842d7ba9d018657b199c4320e7b24679bd6c63483",
+      "size": 37122
+    },
+    "agent-system/02_runtime/PLANNER_DISPATCHABILITY_GATE_P5_4_CONTRACT.md": {
+      "sha256": "94e8839f9bb32c01bbe176ca282eb180b90a259834c480c088c06425155ff2e3",
+      "size": 18908
+    },
+    "agent-system/02_runtime/POST_AUDIT_GIT_CHECKPOINT.md": {
+      "sha256": "f1d8a90256fc8e1ff1a22b87d253eff6a80e9febe3f4bbadab2120050d02246e",
+      "size": 10439
+    },
+    "agent-system/02_runtime/PROFILE_AGENT_LIFECYCLE.md": {
+      "sha256": "e553ed58c829994751122af8afd990b77a7c57ba3fce85dfeb46fd7cc5483bd2",
+      "size": 6758
+    },
+    "agent-system/02_runtime/PROJECT_DESIGN_GAP_GOVERNANCE_P4_CONTRACT.md": {
+      "sha256": "0c838e69ca984585e63750bceb72b061cadcdb1481f4985ba004def1157b25a6",
+      "size": 9441
+    },
+    "agent-system/02_runtime/PROPOSAL_APPLY_P3_CONTRACT.md": {
+      "sha256": "60b27cb8c79e8727e3a134f93857432e5972b7bb170979d074ce8cddd510bf55",
+      "size": 4679
+    },
+    "agent-system/02_runtime/REQUESTER_RETURN_PROTOCOL.md": {
+      "sha256": "c5f737654951ec38abcbef06d69a7dc6710334e2ee32880c4de3af99ebd9f808",
+      "size": 4795
+    },
+    "agent-system/02_runtime/RUNTIME_FILE_TAXONOMY.md": {
+      "sha256": "137c14de6171a1e48091661c228da0a84f930f5dd7ad22290948f231dea4dd61",
+      "size": 9298
+    },
+    "agent-system/02_runtime/RUNTIME_STATE_P2_CONTRACT.md": {
+      "sha256": "9fb5ba6a4c541b6dc7353bb938f7d76af3307ec2fef300541ed517149826aad7",
+      "size": 6410
+    },
+    "agent-system/02_runtime/STATE_TRANSITION_RULES.md": {
+      "sha256": "f6e1cd2be1a1890a853ee678e126ffc481e9aa0f0aab0eaec464a03e52f201da",
+      "size": 24965
+    },
+    "agent-system/02_runtime/TRANSACTIONAL_CHECKPOINT_SPEC.md": {
+      "sha256": "af75c58b1a4e8cd2379943f2c49aeb91c5e71ff627b0d82b2f0f93492cc54c88",
+      "size": 4687
+    },
+    "agent-system/02_runtime/VIOLATION_RECOVERY.md": {
+      "sha256": "d036c6159a836f0d588804e0f64818db86ff124d049eba83f20335b9d0a703c8",
+      "size": 7077
+    },
+    "agent-system/02_runtime/WORKSPACE_BOOTSTRAP_RUNTIME_LIFECYCLE_P4_1_HOTFIX_CONTRACT.md": {
+      "sha256": "1728b5b42c487e2799ed78c76956c864c342e334260ce592a53f8030d442ac95",
+      "size": 2913
+    },
+    "agent-system/03_templates/ADMIN_INTERFACE_REQUIREMENTS_TEMPLATE.md": {
+      "sha256": "f2dfc9b32e22633d2e94d39a084d2ea3d5f197b0874a2dc6c4f831ad2773fe25",
+      "size": 1130
+    },
+    "agent-system/03_templates/AGENT_RESULT_TEMPLATE.md": {
+      "sha256": "57ad332b6ad7901585c2ad6feb70e67cb970c43219800d75f49cf2d929a3f106",
+      "size": 6542
+    },
+    "agent-system/03_templates/BOOTSTRAP_TASK_PACKET_TEMPLATE.md": {
+      "sha256": "e92187c904119c6fd15ca9bdb34587ddd4e88df0e0927a9cc0a01d01de839d21",
+      "size": 8934
+    },
+    "agent-system/03_templates/CAPABILITY_MATRIX_DRAFT_TEMPLATE.md": {
+      "sha256": "0bb29a9af2cc83748816196922144f338a97ab8e1a24a90645aa584d64bc93cc",
+      "size": 1007
+    },
+    "agent-system/03_templates/CHECKPOINT_ELIGIBILITY_TEMPLATE.md": {
+      "sha256": "0785992fe99f0bebf38d15fe641aa6fc32e34501a8cf6d69883bf86d819bed41",
+      "size": 2864
+    },
+    "agent-system/03_templates/CONTEXT_PACK_TEMPLATE.json": {
+      "sha256": "a404416cb29b7b974351c841a54c2ee7277c8e3705bb2eb7504547cd605e7565",
+      "size": 670
+    },
+    "agent-system/03_templates/CONTEXT_PACK_TEMPLATE.md": {
+      "sha256": "4c955e679409c4a5f8ebfceb1891dfb87dc47ffd8b7857331b31b2b249f0b620",
+      "size": 2653
+    },
+    "agent-system/03_templates/DEFERRED_GAPS_REGISTER_TEMPLATE.md": {
+      "sha256": "767f0a8ad7967b85aec3866adc71484066e9d18b0584b2da58bdb8ec08241bea",
+      "size": 872
+    },
+    "agent-system/03_templates/DESIGNER_OWNER_QUESTION_CARD_EXAMPLES.md": {
+      "sha256": "487aede149d6551bd826905d8d5fe98d67b338a3a3d5a52efdcac8d4365b692d",
+      "size": 3117
+    },
+    "agent-system/03_templates/DESIGN_ASSUMPTIONS_REGISTER_TEMPLATE.md": {
+      "sha256": "61ed7c6eb3a4c54ab2a7458dc25e51c1522e558c0a7ce4b26da590b42a1afb78",
+      "size": 871
+    },
+    "agent-system/03_templates/DESIGN_CONTINUATION_TASK_TEMPLATE.md": {
+      "sha256": "43ead850d8f3760f7b5a5fbff62a9a92e7235d87637d577fd0686733faca43c8",
+      "size": 2405
+    },
+    "agent-system/03_templates/DESIGN_OUTPUT_CONTRACT.md": {
+      "sha256": "68d1acc72da4d11159f89c620841cf9979271138ec37b185cdddd9ebeb237757",
+      "size": 10830
+    },
+    "agent-system/03_templates/EVIDENCE_MATRIX_TEMPLATE.md": {
+      "sha256": "34d3562b5a6f6c0b913d77f245323216b4a49801fe637046c9722327172786aa",
+      "size": 1625
+    },
+    "agent-system/03_templates/FINDINGS_REGISTER_TEMPLATE.md": {
+      "sha256": "8a0c7d8c32e49e1d270c0976937c4cbf94ff2f92f86b82fac1ed14cf740ddd94",
+      "size": 1648
+    },
+    "agent-system/03_templates/FUNCTIONAL_REQUIREMENTS_TEMPLATE.md": {
+      "sha256": "e7552ce4f13eb546d11e66b200b22c5609fcb120cb1a6195fcbd976c1924eb85",
+      "size": 1001
+    },
+    "agent-system/03_templates/HANDOFF_TEMPLATE.md": {
+      "sha256": "d6d4319a81a34cc12b7aea12c47a1e5232c4de9e9ab661601f89a22e0562d001",
+      "size": 3617
+    },
+    "agent-system/03_templates/HANDOVER_CHECKLIST_TEMPLATE.md": {
+      "sha256": "f3ff95a2af73b3f31c58c45b18fe23b3084470e17b74fe563c8997b8b78eeb3c",
+      "size": 1760
+    },
+    "agent-system/03_templates/LAUNCH_READINESS_CHECKLIST_TEMPLATE.md": {
+      "sha256": "f27e702acb084efc50dab49a9fc99f36dcf364fb10c052c0897b78e1a28bb1e7",
+      "size": 1775
+    },
+    "agent-system/03_templates/ORCHESTRATOR_TASK_HANDOFF_TEMPLATE.md": {
+      "sha256": "9a8733045e86568a3f606a7e655fcee7d9399039a6c4edf5e7b7417cde105a19",
+      "size": 4419
+    },
+    "agent-system/03_templates/OWNER_ANSWER_INTEGRATION_TEMPLATE.md": {
+      "sha256": "b828d4485c3187562e1fc5f3dd69806db9c48653c7a02aa7451883b9ba5b3b76",
+      "size": 1365
+    },
+    "agent-system/03_templates/OWNER_DECISION_TEMPLATE.md": {
+      "sha256": "25bafc1f0620dda3ebb944c4916fa85bb4578ad025a754bab8c7888cbd76c1c4",
+      "size": 2165
+    },
+    "agent-system/03_templates/OWNER_QUESTION_QUEUE_TEMPLATE.md": {
+      "sha256": "237e2d25520e9d087b8ed84a7fd3729fedfa31b9cce681eae708fa40241a3f21",
+      "size": 2399
+    },
+    "agent-system/03_templates/PROJECT_DESIGN_AUDIT_TEMPLATE.md": {
+      "sha256": "c989e6838ff7faeb0924e24a40549e1b0ffcd156d644bb0b8aeac1596dae7252",
+      "size": 4516
+    },
+    "agent-system/03_templates/PROJECT_DESIGN_BRIEF_TEMPLATE.md": {
+      "sha256": "78e754e3bef3dc9fe5894a69a6bbd5d061575711320008184a21eff5014c46f2",
+      "size": 1206
+    },
+    "agent-system/03_templates/PROJECT_DESIGN_DOCUMENT_TEMPLATES.md": {
+      "sha256": "9ebd174dc67a6468a7b58fd168f6ad4bd9fa0f5e815327192b9e1de7a531851a",
+      "size": 3020
+    },
+    "agent-system/03_templates/PROJECT_TEMPLATE_SELECTION_TEMPLATE.md": {
+      "sha256": "98a996454e43afcb7e9718cfa925465ada8ba958f2211621d41e0a1016de4dcb",
+      "size": 1489
+    },
+    "agent-system/03_templates/PROJECT_TYPE_DECISION_TEMPLATE.md": {
+      "sha256": "a7040f951ee2f8cafc0f7f1a436f6dab0826e70589d9bb494421f2438d804432",
+      "size": 1331
+    },
+    "agent-system/03_templates/REPOSITORY_LOCK_TEMPLATE.md": {
+      "sha256": "9a2ea8d25b978fe17a198ef0ec1cddfb008d4497d7d72d81264e5aec518f824c",
+      "size": 2503
+    },
+    "agent-system/03_templates/RESEARCH_REQUEST_TEMPLATE.md": {
+      "sha256": "6bad21adf78388835e01ad610570a56d6a2ed36385f0f6b558064ba3073e7d8e",
+      "size": 3069
+    },
+    "agent-system/03_templates/RESEARCH_RESULT_TEMPLATE.md": {
+      "sha256": "a1e2a13b65447f9312c8f75053ffeaeb530968cc1470c986a37f4843788b7785",
+      "size": 1323
+    },
+    "agent-system/03_templates/RUN_SMOKE_CHECKLIST_TEMPLATE.md": {
+      "sha256": "c8125f7d6e786701fe6e77332cbb5c6ef32857cd63ce4d1335a76e5ecf595b10",
+      "size": 1488
+    },
+    "agent-system/03_templates/SETUP_TASK_TEMPLATE.md": {
+      "sha256": "e2783c64773cd600db7bd2d73d65f979503bd63361d373cfb01eeb9d52c48a96",
+      "size": 1987
+    },
+    "agent-system/03_templates/STATIC_DASHBOARD_OUTPUT_POLICY.md": {
+      "sha256": "7566d8018ea97dca9704586d12e769d8c06e79511b9ddd34c521ae6a34ee77cd",
+      "size": 1257
+    },
+    "agent-system/03_templates/TASK_PACKET_TEMPLATE.md": {
+      "sha256": "8c1937bdfa1e1a72af07be122cff7f3df500d828884dcc030a47f6bbf6ea955e",
+      "size": 22356
+    },
+    "agent-system/03_templates/TASK_PROPOSAL_TEMPLATE.md": {
+      "sha256": "0c06eeb53fd231cf32fd0f28cfac78788b22e4600d0522b40e473bfa56ed8962",
+      "size": 3131
+    },
+    "agent-system/03_templates/USER_ROLES_AND_SCENARIOS_TEMPLATE.md": {
+      "sha256": "e269db2c1cf37fd5175e76a2b6f69fcb68cc402cf75da47f060ff580199f9d75",
+      "size": 982
+    },
+    "agent-system/03_templates/VISUALIZATION_REQUIREMENTS_TEMPLATE.md": {
+      "sha256": "9793ce3470163229d1a1f9cc2d10f06857fd4c2b96c70681665233344be8ae55",
+      "size": 1169
+    },
+    "agent-system/03_templates/WORKSPACE_IDENTITY_TEMPLATE.md": {
+      "sha256": "546494f293b5155fd70c1bd7a6639d00b7ef8d37005b718fdd59863ab0d547f4",
+      "size": 4260
+    },
+    "agent-system/03_templates/apply_receipt.template.json": {
+      "sha256": "21dee62810900626296aa484d0a0182729c71ca345e6bc68dd0995f02e798ec7",
+      "size": 1134
+    },
+    "agent-system/03_templates/artifact_package_manifest.template.json": {
+      "sha256": "1d4c483bca76f5e02a7234efc21074dec2835246d3b6f0d4d90523711cc3a4be",
+      "size": 501
+    },
+    "agent-system/03_templates/audit_result_package.template.json": {
+      "sha256": "611faa5193c3069d0d4a150dc35a33f0dd30068794496587b8f21257c68c4e37",
+      "size": 3003
+    },
+    "agent-system/03_templates/dispatch_receipt.template.json": {
+      "sha256": "57bd314c11e66638a84fb089218780e966433281c2af3ae1a5f874bc7cfd368b",
+      "size": 905
+    },
+    "agent-system/03_templates/orchestrator_handoff.template.json": {
+      "sha256": "a3bf889bf0f95d534f31710d76f51b9020ae77f92523581535ba95f8d2f51259",
+      "size": 3771
+    },
+    "agent-system/03_templates/proposal_artifact.template.json": {
+      "sha256": "c914290091413c3902af6fa70eace816d0c0551db2fcd0a8db2f0a719fc9324c",
+      "size": 1031
+    },
+    "agent-system/03_templates/result_package.template.json": {
+      "sha256": "1da309e8a3ec4f9fea25256e3050cab4a9ffcc3c0d0dcc986936b0ebb1222670",
+      "size": 1324
+    },
+    "agent-system/03_templates/state/accepted_artifacts.schema.json": {
+      "sha256": "c6c93723cfab20f5724ef1b8099e1a6f1df421c2c531ea3d3ffbb4353b4cdbd4",
+      "size": 2360
+    },
+    "agent-system/03_templates/state/current_gate.schema.json": {
+      "sha256": "654bc506def4b5a163eaf5f3688a89f2b7ff14521b84a524932e008b3ad2eee5",
+      "size": 2939
+    },
+    "agent-system/03_templates/state/next_action.schema.json": {
+      "sha256": "4b452c1c364687ddbd80e276350a64eecaa8069baa760ade5e302c886a0dec9b",
+      "size": 3477
+    },
+    "agent-system/03_templates/state/project_state.schema.json": {
+      "sha256": "e487012217ad676d2f943954e57cb7e7a6b1f1bba3ab3a87ed86c41a74e8ee95",
+      "size": 6363
+    },
+    "agent-system/03_templates/state/task_registry.schema.json": {
+      "sha256": "dc1e09e7878d04f960c4b66d70ec94b5b3c435e31d9952176f16a215f1d709c7",
+      "size": 3760
+    },
+    "agent-system/03_templates/state/workspace_identity.schema.json": {
+      "sha256": "2d81dd8b8761626046a10af5da232642a7c5eea79165f403d28c7654f169ddf3",
+      "size": 2654
+    },
+    "agent-system/03_templates/structured_artifact.template.json": {
+      "sha256": "700e6cbd7b3056bd6058cb30f8f0cdda1f5b0b4b16c43079871cbe71cb16dca8",
+      "size": 678
+    },
+    "agent-system/04_state/ACCEPTED_ARTIFACTS_TEMPLATE.md": {
+      "sha256": "1d6632d58b9eec8450f607ccc05a7ccf78c30f8abd52721a695c1862ef563a91",
+      "size": 2228
+    },
+    "agent-system/04_state/CURRENT_GATE_TEMPLATE.md": {
+      "sha256": "cc0f2816356f4e0b7653dfc68d90c3030614cf87fab0a7f70e25e2162178097b",
+      "size": 2554
+    },
+    "agent-system/04_state/NEXT_ACTION_TEMPLATE.md": {
+      "sha256": "f58105d89891e9527b00af1c3b289ecf08cce338b5c666f6636a43d58db16520",
+      "size": 5303
+    },
+    "agent-system/04_state/PROJECT_STATE_TEMPLATE.md": {
+      "sha256": "a36311efbf270615bae3db50779c1452af144b5bee669acf2989378b876e9091",
+      "size": 4736
+    },
+    "agent-system/04_state/RUNTIME_STATE_SCHEMA.md": {
+      "sha256": "bdecd2a079625a0fc9de5644db4e7ba4850d6c68358faf72069dc5b1f831d8e9",
+      "size": 40227
+    },
+    "agent-system/04_state/TASK_REGISTRY_TEMPLATE.md": {
+      "sha256": "b0e059fea30f090238e948d67052e62aa2d95f5f82fe10bab992cae258b1d339",
+      "size": 3132
+    },
+    "agent-system/05_gap_flow/GAP_FLOW.md": {
+      "sha256": "62d9f5e5c427281a21aa83cf8871f0f687c2b8bf937dc902d6230c617915aff8",
+      "size": 4821
+    },
+    "agent-system/05_gap_flow/GAP_REGISTER_TEMPLATE.md": {
+      "sha256": "318ebd93562b2e0cb510e0503291d0e1b52674b95d4bf09fd30f98b5169eb8a5",
+      "size": 1200
+    },
+    "agent-system/05_gap_flow/OWNER_QUESTION_FLOW.md": {
+      "sha256": "7b3c3b4919fa4c20e53a4f7c1124ab915e619bd46fbca948ddd6622b5c81614c",
+      "size": 11220
+    },
+    "agent-system/06_logs/AGENT_RESULTS_LOG_TEMPLATE.md": {
+      "sha256": "000a934c2d8b0b6749e39212e00ec29552f28b2cff0cc2c5e5643dd3f62db85a",
+      "size": 2440
+    },
+    "agent-system/06_logs/ORCHESTRATOR_EVENTS_LOG_TEMPLATE.md": {
+      "sha256": "868569526083d0cace20bf5070917b91dfbacc15031e7647d6f5ba2cc5277d7e",
+      "size": 2481
+    },
+    "agent-system/06_logs/STATUS_SUMMARY_TEMPLATE.md": {
+      "sha256": "666d3145d7ee882b2d1ac2d14c491937ea7a02b4fa1bf79b760264d49db2078a",
+      "size": 1582
+    },
+    "agent-system/07_lifecycle/BOOTSTRAP_STAGE.md": {
+      "sha256": "4d972402fbbc84f29aa1758505b0a45a0bcf2047bc3bd898ad3ed0aec53c706b",
+      "size": 5558
+    },
+    "agent-system/07_lifecycle/DESIGN_RESEARCH_LOOP.md": {
+      "sha256": "3ef6ab13506e073424da86c45a6bef6392f8fd5be228bf526a7c9f7ffada9c15",
+      "size": 2513
+    },
+    "agent-system/07_lifecycle/DESIGN_STAGE.md": {
+      "sha256": "640fffcf71d32ebd32313e71afb34c84cc6b63c0d1b56afb7ae9ddaa323800b8",
+      "size": 1975
+    },
+    "agent-system/07_lifecycle/DOCUMENTATION_STAGE.md": {
+      "sha256": "3c6263a84e4e7d37f8347aa8de5378b2d22b26216ca874f26706af61a16b6ad4",
+      "size": 2487
+    },
+    "agent-system/07_lifecycle/HANDOVER_STAGE.md": {
+      "sha256": "f2eb7c243ed6697549d6f8729f7797a60aafcb42681dad9799bb9f275218599d",
+      "size": 2332
+    },
+    "agent-system/07_lifecycle/IMPLEMENTATION_STAGE.md": {
+      "sha256": "0003dc01af0a19620ec13414afae8cda9ba1501d6cfd9c5c38ba214c83b03989",
+      "size": 1003
+    },
+    "agent-system/07_lifecycle/LAUNCH_STAGE.md": {
+      "sha256": "613e8de2f0e784bfc042441a6a37fd2d9418a9eeb25d97928ac43b3d26369873",
+      "size": 2261
+    },
+    "agent-system/07_lifecycle/PROJECT_LIFECYCLE.md": {
+      "sha256": "4eb71f3c03fa8a161233a5e1b6ef860bad54b6327c3ca752576ea8126b8e4bce",
+      "size": 4515
+    },
+    "agent-system/07_lifecycle/REQUIREMENTS_STAGE.md": {
+      "sha256": "6b0d803fd84dedd9c7a598cc9ba5e752d2f417ec977dbf23384e2a62e6fe3b35",
+      "size": 1045
+    },
+    "agent-system/07_lifecycle/RUN_STAGE.md": {
+      "sha256": "e02c84d11943952b72d01e2b20f55906c637ad3b0cedd74f884b325bc1bbc8bd",
+      "size": 2097
+    },
+    "agent-system/07_lifecycle/SETUP_STAGE.md": {
+      "sha256": "e4f31158b851deb21f8965b6f172570d3893639e0051147419d4f1a09b1de19d",
+      "size": 2400
+    },
+    "agent-system/07_lifecycle/TESTING_STAGE.md": {
+      "sha256": "2eec78b90e9a7397d961e03150b2e83229aedd9702e3d7296fa54ced1bf7627c",
+      "size": 933
+    },
+    "agent-system/08_profiles/PROJECT_PROFILE_SPEC.md": {
+      "sha256": "644751fe50fdb117f0ec277c899dc9c165ba26dc83c1a1c9f49c07b97ccbf215",
+      "size": 3611
+    },
+    "agent-system/08_profiles/backend_api.md": {
+      "sha256": "ae2dcac73f0194d48abad79187182be36597c59a97424ff77d12501334d2eb15",
+      "size": 2299
+    },
+    "agent-system/08_profiles/browser_automation.md": {
+      "sha256": "6fe631b7035e2d45e4274742f1299c72a23f3cb28cd827ff477ce19d0f21ac03",
+      "size": 2138
+    },
+    "agent-system/08_profiles/cli_tool.md": {
+      "sha256": "5418ba8744ea26b7a1c7bb2a40807b2a17e5f12caa48c6244ed26f2d4d995741",
+      "size": 1928
+    },
+    "agent-system/08_profiles/data_pipeline.md": {
+      "sha256": "2650b0cf955dec14493bdb7c98669a225bcab464fdc539ba8572728c1529ab18",
+      "size": 2075
+    },
+    "agent-system/08_profiles/documentation_only.md": {
+      "sha256": "2b3fcb6d413bf9c03823228488d05f38cbab3b7dac59e38f37175e7f3dd4a6cb",
+      "size": 2032
+    },
+    "agent-system/08_profiles/frontend_app.md": {
+      "sha256": "ae51631e5c9d263bcc1005acdccbb99f038a57ac483d676d5e2d5d2dbab61987",
+      "size": 2083
+    },
+    "agent-system/08_profiles/fullstack_app.md": {
+      "sha256": "4b2684f8c85aca47ae600d0471a48cf0cb3b5f437243108836daaa52193ceb2e",
+      "size": 2291
+    },
+    "agent-system/08_profiles/generic.md": {
+      "sha256": "349b1ffb1e97626efd6a3d305e8a0735c448987edcd32e51925858cb890ebdfc",
+      "size": 1825
+    },
+    "agent-system/08_profiles/infra.md": {
+      "sha256": "f9ddd14798792b46fce701a7d2570cf6d30c3bf760ed040d28270e125bb64f7e",
+      "size": 2243
+    },
+    "agent-system/08_profiles/parser.md": {
+      "sha256": "d8d1eaa6635f679dbd6b273d069e3d93cf6485024f8250339cee41da38bde41c",
+      "size": 2173
+    },
+    "agent-system/08_profiles/telegram_bot.md": {
+      "sha256": "6da9d868d75ed843eea2b762a9088b071c9968cdab0d571be927167bc782ef2f",
+      "size": 2209
+    },
+    "agent-system/09_validators/AGENT_LIFECYCLE_VALIDATION_RULES.md": {
+      "sha256": "e077e5bbf70e20c1fbeb73279a66441e07075701a9465ebdf92f536a289066b7",
+      "size": 4566
+    },
+    "agent-system/09_validators/CHANGED_FILES_SCOPE_MATRIX.md": {
+      "sha256": "ecaf973ab5eb758acdfc480dd9ee4f407eac53fe9e0e9780bc069dad223f8a34",
+      "size": 6074
+    },
+    "agent-system/09_validators/CROSS_LINK_VALIDATION_RULES.md": {
+      "sha256": "822fa61508005692488eedd16ee10c0937ea121b9de7ddcaf1cb0ba9ae54e823",
+      "size": 16616
+    },
+    "agent-system/09_validators/DESIGN_GAP_AUDIT_CORRECTION_RULES.md": {
+      "sha256": "9900b240d0f5ae6b0fa03fa81e6ba190ea1b2b8024a58547caceaa5add7f3e17",
+      "size": 6670
+    },
+    "agent-system/09_validators/DESIGN_REVIEW_RUBRIC.md": {
+      "sha256": "faab2608d23f6111f173f269287d25e459b55b6d2ef62d1c134ab9e2531171b5",
+      "size": 8772
+    },
+    "agent-system/09_validators/DESIGN_TRACEABILITY_RULES.md": {
+      "sha256": "a4ede283b403064149e2bb22117b62cfec9e6cd088d082bfc0bd2aec96c5b898",
+      "size": 9546
+    },
+    "agent-system/09_validators/GIT_CHECKPOINT_VALIDATION_RULES.md": {
+      "sha256": "f9e6e22e34e81b4847eb69113716b9af427cd3c89eb6a744b41e4be91362f514",
+      "size": 12396
+    },
+    "agent-system/09_validators/PRODUCT_CAPABILITY_GATE_POLICY.md": {
+      "sha256": "cf0e6816253f52bf2c7f7fb3983d011c95f2ddd057e7fd4672354b341294dbf2",
+      "size": 7575
+    },
+    "agent-system/09_validators/REASONING_LEVEL_VALIDATION_RULES.md": {
+      "sha256": "e4d6b8f3b75dd12856b49faf2953d58a54a67849b5a9d65a40e78889fe2fe6ca",
+      "size": 6752
+    },
+    "agent-system/09_validators/RESEARCH_RETURN_VALIDATION_RULES.md": {
+      "sha256": "a569a54acc95da4c356db84a31ae8cb6d7838b31960fa1810c2c6181e7905604",
+      "size": 1995
+    },
+    "agent-system/09_validators/RESULT_VALIDATION_RULES.md": {
+      "sha256": "da0c93939f3d03985952cfa03e83508e03ec7477bf96eee2b071f6485a930974",
+      "size": 8792
+    },
+    "agent-system/09_validators/RULE_REGISTRY_VALIDATION_RULES.md": {
+      "sha256": "2f9c5700a604719a28eacf2e5d5801be2cfff8b02527d78c613b6fd596e77af8",
+      "size": 2249
+    },
+    "agent-system/09_validators/RUNTIME_CONSISTENCY_RULES.md": {
+      "sha256": "53a9be519d27c3d859fd4f8627e23aa6a172dd7fb135f27652fa0078bf6a9fa9",
+      "size": 8458
+    },
+    "agent-system/09_validators/SECRET_SCAN_RULES.md": {
+      "sha256": "b426353c2bf5f25c4cc354830912ba62431ae4140e2527f454ca2737f0c5a375",
+      "size": 3629
+    },
+    "agent-system/09_validators/STATE_SIDECAR_VALIDATION_RULES.md": {
+      "sha256": "e16b4aacc84737aecdd88f6371668805dbb5f6c67747471db6e8fa78f47307fa",
+      "size": 11246
+    },
+    "agent-system/09_validators/TASK_PACKET_SCHEMA_VALIDATION_RULES.md": {
+      "sha256": "79b88cb0b948f8dd342c12c0dd67d2295fb500c91ddfdd22e947dcb6f97de74e",
+      "size": 9824
+    },
+    "agent-system/09_validators/TASK_PACKET_VALIDATION_RULES.md": {
+      "sha256": "622fed1a8738e0a856aa491e2e25e9755bb607d49485c74899e7d91fee278036",
+      "size": 9108
+    },
+    "agent-system/09_validators/TRANSITION_VALIDATION_RULES.md": {
+      "sha256": "be02673e6bc7a1624701f6bfc7e7f3657c09bde1f6f76dbd3e67342a2aa5ef58",
+      "size": 5034
+    },
+    "agent-system/09_validators/VALIDATOR_SPEC.md": {
+      "sha256": "0f47601ea20fa4912902649b53287123a350536490aaefd6b7a3dcd776ca188b",
+      "size": 11079
+    },
+    "agent-system/09_validators/WORKSPACE_IDENTITY_VALIDATION_RULES.md": {
+      "sha256": "e170db0788208d095f864bf6f83bc7a2509f13850fc53a7f05c10761fe2d4efe",
+      "size": 7567
+    },
+    "agent-system/09_validators/rules/governance_rules.json": {
+      "sha256": "d8bcaa312c50bbcd41e23f0580d5c1c2e6257326646143e2f4ee652dd8f7649f",
+      "size": 7279
+    },
+    "agent-system/09_validators/schemas/accepted_artifacts.schema.json": {
+      "sha256": "76d7bbbe77d3d7b5396115c8970332e063f3d7585fb0b665838f1e4c8a2cb244",
+      "size": 2643
+    },
+    "agent-system/09_validators/schemas/apply_receipt.schema.json": {
+      "sha256": "e32058adc1b137d6113233d34b7a60b39a428d03a3058cf77d8ef47ee6c95b68",
+      "size": 2814
+    },
+    "agent-system/09_validators/schemas/artifact_package_manifest.schema.json": {
+      "sha256": "47eac5f9da8dc3775750d86a78addade922020d097dad0006c1288ee97d06261",
+      "size": 2871
+    },
+    "agent-system/09_validators/schemas/aso_lock.schema.json": {
+      "sha256": "0e666ade417ff116e682c9358568a37acb2b61882feba3f85a5f6fb0afc360e4",
+      "size": 5549
+    },
+    "agent-system/09_validators/schemas/audit_result_package.schema.json": {
+      "sha256": "8e6bc179e2e7678c289bbf9ef7efc4db0edd82ba94300822d306892d1bdc7edd",
+      "size": 6914
+    },
+    "agent-system/09_validators/schemas/checkpoint_state.schema.json": {
+      "sha256": "093305557d937777f35315068cdc284da3b53762edf966f6c56fb1a0799d006d",
+      "size": 2770
+    },
+    "agent-system/09_validators/schemas/current_gate.schema.json": {
+      "sha256": "0ed50863052797bde3483a87b5d80bbdca2f14b45a6caa02dc66509ac2325481",
+      "size": 5550
+    },
+    "agent-system/09_validators/schemas/deferred_gap.schema.json": {
+      "sha256": "a4894d28d3cd095aa43b4479e151f789eead0892c22130188db2b343c4156081",
+      "size": 2556
+    },
+    "agent-system/09_validators/schemas/design_assumption.contract.json": {
+      "sha256": "6af2b4e916cc26934a4e7a17e98dad98977070d2cf42b0942ba29ce50ec5939e",
+      "size": 2533
+    },
+    "agent-system/09_validators/schemas/dispatch_receipt.schema.json": {
+      "sha256": "dc81b17530d6f424eef219139401f0a31cbf7262eeb1cf65d7b5be6cec05bdc4",
+      "size": 2384
+    },
+    "agent-system/09_validators/schemas/dispatchability_gate.schema.json": {
+      "sha256": "71041f5943285da9423533d029f614f090f3161ec6979e33bedd4dc19c5ebc87",
+      "size": 13444
+    },
+    "agent-system/09_validators/schemas/gap_register.schema.json": {
+      "sha256": "dd6ce9ed33b538639e1822fe1fd8503356fa0f55ba12cebd6cdc1e49c29b9a94",
+      "size": 6481
+    },
+    "agent-system/09_validators/schemas/next_action.schema.json": {
+      "sha256": "ece1319b6a20e9b9797a2f53466243ad6d395cd01f63262681d5ce6b386cc834",
+      "size": 6909
+    },
+    "agent-system/09_validators/schemas/orchestrator_event.schema.json": {
+      "sha256": "ed3a047bcc91a85533bb36e9c4ad0f74e263399a378738913f5fc83939579cae",
+      "size": 2850
+    },
+    "agent-system/09_validators/schemas/orchestrator_handoff.schema.json": {
+      "sha256": "852ae8f3afe394413cd927df61883a6a45ae7a86cbba4b9cc53f9c8d5c969e5d",
+      "size": 5853
+    },
+    "agent-system/09_validators/schemas/orchestrator_runtime_contract.schema.json": {
+      "sha256": "0438e4a92d80a4aa05c6c342b2680a38d9d2f2dc96e31501a2ace054161e2b17",
+      "size": 12055
+    },
+    "agent-system/09_validators/schemas/owner_answer_record.schema.json": {
+      "sha256": "99f2c65e91d2aa17e9c2aebbb01b82c139352286ab085fd9ac02d40bdd2d331a",
+      "size": 2352
+    },
+    "agent-system/09_validators/schemas/owner_question_card.schema.json": {
+      "sha256": "d2680d1dfe0ddaa5012007bf985c853d0c1a3612ff0145131a94db07d2a27ffc",
+      "size": 6605
+    },
+    "agent-system/09_validators/schemas/project_state.schema.json": {
+      "sha256": "4521a0321a0179562b86d202481f2e2c3cb6551b41306d9ae39f0753e1f37dfc",
+      "size": 10365
+    },
+    "agent-system/09_validators/schemas/proposal_artifact.schema.json": {
+      "sha256": "eebd30a348c98858e4db142027d2aeb4cd06415b862543fb19b889e4b06a1bbd",
+      "size": 3220
+    },
+    "agent-system/09_validators/schemas/repository_lock.schema.json": {
+      "sha256": "576de3c67316ad5cb5d6e7425259b879e7d7047e3de455f0192f5a92b43a4a8d",
+      "size": 2242
+    },
+    "agent-system/09_validators/schemas/research_result.schema.json": {
+      "sha256": "cf966543c3f1ef72f0c564df1d5ebb07c28b4ea9689a208f84bbd7ee191bb296",
+      "size": 1833
+    },
+    "agent-system/09_validators/schemas/result.schema.json": {
+      "sha256": "2ad733922971adf91b2e30a0ceb01a531a0f03804ce88eaa7c02abef2bd5b699",
+      "size": 4611
+    },
+    "agent-system/09_validators/schemas/result_package.schema.json": {
+      "sha256": "65a8b19559684fd544cb868055fe9933b34f7cee3e3cc91e4f9b3d9a940430e3",
+      "size": 6156
+    },
+    "agent-system/09_validators/schemas/runtime_state_3_1_0.contract.json": {
+      "sha256": "dfdee21b916758bccc75e8d0afb8fdec644f588213af2b92ea46aa278935bdcf",
+      "size": 9181
+    },
+    "agent-system/09_validators/schemas/schema_manifest.schema.json": {
+      "sha256": "c06d50adcec8f1f278da0442ed97a6d2e15364630e0807520a369ec95d2a3150",
+      "size": 2583
+    },
+    "agent-system/09_validators/schemas/structured_artifact.schema.json": {
+      "sha256": "b55318daf970f300dcf5b94acad03f6ad5592a6f2d6491606dea3a7acc4d939b",
+      "size": 2804
+    },
+    "agent-system/09_validators/schemas/task_packet.schema.json": {
+      "sha256": "c1cea877e25588f0783cdd0ea68bb488fd39de433ffc02c97e0969f252ac2ac8",
+      "size": 8609
+    },
+    "agent-system/09_validators/schemas/task_registry.schema.json": {
+      "sha256": "1e3dbebaea9d601a1144134d686c0d300a73ea4e558a0a1dd5bb05fe1783a28e",
+      "size": 4948
+    },
+    "agent-system/10_examples/ASO_25_GOVERNANCE_HARDENING_COVERAGE_MATRIX.md": {
+      "sha256": "70795049be09292dac8210c832ac2f3216367c80ed7eac9ff5ecbe1d0985b432",
+      "size": 2678
+    },
+    "agent-system/10_examples/EXPECTED_FLOW_EXAMPLE.md": {
+      "sha256": "67195c195ec1696f83f37c42044d75c7bd08558183f4e68bd095ecb614ff60b3",
+      "size": 11938
+    },
+    "agent-system/10_examples/FINAL_SMOKE_CHECKLIST.md": {
+      "sha256": "0f70eaa31408d3e5d20266a6efebc5c02050c260f1ce0336810d35530f02863a",
+      "size": 24971
+    },
+    "agent-system/10_examples/MINIMAL_EXAMPLE_FIXTURE.md": {
+      "sha256": "2cc10c57a04a92d31ad217bd3c244763552d002897e7357e5de32c45b5ab789d",
+      "size": 6152
+    },
+    "agent-system/10_examples/PRODUCT_CAPABILITY_GATE_EXAMPLES.md": {
+      "sha256": "8488c5b68ee862e55d864032b793d6cb96f93486ba7b5e790fd152bc80041825",
+      "size": 3035
+    },
+    "agent-system/10_examples/STAGE3_SAFE_AUTOMATION_DIAGNOSTICS_COMMANDS.md": {
+      "sha256": "b76c4a91207c4700676d47bfd6057fb3b0b172a889deae7ab8c951046d332d2a",
+      "size": 1744
+    },
+    "agent-system/11_release/ASO_ARTIFACT_PACKAGE_MODEL_P5_1_V3_7_1_RELEASE_NOTES.md": {
+      "sha256": "6c5a8e97afdfef585bf466d82a1c395942f9bcebb7ec10850f6a5036a469d350",
+      "size": 1201
+    },
+    "agent-system/11_release/ASO_ARTIFACT_PACKAGE_MODEL_P5_1_V3_7_1_VALIDATION_REPORT.md": {
+      "sha256": "52aa383c888080183e1b50e1fe87394c0916f993ef8de21e63a784812d20ee89",
+      "size": 2268
+    },
+    "agent-system/11_release/ASO_ARTIFACT_PACKAGE_MODEL_P5_V3_7_0_RELEASE_NOTES.md": {
+      "sha256": "f76eb1e250adf32808ccf701467a89e551e66d45c8bf0fc5ddcef41f06b5c57a",
+      "size": 2673
+    },
+    "agent-system/11_release/ASO_ARTIFACT_PACKAGE_MODEL_P5_V3_7_0_VALIDATION_REPORT.md": {
+      "sha256": "470b78bc6d0e2032f69bba195fd37c95ad757832f61a62b9e369ee4be2f6e66f",
+      "size": 5566
+    },
+    "agent-system/11_release/ASO_BOOTSTRAP_STATE_RECONCILIATION_P5_2_V3_7_2_RELEASE_NOTES.md": {
+      "sha256": "e7888babef60cbfb193dc72604d68a47bb01c77085a07a434c5236630cabb92b",
+      "size": 1316
+    },
+    "agent-system/11_release/ASO_BOOTSTRAP_STATE_RECONCILIATION_P5_2_V3_7_2_VALIDATION_REPORT.md": {
+      "sha256": "2984d315fc53a5bdab5d1609006a57fa26e87fdf8d84e2d0c79dab58af4d809e",
+      "size": 3027
+    },
+    "agent-system/11_release/ASO_BOOTSTRAP_TASK_REGISTRY_ALIGNMENT_P5_3_V3_7_3_RELEASE_NOTES.md": {
+      "sha256": "f6bbb795bc3e50f0e18aca35cea875df163a6a81ecd8a1d04566adf98f662dfc",
+      "size": 1182
+    },
+    "agent-system/11_release/ASO_BOOTSTRAP_TASK_REGISTRY_ALIGNMENT_P5_3_V3_7_3_VALIDATION_REPORT.md": {
+      "sha256": "80fe25698931233dffa9d019d855eedcd7aab6016b364929e79cb5b9bc1fc5df",
+      "size": 2259
+    },
+    "agent-system/11_release/ASO_CONTROL_PLANE_V0_RELEASE_CANDIDATE.md": {
+      "sha256": "a1404ed24d30975502cbcfa211c23f5f0aadb18bc01fe9c3328ae78e086c85c0",
+      "size": 12906
+    },
+    "agent-system/11_release/ASO_P56_AUDIT_HARDENING_RELEASE_NOTES.md": {
+      "sha256": "e386446170584bb29cf5a293a02ab33b719787e9d800f27bf113548263193841",
+      "size": 2301
+    },
+    "agent-system/11_release/ASO_P56_AUDIT_HARDENING_VALIDATION_REPORT.md": {
+      "sha256": "7031e422e14cec0aa9587e38269a361db1110fe7cc22204aa47882502fd28472",
+      "size": 3341
+    },
+    "agent-system/11_release/ASO_P57_DOC_RUNTIME_CLEANUP_V3_7_8_RELEASE_NOTES.md": {
+      "sha256": "7d92ab0c959b2b329c1a120f086ef17bb20ebcffe34c7aa66906fb09e7776593",
+      "size": 3458
+    },
+    "agent-system/11_release/ASO_P57_DOC_RUNTIME_CLEANUP_V3_7_8_REMOTE_CI_EVIDENCE.md": {
+      "sha256": "02d7de349b7e9f517536f0bc791af20cc785b6d80d9d4272eb2d9d6c832bf26e",
+      "size": 2261
+    },
+    "agent-system/11_release/ASO_P57_DOC_RUNTIME_CLEANUP_V3_7_8_VALIDATION_REPORT.md": {
+      "sha256": "11e7e82c6e9345fb306376119308167e79511d9a43f8e7e5da33a4320ad6e190",
+      "size": 7286
+    },
+    "agent-system/11_release/ASO_P58_REAL_E2E_LIFECYCLE_HARDENING_V3_7_9_RELEASE_NOTES.md": {
+      "sha256": "1438d490cf72548054b5c2ebd8c4d6e57d816ff6c7f4fc29e1bae22fcab68691",
+      "size": 3413
+    },
+    "agent-system/11_release/ASO_P58_REAL_E2E_LIFECYCLE_HARDENING_V3_7_9_REMOTE_CI_EVIDENCE.md": {
+      "sha256": "c3e9d066165b34a2919d16a39b50f17be48c53b047d580bb3157cc3e84e43c17",
+      "size": 2146
+    },
+    "agent-system/11_release/ASO_P58_REAL_E2E_LIFECYCLE_HARDENING_V3_7_9_VALIDATION_REPORT.md": {
+      "sha256": "42433d8a37cee2d7f8e1cf0fa8983641ae02023aafed9b3f7e1b3106bb1d7fac",
+      "size": 6514
+    },
+    "agent-system/11_release/ASO_PLANNER_DISPATCHABILITY_GATE_P5_4_V3_7_4_RELEASE_NOTES.md": {
+      "sha256": "270cc211ba0c20d81b4773b09b20c526d0dd53650b8f53f28c02a357ef3a6ecf",
+      "size": 3284
+    },
+    "agent-system/11_release/ASO_PLANNER_DISPATCHABILITY_GATE_P5_4_V3_7_4_VALIDATION_REPORT.md": {
+      "sha256": "9be3a03429e41be8a5642313c82792652f371ed6438591ae30d852e756580099",
+      "size": 5129
+    },
+    "agent-system/11_release/ASO_PROJECT_DESIGN_GAP_GOVERNANCE_P4_V3_6_0_RELEASE_NOTES.md": {
+      "sha256": "f3c738e4818c64d041115b22e28f326a57e17bcf00e611771843a0c868198d11",
+      "size": 3086
+    },
+    "agent-system/11_release/ASO_PROJECT_DESIGN_GAP_GOVERNANCE_P4_V3_6_0_VALIDATION_REPORT.md": {
+      "sha256": "67fd5f4e81b0c7ee180618c5cc00741f0d479240c5b20e24ae68bdc596171d08",
+      "size": 10801
+    },
+    "agent-system/11_release/ASO_PROJECT_FACTORY_P0_V3_2_0_RELEASE_NOTES.md": {
+      "sha256": "df833a9daebe0e6b555730386105975749e973f4c96f392a7a3e4c4923fc5d6a",
+      "size": 2219
+    },
+    "agent-system/11_release/ASO_PROJECT_FACTORY_P0_V3_2_0_VALIDATION_REPORT.md": {
+      "sha256": "90667a5370e376cb29118ed9ca4bcb92fa147e8c1dae7511b8773876db926c92",
+      "size": 8719
+    },
+    "agent-system/11_release/ASO_PROJECT_FACTORY_P1_V3_3_0_RELEASE_NOTES.md": {
+      "sha256": "4a4b73fbda8953ed5e8a6df644f30d6120a961d100f3feaf795643367f1379a5",
+      "size": 3623
+    },
+    "agent-system/11_release/ASO_PROJECT_FACTORY_P1_V3_3_0_VALIDATION_REPORT.md": {
+      "sha256": "896b708cd8179abe38a1c2f3f4e2692537dbf9cc931f922db110215ad3bb3d71",
+      "size": 10579
+    },
+    "agent-system/11_release/ASO_PROPOSAL_APPLY_P3_V3_5_0_RELEASE_NOTES.md": {
+      "sha256": "6ea62368f8263041d129d65e837a427c869c020d3b544081dbe92d3b9053ddfc",
+      "size": 4104
+    },
+    "agent-system/11_release/ASO_PROPOSAL_APPLY_P3_V3_5_0_VALIDATION_REPORT.md": {
+      "sha256": "61afbdf8c06b64108310732d448fca7fc62b31655fa5fe411fc02c490fb42547",
+      "size": 9675
+    },
+    "agent-system/11_release/ASO_REAL_TZ_E2E_INSTALL_INTAKE_P5_6_V3_7_6_RELEASE_NOTES.md": {
+      "sha256": "e4f1dd3451d1891eda1acf0c0e0a2871b19a28e00e113a6665e170ee51832e1c",
+      "size": 2832
+    },
+    "agent-system/11_release/ASO_REAL_TZ_E2E_INSTALL_INTAKE_P5_6_V3_7_6_VALIDATION_REPORT.md": {
+      "sha256": "4c279a82f43e0d2a593fd8cd2aa875f314944b3ecf849eed63853b5b9ebef962",
+      "size": 5193
+    },
+    "agent-system/11_release/ASO_RUNTIME_STATE_P2_V3_4_0_RELEASE_NOTES.md": {
+      "sha256": "cb72187fe450a0285fbd07730a48c4215cf7d548d1aaf3b7573b2e1f000a31d3",
+      "size": 5253
+    },
+    "agent-system/11_release/ASO_RUNTIME_STATE_P2_V3_4_0_VALIDATION_REPORT.md": {
+      "sha256": "aef1d1d413f461dfde98c3c157c424b3c0118e2112ae8e9937304b2fb39b629a",
+      "size": 11227
+    },
+    "agent-system/11_release/ASO_WORKING_STATE_STABILIZATION_P5_5_V3_7_5_RELEASE_NOTES.md": {
+      "sha256": "2a52191a4b6d36d86eac5912da4800e7680784493cedf2844217011699a141c2",
+      "size": 1700
+    },
+    "agent-system/11_release/ASO_WORKING_STATE_STABILIZATION_P5_5_V3_7_5_VALIDATION_REPORT.md": {
+      "sha256": "6a1ebe84040adcae3e8aa12e0b06757ab721a98b499ad902852444a7de37e683",
+      "size": 4669
+    },
+    "agent-system/11_release/ASO_WORKSPACE_BOOTSTRAP_RUNTIME_LIFECYCLE_P4_1_V3_6_1_INCIDENT_REPLAY_NOTES.md": {
+      "sha256": "c9445d7fbf5dc364e56822e123d0242667c85e046456c149f0b2164b01a099bf",
+      "size": 6136
+    },
+    "agent-system/11_release/ASO_WORKSPACE_BOOTSTRAP_RUNTIME_LIFECYCLE_P4_1_V3_6_1_RELEASE_NOTES.md": {
+      "sha256": "2a634d75edb75103e643ffa15e90daac857f678178b4b8261890cb1242d24ea6",
+      "size": 3729
+    },
+    "agent-system/11_release/ASO_WORKSPACE_BOOTSTRAP_RUNTIME_LIFECYCLE_P4_1_V3_6_1_VALIDATION_REPORT.md": {
+      "sha256": "af19d800e2612d9b4371c53969a404cfca84f9bdd6f957a017d0aa7cdd093f74",
+      "size": 5503
+    },
+    "agent-system/11_release/STAGE1_UPGRADE_VALIDATION_REPORT.md": {
+      "sha256": "955835eb37cf6ad7bc7272789dc36bb4a5ab618b817cd3cf7504d9305263ec1c",
+      "size": 13157
+    },
+    "agent-system/11_release/STAGE2_STATE_CONTRACT_CORRECTION_VALIDATION_REPORT.md": {
+      "sha256": "7b78782c4d0ecceb383a34d448cb5e6f44b466208d88402eca0c04507286bcdb",
+      "size": 17829
+    },
+    "agent-system/11_release/STAGE2_UPGRADE_VALIDATION_REPORT.md": {
+      "sha256": "07b6f7a1cd78bb4fe839d78f7d1d107847601f3fed1fabe773ed75cc201862d0",
+      "size": 11696
+    },
+    "agent-system/11_release/STAGE3_DAG_CHECKPOINT_CORRECTION_VALIDATION_REPORT.md": {
+      "sha256": "bb16c14af23fa5585ea86c6130fbe6408f5edfbaae0af7d4568087169cfe34b2",
+      "size": 9652
+    },
+    "agent-system/11_release/STAGE3_PRE_MAIN_PACKAGE_LAYOUT_CLEANUP_VALIDATION_REPORT.md": {
+      "sha256": "e5a1549af9ec6415c2e6e02f2b22b4e173c1b71bdc88822d679aab620ad4ce54",
+      "size": 5434
+    },
+    "agent-system/11_release/STAGE3_SAFE_AUTOMATION_DIAGNOSTICS_RELEASE_NOTES.md": {
+      "sha256": "8d2084657f822e0d00a4c80b2d50bc448a7917d52030cfa2e4a6f043dc0c3f10",
+      "size": 2599
+    },
+    "agent-system/11_release/STAGE3_SAFE_AUTOMATION_DIAGNOSTICS_VALIDATION_REPORT.md": {
+      "sha256": "e206caee3fbc22ddec353f7a28458cddd5c34ae7acd690667497e0b11681e03c",
+      "size": 14684
+    },
+    "agent-system/12_project_factory/ASO_LOCK_CONTRACT.md": {
+      "sha256": "921e22c33950d8686958047dc1e282e675f0b81b3eb028f44a52d9294b155f18",
+      "size": 5064
+    },
+    "agent-system/12_project_factory/GENERATED_PROJECT_CLEAN_REPO_CONTRACT.md": {
+      "sha256": "4feac48175f82311d79ad103ca50be39b37d1e43f4ca9b380756ea1955e8ba71",
+      "size": 5294
+    },
+    "agent-system/12_project_factory/GITHUB_PUBLISH_CONTRACT.md": {
+      "sha256": "005af5d2078d85bbe8b8abd87b4afbfa4b34c6d0efddbed0c46af70b987f96c4",
+      "size": 5276
+    },
+    "agent-system/12_project_factory/PROJECT_FACTORY_P0_SPEC.md": {
+      "sha256": "af3e1caae1a1ebc6ad5c93bde85f916e8b80daaeb811994ed694f3ca0340b6fd",
+      "size": 5900
+    },
+    "agent-system/12_project_factory/PROJECT_FACTORY_P1_SPEC.md": {
+      "sha256": "6baf0ab79e1a4da622911f4cf628c4172f5af30ab14d3a335a784623de787e4c",
+      "size": 8903
+    },
+    "agent-system/12_project_factory/REFERENCE_ENGINE_MODE_CONTRACT.md": {
+      "sha256": "cf2b3010b71405965580cf731a04b647924bcefef79446b5a825c33833aa0e32",
+      "size": 3928
+    },
+    "agent-system/GOVERNANCE_CHANGELOG.md": {
+      "sha256": "0923943ebc9eb2744cc8d47b9c67b4de499a10faeab2b278ec74b368b2346592",
+      "size": 134114
+    },
+    "agent-system/ORCHESTRATOR_RUNTIME_CONTRACT.json": {
+      "sha256": "8d9bc3e62e32dfa1f36a6cb20a76378ac30f48cc04ed76f1fd2d11f8b9253dc1",
+      "size": 12167
+    },
+    "agent-system/PACKAGE_VERSIONING.md": {
+      "sha256": "db756599f10796c8c0759b068e8db02c57192d4eeea17070d25be58dd37b6eff",
+      "size": 24856
+    },
+    "agent-system/README.md": {
+      "sha256": "84d06760416632210b0f77cff49bd7773c9cf4647e8635227837e5f68d495647",
+      "size": 39415
+    },
+    "agent-system/scripts/checkpoint_preflight.sh": {
+      "sha256": "2a09ca60456af7caa0d57648a329dffd52d718ce0df4a6a98f59ddf18db013bb",
+      "size": 22150
+    },
+    "agent-system/scripts/init_project_workspace.sh": {
+      "sha256": "cdd992383e134b44f7568b37aa3e43fe148b028f246dab290f1ed40ea22f08be",
+      "size": 14418
+    },
+    "agent-system/scripts/install_aso_clean.sh": {
+      "sha256": "42fea9a2013db4984d1d5a910cf2714344e1e600a75a8d7fefaa8950944c46ae",
+      "size": 6456
+    },
+    "agent-system/scripts/run_governance_smoke_tests.py": {
+      "sha256": "be542ae203eb4890039624fbea00bfe5875856cebb43a3c6d39aa7f5d9e8e852",
+      "size": 8638
+    },
+    "agent-system/scripts/run_governance_smoke_tests.sh": {
+      "sha256": "0099d739e076e1d00ffae73581a21aacba934de2ac659a9f72fd89388febd45f",
+      "size": 26871
+    },
+    "agent-system/scripts/source_hygiene.sh": {
+      "sha256": "13f81b106827dcd4fd98db2c83a11c54628cc62abafa18f4a3a9086a4e73f204",
+      "size": 4221
+    },
+    "agent-system/scripts/validate_task_packet.py": {
+      "sha256": "74c39c18505b20c6f2eb8c895c20fa773d1b4583b5817512540668525c0f421e",
+      "size": 17216
+    },
+    "agent-system/tests/fixtures/approved_ssh_alias/allowed_pattern.txt": {
+      "sha256": "c86737a7639a21e6e99d6feb04ac7c1bd070a8a539d4626caa1a6f7a17297cae",
+      "size": 29
+    },
+    "agent-system/tests/fixtures/approved_ssh_alias/changed_path.txt": {
+      "sha256": "c86737a7639a21e6e99d6feb04ac7c1bd070a8a539d4626caa1a6f7a17297cae",
+      "size": 29
+    },
+    "agent-system/tests/fixtures/approved_ssh_alias/project_state.md": {
+      "sha256": "d15fe82589c2cfed8dd564c11b98e84ccefc0b9092e5dfc4dd994c47127fcbe9",
+      "size": 736
+    },
+    "agent-system/tests/fixtures/aso_lock/invalid_aso.lock": {
+      "sha256": "bdb0983a3175aa180f6b8cd44cad1ec4502bb276766892ae7d0af5f3e4c21484",
+      "size": 656
+    },
+    "agent-system/tests/fixtures/aso_lock/valid_aso.lock": {
+      "sha256": "9b1ce1ef7f2dbcdbaf5b09c660b6b4c796fd079d38ec8da28f888d2b3ee29d6e",
+      "size": 741
+    },
+    "agent-system/tests/fixtures/canonical_remote_expected/project_state.md": {
+      "sha256": "d7da0d47d9050e7decc450a543bd08396852e8755a70f7b3a2e11501ed606486",
+      "size": 637
+    },
+    "agent-system/tests/fixtures/canonical_remote_mismatch/project_state.md": {
+      "sha256": "6c727b38c3cdedcf72f0537e18ab9c22340c263a6c684c1e19299ec60e5a9581",
+      "size": 618
+    },
+    "agent-system/tests/fixtures/context_pack/bad_context_pack_archive_doc.json": {
+      "sha256": "e99c51ced94b03b6b9e5d82cfba6c840dc3f40a7704d3773d867d43d1842fe03",
+      "size": 448
+    },
+    "agent-system/tests/fixtures/context_pack/bad_context_pack_broad_directory.json": {
+      "sha256": "bf9585ee3db43c8ba74059635d41c3af8b13e00aeda5d54fee96ad04a14c3502",
+      "size": 507
+    },
+    "agent-system/tests/fixtures/context_pack/bad_context_pack_budget_overflow.json": {
+      "sha256": "86f6e7caa65c14f74087668b818be65d9339cc492553f1fe18602b40d8fa484f",
+      "size": 773
+    },
+    "agent-system/tests/fixtures/context_pack/bad_context_pack_deprecated_doc.json": {
+      "sha256": "5151ffdb9710b3696f6fe2c862cca92a9385016a133faba96fc726be221d31f7",
+      "size": 528
+    },
+    "agent-system/tests/fixtures/context_pack/bad_context_pack_forbidden_doc.json": {
+      "sha256": "d1037d8e9609c4ece70935250719971f4dc584bd41b9a46053696b9564f376cd",
+      "size": 534
+    },
+    "agent-system/tests/fixtures/context_pack/bad_context_pack_missing_required_fields.json": {
+      "sha256": "e86a17b05d9aa959b6f987b6f1d0eb0f5ff7e4ff540a5b0640b4a20668bda2d9",
+      "size": 241
+    },
+    "agent-system/tests/fixtures/context_pack/bad_context_pack_path_escape.json": {
+      "sha256": "cbbf8088da2c61119e9e35f53cfde262da83a28452163a5ad35ee0aa094bb81a",
+      "size": 446
+    },
+    "agent-system/tests/fixtures/context_pack/deprecated_context_doc.md": {
+      "sha256": "6b8e50324adbfae3d5d3d9ae1a44c67aaf58f1bfbd3318f28976dea90c0028ee",
+      "size": 121
+    },
+    "agent-system/tests/fixtures/context_pack/valid_context_pack.json": {
+      "sha256": "13a14d248cbb040271a5ca02a545487552556def20c05a79e2efc1403ca04458",
+      "size": 865
+    },
+    "agent-system/tests/fixtures/design/bad_design_assumption_as_fact.md": {
+      "sha256": "a5bf1fd5dd6b9ec1d2198e3938b61cbe08c0afadb492fe92db69f1dc9cbf2ab5",
+      "size": 4227
+    },
+    "agent-system/tests/fixtures/design/bad_design_giant_task.md": {
+      "sha256": "e741225a18d5ef7887c595c2edba8f4bae6e33a5aa29c48891bd0007fce8b577",
+      "size": 4105
+    },
+    "agent-system/tests/fixtures/design/bad_design_missing_sources.md": {
+      "sha256": "25f1a8880217f5dfec005da9069f9c0f0376bc1fe39c72fd59a8d8c7c0cd15f6",
+      "size": 3969
+    },
+    "agent-system/tests/fixtures/design/bad_design_missing_testing_strategy.md": {
+      "sha256": "a50c31c06fa888e2220fc49d494abb5a4c8679a5a8371e5812815913a95ff441",
+      "size": 3731
+    },
+    "agent-system/tests/fixtures/design/bad_design_no_acceptance_criteria.md": {
+      "sha256": "82baa0c4a27beaf6abdb973d55eb4a99cbc3df59eb3a3410677b05e396eedafa",
+      "size": 3996
+    },
+    "agent-system/tests/fixtures/design/bad_design_unresolved_dependency.md": {
+      "sha256": "4a62cd4000d28df42fe88f413e499bd860e9c22832aa3cf15e85e4def233a167",
+      "size": 3989
+    },
+    "agent-system/tests/fixtures/design/valid_design.md": {
+      "sha256": "0b5ff1e35b735e894219a5291a0fa73e364bd242dfcd77113676b723b246fc56",
+      "size": 7565
+    },
+    "agent-system/tests/fixtures/design_gap/README.md": {
+      "sha256": "cfe2695f3dde20679c9adae5f012bbd7ed0f125c21721b52d2663417372829ea",
+      "size": 1649
+    },
+    "agent-system/tests/fixtures/design_gap/blocked_workspace/project-docs/design/gap_register.json": {
+      "sha256": "857de00c5edb96508d1ea440f2c247ace2cf60e514d3d1a25c7bab8d14375b42",
+      "size": 1128
+    },
+    "agent-system/tests/fixtures/design_gap/blocked_workspace/project-docs/design/questions/Q-001.json": {
+      "sha256": "7b51999690af4f907f71446df5ebcea948de442a469a629f341cfa1cb88c15e8",
+      "size": 1416
+    },
+    "agent-system/tests/fixtures/design_gap/negative/missing_blocking_stage/NEGATIVE_CASE.md": {
+      "sha256": "dd6f53de8d5a75e62bc74086001102cb55919bfdbac5f93decddb8c8cfc11fd3",
+      "size": 307
+    },
+    "agent-system/tests/fixtures/design_gap/negative/missing_blocking_stage/project-docs/design/gap_register.json": {
+      "sha256": "537bc88cdf16ad1dcc687310cefda805944c472127518852c2a527b36ddbe084",
+      "size": 1125
+    },
+    "agent-system/tests/fixtures/design_gap/negative/missing_blocking_stage/project-docs/design/questions/Q-001.json": {
+      "sha256": "d7babc22c7061145166dc9ef9ef3a246a714e59a1c49c4e18e3871833d641e91",
+      "size": 1416
+    },
+    "agent-system/tests/fixtures/design_gap/negative/missing_rationale/NEGATIVE_CASE.md": {
+      "sha256": "37927619b3309f735e049776e6afde9c266ca0a9e20a3dbdbce01114386dae22",
+      "size": 259
+    },
+    "agent-system/tests/fixtures/design_gap/negative/missing_rationale/project-docs/design/gap_register.json": {
+      "sha256": "4cde4aea0e6573f101583d8fa1c0261d3912b783ecbb0e5a765154afb96d9c66",
+      "size": 1125
+    },
+    "agent-system/tests/fixtures/design_gap/negative/missing_rationale/project-docs/design/questions/Q-001.json": {
+      "sha256": "2f1baadb32b248a9a8380496702c1d0352e9e5cc8747e82f82a4c8e9490ce7aa",
+      "size": 1326
+    },
+    "agent-system/tests/fixtures/design_gap/negative/missing_recommendation/NEGATIVE_CASE.md": {
+      "sha256": "785491c8864ece9e18a022e023126521a94209b1ca2be9a8039b71431ef6cdfd",
+      "size": 249
+    },
+    "agent-system/tests/fixtures/design_gap/negative/missing_recommendation/project-docs/design/gap_register.json": {
+      "sha256": "4cde4aea0e6573f101583d8fa1c0261d3912b783ecbb0e5a765154afb96d9c66",
+      "size": 1125
+    },
+    "agent-system/tests/fixtures/design_gap/negative/missing_recommendation/project-docs/design/questions/Q-001.json": {
+      "sha256": "f4f99ec51d6ff0b14b846c6b12cfc9ce296aa0da4ed2f0497c007058064d9c23",
+      "size": 1415
+    },
+    "agent-system/tests/fixtures/design_gap/negative/orphan_owner_decision/NEGATIVE_CASE.md": {
+      "sha256": "2afeec3af4c748d659313e10b3633487b0bfba3e2d9f30040a65683ed3b5e89c",
+      "size": 248
+    },
+    "agent-system/tests/fixtures/design_gap/negative/orphan_owner_decision/project-docs/design/gap_register.json": {
+      "sha256": "4cde4aea0e6573f101583d8fa1c0261d3912b783ecbb0e5a765154afb96d9c66",
+      "size": 1125
+    },
+    "agent-system/tests/fixtures/design_gap/negative/orphan_owner_decision/project-docs/design/questions/Q-001.json": {
+      "sha256": "7b51999690af4f907f71446df5ebcea948de442a469a629f341cfa1cb88c15e8",
+      "size": 1416
+    },
+    "agent-system/tests/fixtures/design_gap/negative/technical_question/NEGATIVE_CASE.md": {
+      "sha256": "eb388ae5c8a206085b841e435dc7a170bd21b37e431408d6776f437f1d7eb787",
+      "size": 289
+    },
+    "agent-system/tests/fixtures/design_gap/negative/technical_question/project-docs/design/gap_register.json": {
+      "sha256": "4cde4aea0e6573f101583d8fa1c0261d3912b783ecbb0e5a765154afb96d9c66",
+      "size": 1125
+    },
+    "agent-system/tests/fixtures/design_gap/negative/technical_question/project-docs/design/questions/Q-001.json": {
+      "sha256": "f6324f890fb3afaca4ceab629132f857b9a82c8c83949033fa354586a8669d29",
+      "size": 1384
+    },
+    "agent-system/tests/fixtures/design_gap/negative/unanswered_blocking_gap_crossing_stage/NEGATIVE_CASE.md": {
+      "sha256": "6dfe58a725840160c8d62273d43bdfaf2aab773e13ecbc32e8dc94881228dcb7",
+      "size": 316
+    },
+    "agent-system/tests/fixtures/design_gap/negative/unanswered_blocking_gap_crossing_stage/project-docs/design/gap_register.json": {
+      "sha256": "857de00c5edb96508d1ea440f2c247ace2cf60e514d3d1a25c7bab8d14375b42",
+      "size": 1128
+    },
+    "agent-system/tests/fixtures/design_gap/negative/unanswered_blocking_gap_crossing_stage/project-docs/design/questions/Q-001.json": {
+      "sha256": "7b51999690af4f907f71446df5ebcea948de442a469a629f341cfa1cb88c15e8",
+      "size": 1416
+    },
+    "agent-system/tests/fixtures/design_gap/negative/unaudited_question_presentation/NEGATIVE_CASE.md": {
+      "sha256": "be84a28a53bc8dffd7042d23e348158a2b787aa1beb1dc2008753d17b5ab0bd1",
+      "size": 239
+    },
+    "agent-system/tests/fixtures/design_gap/negative/unaudited_question_presentation/project-docs/design/gap_register.json": {
+      "sha256": "4cde4aea0e6573f101583d8fa1c0261d3912b783ecbb0e5a765154afb96d9c66",
+      "size": 1125
+    },
+    "agent-system/tests/fixtures/design_gap/negative/unaudited_question_presentation/project-docs/design/questions/Q-001.json": {
+      "sha256": "f120e936a286be5e007fa6c07449a21144a0f5f28a9ac8251c0c390a87c99d9f",
+      "size": 1336
+    },
+    "agent-system/tests/fixtures/design_gap/valid_workspace/project-docs/design/gap_register.json": {
+      "sha256": "4cde4aea0e6573f101583d8fa1c0261d3912b783ecbb0e5a765154afb96d9c66",
+      "size": 1125
+    },
+    "agent-system/tests/fixtures/design_gap/valid_workspace/project-docs/design/questions/Q-001.json": {
+      "sha256": "7b51999690af4f907f71446df5ebcea948de442a469a629f341cfa1cb88c15e8",
+      "size": 1416
+    },
+    "agent-system/tests/fixtures/incidents/attempted_auto_approval.md": {
+      "sha256": "ebba7ea0fd31112c85251dec702e122712cbd0f50f3358636ff3a64a666d0639",
+      "size": 354
+    },
+    "agent-system/tests/fixtures/incidents/missing_rule_id.md": {
+      "sha256": "1e2a6bdd73b15b1b1977f78f2ceb78bb190c04f5cdaddea649edd82a45e682d6",
+      "size": 288
+    },
+    "agent-system/tests/fixtures/incidents/valid_fixture_proposal.md": {
+      "sha256": "714e70bac41b9ff2e16f7f13514ed87aeca255dd4ac8d0d0786a0bbf7d5ed30d",
+      "size": 336
+    },
+    "agent-system/tests/fixtures/invalid_task_packet/TASK_INVALID_MISSING_REQUIRED.md": {
+      "sha256": "097200116fa5606e06ed767b3b7c98ba4f72d52b4c5400cea0a5768f60ee684f",
+      "size": 299
+    },
+    "agent-system/tests/fixtures/invalid_task_packet/expected_blocker.txt": {
+      "sha256": "4e2a91de48460b167ca2d321c4c342c23f88fb4481138d5ebdac3bee9451d40d",
+      "size": 27
+    },
+    "agent-system/tests/fixtures/manual_preflight_ref/expected_blocker.txt": {
+      "sha256": "780e6a3a3ed5cd5f2f27010114e04d22c1e0cc25962d8c9ded7269eeaeca5d5a",
+      "size": 71
+    },
+    "agent-system/tests/fixtures/manual_preflight_ref/project_state.md": {
+      "sha256": "748299fc06477ac43fa6c5f7a49dc273a84771e0c9c34744c6514d119a9bd3c6",
+      "size": 672
+    },
+    "agent-system/tests/fixtures/package_repo_with_project_docs/allowed_pattern.txt": {
+      "sha256": "a3447bceb4564982952a0723fc42df30047f0d50ca54f72ab41bf199820c135b",
+      "size": 15
+    },
+    "agent-system/tests/fixtures/package_repo_with_project_docs/changed_path.txt": {
+      "sha256": "7251ec9bf1a22c7f0a0a03527594afef344f914634526c348ea8f2d2c489818f",
+      "size": 39
+    },
+    "agent-system/tests/fixtures/package_repo_with_project_docs/expected_blocker.txt": {
+      "sha256": "6ebe402e444bca49001ba2d0264871bccbb5e508226fb52487d78223f3cc1d1e",
+      "size": 101
+    },
+    "agent-system/tests/fixtures/package_repo_with_project_docs/project_state.md": {
+      "sha256": "ab2a75b3e20ad1fc05591e2f11ae8da29f6575e1c42d3d0d68d5ac3a878368b0",
+      "size": 626
+    },
+    "agent-system/tests/fixtures/project_input_tz_policy/project_state.md": {
+      "sha256": "832bc5f497a180a745fb5c8cea10f1df8275668dade9a6b66d5eb4beb4da8c1e",
+      "size": 691
+    },
+    "agent-system/tests/fixtures/project_verify_clean/invalid_missing_gitignore/README.md": {
+      "sha256": "6535094d59929f3bc1c25832bb89e1d9cc0f546b0ee14904bdbc11f2e16e3145",
+      "size": 28
+    },
+    "agent-system/tests/fixtures/project_verify_clean/invalid_missing_gitignore/agent-system/README.md": {
+      "sha256": "c84531bc44b602df6e2a66c8890b79efa608ba8dab94ecf1cc92389ed800ea2f",
+      "size": 32
+    },
+    "agent-system/tests/fixtures/project_verify_clean/invalid_missing_gitignore/aso.lock": {
+      "sha256": "b1b509514e317487f53ad814f75debabba0dd8b86384540cc3274484d3300846",
+      "size": 726
+    },
+    "agent-system/tests/fixtures/project_verify_clean/valid_minimal/.gitignore": {
+      "sha256": "5116691ccc2fe062437fb11c4a23c9991b4c3aa26aa29b84a132ad8f7705459c",
+      "size": 298
+    },
+    "agent-system/tests/fixtures/project_verify_clean/valid_minimal/README.md": {
+      "sha256": "f91066b0f11064147fcee1b6e8cc07198ee7aa78e79d83d8869540d763e0a8ed",
+      "size": 56
+    },
+    "agent-system/tests/fixtures/project_verify_clean/valid_minimal/agent-system/README.md": {
+      "sha256": "c84531bc44b602df6e2a66c8890b79efa608ba8dab94ecf1cc92389ed800ea2f",
+      "size": 32
+    },
+    "agent-system/tests/fixtures/project_verify_clean/valid_minimal/aso.lock": {
+      "sha256": "5cf959c90dec12bbf81f79f368d6c77cd5ffe0e992991f328efc5cff4b288cfa",
+      "size": 706
+    },
+    "agent-system/tests/fixtures/proposal_apply_p3/negative/malformed_json.json": {
+      "sha256": "a8cc9214dcbbe1dfaa07fb707820a6585f169a2f31116e2943ffdfc4a10bf6c7",
+      "size": 16
+    },
+    "agent-system/tests/fixtures/proposal_apply_p3/negative/non_object_json.json": {
+      "sha256": "095a8a928787d4af087970ebc7110197abaa90f992b74037ce17491760f06880",
+      "size": 40
+    },
+    "agent-system/tests/fixtures/proposal_apply_p3/proposals/README.md": {
+      "sha256": "5dce4ce45b14cc7fc70d3043583d8efba3bf11d2422d7607c6117f791fb78bc7",
+      "size": 183
+    },
+    "agent-system/tests/fixtures/proposal_apply_p3/valid_workspace/README.md": {
+      "sha256": "0c14db5fa2546c0ea08a8a3853bef6008e6ea9ca37d5689dd7fc30d7221d8cec",
+      "size": 138
+    },
+    "agent-system/tests/fixtures/push_not_allowed/allowed_pattern.txt": {
+      "sha256": "1d9c3fd885fa3ea21d77f4c1f79f956fcf9be8e72c82f3d35547f9e04b6f3392",
+      "size": 7
+    },
+    "agent-system/tests/fixtures/push_not_allowed/changed_path.txt": {
+      "sha256": "56b0347605573e8146aefeff3b13ef49c618497354e652894eeb57a6ca56e8a6",
+      "size": 16
+    },
+    "agent-system/tests/fixtures/push_not_allowed/expected_blocker.txt": {
+      "sha256": "20c4dad265fdda241c9c38e66fc22c8b740f25969ade2c23f26fd4c8eca64623",
+      "size": 47
+    },
+    "agent-system/tests/fixtures/push_not_allowed/project_state.md": {
+      "sha256": "4bb7d33b2051901bb9cd9088a9dbb62bcad3e597a4612655d5d3d1f2796733a6",
+      "size": 625
+    },
+    "agent-system/tests/fixtures/real_tz_e2e/MISSING_TZ_PATH.txt": {
+      "sha256": "652b6830896d71c53078e82d9ee0ca6136f216ed96e1836a19d0c54b1296854d",
+      "size": 37
+    },
+    "agent-system/tests/fixtures/real_tz_e2e/TZ_REAL_E2E_TELEGRAM_BOT.md": {
+      "sha256": "21b70f311f5a30f94f4e0b2d128f998c9cdf4f1756acb313d0913f697fbd65ab",
+      "size": 2434
+    },
+    "agent-system/tests/fixtures/results/AUDIT_RESULT_TASK_DEMO_001_BLOCKED.md": {
+      "sha256": "91237aa43dd489bb99fb293589ebfdc9ef03d482ce1176b64f6ec960b6353d8f",
+      "size": 691
+    },
+    "agent-system/tests/fixtures/results/AUDIT_RESULT_TASK_DEMO_001_FAIL.md": {
+      "sha256": "8edad8ca93bc57d30ac3aaec618d77c7607c1c7195cf0bbba2c2ae5fb1aa797f",
+      "size": 686
+    },
+    "agent-system/tests/fixtures/results/AUDIT_RESULT_TASK_DEMO_001_GAP.md": {
+      "sha256": "5bb558ee5f2705aefe7c2a5d038c49c8626a0498331a267426323bcc1d1edd97",
+      "size": 970
+    },
+    "agent-system/tests/fixtures/results/AUDIT_RESULT_TASK_DEMO_001_PASS.md": {
+      "sha256": "4e61b6c8f13c01dc279f7cee5346983b65e4bb44e0555701225b97eb024e864a",
+      "size": 702
+    },
+    "agent-system/tests/fixtures/results/RESULT_TASK_DEMO_001_BYPASS.md": {
+      "sha256": "d91859fdbb03cb8758c1dd506e279417433c49aa22ff8397b92978a9c0589cc7",
+      "size": 687
+    },
+    "agent-system/tests/fixtures/results/RESULT_TASK_DEMO_001_FAIL.md": {
+      "sha256": "349b9566891746eba5637bca7a7a04fb1b6be19dcddf3378f476e80345269a55",
+      "size": 592
+    },
+    "agent-system/tests/fixtures/results/RESULT_TASK_DEMO_001_MALFORMED.md": {
+      "sha256": "5d7d4c3a503b3fe6b6d838e2c3c3eaefa158353dc842538466cc98139f316aec",
+      "size": 62
+    },
+    "agent-system/tests/fixtures/results/RESULT_TASK_DEMO_001_PASS.md": {
+      "sha256": "328cea9a66521c6dc322708ead20fe6082c132db73cb9f9adaabfc141c3549ff",
+      "size": 873
+    },
+    "agent-system/tests/fixtures/rules/invalid_duplicate/agent-system/09_validators/RESULT_VALIDATION_RULES.md": {
+      "sha256": "e5e3bc417cdbde9b545b2956f9491f95a91112d7e701e6e1b1902e731dad8c8b",
+      "size": 34
+    },
+    "agent-system/tests/fixtures/rules/invalid_duplicate/agent-system/09_validators/rules/governance_rules.json": {
+      "sha256": "599ab83cd327dd9963ea5660700a772493f483f7c5f41a8d26883d07aab9b64c",
+      "size": 887
+    },
+    "agent-system/tests/fixtures/rules/invalid_semantics/agent-system/09_validators/rules/governance_rules.json": {
+      "sha256": "f24817ffe847c6f818f665395c78522ea463cfdffc92546462af32c945d640a5",
+      "size": 439
+    },
+    "agent-system/tests/fixtures/rules/valid_registry/agent-system/09_validators/RESULT_VALIDATION_RULES.md": {
+      "sha256": "e5e3bc417cdbde9b545b2956f9491f95a91112d7e701e6e1b1902e731dad8c8b",
+      "size": 34
+    },
+    "agent-system/tests/fixtures/rules/valid_registry/agent-system/09_validators/rules/governance_rules.json": {
+      "sha256": "c43a5f46e5bba547ac905568420e3b7f328d94813978721b5cb1bf9de283062c",
+      "size": 496
+    },
+    "agent-system/tests/fixtures/secret_file_present/allowed_pattern.txt": {
+      "sha256": "10edf395121888b825269ff19c83f8531dc38df96c5927b2e09a6cfc6e86d06a",
+      "size": 11
+    },
+    "agent-system/tests/fixtures/secret_file_present/changed_path.txt": {
+      "sha256": "10edf395121888b825269ff19c83f8531dc38df96c5927b2e09a6cfc6e86d06a",
+      "size": 11
+    },
+    "agent-system/tests/fixtures/secret_file_present/expected_blocker.txt": {
+      "sha256": "51a51eb0a85f4b6573fa1c01371af577f7a924d92d319459f3df6c303aed3f28",
+      "size": 71
+    },
+    "agent-system/tests/fixtures/secret_file_present/project_state.md": {
+      "sha256": "ab2a75b3e20ad1fc05591e2f11ae8da29f6575e1c42d3d0d68d5ac3a878368b0",
+      "size": 626
+    },
+    "agent-system/tests/fixtures/state/dag_invalid_audit_passed_dependency_ready/README.md": {
+      "sha256": "8aa2d15b6ea8dc43ab3f1317c3ee58946e452cf181ef27f141a5f06f600cb50c",
+      "size": 161
+    },
+    "agent-system/tests/fixtures/state/dag_invalid_blocked_ready/README.md": {
+      "sha256": "77b167051e9ad0c3f95fe73ee8e49655dac28aa9aeed87d2f1ab5f7d37776cf0",
+      "size": 165
+    },
+    "agent-system/tests/fixtures/state/dag_invalid_cycle/README.md": {
+      "sha256": "1e263de69fc157d239c65e2f40449ca494da37bcced941fe959b3afe311b3ab3",
+      "size": 122
+    },
+    "agent-system/tests/fixtures/state/dag_invalid_missing_dependency/README.md": {
+      "sha256": "150d07d883aa54a7bfee358c6dc11f280b4eeb4844939e1d6ed2d4f09dd09553",
+      "size": 162
+    },
+    "agent-system/tests/fixtures/state/dag_valid/README.md": {
+      "sha256": "70b70b6e7325d94f3700de4af6e8eab6396d22a5e2ee1d3f97b99922d9e7f75c",
+      "size": 116
+    },
+    "agent-system/tests/fixtures/state/invalid_bad_schema_version/README.md": {
+      "sha256": "c2a5aaa0e0f89fecdb16306217cf54abd9550f05c22f9123a8c8c59b90de9b26",
+      "size": 160
+    },
+    "agent-system/tests/fixtures/state/invalid_checkpoint_policy_not_required/README.md": {
+      "sha256": "26f82392769370e5c430adc5ed67c10fa9ff5051f8e1baa47a8a03c462829e8b",
+      "size": 182
+    },
+    "agent-system/tests/fixtures/state/invalid_current_gate_status_active/README.md": {
+      "sha256": "49502a45011829727a844868f8c5dbc60e2219008e890f95e4bf5960c172940b",
+      "size": 162
+    },
+    "agent-system/tests/fixtures/state/invalid_dispatch_action_semantic/README.md": {
+      "sha256": "29f7dcba2941bf470e6f50613c91bf06ef71f73ba429421a2f22851f9332253b",
+      "size": 170
+    },
+    "agent-system/tests/fixtures/state/invalid_markdown_json_drift/README.md": {
+      "sha256": "50165ff956b8cbb292ef27ab63a37fda33d394134fef91d18ee01d95b446aac2",
+      "size": 170
+    },
+    "agent-system/tests/fixtures/state/invalid_missing_required/README.md": {
+      "sha256": "4c169c8e7ec5584c34249fac4e2ec358dec832048b9bc413986b4c6a6ba632f5",
+      "size": 147
+    },
+    "agent-system/tests/fixtures/state/invalid_runtime_architect/README.md": {
+      "sha256": "26640a4b725ca75d34ddf38e85fc3960faba97f03ee112dd2f041a8771357085",
+      "size": 168
+    },
+    "agent-system/tests/fixtures/state/p2_valid_workspace/README.md": {
+      "sha256": "0c14db5fa2546c0ea08a8a3853bef6008e6ea9ca37d5689dd7fc30d7221d8cec",
+      "size": 138
+    },
+    "agent-system/tests/fixtures/task_packets/bad_context_pack_builder_forbidden_root.md": {
+      "sha256": "a19f18112122fe8900cab29fe45457da39e2091db8248291f85c5ffe9d3b1637",
+      "size": 376
+    },
+    "agent-system/tests/fixtures/task_packets/bad_context_pack_builder_missing_doc.md": {
+      "sha256": "574b063d109fb5d3612aa3551e9e3ec8d39cc783261ecce7439a2ea006e27405",
+      "size": 416
+    },
+    "agent-system/tests/fixtures/task_packets/bad_context_pack_builder_whole_project.md": {
+      "sha256": "8135c0e19eb0ee5738c848168e2c344d8abcf4a34e33d4fa1a069846f8750c1f",
+      "size": 343
+    },
+    "agent-system/tests/fixtures/task_packets/valid_context_pack_builder_task.md": {
+      "sha256": "41432a003581f397d7fba94be33a3d4197023a46f6b0f384fe6819cf63838ae5",
+      "size": 1099
+    },
+    "agent-system/tests/fixtures/untracked_critical_baseline/expected_blocker.txt": {
+      "sha256": "0bdde2a8cce5e0b95ae56787275278caf4a69aead2c38dfb66cd724a360b5368",
+      "size": 76
+    },
+    "agent-system/tests/fixtures/untracked_critical_baseline/project_state.md": {
+      "sha256": "e26c9cd36f24d17e9af688022f69b29c9f03a1ede58d09a8e802d73c7e2eb58c",
+      "size": 636
+    },
+    "agent-system/tests/fixtures/wrong_branch/allowed_pattern.txt": {
+      "sha256": "1d9c3fd885fa3ea21d77f4c1f79f956fcf9be8e72c82f3d35547f9e04b6f3392",
+      "size": 7
+    },
+    "agent-system/tests/fixtures/wrong_branch/changed_path.txt": {
+      "sha256": "56b0347605573e8146aefeff3b13ef49c618497354e652894eeb57a6ca56e8a6",
+      "size": 16
+    },
+    "agent-system/tests/fixtures/wrong_branch/expected_blocker.txt": {
+      "sha256": "5cdf2b0995c39c626cd69eba80abedd54106862b0b7df27493f0c6c09886da99",
+      "size": 45
+    },
+    "agent-system/tests/fixtures/wrong_branch/project_state.md": {
+      "sha256": "d17fbdf1c710e7a5efe3353ae543648d220b43e4348ce295bea7e022be2d81bf",
+      "size": 626
+    },
+    "agent-system/tests/fixtures/wrong_remote/allowed_pattern.txt": {
+      "sha256": "1d9c3fd885fa3ea21d77f4c1f79f956fcf9be8e72c82f3d35547f9e04b6f3392",
+      "size": 7
+    },
+    "agent-system/tests/fixtures/wrong_remote/changed_path.txt": {
+      "sha256": "56b0347605573e8146aefeff3b13ef49c618497354e652894eeb57a6ca56e8a6",
+      "size": 16
+    },
+    "agent-system/tests/fixtures/wrong_remote/expected_blocker.txt": {
+      "sha256": "67b14300f44dc62727c9f9d7ae5f61b70ad48ff80a90cf4b73e2ce0a4e99e4ed",
+      "size": 47
+    },
+    "agent-system/tests/fixtures/wrong_remote/project_state.md": {
+      "sha256": "c882b943ae4226f0692b4cb45077ae035d35b2f1f35019844426e2c916a61f53",
+      "size": 634
+    },
+    "agent-system/tests/test_governance_smoke_runner.py": {
+      "sha256": "a22b3097d41d97188914db4a441ea166ff4b88d5ff50de5de831a0d8a5296519",
+      "size": 6227
+    },
+    "agent-system/tests/test_validate_task_packet.py": {
+      "sha256": "998fb94a80a926111bf8eebf1f12d307491350c28750bb10393e56e40fd1b3ec",
+      "size": 7459
+    },
+    "agent-system/tools/aso/__init__.py": {
+      "sha256": "4c18a47753b51b551b887326fc953864d83795b3cbd4db404fd67b7631462300",
+      "size": 69
+    },
+    "agent-system/tools/aso/agent_system_orchestrator_aso/__init__.py": {
+      "sha256": "b57c557fa65d203b48ee7ede980108506f4c107f27f1780935231f269f30a38d",
+      "size": 119
+    },
+    "agent-system/tools/aso/agent_system_orchestrator_aso/__main__.py": {
+      "sha256": "5acd4e4aec536f8f253868317b1a4feef34011927bbcb3c057abe62671aaab13",
+      "size": 195
+    },
+    "agent-system/tools/aso/agent_system_orchestrator_aso/aso_tool/__init__.py": {
+      "sha256": "4c18a47753b51b551b887326fc953864d83795b3cbd4db404fd67b7631462300",
+      "size": 69
+    },
+    "agent-system/tools/aso/agent_system_orchestrator_aso/aso_tool/artifact_storage.py": {
+      "sha256": "ef0e208f7ab282b5ad30f7d50cacb5dc8d0f419cc9c1061df4f25f412329934e",
+      "size": 5203
+    },
+    "agent-system/tools/aso/agent_system_orchestrator_aso/aso_tool/aso.py": {
+      "sha256": "54cfb805150a1f60592bba643569a447797535d4d2819a63b6cab86390da8faa",
+      "size": 63951
+    },
+    "agent-system/tools/aso/agent_system_orchestrator_aso/aso_tool/commands/__init__.py": {
+      "sha256": "2ffe32d295224e404d912c93b09fdbbb116140aa0d4cd40ae90eb0c21781d804",
+      "size": 50
+    },
+    "agent-system/tools/aso/agent_system_orchestrator_aso/aso_tool/commands/apply.py": {
+      "sha256": "7537091b986e3a442b000de015365886f8488005e798caf4f5865014cd9306de",
+      "size": 33754
+    },
+    "agent-system/tools/aso/agent_system_orchestrator_aso/aso_tool/commands/archive_verify.py": {
+      "sha256": "9c7dc8cd5224328c6db0dfdda87cea9ace209563cc702015cfb792b9ef9f86c4",
+      "size": 24371
+    },
+    "agent-system/tools/aso/agent_system_orchestrator_aso/aso_tool/commands/artifact.py": {
+      "sha256": "20aafb8b9720c9e211b9fd83475722332d0ed7c50d6abb37b761a6114f2ff76b",
+      "size": 37490
+    },
+    "agent-system/tools/aso/agent_system_orchestrator_aso/aso_tool/commands/checkpoint_preflight.py": {
+      "sha256": "88edb37f48d3ddb6cee197cf9e6cea6fc72992192a63cc0feafc12c58ae5ae19",
+      "size": 20703
+    },
+    "agent-system/tools/aso/agent_system_orchestrator_aso/aso_tool/commands/context_pack_build.py": {
+      "sha256": "b3645009324690fa0eb97c9a20e643f5ce0accbec9f5ff96cd0dba652aeaeb75",
+      "size": 22807
+    },
+    "agent-system/tools/aso/agent_system_orchestrator_aso/aso_tool/commands/dag.py": {
+      "sha256": "31dae340049e2df9518e709433c42d9fe4d4280773a90ce830c62eeaf56fd3bd",
+      "size": 20992
+    },
+    "agent-system/tools/aso/agent_system_orchestrator_aso/aso_tool/commands/dashboard.py": {
+      "sha256": "b3ceb3f273a4722585880d1d49704fd76a6a8985a45bb2e38b81f6763474dbb0",
+      "size": 42321
+    },
+    "agent-system/tools/aso/agent_system_orchestrator_aso/aso_tool/commands/design.py": {
+      "sha256": "e722b610a692a3db31785244cdfbcfab9db51a7d978259e07c57657f993338c5",
+      "size": 9499
+    },
+    "agent-system/tools/aso/agent_system_orchestrator_aso/aso_tool/commands/dispatch.py": {
+      "sha256": "1598359087f8abf8dbe66e2311fd46cadac8b99de69c64be6822b23f8ce10db1",
+      "size": 6256
+    },
+    "agent-system/tools/aso/agent_system_orchestrator_aso/aso_tool/commands/doctor.py": {
+      "sha256": "e0c33e5d5c04e6235fbfd057932b17f097c8e82c592d938f3e1a866e3d2a636f",
+      "size": 32517
+    },
+    "agent-system/tools/aso/agent_system_orchestrator_aso/aso_tool/commands/incident_fixture.py": {
+      "sha256": "5833dee8c30346979cd70b7165744bdbfd5135a1e9f3b05201825c547bdff8a9",
+      "size": 13099
+    },
+    "agent-system/tools/aso/agent_system_orchestrator_aso/aso_tool/commands/intake.py": {
+      "sha256": "cddab4af9e7cdbd9b2a3e797695c4c0c6199e31d5e39973fbee7a3f101482035",
+      "size": 14752
+    },
+    "agent-system/tools/aso/agent_system_orchestrator_aso/aso_tool/commands/lifecycle.py": {
+      "sha256": "89635708119f931e658b84d6dd11a1e4c9474eb397fec01826c722d21d03e0d1",
+      "size": 20393
+    },
+    "agent-system/tools/aso/agent_system_orchestrator_aso/aso_tool/commands/lint.py": {
+      "sha256": "5eef292f1756669be5fe53183d0ab3f47e94f2ecc794bcd5abff8acf79cc34ba",
+      "size": 68210
+    },
+    "agent-system/tools/aso/agent_system_orchestrator_aso/aso_tool/commands/mode_guard.py": {
+      "sha256": "c4f3a2e0bf70c501f3e3484d248c2a3111291e6c872ba9766cb5fe58fe9723f1",
+      "size": 6321
+    },
+    "agent-system/tools/aso/agent_system_orchestrator_aso/aso_tool/commands/orchestrator.py": {
+      "sha256": "a20a65b08e44a69b93bd33dbdf8413450d67befc952df0ea9764d38794c8f61c",
+      "size": 21785
+    },
+    "agent-system/tools/aso/agent_system_orchestrator_aso/aso_tool/commands/output_policy.py": {
+      "sha256": "8c6d4f8107986b79873d139e7f2e9e3222a28671585b301d0827802c1e5c3f3e",
+      "size": 3437
+    },
+    "agent-system/tools/aso/agent_system_orchestrator_aso/aso_tool/commands/package_checks.py": {
+      "sha256": "334bac8945da05febff2fd75e96081b4877c3039a79b05636d44bf1db8405b78",
+      "size": 34731
+    },
+    "agent-system/tools/aso/agent_system_orchestrator_aso/aso_tool/commands/package_layout.py": {
+      "sha256": "159f7c89224a6eb281b4ddf28ef290788bc18868385f6aaf0a5d4a020efc9bf0",
+      "size": 2298
+    },
+    "agent-system/tools/aso/agent_system_orchestrator_aso/aso_tool/commands/package_sync.py": {
+      "sha256": "a95e2435929b363b5a51183f71b47a58ada7685c76d5b48687b232754cb42ad4",
+      "size": 754
+    },
+    "agent-system/tools/aso/agent_system_orchestrator_aso/aso_tool/commands/plan_next.py": {
+      "sha256": "450b01f9b449b60c32ac218c7f6ee5ccf7c84db5ea3a6c41334ac7ceaafccdb4",
+      "size": 53278
+    },
+    "agent-system/tools/aso/agent_system_orchestrator_aso/aso_tool/commands/project.py": {
+      "sha256": "14a091560025fc2f9c728b9c1248fd1b3bd4ea8aed93b3e9c0866c1e54a77ba4",
+      "size": 49948
+    },
+    "agent-system/tools/aso/agent_system_orchestrator_aso/aso_tool/commands/propose_checkpoint.py": {
+      "sha256": "02bc565f96a799fe60d20ecb6dfa557822565fba0b234f5d019bf25c418c3660",
+      "size": 16723
+    },
+    "agent-system/tools/aso/agent_system_orchestrator_aso/aso_tool/commands/propose_next_task.py": {
+      "sha256": "d423b6c15508f61419daed28d26c3bd9670f4dd5f4addbd762de4ecf9c3b0e2a",
+      "size": 12042
+    },
+    "agent-system/tools/aso/agent_system_orchestrator_aso/aso_tool/commands/propose_transition.py": {
+      "sha256": "82539013210ba10455a20c65d9068baddaea3bf9e5c836b4189f6c1e4ba5a77e",
+      "size": 16564
+    },
+    "agent-system/tools/aso/agent_system_orchestrator_aso/aso_tool/commands/record_result.py": {
+      "sha256": "18313929473810958d39fc1eab91d60f9075b0678fa40db28f7a34aeca66b96c",
+      "size": 32080
+    },
+    "agent-system/tools/aso/agent_system_orchestrator_aso/aso_tool/commands/repair_hints.py": {
+      "sha256": "7a819427016b015277b37baf85edd79ffb081737b0e8d9d4ecd0df99aade73bc",
+      "size": 2004
+    },
+    "agent-system/tools/aso/agent_system_orchestrator_aso/aso_tool/commands/state_init.py": {
+      "sha256": "ee62ac1bd94cd3eac2268d4e98ec26244d7da07b3e8cf83fc35f29f5baca36e1",
+      "size": 23851
+    },
+    "agent-system/tools/aso/agent_system_orchestrator_aso/aso_tool/commands/state_migrate.py": {
+      "sha256": "4c52bb3787beec8de85e8c73efca89077d239637af920fbd1e87da20edcf2b77",
+      "size": 19430
+    },
+    "agent-system/tools/aso/agent_system_orchestrator_aso/aso_tool/commands/state_render.py": {
+      "sha256": "389c06f92924f6f24947d89bce7ce0d8ce7587b9ad1f64ae62300deeb87fa21d",
+      "size": 16965
+    },
+    "agent-system/tools/aso/agent_system_orchestrator_aso/aso_tool/commands/state_verify.py": {
+      "sha256": "c2a810535c6435caedab954f2a1ef6b39b1a2a19d9500de8c7578a42f2514b3d",
+      "size": 71577
+    },
+    "agent-system/tools/aso/agent_system_orchestrator_aso/aso_tool/commands/status.py": {
+      "sha256": "7e491908d12a6842817f7f0c14084f2c0b1e4ad472e788b6125669c5f2b795ba",
+      "size": 17292
+    },
+    "agent-system/tools/aso/agent_system_orchestrator_aso/aso_tool/commands/validate_context_pack.py": {
+      "sha256": "37fe57cfabd1462aaa894a9815ebb0b8adc650fd91457b718b8829250081827b",
+      "size": 34136
+    },
+    "agent-system/tools/aso/agent_system_orchestrator_aso/aso_tool/commands/validate_design.py": {
+      "sha256": "4aed60527b2df7e9e8428b91dba917ae3160356f442cc640b4e956cfa174b05d",
+      "size": 3366
+    },
+    "agent-system/tools/aso/agent_system_orchestrator_aso/aso_tool/commands/validate_rules.py": {
+      "sha256": "ef445d1e51a8649d3a3b2adf386588bc7b55c155b9fc7ba8efe27c5937c773b4",
+      "size": 10114
+    },
+    "agent-system/tools/aso/agent_system_orchestrator_aso/aso_tool/commands/wizard.py": {
+      "sha256": "c349eb38a515c931d5ad6f47f28b83756e2902b9403f6350fe188120b46e2264",
+      "size": 9633
+    },
+    "agent-system/tools/aso/agent_system_orchestrator_aso/aso_tool/correction_routing.py": {
+      "sha256": "d026bcfa88df196044be10302f6040dedfced7d2262138415498db5fdc3d95c9",
+      "size": 7081
+    },
+    "agent-system/tools/aso/agent_system_orchestrator_aso/aso_tool/dispatch_receipts.py": {
+      "sha256": "35c51a56d4d9d237e560e02564ab0d9ed02e63de3d7d89c21d791ea1fc4f82b9",
+      "size": 8921
+    },
+    "agent-system/tools/aso/agent_system_orchestrator_aso/aso_tool/handoff_artifacts.py": {
+      "sha256": "1f24495076a40ce62c5bef3ccbe46e1f41c8b5111d4629a91d7a86dd87ca2b6b",
+      "size": 19066
+    },
+    "agent-system/tools/aso/agent_system_orchestrator_aso/aso_tool/lockfile.py": {
+      "sha256": "c1a960c9030a9471fbdcb93adce48564dc84f423059df08c987f4127fb8f5080",
+      "size": 14282
+    },
+    "agent-system/tools/aso/agent_system_orchestrator_aso/aso_tool/models/__init__.py": {
+      "sha256": "7cf6de072195ec4068a2f11f236ea91a22e523f53ff404b29579e1dd1113397c",
+      "size": 54
+    },
+    "agent-system/tools/aso/agent_system_orchestrator_aso/aso_tool/parsers/__init__.py": {
+      "sha256": "c4f273dac241ebc470b555e1abbffa315d1c17d391155c477571ef306d7627eb",
+      "size": 57
+    },
+    "agent-system/tools/aso/agent_system_orchestrator_aso/aso_tool/parsers/markdown_design.py": {
+      "sha256": "fc07e357cc322784762f18551c9947ce76b1a0ebc1b630c072b2b944f234bb3b",
+      "size": 3339
+    },
+    "agent-system/tools/aso/agent_system_orchestrator_aso/aso_tool/proposal_contracts.py": {
+      "sha256": "d179eb431f94e7c0e0c9a923cc2a0380c4ec9a28b1fa19523d2876b4e55ca490",
+      "size": 9422
+    },
+    "agent-system/tools/aso/agent_system_orchestrator_aso/aso_tool/resources.py": {
+      "sha256": "217d11631e67fcf4cae7f0f2d5d29fd0239c630038de013807957f19761f492b",
+      "size": 9613
+    },
+    "agent-system/tools/aso/agent_system_orchestrator_aso/aso_tool/result_parser.py": {
+      "sha256": "2e70e0c386f433f5ee28fb3eb8bdda4bfb213cacff02b49683e4d6428fe8481d",
+      "size": 18180
+    },
+    "agent-system/tools/aso/agent_system_orchestrator_aso/aso_tool/rules/__init__.py": {
+      "sha256": "669f95b4a4f260d6634cfc6a591a7cef7ffd65ac17c86ad3749597df252d08ae",
+      "size": 54
+    },
+    "agent-system/tools/aso/agent_system_orchestrator_aso/aso_tool/rules/design.py": {
+      "sha256": "e5e2639e3fd95695ce4eaf242aa8a962491ebb6be569954cd5947ed3237a12bf",
+      "size": 24827
+    },
+    "agent-system/tools/aso/agent_system_orchestrator_aso/aso_tool/rules/design_governance.py": {
+      "sha256": "4719b9fc5b155ae0f6b5c55e74a381987f348be80bc93268d8fdc0fa22cbbd20",
+      "size": 36781
+    },
+    "agent-system/tools/aso/agent_system_orchestrator_aso/aso_tool/runtime_contract_fallback.py": {
+      "sha256": "55f08319893ccdbd402fd3aff860ecc387fc2514ae798a9b493ef88905fdcda4",
+      "size": 12396
+    },
+    "agent-system/tools/aso/agent_system_orchestrator_aso/aso_tool/runtime_schema_contracts.py": {
+      "sha256": "7e2b5dffae6060172fd445a22e683384c58794d6989886e777fc13b484097e2c",
+      "size": 6936
+    },
+    "agent-system/tools/aso/agent_system_orchestrator_aso/aso_tool/timestamps.py": {
+      "sha256": "9899dd7c5293a98bc995727237270cb93cf1b66803bab906803d781a20747c5f",
+      "size": 393
+    },
+    "agent-system/tools/aso/agent_system_orchestrator_aso/aso_tool/transition_engine.py": {
+      "sha256": "bbf8f4242719f6dac07e28c4884223a59770da81c8d9636e92b8dcf7ffe5530b",
+      "size": 61577
+    },
+    "agent-system/tools/aso/agent_system_orchestrator_aso/cli.py": {
+      "sha256": "b04aad461cb9882463e3818ab753a7ec30d2108bb07823b0ca75dcdc36823e3d",
+      "size": 219
+    },
+    "agent-system/tools/aso/agent_system_orchestrator_aso/resources/__init__.py": {
+      "sha256": "9e2c7b8ba0d53ebaf6673c3032b227d69979a650497aadf1603aba3c02e8b8e3",
+      "size": 43
+    },
+    "agent-system/tools/aso/aso.py": {
+      "sha256": "7c33ab9204d3b25ff78af9ab97c87f1ded4ab97e990980ec48b6e329a09f8fa1",
+      "size": 238
+    },
+    "agent-system/tools/aso/tests/.gitkeep": {
+      "sha256": "01ba4719c80b6fe911b091a7c05124b64eeece964e09c058ef8f9805daca546b",
+      "size": 1
+    },
+    "agent-system/tools/aso/tests/current_source_snapshot.py": {
+      "sha256": "24ecded27817d658018a30b7b23a8d05823518f3c2c64de3b617e685a01bfe37",
+      "size": 2481
+    },
+    "agent-system/tools/aso/tests/fixtures/hotfix_p4_1/incident_001_workspace_root/README.md": {
+      "sha256": "894f5eb86a23acfbca38b553afbf7b52dae8ef79e1c9cadcc85e1d5eb11ed250",
+      "size": 170
+    },
+    "agent-system/tools/aso/tests/fixtures/hotfix_p4_1/incident_001_workspace_root/agent-system/README.md": {
+      "sha256": "0713bebc6042c78240ae427d78f0967c1766d5118473b96715c755e9f310630b",
+      "size": 105
+    },
+    "agent-system/tools/aso/tests/fixtures/hotfix_p4_1/incident_001_workspace_root/aso.lock": {
+      "sha256": "ee5362e55932c1dd065d4c34c0c70d045759a46043f1a6d3b9da42991b2be3eb",
+      "size": 99
+    },
+    "agent-system/tools/aso/tests/fixtures/project_factory_p1/github_dry_run_answers.json": {
+      "sha256": "24952496e7bd440ce6ee9f71c3f5963bb7ae336f0d15bb871a5283890e70a74e",
+      "size": 235
+    },
+    "agent-system/tools/aso/tests/fixtures/project_factory_p1/p0_lock_compatible/.gitignore": {
+      "sha256": "5116691ccc2fe062437fb11c4a23c9991b4c3aa26aa29b84a132ad8f7705459c",
+      "size": 298
+    },
+    "agent-system/tools/aso/tests/fixtures/project_factory_p1/p0_lock_compatible/README.md": {
+      "sha256": "b70df28db675dcd7b95466896a0bdf442b5c8dae47c8f8a80b371b3acbc2cb01",
+      "size": 67
+    },
+    "agent-system/tools/aso/tests/fixtures/project_factory_p1/p0_lock_compatible/agent-system/README.md": {
+      "sha256": "b923a0cc3822eb6d685c282bf56385d98684ddf534798219763647b9d5b95bdd",
+      "size": 26
+    },
+    "agent-system/tools/aso/tests/fixtures/project_factory_p1/p0_lock_compatible/aso.lock": {
+      "sha256": "0e39274e5bea57903501750d1fb95eea56b09b56b6917d59b5e1171e053f889d",
+      "size": 696
+    },
+    "agent-system/tools/aso/tests/fixtures/project_factory_p1/publication_boundary_negative/tracked_project_input/.gitignore": {
+      "sha256": "5116691ccc2fe062437fb11c4a23c9991b4c3aa26aa29b84a132ad8f7705459c",
+      "size": 298
+    },
+    "agent-system/tools/aso/tests/fixtures/project_factory_p1/publication_boundary_negative/tracked_project_input/README.md": {
+      "sha256": "f72174ec38c29986df2c11be9c86528c08e313783c6fea818a10fde8afba43f6",
+      "size": 28
+    },
+    "agent-system/tools/aso/tests/fixtures/project_factory_p1/publication_boundary_negative/tracked_project_input/aso.lock": {
+      "sha256": "e4624d41a0c57ae5b9770fcd17133889fdfe8edcdd17209191e85f3d03ddfc34",
+      "size": 727
+    },
+    "agent-system/tools/aso/tests/fixtures/project_factory_p1/reference_valid/.gitignore": {
+      "sha256": "5116691ccc2fe062437fb11c4a23c9991b4c3aa26aa29b84a132ad8f7705459c",
+      "size": 298
+    },
+    "agent-system/tools/aso/tests/fixtures/project_factory_p1/reference_valid/README.md": {
+      "sha256": "174796d86a52ab58cc03233272beaa1cec77a5f155cc98cbd85390ada743054c",
+      "size": 55
+    },
+    "agent-system/tools/aso/tests/fixtures/project_factory_p1/reference_valid/aso.lock": {
+      "sha256": "6dae9d884a822119e318afd4cfcf1cda248002e1daff1b60e4ed0f8b539ea086",
+      "size": 711
+    },
+    "agent-system/tools/aso/tests/fixtures/project_factory_p1/wizard_answers_reference_github.json": {
+      "sha256": "c40ba25865d9d6eec29d607dbb5e8cc1bf099ee2a413e370ee916384cd7ac4d8",
+      "size": 299
+    },
+    "agent-system/tools/aso/tests/test_apply.py": {
+      "sha256": "ab1869d0565c95367b0de0b4ad8e3690fd28af99448915a177ac5adac67267eb",
+      "size": 29497
+    },
+    "agent-system/tools/aso/tests/test_archive_verify.py": {
+      "sha256": "e2dda8fd9e122e44fc8842dd3eb99cab9008b4c519011b8b24b154698f5499bf",
+      "size": 8551
+    },
+    "agent-system/tools/aso/tests/test_artifact.py": {
+      "sha256": "41112765b86f00b411dd138ff24978c3e1e8ec29a71f95941a1678be14691ef0",
+      "size": 5350
+    },
+    "agent-system/tools/aso/tests/test_artifact_cli.py": {
+      "sha256": "11273b85b6c5a74bcaa6b716b979e8fa150e8012f8cbdd6fe08e2e787aa47384",
+      "size": 16774
+    },
+    "agent-system/tools/aso/tests/test_artifact_manifest_contract.py": {
+      "sha256": "37a9aca46ed43890abe5e5a29f9f0301da7706cccdb80dff27774aa7e03020db",
+      "size": 7874
+    },
+    "agent-system/tools/aso/tests/test_artifact_package_schemas.py": {
+      "sha256": "7c237c613fedd67526c576721e0bc569045a042ab3d92c5da06b5813aabd2457",
+      "size": 10809
+    },
+    "agent-system/tools/aso/tests/test_artifact_storage.py": {
+      "sha256": "16feb4c287d989bd2fda8645fedffb7be77043f6615f34716b97a2aa51a89f9d",
+      "size": 3617
+    },
+    "agent-system/tools/aso/tests/test_audit_correction_routing.py": {
+      "sha256": "a78c0359ae231f777c3cda741fcf541ac56f03c52564395e9f9521a5f56f6ae4",
+      "size": 12635
+    },
+    "agent-system/tools/aso/tests/test_checkpoint.py": {
+      "sha256": "72b8328a1cf96dbfbe76cffd19cdeb91089819f995b8348a6e7339bfc687d2e2",
+      "size": 2052
+    },
+    "agent-system/tools/aso/tests/test_checkpoint_preflight.py": {
+      "sha256": "a15d8ec161ce48db7167ca8872171c1e804393ad257d7e6955cb1cfa25675311",
+      "size": 20777
+    },
+    "agent-system/tools/aso/tests/test_ci_governance.py": {
+      "sha256": "2a9905af051e9b42a63f841f234a66257dc4e05563db29af9b87574dd209cb30",
+      "size": 5933
+    },
+    "agent-system/tools/aso/tests/test_cli_mode_guard.py": {
+      "sha256": "50014a777a8222af967b779ec64162870300ffbd40da94c47096517760d1c306",
+      "size": 7896
+    },
+    "agent-system/tools/aso/tests/test_context_pack_build.py": {
+      "sha256": "ee8f88cad1b8164de4aaedc5638f875e762b6dfe7505b37f47e02607ceca6db2",
+      "size": 9896
+    },
+    "agent-system/tools/aso/tests/test_contract_authority_map.py": {
+      "sha256": "8488e6e0c0d0e212d37e8bb4039933bbb6f2728cb849803305aa64c781f5c9ac",
+      "size": 1768
+    },
+    "agent-system/tools/aso/tests/test_dag.py": {
+      "sha256": "b546de901c027c310f9527bca35b9376d8f517dd4f3528f62b47e98b06a89ec3",
+      "size": 10122
+    },
+    "agent-system/tools/aso/tests/test_dashboard.py": {
+      "sha256": "37559d4bf4cca5711a12fb65c88d20e18ff10ce5840e2942be261daea1202e2f",
+      "size": 11146
+    },
+    "agent-system/tools/aso/tests/test_design_governance.py": {
+      "sha256": "2ac4a6c1ed2f1355a44d40e4edb5f391b4d5218d4ebfa34e735cf8691a53a297",
+      "size": 16632
+    },
+    "agent-system/tools/aso/tests/test_dispatch_receipts.py": {
+      "sha256": "9987aa652732d9e03fd708107d366c5574933b2898c18885130a111be05af1ab",
+      "size": 4614
+    },
+    "agent-system/tools/aso/tests/test_dispatchability_contract.py": {
+      "sha256": "1feb71ce106fe74ecf3e30f2d4d866836f2234c1a1f3966fe9ec3a2ea230f136",
+      "size": 24297
+    },
+    "agent-system/tools/aso/tests/test_doctor.py": {
+      "sha256": "5b011ee95908c43c7c5f8e7669edd92bb45fc217818a759dbbb8a98ba7881404",
+      "size": 16942
+    },
+    "agent-system/tools/aso/tests/test_incident_fixture.py": {
+      "sha256": "a416e729e32bb343674973ca5f5332f343a008fa6400fc56d76d97372b48b487",
+      "size": 6760
+    },
+    "agent-system/tools/aso/tests/test_install_doc_examples.py": {
+      "sha256": "012fc57f642bfca53e87c26d100203af57749bed7502dcbd8ef3794553d41766",
+      "size": 1473
+    },
+    "agent-system/tools/aso/tests/test_install_hygiene.py": {
+      "sha256": "f80ca94f1624401555b241fca3dc2719b07b13d07f4f52d148f689467b196d48",
+      "size": 14049
+    },
+    "agent-system/tools/aso/tests/test_installed_resource_lookup.py": {
+      "sha256": "e92f46df52feffb8429e56c852869db0cd18d1d31807bc0c64f6b4ad971e00ae",
+      "size": 4932
+    },
+    "agent-system/tools/aso/tests/test_intake_bootstrap.py": {
+      "sha256": "374527100b02a7b85c035bef6c5913323f207f9b25e8560d5923167375a9a54a",
+      "size": 12827
+    },
+    "agent-system/tools/aso/tests/test_lifecycle.py": {
+      "sha256": "4170f315363b1a5c18870a7c1d34edaccbaff2cb9eb67ac7d652c36edc56bd34",
+      "size": 7965
+    },
+    "agent-system/tools/aso/tests/test_lifecycle_state_reconciliation.py": {
+      "sha256": "785bc2c93d98812db91f16d12557ddb17964e8785e08115a8f368ebe0b67f023",
+      "size": 18319
+    },
+    "agent-system/tools/aso/tests/test_lint.py": {
+      "sha256": "32ed94d9a235a123edb256e6158ba2446f04d83bdbdad425e1fbd283e5898b89",
+      "size": 32219
+    },
+    "agent-system/tools/aso/tests/test_lockfile.py": {
+      "sha256": "023b10892b373946db6779fa0106a3c89f2aa97f22ca14445250c48a212dc246",
+      "size": 10141
+    },
+    "agent-system/tools/aso/tests/test_orchestrator_context_minimization.py": {
+      "sha256": "d3a5228c3749406ec4475f512c29a7f008b83fc36b86aaf72fab515ad4aa6237",
+      "size": 7288
+    },
+    "agent-system/tools/aso/tests/test_orchestrator_conveyor.py": {
+      "sha256": "8fd89c3d67ee896d7869c361e57c4d92307a003da1fe674531dac61087515ea5",
+      "size": 6421
+    },
+    "agent-system/tools/aso/tests/test_orchestrator_handoff_contract.py": {
+      "sha256": "2a1a32a33896641073650b50847f0010b5c087c84eedd7488c71883225d159e8",
+      "size": 7063
+    },
+    "agent-system/tools/aso/tests/test_orchestrator_runtime_contract.py": {
+      "sha256": "411280c202b73ce32de05c3d88724ea0782f7bba94218a3c8ffd9fcccfd38398",
+      "size": 7979
+    },
+    "agent-system/tools/aso/tests/test_package_layout.py": {
+      "sha256": "801c6e8cadbd2038d9db74410e8fc32254e90c7d07b59c324176010df129b610",
+      "size": 8522
+    },
+    "agent-system/tools/aso/tests/test_package_sync.py": {
+      "sha256": "0a33c641855ddb7a0c3757d79383b0849b7b9d2f9a4e29b43fcd388d86c55cd2",
+      "size": 3783
+    },
+    "agent-system/tools/aso/tests/test_packaging.py": {
+      "sha256": "54fc8d8c5bf6883d7e51052e7556d7d93e548262807f5197009c7e997c982b28",
+      "size": 8850
+    },
+    "agent-system/tools/aso/tests/test_plan_next.py": {
+      "sha256": "f85a18048598defdde90dd055cff35aa2a649d577c14644a09c000e96d6aa20b",
+      "size": 51494
+    },
+    "agent-system/tools/aso/tests/test_project.py": {
+      "sha256": "6a248c539622a3944f31f6385708f7d3fb4a7634057a53cec0a152ebf4d72a64",
+      "size": 56736
+    },
+    "agent-system/tools/aso/tests/test_proposal_contracts.py": {
+      "sha256": "5e125e3bdb534c15285facb95d944dd4d4c7eec0dfcf5e0fd9d255b51b3ab1fd",
+      "size": 3780
+    },
+    "agent-system/tools/aso/tests/test_propose_checkpoint.py": {
+      "sha256": "60bb39ab74fb497cc3c1f90d70c964befc7e67ea06f38cb84e6c8a5059d6bd8d",
+      "size": 11761
+    },
+    "agent-system/tools/aso/tests/test_propose_next_task.py": {
+      "sha256": "a1680831d7b33f01d6ef5a857b549511c512a35b989ff7f63145b917fce7cbf9",
+      "size": 7203
+    },
+    "agent-system/tools/aso/tests/test_propose_transition.py": {
+      "sha256": "c3ff967137daa31ba65db84df6fb023b1b9b02d0cb96cf2282622b60434f2a7e",
+      "size": 9765
+    },
+    "agent-system/tools/aso/tests/test_real_e2e_lifecycle_regression.py": {
+      "sha256": "39e4c3f464a660fb80613ff95c8739408731050bfdd3c12e1fff307333aacfaf",
+      "size": 15972
+    },
+    "agent-system/tools/aso/tests/test_real_tz_e2e_smoke.py": {
+      "sha256": "fd511ff79d4cc5a803c12ddba42ec68b4f56122375980c66f0c300b8ddbec745",
+      "size": 10573
+    },
+    "agent-system/tools/aso/tests/test_record_result.py": {
+      "sha256": "3f65da30cd3f8cf6c1d40bdbcd9491f1d2d0bcc2f8a41e62ae4bdf628f9c8ed7",
+      "size": 25574
+    },
+    "agent-system/tools/aso/tests/test_result_parser.py": {
+      "sha256": "83aa5c4b48e3bebf5d4ccf8e99f3dcf493a70532e59661f88e3858dbe3cdffa6",
+      "size": 6248
+    },
+    "agent-system/tools/aso/tests/test_runtime_schema_contracts.py": {
+      "sha256": "7836e778bd0747967b0a15f4a898a36b20ed04ebdff59b32eaf927215b2338d8",
+      "size": 2054
+    },
+    "agent-system/tools/aso/tests/test_state_init.py": {
+      "sha256": "616ec18d63f22ffb6df5cc4b5ddfa412ad42a5b6eb2044198f76db3bd6722203",
+      "size": 13055
+    },
+    "agent-system/tools/aso/tests/test_state_migrate.py": {
+      "sha256": "4c8221231c349f1ecfbd69509ae096e5c603ca3eb32001dbe0f3a663b5ab970b",
+      "size": 6665
+    },
+    "agent-system/tools/aso/tests/test_state_render.py": {
+      "sha256": "da86a6e4e281720cd268ef2e060ad8432c1d161e2f525ac7eb9c3e7485ff5da6",
+      "size": 13218
+    },
+    "agent-system/tools/aso/tests/test_state_verify.py": {
+      "sha256": "ca9e637813a1c0b7eb6b4991f4702c12393368b9356a22ec3bf28ab8b7df8e90",
+      "size": 29475
+    },
+    "agent-system/tools/aso/tests/test_status.py": {
+      "sha256": "e47d3c7b360fa1c3b63f7894ff1a7dbf90d585504136ed401e33887855ac9f1a",
+      "size": 10281
+    },
+    "agent-system/tools/aso/tests/test_transition_engine.py": {
+      "sha256": "d96fb4c79a593c4ff0e7720ffdb95b8a79010ef8bbbe2bad5471ed5bd1fe36dd",
+      "size": 7787
+    },
+    "agent-system/tools/aso/tests/test_validate_context_pack.py": {
+      "sha256": "0b63bb4e5f562ec7d13071d0fa80f6f649812b2145819ac93946a9478e99bd9e",
+      "size": 17685
+    },
+    "agent-system/tools/aso/tests/test_validate_design.py": {
+      "sha256": "594cee8ecc6d012b9dc22ea5689ef66c90a8955cb349acb8d61d70be474c88b1",
+      "size": 3408
+    },
+    "agent-system/tools/aso/tests/test_validate_rules.py": {
+      "sha256": "44b952d12ae530f854e6897a666b448cfcf621f6cb72c86301c73c45a348fac2",
+      "size": 2603
+    },
+    "agent-system/tools/aso/tests/test_version_coherence.py": {
+      "sha256": "44fac3f2c0c7e6675f2c7c0f04ce6b9a5ca887e7c0c125700f4b164f1271a5b8",
+      "size": 12397
+    },
+    "agent-system/tools/aso/tests/test_wizard.py": {
+      "sha256": "d9489b41caa815d2b95f6de0fa88415b2847aa3379e2cde040a4c34d36c8d225",
+      "size": 10473
+    }
+  },
+  "required_directory_sentinels": [
+    "agent-system/09_validators"
+  ],
+  "required_file_sentinels": [
+    "agent-system/00_start/ORCHESTRATOR_START.md",
+    "agent-system/ORCHESTRATOR_RUNTIME_CONTRACT.json",
+    "agent-system/02_runtime/ORCHESTRATOR_RUNTIME_CONTRACT.json",
+    "agent-system/tools/aso/aso.py"
+  ],
+  "resource_root": "agent-system",
+  "schema": "aso_resource_manifest_v1"
+}

@@ -1,0 +1,136 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://aso.local/state/current_gate.schema.json",
+  "title": "CURRENT_GATE sidecar",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "sidecar_type",
+    "markdown_source",
+    "state_revision",
+    "updated_at",
+    "updated_by",
+    "content"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": "2.0.0"
+    },
+    "sidecar_type": {
+      "const": "CURRENT_GATE"
+    },
+    "markdown_source": {
+      "const": "project-runtime/CURRENT_GATE.md"
+    },
+    "state_revision": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "updated_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "updated_by": {
+      "type": "string",
+      "minLength": 1
+    },
+    "content": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "gate_id",
+        "gate_type",
+        "status",
+        "owner_role",
+        "task_id",
+        "task_packet",
+        "action_semantic",
+        "workspace_identity_status",
+        "repository_lock_status",
+        "checkpoint_eligibility",
+        "checkpoint_blocked_by",
+        "evidence_refs"
+      ],
+      "properties": {
+        "gate_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "gate_type": {
+          "type": "string",
+          "minLength": 1
+        },
+        "status": {
+          "type": "string",
+          "enum": [
+            "ready",
+            "active",
+            "blocked",
+            "passed",
+            "failed"
+          ]
+        },
+        "owner_role": {
+          "type": "string",
+          "minLength": 1
+        },
+        "task_id": {
+          "type": "string"
+        },
+        "task_packet": {
+          "type": "string"
+        },
+        "action_semantic": {
+          "type": "string",
+          "enum": [
+            "dispatch",
+            "pause",
+            "wait_for_owner",
+            "stop_terminal",
+            "correction",
+            "checkpoint",
+            "none"
+          ]
+        },
+        "workspace_identity_status": {
+          "type": "string",
+          "enum": [
+            "passed",
+            "failed",
+            "pending"
+          ]
+        },
+        "repository_lock_status": {
+          "type": "string",
+          "enum": [
+            "passed",
+            "failed",
+            "pending"
+          ]
+        },
+        "checkpoint_eligibility": {
+          "type": "string",
+          "enum": [
+            "eligible",
+            "blocked",
+            "not_required",
+            "pending"
+          ]
+        },
+        "checkpoint_blocked_by": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "evidence_refs": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,215 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://agent-system.local/schemas/next_action.schema.json",
+  "title": "NEXT_ACTION",
+  "description": "Stage 2 envelope sidecar for project-runtime/NEXT_ACTION.md.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "sidecar_type",
+    "markdown_source",
+    "state_revision",
+    "updated_at",
+    "updated_by",
+    "content"
+  ],
+  "properties": {
+    "schema_version": { "type": "string", "const": "2.0.0" },
+    "sidecar_type": { "type": "string", "const": "NEXT_ACTION" },
+    "markdown_source": { "type": "string", "const": "project-runtime/NEXT_ACTION.md" },
+    "state_revision": { "type": "integer", "minimum": 1 },
+    "updated_at": { "type": "string", "format": "date-time" },
+    "updated_by": { "type": "string", "const": "orchestrator" },
+    "content": { "$ref": "#/$defs/content" }
+  },
+  "$defs": {
+    "content": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "action_id",
+        "action_type",
+        "target_role",
+        "task_id",
+        "task_packet",
+        "dependency_status",
+        "blocked_by",
+        "action_semantic",
+        "workspace_identity_required",
+        "repository_lock_required",
+        "checkpoint_policy",
+        "checkpoint_preflight_required",
+        "checkpoint_receipt_required",
+        "checkpoint_receipt_ref",
+        "requester_return_context",
+        "blocking_or_resume_context",
+        "required_universal_docs",
+        "required_project_docs",
+        "expected_result",
+        "instruction_for_orchestrator"
+      ],
+      "properties": {
+        "action_id": { "type": "string" },
+        "action_type": {
+          "type": "string",
+          "enum": ["create_agent", "route_result", "update_state", "wait_for_owner", "correction", "finalize", "stop"]
+        },
+        "target_role": { "$ref": "#/$defs/controlOrTargetRole" },
+        "task_id": { "type": "string" },
+        "task_packet": { "type": "string" },
+        "dependency_status": {
+          "type": "string",
+          "enum": ["ready", "blocked", "completed", "not_applicable"]
+        },
+        "blocked_by": { "$ref": "#/$defs/listOrNone" },
+        "action_semantic": { "$ref": "#/$defs/actionSemantic" },
+        "workspace_identity_required": { "type": "boolean" },
+        "repository_lock_required": { "type": "boolean" },
+        "checkpoint_policy": {
+          "type": "string",
+          "enum": ["forbidden", "local_only", "commit_and_push", "no_checkpoint"]
+        },
+        "checkpoint_preflight_required": { "type": "boolean" },
+        "checkpoint_receipt_required": { "type": "boolean" },
+        "checkpoint_receipt_ref": { "type": "string" },
+        "requester_return_context": {
+          "oneOf": [
+            { "const": "NONE" },
+            { "$ref": "#/$defs/requesterReturnContext" }
+          ]
+        },
+        "blocking_or_resume_context": {
+          "oneOf": [
+            { "const": "NONE" },
+            { "$ref": "#/$defs/blockingOrResumeContext" }
+          ]
+        },
+        "required_universal_docs": { "$ref": "#/$defs/listOrNone" },
+        "required_project_docs": { "$ref": "#/$defs/listOrNone" },
+        "expected_result": { "$ref": "#/$defs/listOrNone" },
+        "instruction_for_orchestrator": { "type": "string" }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": { "action_semantic": { "const": "wait_for_owner" } },
+            "required": ["action_semantic"]
+          },
+          "then": {
+            "properties": {
+              "action_type": { "const": "wait_for_owner" },
+              "target_role": { "const": "project_owner" }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": { "action_semantic": { "const": "stop_terminal" } },
+            "required": ["action_semantic"]
+          },
+          "then": { "properties": { "action_type": { "const": "stop" } } }
+        }
+      ]
+    },
+    "actionSemantic": {
+      "type": "string",
+      "enum": ["normal", "wait_for_owner", "pause", "stop_terminal", "completed_state_transition"]
+    },
+    "controlOrTargetRole": {
+      "type": "string",
+      "enum": [
+        "requirements_analyst",
+        "solution_architect",
+        "designer",
+        "developer",
+        "auditor",
+        "tester",
+        "technical_writer",
+        "devops_setup_engineer",
+        "release_manager",
+        "orchestrator",
+        "project_owner",
+        "none"
+      ]
+    },
+    "profileRole": {
+      "type": "string",
+      "enum": [
+        "requirements_analyst",
+        "solution_architect",
+        "designer",
+        "developer",
+        "auditor",
+        "tester",
+        "technical_writer",
+        "devops_setup_engineer",
+        "release_manager"
+      ]
+    },
+    "listOrNone": {
+      "oneOf": [
+        { "const": "NONE" },
+        { "type": "array", "items": { "type": "string" } }
+      ]
+    },
+    "blockingOrResumeContext": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "blocker_id",
+        "blocker_type",
+        "blocks",
+        "resolution_path",
+        "owner_question",
+        "resume_condition"
+      ],
+      "properties": {
+        "blocker_id": { "type": "string" },
+        "blocker_type": { "$ref": "#/$defs/blockerType" },
+        "blocks": { "type": "string" },
+        "resolution_path": { "type": "string" },
+        "owner_question": { "type": "string" },
+        "resume_condition": { "type": "string" }
+      }
+    },
+    "requesterReturnContext": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "requested_by_role",
+        "requested_by_task",
+        "return_to_requester_after_audit_pass",
+        "return_to_role_after_audit_pass",
+        "return_task_after_audit_pass",
+        "research_question_id",
+        "accepted_research_result_ref",
+        "accepted_research_audit_ref"
+      ],
+      "properties": {
+        "requested_by_role": {
+          "oneOf": [
+            { "$ref": "#/$defs/profileRole" },
+            { "const": "NONE" }
+          ]
+        },
+        "requested_by_task": { "type": "string" },
+        "return_to_requester_after_audit_pass": { "type": "boolean" },
+        "return_to_role_after_audit_pass": {
+          "oneOf": [
+            { "$ref": "#/$defs/profileRole" },
+            { "const": "none" }
+          ]
+        },
+        "return_task_after_audit_pass": { "type": "string" },
+        "research_question_id": { "type": "string" },
+        "accepted_research_result_ref": { "type": "string" },
+        "accepted_research_audit_ref": { "type": "string" }
+      }
+    },
+    "blockerType": {
+      "type": "string",
+      "enum": ["owner_decision", "pause", "audit_fail", "gap", "runtime", "dependency", "governance", "other"]
+    }
+  }
+}

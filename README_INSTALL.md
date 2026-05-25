@@ -101,16 +101,11 @@ and dispatchability contract tests.
 
 Installed `aso` commands resolve required governance resources from packaged
 package data, not from the virtualenv root or the current working directory.
-Packaged ASO governance/runtime resources are JSON and Markdown only unless a
-future task explicitly expands package data. The packaged runtime resource set
-is limited to
-`agent-system/09_validators/rules/governance_rules.json` and the registry's
-referenced source documents:
-`agent-system/02_runtime/PLANNER_DISPATCHABILITY_GATE_P5_4_CONTRACT.md`,
-`agent-system/02_runtime/PROPOSAL_APPLY_P3_CONTRACT.md`,
-`agent-system/02_runtime/RUNTIME_STATE_P2_CONTRACT.md`,
-`agent-system/02_runtime/STATE_TRANSITION_RULES.md`, and the six referenced
-validator rule Markdown files under `agent-system/09_validators/`.
+Packaged ASO governance/runtime resources include the vendored Project Factory
+source tree required for installed `aso project create --engine-mode vendored`
+as well as installed package commands such as `plan-next`, without requiring an
+adjacent source checkout. `aso package-layout verify` checks the packaged
+resource manifest and hashes.
 
 `aso package-sync verify` is a deprecated compatibility alias for
 `aso package-layout verify`. It performs no copy synchronization and must not

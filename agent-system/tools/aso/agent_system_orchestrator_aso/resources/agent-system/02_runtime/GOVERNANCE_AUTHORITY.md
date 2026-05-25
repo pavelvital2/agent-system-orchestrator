@@ -1,0 +1,130 @@
+# GOVERNANCE_AUTHORITY
+
+## Purpose
+
+This document defines immutable governance rules, authority precedence, conflict resolution, and governance freeze semantics for deterministic orchestration.
+
+## Immutable rules
+
+These rules cannot be overridden by task packet, NEXT_ACTION, handoff, or agent RESULT.
+
+1. One agent receives exactly one bounded task.
+2. A completed agent context is not reused; after RESULT, the profile-agent
+   context is terminated and deleted or rendered inaccessible for future work.
+3. Runtime state comes from filesystem files, not conversational memory.
+4. `NEXT_ACTION.md` contains the single next permitted action.
+5. Orchestrator does not design, implement, audit, test, document, or answer GAPs.
+6. The orchestrator does not write code, tests, schemas, validators, task
+   packets, package docs, project docs, release notes, or profile artifacts as
+   profile-agent work.
+7. The orchestrator does not check changes semantically; it may only run
+   deterministic validators, verify formal fields, preserve evidence, and
+   route independent tester or auditor agents.
+8. Profile agents do not modify `project-runtime/`.
+9. Ordinary project agents do not modify `agent-system/`.
+10. Task packets must be inside `ACTIVE_DOC_ROOT` unless explicitly governed as system/bootstrap documents.
+11. Deprecated/archive documents are not active source-of-truth.
+12. solution_architect and developer pass require auditor review.
+13. Profile agents cannot declare project completion.
+14. Completion requires orchestrator finalization.
+15. Active GAPs/blockers stop dependent dispatch.
+16. Runtime/governance violations stop dispatch until correction.
+17. Workspace identity validation is mandatory before runtime initialization,
+    profile-agent dispatch, checkpoint, commit, or push.
+18. Repository identity is compared by canonical `EXPECTED_GIT_REMOTE` and
+    `ACTUAL_GIT_REMOTE`, not by raw remote strings alone.
+19. Push is forbidden unless an accepted repository lock sets
+    `PUSH_ALLOWED: true` for the current workspace type, canonical repository
+    identity, and branch.
+20. Critical governance/runtime baseline paths must be tracked before first
+    profile-agent dispatch and first accepted checkpoint unless an explicit
+    owner policy records the allowed exception.
+21. Bootstrap cannot be accepted without a valid downstream task packet,
+    explicit GAP, explicit BLOCKED route, or explicit wait_for_owner route.
+
+## Authority precedence
+
+When instructions conflict, the highest applicable authority wins:
+
+```text
+1. Immutable governance rules
+2. Runtime state schema and state transition rules
+3. Filesystem governance
+4. Role instructions
+5. Task packet
+6. NEXT_ACTION operational instruction
+7. Handoff prompt
+8. Agent RESULT recommendation
+```
+
+A lower authority cannot relax or bypass a higher authority.
+
+## Conflict handling
+
+| Conflict | Resolution |
+|---|---|
+| Task packet conflicts with mandatory workflow | Treat as workflow violation; do not dispatch. |
+| NEXT_ACTION conflicts with transition table | Treat as invalid runtime state; enter correction. |
+| Role instruction conflicts with task packet | Role/governance wins unless explicitly governed and audited. |
+| Owner answer changes requirements/architecture | Route through solution_architect/audit or bounded correction task. |
+| Archive/deprecated doc appears in REQUIRED_DOCS | Treat task packet as invalid. |
+| Raw Git remote strings differ but canonical repository identity matches | Treat as valid only if the raw forms are allowed by workspace identity rules and any SSH alias is accepted or proven to resolve to GitHub. |
+| Canonical expected and actual repository identity differ | Treat as `repository_identity_mismatch`; dispatch, checkpoint, commit, and push are forbidden. |
+| Expected and actual branch differ | Treat as `repository_branch_mismatch`; push is forbidden and commit requires an explicit governed local-only checkpoint allowance. |
+| README/runtime/manifest/Git identity conflict | Treat as `workspace_identity_leakage`; dispatch, checkpoint, commit, and push are forbidden until correction. |
+| Untracked critical baseline path | Treat as `untracked_critical_baseline`; first dispatch and checkpoint are forbidden until tracked or explicitly exempted by owner policy. |
+| Bootstrap result has no valid continuation route | Treat as `bootstrap_continuation_missing`; accepted checkpoint and normal next dispatch are forbidden. |
+
+## Governance freeze
+
+Governance freeze is active when any of the following occurs:
+
+- runtime schema violation;
+- schema/template mismatch;
+- invalid transition;
+- task packet outside ACTIVE_DOC_ROOT;
+- deprecated/superseded task selected for dispatch;
+- ordinary agent changed forbidden files;
+- universal package is being changed;
+- manual runtime intervention occurred;
+- finalization invariant fails.
+- workspace identity validation fails;
+- repository lock is absent, stale, revoked, or contradicted for a checkpoint or
+  push;
+- canonical repository identity, branch, or workspace type conflicts with the
+  active runtime state.
+
+During freeze:
+
+```text
+PROJECT_STATUS: blocked
+CURRENT_PHASE: correction | blocked
+NEXT_ACTION.ACTION_TYPE: correction | wait_for_owner | update_state | stop | create_agent
+```
+
+Allowed freeze-safe actions are limited to:
+
+- `correction`;
+- `wait_for_owner`;
+- governed `update_state`;
+- `stop` when stop invariants allow it;
+- `create_agent` only for an explicitly bounded package-governance correction task.
+
+No normal project `create_agent` dispatch is allowed.
+
+## Freeze exit criteria
+
+Freeze exits only when:
+
+- runtime files validate against schema;
+- transition table permits NEXT_ACTION;
+- schema/templates are aligned;
+- package version/changelog are updated if package docs changed;
+- workspace identity and repository lock validate for the active workspace;
+- superseded/deprecated tasks are not active;
+- active GAPs/blockers are routed correctly;
+- NEXT_ACTION is regenerated from validated runtime state.
+
+## Manual intervention boundary
+
+The project owner may perform emergency runtime correction. After manual intervention, the orchestrator must not continue dispatch from memory. It must reread all runtime files, validate the state tuple, and regenerate NEXT_ACTION or enter correction/wait.

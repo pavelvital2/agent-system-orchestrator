@@ -1,0 +1,40 @@
+{
+  "schema_version": "1.0.0",
+  "question_id": "Q-001",
+  "gap_id": "GAP-001",
+  "question": "Should staff approve each request before it is treated as accepted?",
+  "why_it_matters": "This changes the customer's path, staff workload, and the status shown after submission.",
+  "question_category": "approval_behavior",
+  "options": [
+    {
+      "id": "A",
+      "label": "Yes, staff approve each request.",
+      "owner_effect": "More control, with a slightly slower customer flow."
+    },
+    {
+      "id": "B",
+      "label": "No, requests are accepted immediately.",
+      "owner_effect": "A faster flow, with less manual control."
+    }
+  ],
+  "recommended_option": "A",
+  "recommendation_reason": "This is safer when availability or suitability must be checked before accepting a request.",
+  "blocking_stage": "implementation",
+  "can_continue_until": "design",
+  "owner_impact": "The owner chooses how much control staff have over incoming requests.",
+  "routing": {
+    "routing_mode": "one_question_at_a_time",
+    "queue_id": "owner-main",
+    "queue_position": 1,
+    "presentation_state": "queued",
+    "previous_question_id": "NONE",
+    "next_question_id": "NONE"
+  },
+  "status": "ready_for_owner",
+  "audit_ref": "project-runtime/audits/AUDIT_Q_001_PASS.md",
+  "audit": {
+    "status": "passed",
+    "evidence_ref": "project-runtime/audits/AUDIT_Q_001_PASS.md"
+  },
+  "answer_record_id": "NONE"
+}

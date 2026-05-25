@@ -1,0 +1,65 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://agent-system.local/schemas/repository_lock.schema.json",
+  "title": "REPOSITORY_LOCK",
+  "description": "Runtime Schema 3.1.1 envelope sidecar for repository identity and push-boundary lock evidence.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "sidecar_type",
+    "runtime_schema_version",
+    "state_revision",
+    "updated_at",
+    "updated_by",
+    "content"
+  ],
+  "properties": {
+    "schema_version": { "type": "string", "const": "3.1.1" },
+    "sidecar_type": { "type": "string", "const": "REPOSITORY_LOCK" },
+    "runtime_schema_version": { "type": "string", "const": "3.1.1" },
+    "state_revision": { "type": "integer", "minimum": 1 },
+    "updated_at": { "type": "string", "format": "date-time" },
+    "updated_by": { "type": "string" },
+    "markdown_source": { "type": "string" },
+    "source_hash": { "type": "string" },
+    "previous_revision_hash": { "type": "string" },
+    "migration_source_schema": { "type": "string" },
+    "content": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "lock_id",
+        "project_slug",
+        "workspace_type",
+        "expected_git_remote",
+        "expected_branch",
+        "push_allowed",
+        "lock_status",
+        "accepted_by_task",
+        "accepted_by_audit",
+        "accepted_at",
+        "lock_revision"
+      ],
+      "properties": {
+        "lock_id": { "type": "string" },
+        "project_slug": { "type": "string" },
+        "workspace_type": {
+          "type": "string",
+          "enum": ["package_repo", "project_workspace", "implementation_repo", "test_fixture"]
+        },
+        "expected_git_remote": { "type": "string" },
+        "expected_branch": { "type": "string" },
+        "push_allowed": { "type": "boolean" },
+        "lock_status": {
+          "type": "string",
+          "enum": ["absent", "draft", "accepted", "revoked", "blocked"]
+        },
+        "accepted_by_task": { "type": "string" },
+        "accepted_by_audit": { "type": "string" },
+        "accepted_at": { "type": "string" },
+        "lock_revision": { "type": "integer", "minimum": 1 }
+      }
+    }
+  }
+}

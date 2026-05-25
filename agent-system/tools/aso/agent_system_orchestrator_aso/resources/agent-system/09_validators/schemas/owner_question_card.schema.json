@@ -1,0 +1,205 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://agent-system.local/schemas/owner_question_card.schema.json",
+  "title": "OWNER_QUESTION_CARD",
+  "description": "Corrected P4 owner-facing question card contract. Cards are authored by a profile agent and audited; ASO routes one audited card at a time and does not derive questions from TZ.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "question_id",
+    "gap_id",
+    "question",
+    "why_it_matters",
+    "question_category",
+    "options",
+    "recommended_option",
+    "recommendation_reason",
+    "blocking_stage",
+    "can_continue_until",
+    "owner_impact",
+    "routing",
+    "status",
+    "audit_ref"
+  ],
+  "properties": {
+    "schema_version": { "type": "string", "const": "1.0.0" },
+    "question_id": { "type": "string", "pattern": "^Q-[A-Za-z0-9._-]+$" },
+    "gap_id": { "type": "string", "pattern": "^GAP-[A-Za-z0-9._-]+$" },
+    "question": { "$ref": "#/$defs/ownerFacingNonTechnicalText" },
+    "why_it_matters": { "$ref": "#/$defs/ownerFacingNonTechnicalText" },
+    "question_category": { "$ref": "#/$defs/questionCategory" },
+    "options": {
+      "type": "array",
+      "minItems": 2,
+      "items": { "$ref": "#/$defs/questionOption" }
+    },
+    "recommended_option": { "$ref": "#/$defs/ownerFacingNonTechnicalText" },
+    "recommendation_reason": { "$ref": "#/$defs/ownerFacingNonTechnicalText" },
+    "blocking_stage": { "$ref": "#/$defs/stageName" },
+    "can_continue_until": { "$ref": "#/$defs/stageName" },
+    "owner_impact": { "$ref": "#/$defs/ownerFacingNonTechnicalText" },
+    "routing": { "$ref": "#/$defs/oneQuestionRouting" },
+    "status": { "$ref": "#/$defs/questionStatus" },
+    "audit_ref": { "type": "string", "minLength": 1 },
+    "audit": { "$ref": "#/$defs/auditEvidence" },
+    "answer_record_id": {
+      "oneOf": [
+        { "type": "string", "pattern": "^ANS-[A-Za-z0-9._-]+$" },
+        { "const": "NONE" }
+      ]
+    }
+  },
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "status": { "enum": ["ready_for_owner", "presented", "presented_to_owner"] }
+        },
+        "required": ["status"]
+      },
+      "then": {
+        "required": ["audit"],
+        "properties": {
+          "audit_ref": { "$ref": "#/$defs/auditPassEvidenceRef" },
+          "audit": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["status", "evidence_ref"],
+            "properties": {
+              "status": { "const": "passed" },
+              "evidence_ref": { "$ref": "#/$defs/auditPassEvidenceRef" }
+            }
+          }
+        }
+      }
+    }
+  ],
+  "$defs": {
+    "ownerFacingNonTechnicalText": {
+      "type": "string",
+      "minLength": 1,
+      "not": {
+        "pattern": "(^|[^A-Za-z0-9])([Ff][Aa][Ss][Tt][Aa][Pp][Ii]|[Dd][Jj][Aa][Nn][Gg][Oo]|[Pp][Oo][Ss][Tt][Gg][Rr][Ee][Ss]([Qq][Ll])?|[Ss][Qq][Ll][Ii][Tt][Ee]|[Ww][Ee][Bb][Hh][Oo][Oo][Kk][Ss]?|[Pp][Oo][Ll][Ll][Ii][Nn][Gg]|[Rr][Bb][Aa][Cc]|[Cc][Ee][Ll][Ee][Rr][Yy]|[Aa][Pp][Ss][Cc][Hh][Ee][Dd][Uu][Ll][Ee][Rr]|[Oo][Rr][Mm]|[Rr][Ee][Ss][Tt][ -]?[Aa][Pp][Ii]|[Dd][Aa][Tt][Aa][Bb][Aa][Ss][Ee]|[Ff][Rr][Aa][Mm][Ee][Ww][Oo][Rr][Kk]|[Qq][Uu][Ee][Uu][Ee]|[Ww][Oo][Rr][Kk][Ee][Rr]|[Ss][Cc][Hh][Ee][Dd][Uu][Ll][Ee][Rr]|[Dd][Ee][Pp][Ll][Oo][Yy][Mm][Ee][Nn][Tt]|[Hh][Oo][Ss][Tt][Ii][Nn][Gg]|[Aa][Pp][Ii])([^A-Za-z0-9]|$)"
+      }
+    },
+    "auditPassEvidenceRef": {
+      "type": "string",
+      "pattern": "^project-runtime/audits/AUDIT_[A-Za-z0-9._-]+_PASS\\.md$"
+    },
+    "auditEvidence": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["status", "evidence_ref"],
+      "properties": {
+        "status": {
+          "type": "string",
+          "enum": ["pending", "passed", "failed"]
+        },
+        "evidence_ref": {
+          "oneOf": [
+            { "$ref": "#/$defs/auditPassEvidenceRef" },
+            { "const": "NONE" }
+          ]
+        }
+      }
+    },
+    "questionCategory": {
+      "type": "string",
+      "enum": [
+        "functionality",
+        "workflow",
+        "user_workflow",
+        "user_roles",
+        "business_rules",
+        "interface_behavior",
+        "information_visualization",
+        "report_export_expectations",
+        "notifications",
+        "approval_behavior",
+        "operational_constraints",
+        "content_text_choices",
+        "priority_scope_choices",
+        "acceptance_expectations"
+      ]
+    },
+    "stageName": {
+      "type": "string",
+      "enum": [
+        "intake",
+        "requirements",
+        "design",
+        "ux_design",
+        "architecture",
+        "implementation",
+        "testing",
+        "setup",
+        "run",
+        "launch",
+        "documentation",
+        "handover",
+        "final_acceptance",
+        "terminal",
+        "not_applicable"
+      ]
+    },
+    "questionStatus": {
+      "type": "string",
+      "enum": [
+        "draft",
+        "audit_pending",
+        "ready_for_audit",
+        "audit_failed",
+        "ready_for_owner",
+        "presented",
+        "presented_to_owner",
+        "answered",
+        "integrated",
+        "closed",
+        "superseded",
+        "blocked"
+      ]
+    },
+    "questionOption": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "label", "owner_effect"],
+      "properties": {
+        "id": { "type": "string", "pattern": "^[A-Z][A-Z0-9_-]*$" },
+        "label": { "$ref": "#/$defs/ownerFacingNonTechnicalText" },
+        "owner_effect": { "$ref": "#/$defs/ownerFacingNonTechnicalText" }
+      }
+    },
+    "oneQuestionRouting": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "routing_mode",
+        "queue_id",
+        "queue_position",
+        "presentation_state"
+      ],
+      "properties": {
+        "routing_mode": { "type": "string", "const": "one_question_at_a_time" },
+        "queue_id": { "type": "string", "minLength": 1 },
+        "queue_position": { "type": "integer", "minimum": 1 },
+        "presentation_state": {
+          "type": "string",
+          "enum": ["queued", "current", "presented", "answered", "integrated", "skipped", "blocked"]
+        },
+        "previous_question_id": {
+          "oneOf": [
+            { "type": "string", "pattern": "^Q-[A-Za-z0-9._-]+$" },
+            { "const": "NONE" }
+          ]
+        },
+        "next_question_id": {
+          "oneOf": [
+            { "type": "string", "pattern": "^Q-[A-Za-z0-9._-]+$" },
+            { "const": "NONE" }
+          ]
+        }
+      }
+    }
+  }
+}

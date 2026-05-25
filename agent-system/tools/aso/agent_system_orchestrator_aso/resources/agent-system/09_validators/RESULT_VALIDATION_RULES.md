@@ -296,3 +296,18 @@ Research result validation must reject:
 - technical execution obstacles treated as research findings instead of
   BLOCKER;
 - any recommendation that bypasses independent audit before requester return.
+
+## Dispatch receipt validation
+
+Auditor reasoning-level checks must use the dispatch receipt:
+
+```text
+project-runtime/agents/dispatches/<AGENT_INSTANCE_ID>.json
+```
+
+The receipt must conform to
+`agent-system/09_validators/schemas/dispatch_receipt.schema.json` and record the
+runner, model when known, reasoning_effort, prompt_ref, task_id, role,
+started_at, and handoff_ref. Validators must not accept stderr scraping,
+terminal scrollback, or unverifiable runner text as reasoning-level compliance
+evidence.

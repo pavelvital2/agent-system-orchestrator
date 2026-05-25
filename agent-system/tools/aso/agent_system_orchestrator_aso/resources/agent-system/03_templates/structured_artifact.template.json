@@ -1,0 +1,23 @@
+{
+  "schema_version": "1.0.0",
+  "package_version": "3.7.9",
+  "governance_ruleset_version": "3.7.9",
+  "runtime_schema_version": "3.1.1",
+  "artifact_package_schema_version": "1.1.0",
+  "artifact_id": "STRUCTURED_ARTIFACT_TEMPLATE",
+  "artifact_type": "structured_artifact",
+  "created_at": "2026-05-22T00:00:00Z",
+  "created_by": "aso-artifact-package-schema-template",
+  "source_refs": "NONE",
+  "content": {
+    "summary": "Template for shared structured package artifacts.",
+    "records": []
+  },
+  "validation": {
+    "status": "not_run",
+    "validators": "NONE",
+    "notes": [
+      "Template only. This is package metadata, not a Runtime Schema sidecar."
+    ]
+  }
+}

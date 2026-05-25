@@ -1,0 +1,438 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://agent-system.local/schemas/dispatchability_gate.schema.json",
+  "title": "DISPATCHABILITY_GATE",
+  "description": "Machine-checkable P5.4 dispatchability verdict emitted by plan-next and surfaced by orchestrator next/status.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "contract_id",
+    "contract_version",
+    "dispatchable",
+    "verdict",
+    "recommended_next_action",
+    "status",
+    "target_role",
+    "role_class",
+    "action_type",
+    "action_class",
+    "task_id",
+    "task_packet",
+    "checks",
+    "reasons",
+    "live_dispatch_performed"
+  ],
+  "properties": {
+    "contract_id": { "type": "string", "const": "ASO_PLANNER_DISPATCHABILITY_GATE_P5_4" },
+    "contract_version": { "type": "string", "const": "1.0.0" },
+    "dispatchable": { "type": "boolean" },
+    "verdict": { "type": "string", "enum": ["dispatchable", "not_dispatchable"] },
+    "recommended_next_action": {
+      "type": "string",
+      "enum": [
+        "CREATE_AGENT",
+        "CREATE_AUDITOR",
+        "ROUTE_RESULT",
+        "UPDATE_STATE",
+        "ASK_OWNER",
+        "FREEZE",
+        "BOOTSTRAP_PREP",
+        "CORRECTION_REQUIRED",
+        "STOP",
+        "CHECKPOINT_PREFLIGHT",
+        "FINALIZE",
+        "NONE"
+      ]
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "ready",
+        "blocked",
+        "correction_required",
+        "owner_input_required",
+        "frozen",
+        "bootstrap_required",
+        "stopped"
+      ]
+    },
+    "target_role": { "type": "string" },
+    "role_class": {
+      "type": "string",
+      "enum": ["profile_execution", "control_or_pseudo", "unknown"]
+    },
+    "action_type": { "type": "string" },
+    "action_class": {
+      "type": "string",
+      "enum": [
+        "dispatch",
+        "audit_dispatch",
+        "internal_correction",
+        "state_update",
+        "owner_wait",
+        "result_routing",
+        "checkpoint",
+        "finalization",
+        "terminal_stop",
+        "bootstrap_preparation",
+        "unknown"
+      ]
+    },
+    "task_id": { "type": "string" },
+    "task_packet": { "type": "string" },
+    "checks": {
+      "type": "array",
+      "minItems": 1,
+      "items": { "$ref": "#/$defs/check" },
+      "contains": {
+        "type": "object",
+        "required": ["check_id"],
+        "properties": { "check_id": { "const": "DG54_ACTION_TYPE_DISPATCH_CAPABLE" } }
+      }
+    },
+    "reasons": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/reason" }
+    },
+    "live_dispatch_performed": { "type": "boolean", "const": false },
+    "resolved_reasoning_level": {
+      "type": "string",
+      "enum": ["low", "medium", "high", "xhigh", "NONE"]
+    },
+    "reasoning_source": { "type": "string" },
+    "reasoning_inputs": {
+      "type": "object",
+      "additionalProperties": true
+    },
+    "dispatch_receipt_required": { "type": "boolean" },
+    "dispatch_receipt_schema_ref": { "type": "string" },
+    "dispatch_receipt_ref_template": {
+      "type": "string",
+      "const": "project-runtime/agents/dispatches/<AGENT_INSTANCE_ID>.json"
+    },
+    "handoff_artifact_schema_ref": {
+      "type": "string",
+      "const": "agent-system/09_validators/schemas/orchestrator_handoff.schema.json"
+    },
+    "handoff_ref_template": {
+      "type": "string",
+      "const": "project-runtime/handoffs/<TASK_ID>.json"
+    },
+    "prompt_ref_template": {
+      "type": "string",
+      "const": "project-runtime/handoffs/<TASK_ID>.prompt.md"
+    },
+    "external_runner_command_template": {
+      "type": "string",
+      "const": "codex exec -C <WORKSPACE_ROOT> -m <MODEL> -c model_reasoning_effort=\"<REASONING_EFFORT>\" - < <PROMPT_REF>"
+    },
+    "receipt_writer_command_template": { "type": "string" },
+    "runner_semantics": { "type": "string" }
+  },
+  "allOf": [
+    {
+      "if": { "properties": { "recommended_next_action": { "const": "CREATE_AGENT" } }, "required": ["recommended_next_action"] },
+      "then": {
+        "properties": {
+          "dispatchable": { "const": true },
+          "verdict": { "const": "dispatchable" },
+          "role_class": { "const": "profile_execution" },
+          "action_type": { "const": "create_agent" },
+          "action_class": { "const": "dispatch" },
+          "task_id": { "$ref": "#/$defs/realDispatchValue" },
+          "task_packet": { "$ref": "#/$defs/realDispatchValue" },
+          "checks": {
+            "allOf": [
+              { "$ref": "#/$defs/createAgentRequiredPassedChecks" },
+              {
+                "not": {
+                  "contains": {
+                    "type": "object",
+                    "required": ["passed"],
+                    "properties": { "passed": { "const": false } }
+                  }
+                }
+              }
+            ]
+          },
+          "target_role": {
+            "enum": [
+              "requirements_analyst",
+              "solution_architect",
+              "developer",
+              "tester",
+              "technical_writer",
+              "devops_setup_engineer",
+              "release_manager"
+            ]
+          }
+        }
+      }
+    },
+    {
+      "if": { "properties": { "recommended_next_action": { "const": "CREATE_AUDITOR" } }, "required": ["recommended_next_action"] },
+      "then": {
+        "properties": {
+          "dispatchable": { "const": true },
+          "verdict": { "const": "dispatchable" },
+          "role_class": { "const": "profile_execution" },
+          "action_type": { "const": "create_agent" },
+          "action_class": { "const": "audit_dispatch" },
+          "task_id": { "$ref": "#/$defs/realDispatchValue" },
+          "task_packet": { "$ref": "#/$defs/realDispatchValue" },
+          "checks": {
+            "allOf": [
+              { "$ref": "#/$defs/createAgentRequiredPassedChecks" },
+              {
+                "not": {
+                  "contains": {
+                    "type": "object",
+                    "required": ["passed"],
+                    "properties": { "passed": { "const": false } }
+                  }
+                }
+              }
+            ]
+          },
+          "target_role": { "const": "auditor" }
+        }
+      }
+    },
+    {
+      "if": { "properties": { "dispatchable": { "const": false } }, "required": ["dispatchable"] },
+      "then": {
+        "properties": {
+          "verdict": { "const": "not_dispatchable" },
+          "recommended_next_action": {
+            "not": { "enum": ["CREATE_AGENT", "CREATE_AUDITOR"] }
+          }
+        },
+        "required": ["reasons"]
+      }
+    }
+  ],
+  "$defs": {
+    "realDispatchValue": {
+      "type": "string",
+      "minLength": 1,
+      "not": { "enum": ["", "NONE", "none", "null", "UNKNOWN"] }
+    },
+    "createAgentRequiredPassedChecks": {
+      "type": "array",
+      "allOf": [
+        {
+          "contains": {
+            "type": "object",
+            "required": ["check_id", "passed"],
+            "properties": {
+              "check_id": { "const": "DG54_ACTION_TYPE_DISPATCH_CAPABLE" },
+              "passed": { "const": true }
+            }
+          }
+        },
+        {
+          "contains": {
+            "type": "object",
+            "required": ["check_id", "passed"],
+            "properties": {
+              "check_id": { "const": "DG54_TARGET_ROLE_PROFILE_EXECUTION" },
+              "passed": { "const": true }
+            }
+          }
+        },
+        {
+          "contains": {
+            "type": "object",
+            "required": ["check_id", "passed"],
+            "properties": {
+              "check_id": { "const": "DG54_TARGET_ROLE_NOT_CONTROL" },
+              "passed": { "const": true }
+            }
+          }
+        },
+        {
+          "contains": {
+            "type": "object",
+            "required": ["check_id", "passed"],
+            "properties": {
+              "check_id": { "const": "DG54_TASK_ID_PRESENT" },
+              "passed": { "const": true }
+            }
+          }
+        },
+        {
+          "contains": {
+            "type": "object",
+            "required": ["check_id", "passed"],
+            "properties": {
+              "check_id": { "const": "DG54_TASK_PACKET_PRESENT" },
+              "passed": { "const": true }
+            }
+          }
+        },
+        {
+          "contains": {
+            "type": "object",
+            "required": ["check_id", "passed"],
+            "properties": {
+              "check_id": { "const": "DG54_TASK_PACKET_EXISTS" },
+              "passed": { "const": true }
+            }
+          }
+        },
+        {
+          "contains": {
+            "type": "object",
+            "required": ["check_id", "passed"],
+            "properties": {
+              "check_id": { "const": "DG54_TASK_PACKET_DISPATCH_VALID" },
+              "passed": { "const": true }
+            }
+          }
+        },
+        {
+          "contains": {
+            "type": "object",
+            "required": ["check_id", "passed"],
+            "properties": {
+              "check_id": { "const": "DG54_REASONING_FLOOR_RESOLVED" },
+              "passed": { "const": true }
+            }
+          }
+        },
+        {
+          "contains": {
+            "type": "object",
+            "required": ["check_id", "passed"],
+            "properties": {
+              "check_id": { "const": "DG54_BOOTSTRAP_REASONING_FIELDS_PRESENT" },
+              "passed": { "const": true }
+            }
+          }
+        },
+        {
+          "contains": {
+            "type": "object",
+            "required": ["check_id", "passed"],
+            "properties": {
+              "check_id": { "const": "DG54_TASK_REGISTRY_COMPATIBLE" },
+              "passed": { "const": true }
+            }
+          }
+        },
+        {
+          "contains": {
+            "type": "object",
+            "required": ["check_id", "passed"],
+            "properties": {
+              "check_id": { "const": "DG54_CURRENT_GATE_PERMITS_DISPATCH" },
+              "passed": { "const": true }
+            }
+          }
+        },
+        {
+          "contains": {
+            "type": "object",
+            "required": ["check_id", "passed"],
+            "properties": {
+              "check_id": { "const": "DG54_NO_BLOCKING_RULES" },
+              "passed": { "const": true }
+            }
+          }
+        },
+        {
+          "contains": {
+            "type": "object",
+            "required": ["check_id", "passed"],
+            "properties": {
+              "check_id": { "const": "DG54_WORKSPACE_IDENTITY_READY" },
+              "passed": { "const": true }
+            }
+          }
+        },
+        {
+          "contains": {
+            "type": "object",
+            "required": ["check_id", "passed"],
+            "properties": {
+              "check_id": { "const": "DG54_REPOSITORY_LOCK_READY" },
+              "passed": { "const": true }
+            }
+          }
+        },
+        {
+          "contains": {
+            "type": "object",
+            "required": ["check_id", "passed"],
+            "properties": {
+              "check_id": { "const": "DG54_BASELINE_READY_OR_BOOTSTRAP_EXCEPTION" },
+              "passed": { "const": true }
+            }
+          }
+        }
+      ]
+    },
+    "check": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["check_id", "passed", "severity", "reason_code", "evidence"],
+      "properties": {
+        "check_id": {
+          "type": "string",
+          "enum": [
+            "DG54_ACTION_TYPE_DISPATCH_CAPABLE",
+            "DG54_TARGET_ROLE_PROFILE_EXECUTION",
+            "DG54_TARGET_ROLE_NOT_CONTROL",
+            "DG54_TASK_ID_PRESENT",
+            "DG54_TASK_PACKET_PRESENT",
+            "DG54_TASK_PACKET_EXISTS",
+            "DG54_TASK_PACKET_DISPATCH_VALID",
+            "DG54_REASONING_FLOOR_RESOLVED",
+            "DG54_BOOTSTRAP_REASONING_FIELDS_PRESENT",
+            "DG54_TASK_REGISTRY_COMPATIBLE",
+            "DG54_CURRENT_GATE_PERMITS_DISPATCH",
+            "DG54_NO_BLOCKING_RULES",
+            "DG54_WORKSPACE_IDENTITY_READY",
+            "DG54_REPOSITORY_LOCK_READY",
+            "DG54_BASELINE_READY_OR_BOOTSTRAP_EXCEPTION"
+          ]
+        },
+        "passed": { "type": "boolean" },
+        "severity": { "type": "string", "enum": ["info", "warning", "error"] },
+        "reason_code": { "$ref": "#/$defs/reasonCode" },
+        "evidence": { "type": "string" }
+      }
+    },
+    "reason": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["reason_code", "message", "input_ref"],
+      "properties": {
+        "reason_code": { "$ref": "#/$defs/reasonCode" },
+        "message": { "type": "string", "minLength": 1 },
+        "input_ref": { "type": "string", "minLength": 1 }
+      }
+    },
+    "reasonCode": {
+      "type": "string",
+      "enum": [
+        "none",
+        "action_type_not_dispatch_capable",
+        "target_role_not_profile_execution",
+        "target_role_control_or_pseudo",
+        "task_id_none",
+        "task_packet_none",
+        "task_packet_missing",
+        "task_packet_not_dispatch_valid",
+        "reasoning_floor_unresolved",
+        "bootstrap_reasoning_fields_missing",
+        "task_registry_incompatible",
+        "current_gate_blocks_dispatch",
+        "blocking_rules_present",
+        "workspace_identity_not_ready",
+        "repository_lock_not_ready",
+        "baseline_not_ready"
+      ]
+    }
+  }
+}

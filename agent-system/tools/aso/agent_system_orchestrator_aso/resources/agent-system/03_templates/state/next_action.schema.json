@@ -1,0 +1,152 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://aso.local/state/next_action.schema.json",
+  "title": "NEXT_ACTION sidecar",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "sidecar_type",
+    "markdown_source",
+    "state_revision",
+    "updated_at",
+    "updated_by",
+    "content"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": "2.0.0"
+    },
+    "sidecar_type": {
+      "const": "NEXT_ACTION"
+    },
+    "markdown_source": {
+      "const": "project-runtime/NEXT_ACTION.md"
+    },
+    "state_revision": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "updated_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "updated_by": {
+      "type": "string",
+      "minLength": 1
+    },
+    "content": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "action_id",
+        "action_type",
+        "target_role",
+        "task_id",
+        "task_packet",
+        "dependency_status",
+        "action_semantic",
+        "workspace_identity_required",
+        "repository_lock_required",
+        "checkpoint_policy",
+        "requester_return_context",
+        "blocked_by",
+        "summary"
+      ],
+      "properties": {
+        "action_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "action_type": {
+          "type": "string",
+          "enum": [
+            "create_agent",
+            "audit",
+            "test",
+            "correction",
+            "update_state",
+            "wait_for_owner",
+            "checkpoint",
+            "stop"
+          ]
+        },
+        "target_role": {
+          "type": "string",
+          "minLength": 1
+        },
+        "task_id": {
+          "type": "string"
+        },
+        "task_packet": {
+          "type": "string"
+        },
+        "dependency_status": {
+          "type": "string",
+          "enum": [
+            "ready",
+            "blocked",
+            "not_required",
+            "pending"
+          ]
+        },
+        "action_semantic": {
+          "type": "string",
+          "enum": [
+            "dispatch",
+            "pause",
+            "wait_for_owner",
+            "stop_terminal",
+            "correction",
+            "checkpoint",
+            "none"
+          ]
+        },
+        "workspace_identity_required": {
+          "type": "boolean"
+        },
+        "repository_lock_required": {
+          "type": "boolean"
+        },
+        "checkpoint_policy": {
+          "type": "string",
+          "enum": [
+            "required_after_audit",
+            "not_required",
+            "blocked",
+            "pending"
+          ]
+        },
+        "requester_return_context": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "required",
+            "return_to_role_after_audit_pass",
+            "return_task_after_audit_pass"
+          ],
+          "properties": {
+            "required": {
+              "type": "boolean"
+            },
+            "return_to_role_after_audit_pass": {
+              "type": "string"
+            },
+            "return_task_after_audit_pass": {
+              "type": "string"
+            }
+          }
+        },
+        "blocked_by": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "summary": {
+          "type": "string"
+        }
+      }
+    }
+  }
+}

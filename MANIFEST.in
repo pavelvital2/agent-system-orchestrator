@@ -1,0 +1,4 @@
+graft agent-system/tools/aso/agent_system_orchestrator_aso/resources
+global-exclude __pycache__/*
+global-exclude *.py[cod]
+prune agent-system/tools/aso/agent_system_orchestrator_aso/resources/agent-system/tools/aso/agent_system_orchestrator_aso/resources/agent-system

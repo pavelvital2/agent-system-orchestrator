@@ -1,0 +1,310 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://agent-system.local/schemas/project_state.schema.json",
+  "title": "PROJECT_STATE",
+  "description": "Stage 2 envelope sidecar for project-runtime/PROJECT_STATE.md.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "sidecar_type",
+    "markdown_source",
+    "state_revision",
+    "updated_at",
+    "updated_by",
+    "content"
+  ],
+  "properties": {
+    "schema_version": { "type": "string", "const": "2.0.0" },
+    "sidecar_type": { "type": "string", "const": "PROJECT_STATE" },
+    "markdown_source": { "type": "string", "const": "project-runtime/PROJECT_STATE.md" },
+    "state_revision": { "type": "integer", "minimum": 1 },
+    "updated_at": { "type": "string", "format": "date-time" },
+    "updated_by": { "type": "string", "const": "orchestrator" },
+    "content": { "$ref": "#/$defs/content" }
+  },
+  "$defs": {
+    "content": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "project_name",
+        "project_slug",
+        "project_root",
+        "tz_path",
+        "active_doc_root",
+        "package_version",
+        "governance_ruleset_version",
+        "runtime_schema_version",
+        "workspace_type",
+        "workspace_identity_ref",
+        "repository_lock_ref",
+        "project_root_expected",
+        "git_toplevel_actual",
+        "expected_remote",
+        "actual_remote",
+        "expected_git_remote",
+        "actual_git_remote",
+        "expected_branch",
+        "actual_branch",
+        "push_allowed",
+        "identity_validation_status",
+        "identity_validation_error",
+        "identity_validation_evidence",
+        "repository_lock_status",
+        "baseline_tracking_status",
+        "project_input_tracking_policy",
+        "checkpoint_eligibility",
+        "audit_status",
+        "checkpoint_eligibility_status",
+        "checkpoint_preflight_status",
+        "checkpoint_preflight_ref",
+        "checkpoint_receipt_ref",
+        "commit_status",
+        "last_commit_hash",
+        "last_commit_branch",
+        "push_status",
+        "last_push_remote",
+        "last_push_branch",
+        "last_push_target_status",
+        "project_checkpoint_status",
+        "checkpoint_blocked_by",
+        "last_checkpoint_failure_reason",
+        "current_phase",
+        "project_status",
+        "action_semantic",
+        "semantic_reason",
+        "active_branches",
+        "completed_milestones",
+        "active_risks",
+        "active_blockers",
+        "active_gaps",
+        "last_accepted_result"
+      ],
+      "properties": {
+        "project_name": { "type": "string" },
+        "project_slug": { "type": "string" },
+        "project_root": { "type": "string" },
+        "tz_path": { "type": "string" },
+        "active_doc_root": { "type": "string" },
+        "package_version": { "type": "string" },
+        "governance_ruleset_version": { "type": "string" },
+        "runtime_schema_version": { "type": "string" },
+        "workspace_type": {
+          "type": "string",
+          "enum": ["package_repo", "project_workspace", "implementation_repo", "test_fixture"]
+        },
+        "workspace_identity_ref": { "type": "string" },
+        "repository_lock_ref": { "type": "string" },
+        "project_root_expected": { "type": "string" },
+        "git_toplevel_actual": { "type": "string" },
+        "expected_remote": { "type": "string" },
+        "actual_remote": { "type": "string" },
+        "expected_git_remote": { "type": "string" },
+        "actual_git_remote": { "type": "string" },
+        "expected_branch": { "type": "string" },
+        "actual_branch": { "type": "string" },
+        "push_allowed": { "type": "boolean" },
+        "identity_validation_status": {
+          "type": "string",
+          "enum": ["not_checked", "passed", "failed", "blocked"]
+        },
+        "identity_validation_error": {
+          "type": "string",
+          "enum": [
+            "NONE",
+            "repository_identity_mismatch",
+            "repository_branch_mismatch",
+            "workspace_identity_leakage",
+            "unapproved_ssh_host_alias",
+            "missing_identity_manifest",
+            "repository_lock_missing",
+            "push_without_repository_lock"
+          ]
+        },
+        "identity_validation_evidence": { "type": "string" },
+        "repository_lock_status": {
+          "type": "string",
+          "enum": ["absent", "draft", "accepted", "revoked", "blocked"]
+        },
+        "baseline_tracking_status": {
+          "type": "string",
+          "enum": ["not_checked", "passed", "blocked", "owner_action_required"]
+        },
+        "project_input_tracking_policy": {
+          "type": "string",
+          "enum": ["tracked", "owner-private/untracked", "not_set"]
+        },
+        "checkpoint_eligibility": {
+          "type": "string",
+          "enum": ["blocked", "local_only", "push_allowed", "not_applicable"]
+        },
+        "audit_status": {
+          "type": "string",
+          "enum": ["not_applicable", "pending", "passed", "failed", "blocked", "gap"]
+        },
+        "checkpoint_eligibility_status": {
+          "type": "string",
+          "enum": ["not_checked", "eligible", "ineligible", "blocked"]
+        },
+        "checkpoint_preflight_status": {
+          "type": "string",
+          "enum": ["not_run", "passed", "failed", "blocked"]
+        },
+        "checkpoint_preflight_ref": { "type": "string" },
+        "checkpoint_receipt_ref": { "type": "string" },
+        "commit_status": {
+          "type": "string",
+          "enum": ["not_required", "not_attempted", "committed", "failed", "blocked"]
+        },
+        "last_commit_hash": { "type": "string" },
+        "last_commit_branch": { "type": "string" },
+        "push_status": {
+          "type": "string",
+          "enum": ["not_required", "not_attempted", "pushed", "failed", "blocked"]
+        },
+        "last_push_remote": { "type": "string" },
+        "last_push_branch": { "type": "string" },
+        "last_push_target_status": {
+          "type": "string",
+          "enum": ["not_checked", "matched", "mismatched", "blocked", "not_required"]
+        },
+        "project_checkpoint_status": {
+          "type": "string",
+          "enum": ["not_required", "pending", "passed", "failed", "blocked"]
+        },
+        "checkpoint_blocked_by": { "$ref": "#/$defs/listOrNone" },
+        "last_checkpoint_failure_reason": { "type": "string" },
+        "current_phase": {
+          "type": "string",
+          "enum": [
+            "bootstrap",
+            "requirements",
+            "design",
+            "design_audit",
+            "implementation",
+            "implementation_audit",
+            "audit",
+            "testing",
+            "setup",
+            "run",
+            "launch",
+            "documentation",
+            "handover",
+            "correction",
+            "blocked",
+            "finalization",
+            "final_acceptance",
+            "completed"
+          ]
+        },
+        "project_status": {
+          "type": "string",
+          "enum": ["active", "blocked", "completed", "archived"]
+        },
+        "action_semantic": { "$ref": "#/$defs/actionSemantic" },
+        "semantic_reason": { "type": "string" },
+        "active_branches": {
+          "oneOf": [
+            { "const": "NONE" },
+            { "type": "array", "items": { "$ref": "#/$defs/branch" } }
+          ]
+        },
+        "completed_milestones": { "$ref": "#/$defs/listOrNone" },
+        "active_risks": { "$ref": "#/$defs/listOrNone" },
+        "active_blockers": {
+          "oneOf": [
+            { "const": "NONE" },
+            { "type": "array", "items": { "$ref": "#/$defs/blocker" } }
+          ]
+        },
+        "active_gaps": { "$ref": "#/$defs/listOrNone" },
+        "last_accepted_result": {
+          "oneOf": [
+            { "const": "NONE" },
+            { "$ref": "#/$defs/lastAcceptedResult" }
+          ]
+        }
+      }
+    },
+    "actionSemantic": {
+      "type": "string",
+      "enum": ["normal", "wait_for_owner", "pause", "stop_terminal", "completed_state_transition"]
+    },
+    "profileRole": {
+      "type": "string",
+      "enum": [
+        "requirements_analyst",
+        "solution_architect",
+        "designer",
+        "developer",
+        "auditor",
+        "tester",
+        "technical_writer",
+        "devops_setup_engineer",
+        "release_manager"
+      ]
+    },
+    "branch": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "branch_id",
+        "status",
+        "current_task",
+        "current_agent_role",
+        "dependencies",
+        "blocked_by"
+      ],
+      "properties": {
+        "branch_id": { "type": "string" },
+        "status": { "type": "string", "enum": ["active", "blocked", "completed", "archived"] },
+        "current_task": { "type": "string" },
+        "current_agent_role": { "$ref": "#/$defs/profileRole" },
+        "dependencies": { "$ref": "#/$defs/listOrNone" },
+        "blocked_by": { "type": "string" }
+      }
+    },
+    "blocker": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "blocker_id",
+        "blocker_type",
+        "status",
+        "blocks",
+        "blocked_by",
+        "resolution_path"
+      ],
+      "properties": {
+        "blocker_id": { "type": "string" },
+        "blocker_type": {
+          "type": "string",
+          "enum": ["owner_decision", "pause", "audit_fail", "gap", "runtime", "dependency", "governance", "other"]
+        },
+        "status": { "type": "string", "enum": ["active", "resolving"] },
+        "blocks": { "type": "string" },
+        "blocked_by": { "type": "string" },
+        "resolution_path": { "type": "string" }
+      }
+    },
+    "lastAcceptedResult": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["role", "task", "date", "status", "result_ref"],
+      "properties": {
+        "role": { "$ref": "#/$defs/profileRole" },
+        "task": { "type": "string" },
+        "date": { "type": "string" },
+        "status": { "type": "string" },
+        "result_ref": { "type": "string" }
+      }
+    },
+    "listOrNone": {
+      "oneOf": [
+        { "const": "NONE" },
+        { "type": "array", "items": { "type": "string" } }
+      ]
+    }
+  }
+}

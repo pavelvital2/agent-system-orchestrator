@@ -1,0 +1,1583 @@
+# RUNTIME_STATE_SCHEMA
+
+## Назначение
+
+Этот документ определяет обязательную схему runtime state файлов проекта.
+This document defines runtime state structure only.
+
+Цель:
+- предотвратить drift runtime state;
+- сделать orchestration deterministic;
+- исключить хранение состояния проекта только в контексте оркестратора;
+- стандартизировать структуру runtime state файлов;
+- отделить operational state от проектной документации.
+
+Runtime state не является проектной документацией. Runtime state — это operational source-of-truth для оркестратора.
+
+Runtime state validation must also comply with:
+
+```text
+agent-system/02_runtime/GOVERNANCE_AUTHORITY.md
+agent-system/02_runtime/STATE_TRANSITION_RULES.md
+agent-system/02_runtime/CANONICAL_JSON_STATE_PREPARATION.md
+agent-system/02_runtime/REQUESTER_RETURN_PROTOCOL.md
+agent-system/02_runtime/VIOLATION_RECOVERY.md
+agent-system/02_runtime/ACCEPTED_STATE_LOCKING.md
+agent-system/PACKAGE_VERSIONING.md
+agent-system/09_validators/VALIDATOR_SPEC.md
+agent-system/09_validators/RUNTIME_CONSISTENCY_RULES.md
+```
+
+Machine-readable sidecar schemas are defined in:
+
+```text
+agent-system/09_validators/schemas/project_state.schema.json
+agent-system/09_validators/schemas/current_gate.schema.json
+agent-system/09_validators/schemas/next_action.schema.json
+agent-system/09_validators/schemas/task_registry.schema.json
+agent-system/09_validators/schemas/accepted_artifacts.schema.json
+agent-system/09_validators/schemas/orchestrator_event.schema.json
+```
+
+These sidecars use JSON Schema Draft 2020-12 and must validate the Stage 2
+sidecar envelope documented below. The Markdown files remain human-readable
+runtime records and the authoritative compatibility view for field meaning,
+canonical enum values, and owner/operator review. Executable parsing or
+rendering support is future/optional unless separately implemented by an
+accepted package task.
+
+## Stage 2 sidecar authority
+
+Stage 2 has exactly one documented JSON sidecar contract:
+
+```text
+{
+  "schema_version": "<stable package schema version>",
+  "sidecar_type": "<matching canonical sidecar type>",
+  "markdown_source": "<matching project-runtime/*.md path>",
+  "state_revision": <positive integer>,
+  "updated_at": "<RFC 3339 UTC timestamp>",
+  "updated_by": "orchestrator",
+  "content": {
+    "<lower_case_field_name>": "<governed value>"
+  }
+}
+```
+
+The sidecar root is an envelope object. Governed runtime values live under the
+lower-case `content` object. Direct top-level JSON objects that contain the
+Markdown uppercase field names are not the Stage 2 sidecar model and must not
+be accepted as valid sidecars.
+
+The Markdown runtime templates remain the authoritative human-readable
+compatibility view and continue to use uppercase field names. Field names map
+deterministically from Markdown uppercase names to JSON lower-case `content`
+names:
+
+```text
+PROJECT_STATE.CURRENT_PHASE -> PROJECT_STATE.content.current_phase
+PROJECT_STATE.PUSH_ALLOWED -> PROJECT_STATE.content.push_allowed
+CURRENT_GATE.STATUS -> CURRENT_GATE.content.status
+CURRENT_GATE.CHECKPOINT_ELIGIBILITY -> CURRENT_GATE.content.checkpoint_eligibility
+NEXT_ACTION.ACTION_TYPE -> NEXT_ACTION.content.action_type
+NEXT_ACTION.TARGET_ROLE -> NEXT_ACTION.content.target_role
+NEXT_ACTION.WORKSPACE_IDENTITY_REQUIRED -> NEXT_ACTION.content.workspace_identity_required
+NEXT_ACTION.CHECKPOINT_POLICY -> NEXT_ACTION.content.checkpoint_policy
+TASK_REGISTRY.STATUS -> TASK_REGISTRY.content.status
+ACCEPTED_ARTIFACTS.STATUS -> ACCEPTED_ARTIFACTS.content.status
+```
+
+The mapping rule is mechanical: strip the Markdown file prefix, convert the
+uppercase field name to lower snake case, and place the value under `content`.
+Markdown section fields that summarize lists or nested records map to governed
+lower-case content fields or arrays with the same canonical values documented
+by the matching template and schema section.
+
+JSON booleans mirror Markdown binary fields:
+
+```text
+Markdown yes -> JSON true
+Markdown no -> JSON false
+Markdown true -> JSON true
+Markdown false -> JSON false
+```
+
+Boolean sidecar fields must not widen the Markdown contract. A binary Markdown
+field that accepts only `yes | no` or `true | false` maps to a JSON boolean
+only; string spellings such as `"yes"`, `"no"`, `"true"`, or `"false"` are
+compatibility-view text, not governed JSON boolean values.
+
+JSON schemas, fixtures, and validators must validate this same envelope and
+lower-case `content` model. They must not permit values outside the canonical
+enum sets in the Markdown runtime templates and this schema. For Stage 2, the
+canonical enum authority is:
+
+```text
+PROJECT_STATE: PROJECT_STATE_TEMPLATE.md and the PROJECT_STATE.md schema below.
+CURRENT_GATE: CURRENT_GATE_TEMPLATE.md and the CURRENT_GATE.md schema below.
+NEXT_ACTION: NEXT_ACTION_TEMPLATE.md and the NEXT_ACTION.md schema below.
+TASK_REGISTRY: TASK_REGISTRY_TEMPLATE.md and the TASK_REGISTRY.md schema below.
+ACCEPTED_ARTIFACTS: ACCEPTED_ARTIFACTS_TEMPLATE.md and the ACCEPTED_ARTIFACTS.md schema below.
+```
+
+The following values are explicitly invalid Stage 2 runtime-state values and
+must not be made valid by JSON schemas, fixtures, or validators:
+
+```text
+NEXT_ACTION.content.target_role: runtime_architect
+NEXT_ACTION.content.action_semantic: dispatch
+NEXT_ACTION.content.checkpoint_policy: not_required
+CURRENT_GATE.content.status: active
+CURRENT_GATE.content.checkpoint_eligibility: not_required
+```
+
+`runtime_architect` is not a profile execution role or routing pseudo-role.
+`dispatch` is not an action semantic. `not_required` is valid for specific
+checkpoint status fields where documented, but it is not a valid
+`CHECKPOINT_POLICY` or `CURRENT_GATE.CHECKPOINT_ELIGIBILITY` value.
+
+Canonical JSON runtime state is specified in:
+
+```text
+agent-system/02_runtime/CANONICAL_JSON_STATE_PREPARATION.md
+```
+
+P57 Runtime Schema 3.1.1 authority is carried by the
+`project-runtime/state/*.json` sidecars. Markdown runtime files are generated
+compatibility views for owner/operator review and legacy documentation
+compatibility.
+
+For v2.0.0 workspace identity hardening, the Markdown schema and templates are
+the controlling source for mandatory identity and checkpoint fields. A stale
+sidecar that lacks these fields must not be used to accept legacy runtime state
+that omits them.
+
+---
+
+## Обязательные runtime files
+
+Минимальный набор runtime-файлов:
+
+```text
+project-runtime/PROJECT_STATE.md
+project-runtime/CURRENT_GATE.md
+project-runtime/NEXT_ACTION.md
+project-runtime/GAP_REGISTER.md
+project-runtime/TASK_REGISTRY.md
+project-runtime/ACCEPTED_ARTIFACTS.md
+project-runtime/AGENT_RESULTS_LOG.md
+project-runtime/ORCHESTRATOR_EVENTS_LOG.md
+project-runtime/STATUS_SUMMARY.md
+```
+
+Если какого-либо файла нет, оркестратор обязан создать его из шаблона или остановить pipeline в `wait_for_owner`, если шаблон отсутствует.
+
+Checkpoint eligibility receipts are bounded runtime evidence, not part of the
+minimal always-present runtime file set. Receipt path convention:
+
+```text
+project-runtime/checkpoints/CHECKPOINT_ELIGIBILITY_<TASK_ID>_<ATTEMPT_NO>.md
+```
+
+---
+
+## Общие правила runtime state
+
+Runtime state:
+
+- обновляет только оркестратор;
+- не обновляют профильные агенты;
+- должен перечитываться оркестратором перед каждым действием;
+- не должен заменять project docs;
+- не должен содержать полный текст task packets;
+- не должен содержать большие отчёты агентов;
+- должен ссылаться на файлы, а не копировать их полностью;
+- должен хранить только operational status.
+
+Запрещено:
+- хранить business requirements в runtime state;
+- хранить architecture decisions в runtime state;
+- хранить кодовые решения в runtime state;
+- использовать runtime state как giant execution document.
+
+---
+
+# PROJECT_STATE.md schema
+
+## Назначение
+
+`PROJECT_STATE.md` фиксирует общее operational состояние проекта.
+
+## Обязательные поля
+
+```text
+PROJECT_NAME:
+PROJECT_SLUG:
+PROJECT_ROOT:
+TZ_PATH:
+ACTIVE_DOC_ROOT:
+PACKAGE_VERSION:
+GOVERNANCE_RULESET_VERSION:
+RUNTIME_SCHEMA_VERSION:
+WORKSPACE_TYPE:
+WORKSPACE_IDENTITY_REF:
+REPOSITORY_LOCK_REF:
+PROJECT_ROOT_EXPECTED:
+GIT_TOPLEVEL_ACTUAL:
+EXPECTED_REMOTE:
+ACTUAL_REMOTE:
+EXPECTED_GIT_REMOTE:
+ACTUAL_GIT_REMOTE:
+EXPECTED_BRANCH:
+ACTUAL_BRANCH:
+PUSH_ALLOWED:
+IDENTITY_VALIDATION_STATUS:
+IDENTITY_VALIDATION_ERROR:
+IDENTITY_VALIDATION_EVIDENCE:
+REPOSITORY_LOCK_STATUS:
+BASELINE_TRACKING_STATUS:
+PROJECT_INPUT_TRACKING_POLICY:
+CHECKPOINT_ELIGIBILITY:
+AUDIT_STATUS:
+CHECKPOINT_ELIGIBILITY_STATUS:
+CHECKPOINT_PREFLIGHT_STATUS:
+CHECKPOINT_PREFLIGHT_REF:
+CHECKPOINT_RECEIPT_REF:
+COMMIT_STATUS:
+LAST_COMMIT_HASH:
+LAST_COMMIT_BRANCH:
+PUSH_STATUS:
+LAST_PUSH_REMOTE:
+LAST_PUSH_BRANCH:
+LAST_PUSH_TARGET_STATUS:
+PROJECT_CHECKPOINT_STATUS:
+CHECKPOINT_BLOCKED_BY:
+LAST_CHECKPOINT_FAILURE_REASON:
+CURRENT_PHASE:
+PROJECT_STATUS:
+ACTION_SEMANTIC:
+SEMANTIC_REASON:
+```
+
+## CURRENT_PHASE допустимые значения
+
+```text
+bootstrap
+requirements
+design
+design_audit
+implementation
+implementation_audit
+audit
+testing
+setup
+run
+launch
+documentation
+handover
+correction
+blocked
+finalization
+final_acceptance
+completed
+```
+
+## PROJECT_STATUS допустимые значения
+
+```text
+active
+blocked
+completed
+archived
+```
+
+## Workspace identity and repository lock
+
+`PROJECT_STATE.md` must contain the current workspace identity and repository
+lock fields. These fields are mandatory in runtime schema version `2.0.0`.
+
+```text
+PROJECT_SLUG:
+WORKSPACE_TYPE: package_repo | project_workspace | implementation_repo | test_fixture
+WORKSPACE_IDENTITY_REF:
+REPOSITORY_LOCK_REF:
+PROJECT_ROOT_EXPECTED:
+GIT_TOPLEVEL_ACTUAL:
+EXPECTED_REMOTE:
+ACTUAL_REMOTE:
+EXPECTED_GIT_REMOTE:
+ACTUAL_GIT_REMOTE:
+EXPECTED_BRANCH:
+ACTUAL_BRANCH:
+PUSH_ALLOWED: true | false
+IDENTITY_VALIDATION_STATUS: not_checked | passed | failed | blocked
+IDENTITY_VALIDATION_ERROR: NONE | repository_identity_mismatch | repository_branch_mismatch | workspace_identity_leakage | unapproved_ssh_host_alias | missing_identity_manifest | repository_lock_missing | push_without_repository_lock
+IDENTITY_VALIDATION_EVIDENCE:
+REPOSITORY_LOCK_STATUS: absent | draft | accepted | revoked | blocked
+BASELINE_TRACKING_STATUS: not_checked | passed | blocked | owner_action_required
+PROJECT_INPUT_TRACKING_POLICY: tracked | owner-private/untracked | not_set
+CHECKPOINT_ELIGIBILITY: blocked | local_only | push_allowed | not_applicable
+AUDIT_STATUS: not_applicable | pending | passed | failed | blocked | gap
+CHECKPOINT_ELIGIBILITY_STATUS: not_checked | eligible | ineligible | blocked
+CHECKPOINT_PREFLIGHT_STATUS: not_run | passed | failed | blocked
+CHECKPOINT_PREFLIGHT_REF:
+CHECKPOINT_RECEIPT_REF:
+COMMIT_STATUS: not_required | not_attempted | committed | failed | blocked
+LAST_COMMIT_HASH:
+LAST_COMMIT_BRANCH:
+PUSH_STATUS: not_required | not_attempted | pushed | failed | blocked
+LAST_PUSH_REMOTE:
+LAST_PUSH_BRANCH:
+LAST_PUSH_TARGET_STATUS: not_checked | matched | mismatched | blocked | not_required
+PROJECT_CHECKPOINT_STATUS: not_required | pending | passed | failed | blocked
+CHECKPOINT_BLOCKED_BY:
+LAST_CHECKPOINT_FAILURE_REASON:
+```
+
+`EXPECTED_GIT_REMOTE` and `ACTUAL_GIT_REMOTE` are canonical repository identity
+fields. Validators must compare them instead of comparing raw remote strings
+only. Accepted equivalent raw remotes are defined by:
+
+```text
+agent-system/09_validators/WORKSPACE_IDENTITY_VALIDATION_RULES.md
+```
+
+`PUSH_ALLOWED` defaults to `false` unless an accepted repository lock validates
+the current workspace type, canonical repository identity, branch, and identity
+leakage status.
+
+`AUDIT_STATUS` is necessary evidence for post-audit routing but is not
+sufficient for checkpoint, commit, or push. `CHECKPOINT_ELIGIBILITY_STATUS`
+records the deterministic preflight decision after identity, Git target, file
+scope, task packet schema, runtime schema, and secret scan checks. Runtime
+state must distinguish:
+
+```text
+COMMIT_STATUS: local commit attempt/result
+PUSH_STATUS: technical push attempt/result
+LAST_PUSH_TARGET_STATUS: remote/branch target verification
+PROJECT_CHECKPOINT_STATUS: governed project/package checkpoint outcome
+```
+
+`PROJECT_CHECKPOINT_STATUS: passed` is valid only when checkpoint preflight
+passed, the allowed commit path completed, and push requirements were either
+not required or completed successfully.
+
+## Branches
+
+`PROJECT_STATE.md` должен содержать секцию:
+
+```text
+## Active branches
+```
+
+Формат ветки:
+
+```text
+BRANCH_ID:
+STATUS: active | blocked | completed | archived
+CURRENT_TASK:
+CURRENT_AGENT_ROLE:
+DEPENDENCIES:
+BLOCKED_BY:
+```
+
+`CURRENT_AGENT_ROLE` допустимые значения:
+
+```text
+requirements_analyst
+solution_architect
+designer
+developer
+auditor
+tester
+technical_writer
+devops_setup_engineer
+release_manager
+```
+
+`CURRENT_AGENT_ROLE` records only profile execution roles. It must not use
+control pseudo-roles.
+
+Если активных веток нет:
+
+```text
+NONE
+```
+
+## Completed milestones
+
+Формат:
+
+```text
+- <milestone id>: <short result>
+```
+
+Если нет:
+
+```text
+NONE
+```
+
+## Active risks
+
+Формат:
+
+```text
+- <risk id or short risk>
+```
+
+Если нет:
+
+```text
+NONE
+```
+
+## Active blockers
+
+Формат:
+
+```text
+- <blocker id or short blocker>
+```
+
+Если нет:
+
+```text
+NONE
+```
+
+## Active gaps
+
+Формат:
+
+```text
+- <GAP_ID>
+```
+
+Если нет:
+
+```text
+NONE
+```
+
+## Last accepted result
+
+Формат:
+
+```text
+ROLE:
+TASK:
+DATE:
+STATUS:
+RESULT_REF:
+```
+
+---
+
+# CURRENT_GATE.md schema
+
+## Назначение
+
+`CURRENT_GATE.md` фиксирует текущий gate pipeline.
+
+## Обязательные поля
+
+```text
+GATE_ID:
+GATE_NAME:
+GATE_TYPE:
+STATUS:
+OWNER_ROLE:
+TASK_ID:
+TASK_PACKET:
+ACTION_SEMANTIC:
+WORKSPACE_IDENTITY_STATUS:
+REPOSITORY_LOCK_STATUS:
+BASELINE_TRACKING_STATUS:
+CHECKPOINT_ELIGIBILITY:
+CHECKPOINT_ELIGIBILITY_STATUS:
+PROJECT_CHECKPOINT_STATUS:
+ENTRY_CRITERIA:
+EXIT_CRITERIA:
+REQUIRED_NEXT_ROLE:
+GATE_EVIDENCE:
+BLOCKING_STATUS:
+NOTES:
+```
+
+Markdown section-to-schema mapping:
+
+```text
+## Current gate -> GATE_ID, GATE_NAME, GATE_TYPE, STATUS, OWNER_ROLE, TASK_ID, TASK_PACKET, ACTION_SEMANTIC, WORKSPACE_IDENTITY_STATUS, REPOSITORY_LOCK_STATUS, CHECKPOINT_ELIGIBILITY, CHECKPOINT_ELIGIBILITY_STATUS, PROJECT_CHECKPOINT_STATUS
+## Entry criteria -> ENTRY_CRITERIA
+## Exit criteria -> EXIT_CRITERIA
+## Required next role -> REQUIRED_NEXT_ROLE
+## Gate evidence -> GATE_EVIDENCE
+## Blocking status -> BLOCKING_STATUS
+## Notes -> NOTES
+```
+
+## GATE_TYPE допустимые значения
+
+```text
+bootstrap
+requirements
+design
+audit
+implementation
+testing
+setup
+run
+launch
+documentation
+handover
+correction
+finalization
+final_acceptance
+terminal
+```
+
+## STATUS допустимые значения
+
+```text
+open
+passed
+failed
+blocked
+skipped
+```
+
+`skipped` допустим только если skip явно разрешён task packet или governance.
+
+## OWNER_ROLE допустимые значения
+
+```text
+orchestrator
+requirements_analyst
+designer
+developer
+auditor
+tester
+technical_writer
+devops_setup_engineer
+release_manager
+project_owner
+```
+
+`OWNER_ROLE` may identify a profile execution role, the orchestrator, or the
+project owner for the current gate. `none` is reserved for routing fields that
+explicitly permit no next role.
+
+## ACTION_SEMANTIC допустимые значения
+
+```text
+normal
+wait_for_owner
+pause
+stop_terminal
+completed_state_transition
+```
+
+## WORKSPACE_IDENTITY_STATUS допустимые значения
+
+```text
+not_checked
+passed
+failed
+blocked
+```
+
+## REPOSITORY_LOCK_STATUS допустимые значения
+
+```text
+absent
+draft
+accepted
+revoked
+blocked
+not_required
+```
+
+## CHECKPOINT_ELIGIBILITY допустимые значения
+
+```text
+blocked
+local_only
+push_allowed
+not_applicable
+```
+
+## CHECKPOINT_ELIGIBILITY_STATUS допустимые значения
+
+```text
+not_checked
+eligible
+ineligible
+blocked
+```
+
+## PROJECT_CHECKPOINT_STATUS допустимые значения
+
+```text
+not_required
+pending
+passed
+failed
+blocked
+```
+
+## Entry criteria
+
+Секция обязательна:
+
+```text
+## Entry criteria
+- <criterion>
+```
+
+Если отсутствуют:
+
+```text
+- NONE
+```
+
+## Exit criteria
+
+Секция обязательна:
+
+```text
+## Exit criteria
+- <criterion>
+```
+
+Если отсутствуют:
+
+```text
+- NONE
+```
+
+## Required next role
+
+```text
+requirements_analyst | solution_architect | designer | developer | auditor | tester | technical_writer | devops_setup_engineer | release_manager | orchestrator | project_owner | none
+```
+
+Profile execution roles are `requirements_analyst`, `solution_architect`,
+`developer`, `auditor`, `tester`, `technical_writer`,
+`devops_setup_engineer`, and `release_manager`. `designer` is a deprecated
+alias for `solution_architect`. `orchestrator`, `project_owner`, and `none`
+are control/routing pseudo-roles, not profile task types.
+
+## Gate evidence
+
+Формат:
+
+```text
+## Gate evidence
+- <file/result/command reference>
+```
+
+Если нет:
+
+```text
+- NONE
+```
+
+## Blocking status
+
+Секция обязательна:
+
+```text
+## Blocking status
+BLOCKER_ID:
+BLOCKER_TYPE: owner_decision | pause | audit_fail | gap | runtime | dependency | governance | other
+BLOCKS:
+BLOCKED_BY:
+RESOLUTION_PATH:
+```
+
+Required when `STATUS` is `blocked` or `failed`.
+
+Если gate is not blocked or failed:
+
+```text
+NONE
+```
+
+## Notes
+
+Секция обязательна:
+
+```text
+## Notes
+- <note>
+```
+
+Если нет:
+
+```text
+- NONE
+```
+
+---
+
+# NEXT_ACTION.md schema
+
+## Назначение
+
+`NEXT_ACTION.md` фиксирует единственное следующее разрешённое действие.
+
+Оркестратор не должен выбирать действие из памяти. Он должен читать `NEXT_ACTION.md`.
+
+## Обязательные поля
+
+```text
+ACTION_ID:
+ACTION_TYPE:
+TARGET_ROLE:
+TASK_ID:
+TASK_PACKET:
+DEPENDENCY_STATUS:
+BLOCKED_BY:
+ACTION_SEMANTIC:
+WORKSPACE_IDENTITY_REQUIRED:
+REPOSITORY_LOCK_REQUIRED:
+CHECKPOINT_POLICY:
+CHECKPOINT_PREFLIGHT_REQUIRED:
+CHECKPOINT_RECEIPT_REQUIRED:
+CHECKPOINT_RECEIPT_REF:
+REQUESTER_RETURN_CONTEXT:
+BLOCKING_OR_RESUME_CONTEXT:
+REQUIRED_UNIVERSAL_DOCS:
+REQUIRED_PROJECT_DOCS:
+EXPECTED_RESULT:
+INSTRUCTION_FOR_ORCHESTRATOR:
+```
+
+Markdown section-to-schema mapping:
+
+```text
+## Next action -> ACTION_ID, ACTION_TYPE, TARGET_ROLE, TASK_ID, TASK_PACKET, DEPENDENCY_STATUS, BLOCKED_BY, ACTION_SEMANTIC, WORKSPACE_IDENTITY_REQUIRED, REPOSITORY_LOCK_REQUIRED, CHECKPOINT_POLICY, CHECKPOINT_PREFLIGHT_REQUIRED, CHECKPOINT_RECEIPT_REQUIRED, CHECKPOINT_RECEIPT_REF
+## Requester return context -> REQUESTER_RETURN_CONTEXT
+## Blocking or resume context -> BLOCKING_OR_RESUME_CONTEXT
+## REQUIRED_UNIVERSAL_DOCS -> REQUIRED_UNIVERSAL_DOCS
+## REQUIRED_PROJECT_DOCS -> REQUIRED_PROJECT_DOCS
+## EXPECTED_RESULT -> EXPECTED_RESULT
+## Instruction for orchestrator -> INSTRUCTION_FOR_ORCHESTRATOR
+```
+
+## ACTION_TYPE допустимые значения
+
+```text
+create_agent
+route_result
+update_state
+wait_for_owner
+correction
+finalize
+stop
+```
+
+## TARGET_ROLE допустимые значения
+
+```text
+requirements_analyst
+solution_architect
+designer
+developer
+auditor
+tester
+technical_writer
+devops_setup_engineer
+release_manager
+orchestrator
+project_owner
+none
+```
+
+Profile execution TARGET_ROLE values are valid for dispatchable bounded
+profile-agent work. Control pseudo-roles `orchestrator`, `project_owner`, and
+`none` are valid only for orchestration, owner waits, terminal routing, or other
+governed control contexts.
+
+## DEPENDENCY_STATUS допустимые значения
+
+```text
+ready
+blocked
+completed
+not_applicable
+```
+
+## ACTION_SEMANTIC допустимые значения
+
+```text
+normal
+wait_for_owner
+pause
+stop_terminal
+completed_state_transition
+```
+
+## WORKSPACE_IDENTITY_REQUIRED допустимые значения
+
+```text
+yes
+no
+```
+
+`WORKSPACE_IDENTITY_REQUIRED` must be `yes` for normal runtime
+initialization, profile-agent dispatch, checkpoint, commit, or push. It may be
+`no` only for governed correction or owner-wait actions that exist to create or
+repair missing identity records.
+
+## REPOSITORY_LOCK_REQUIRED допустимые значения
+
+```text
+yes
+no
+```
+
+`REPOSITORY_LOCK_REQUIRED` must be `yes` before commit or push. Push still
+requires an accepted lock with `PUSH_ALLOWED: true`.
+
+## CHECKPOINT_POLICY допустимые значения
+
+```text
+forbidden
+local_only
+commit_and_push
+no_checkpoint
+```
+
+## CHECKPOINT_PREFLIGHT_REQUIRED допустимые значения
+
+```text
+yes
+no
+```
+
+`CHECKPOINT_PREFLIGHT_REQUIRED` must be `yes` before checkpoint, commit, or
+push. It may be `no` only when `CHECKPOINT_POLICY: forbidden` or
+`CHECKPOINT_POLICY: no_checkpoint` and no checkpoint attempt will run.
+
+## CHECKPOINT_RECEIPT_REQUIRED допустимые значения
+
+```text
+yes
+no
+```
+
+`CHECKPOINT_RECEIPT_REQUIRED` must be `yes` when `CHECKPOINT_POLICY` is
+`local_only` or `commit_and_push`. `CHECKPOINT_RECEIPT_REF` must point to a
+bounded receipt based on:
+
+```text
+agent-system/03_templates/CHECKPOINT_ELIGIBILITY_TEMPLATE.md
+```
+
+## Requester return context
+
+Required when routing a research dependency, audited dependency, or requester
+continuation. Otherwise use `NONE`.
+
+```text
+## Requester return context
+REQUESTED_BY_ROLE:
+REQUESTED_BY_TASK:
+RETURN_TO_REQUESTER_AFTER_AUDIT_PASS: yes | no
+RETURN_TO_ROLE_AFTER_AUDIT_PASS:
+RETURN_TASK_AFTER_AUDIT_PASS:
+RESEARCH_QUESTION_ID:
+ACCEPTED_RESEARCH_RESULT_REF:
+ACCEPTED_RESEARCH_AUDIT_REF:
+```
+
+## Blocking or resume context
+
+Секция обязательна:
+
+```text
+## Blocking or resume context
+BLOCKER_ID:
+BLOCKER_TYPE: owner_decision | pause | audit_fail | gap | runtime | dependency | governance | other
+BLOCKS:
+RESOLUTION_PATH:
+OWNER_QUESTION:
+RESUME_CONDITION:
+```
+
+Required when `DEPENDENCY_STATUS: blocked`, `ACTION_TYPE: wait_for_owner`, or
+`ACTION_SEMANTIC: pause`.
+
+Если отсутствует blocking or resume context:
+
+```text
+NONE
+```
+
+## REQUIRED_UNIVERSAL_DOCS
+
+Секция обязательна:
+
+```text
+REQUIRED_UNIVERSAL_DOCS:
+- <path>
+```
+
+Если нет:
+
+```text
+- NONE
+```
+
+## REQUIRED_PROJECT_DOCS
+
+Секция обязательна:
+
+```text
+REQUIRED_PROJECT_DOCS:
+- <path>
+```
+
+Если нет:
+
+```text
+- NONE
+```
+
+## EXPECTED_RESULT
+
+Секция обязательна:
+
+```text
+EXPECTED_RESULT:
+- <expected format or file>
+```
+
+Обычно:
+
+```text
+- agent-system/03_templates/AGENT_RESULT_TEMPLATE.md
+```
+
+## Instruction for orchestrator
+
+Секция обязательна:
+
+```text
+## Instruction for orchestrator
+<one precise instruction>
+```
+
+Правила:
+- инструкция должна быть одна;
+- инструкция не должна содержать скрытые подзадачи;
+- если нужно несколько действий, каждое действие должно стать отдельным NEXT_ACTION после завершения предыдущего.
+
+---
+
+# GAP_REGISTER.md schema
+
+## Назначение
+
+`GAP_REGISTER.md` фиксирует GAP, которые требуют решения владельца проекта или correction flow.
+
+GAP entries are blocking records.
+Non-blocking findings must not be stored as active GAPs.
+Use a findings register based on `agent-system/03_templates/FINDINGS_REGISTER_TEMPLATE.md` when traceability is required without blocking dependent dispatch.
+
+## Active gaps
+
+Формат:
+
+```text
+GAP_ID:
+STATUS: open | answered | closed | superseded
+SOURCE_ROLE:
+SOURCE_TASK:
+TYPE: business | functional | technical | documentation | acceptance | runtime
+BLOCKS:
+QUESTION_TO_OWNER:
+RECOMMENDED_OPTIONS:
+RECOMMENDED_OPTION:
+OWNER_DECISION_REF:
+OWNER_ANSWER:
+RESOLUTION_TASK:
+ACCEPTED_SOURCE_OF_TRUTH_UPDATE:
+ACCEPTED_ARTIFACT_REF:
+CLOSURE_EVIDENCE:
+CREATED_AT:
+UPDATED_AT:
+```
+
+Если активных GAP нет:
+
+```text
+NONE
+```
+
+## Closed gaps
+
+Формат:
+
+```text
+GAP_ID:
+RESOLUTION:
+OWNER_DECISION_REF:
+ACCEPTED_SOURCE_OF_TRUTH_UPDATE:
+ACCEPTED_ARTIFACT_REF:
+CLOSURE_EVIDENCE:
+CLOSED_BY:
+CLOSED_AT:
+```
+
+Если закрытых GAP нет:
+
+```text
+NONE
+```
+
+## GAP routing rules
+
+- business GAP → project_owner;
+- functional GAP → project_owner или solution_architect, если вопрос технически проектный;
+- technical GAP → solution_architect;
+- documentation GAP → solution_architect или technical_writer;
+- acceptance GAP → solution_architect;
+- runtime GAP → solution_architect, если не требуется business decision.
+
+Оркестратор не решает GAP по существу.
+
+## GAP closure requirements
+
+- `STATUS: answered` means an answer or owner decision exists, but dependent dispatch remains blocked.
+- `STATUS: closed` requires an accepted source-of-truth update.
+- `ACCEPTED_SOURCE_OF_TRUTH_UPDATE` must reference the accepted document, task packet, runtime-state update, or owner decision record that became source-of-truth.
+- `CLOSURE_EVIDENCE` must reference the RESULT, audit, accepted artifact, or runtime-state record that proves the update was accepted.
+- If the resolution changes requirements, design, task scope, acceptance criteria, runtime behavior, or launch readiness, closure must go through governed solution_architect/audit or correction/audit flow before dependent dispatch continues.
+
+---
+
+# Owner decision and evidence tracking
+
+Owner decision records and evidence matrices are bounded artifacts, not replacements for runtime state.
+
+Use:
+
+```text
+agent-system/03_templates/OWNER_DECISION_TEMPLATE.md
+agent-system/03_templates/EVIDENCE_MATRIX_TEMPLATE.md
+agent-system/03_templates/FINDINGS_REGISTER_TEMPLATE.md
+```
+
+Runtime state may reference these artifacts through:
+
+- `GAP_REGISTER.OWNER_DECISION_REF`;
+- `GAP_REGISTER.CLOSURE_EVIDENCE`;
+- `ACCEPTED_ARTIFACTS.ARTIFACT_REF`;
+- `TASK_REGISTRY.RESULT_REFS`;
+- `ORCHESTRATOR_EVENTS_LOG.INPUT_REFS`;
+- `ORCHESTRATOR_EVENTS_LOG.OUTPUT_REFS`;
+- `STATUS_SUMMARY.ACTIVE_BLOCKERS`;
+- `STATUS_SUMMARY.ACTIVE_GAPS`.
+
+These references must be bounded paths or ids.
+Runtime state must not copy full owner decisions, evidence matrices, or findings registers.
+
+---
+
+# AGENT_RESULTS_LOG.md schema
+
+## Назначение
+
+`AGENT_RESULTS_LOG.md` фиксирует краткую историю результатов агентов.
+
+Он не должен содержать полные большие отчёты, если они сохранены отдельными файлами.
+
+## Формат записи
+
+```text
+DATE:
+ROLE:
+TASK:
+STATUS:
+RESULT_REF:
+CHANGED_FILES:
+NEXT_RECOMMENDED_ACTION:
+```
+
+`ROLE` допустимые значения for profile-agent results:
+
+```text
+requirements_analyst
+solution_architect
+designer
+developer
+auditor
+tester
+technical_writer
+devops_setup_engineer
+release_manager
+```
+
+Control pseudo-roles are not profile-agent result roles.
+
+## Правила
+
+- каждая завершённая agent task должна иметь запись;
+- failed, blocked, gap, and orchestrator-classified violation entries must be logged before recovery routing;
+- Profile-agent RESULT STATUS remains limited to pass | fail | blocked | gap; violation is a log/recovery classification only.
+- RESULT_REF должен ссылаться на место хранения полного RESULT или содержать краткий RESULT, если он небольшой;
+- `NEXT_RECOMMENDED_ACTION` records the advisory next action emitted by the agent RESULT;
+- legacy consumers may display `NEXT_REQUIRED_ACTION`, but new log entries must use `NEXT_RECOMMENDED_ACTION`;
+- log не должен заменять project docs;
+- log не должен становиться giant execution document.
+
+---
+
+# TASK_REGISTRY.md schema
+
+## Назначение
+
+`TASK_REGISTRY.md` фиксирует operational lifecycle state задач и их traceability.
+
+## Формат записи
+
+```text
+TASK_ID:
+TASK_TITLE:
+TASK_TYPE:
+TASK_KIND:
+OWNER_ROLE:
+STATUS:
+TASK_PACKET:
+DEPENDENCIES:
+REQUESTED_BY_ROLE:
+REQUESTED_BY_TASK:
+RETURN_TO_REQUESTER_AFTER_AUDIT_PASS:
+RETURN_TO_ROLE_AFTER_AUDIT_PASS:
+RETURN_TASK_AFTER_AUDIT_PASS:
+RESEARCH_QUESTION_ID:
+RESULT_REFS:
+AUDIT_REFS:
+CORRECTION_LINKS:
+COMMIT_HASH:
+BRANCH:
+PUSH_STATUS:
+ACCEPTED_FILES:
+CHECKPOINT_REF:
+CREATED_AT:
+UPDATED_AT:
+```
+
+`TASK_TYPE` допустимые значения:
+
+```text
+requirements_analyst
+solution_architect
+designer
+developer
+auditor
+tester
+technical_writer
+devops_setup_engineer
+release_manager
+```
+
+`TASK_KIND` допустимые значения:
+
+```text
+normal
+research_dependency
+design_continuation
+task_continuation
+correction
+audit
+testing
+setup
+launch
+handover
+```
+
+`OWNER_ROLE` uses the control/target role enum:
+
+```text
+orchestrator
+requirements_analyst
+solution_architect
+designer
+developer
+auditor
+tester
+technical_writer
+devops_setup_engineer
+release_manager
+project_owner
+none
+```
+
+## STATUS допустимые значения
+
+```text
+pending
+ready
+running
+audit_pending
+audit_passed
+checkpoint_done
+blocked
+failed
+superseded
+completed
+```
+
+## Правила
+
+- `DEPENDENCIES` must list prerequisite task ids or `NONE`;
+- `REQUESTED_BY_ROLE`, `REQUESTED_BY_TASK`,
+  `RETURN_TO_REQUESTER_AFTER_AUDIT_PASS`,
+  `RETURN_TO_ROLE_AFTER_AUDIT_PASS`, `RETURN_TASK_AFTER_AUDIT_PASS`, and
+  `RESEARCH_QUESTION_ID` must preserve requester return metadata for research
+  dependency and continuation tasks, otherwise use `NONE` or `no` as
+  applicable;
+- `RESULT_REFS` must reference bounded RESULT records or `NONE`;
+- `AUDIT_REFS` must reference bounded audit records or `NONE`;
+- `CORRECTION_LINKS` must reference correction tasks/results or `NONE`;
+- `COMMIT_HASH` is required after a successful post-audit Git checkpoint and may be `NONE` before checkpoint;
+- `BRANCH` is required after a post-audit Git checkpoint and may be `NONE` before checkpoint;
+- `PUSH_STATUS` must be one of `not_required`, `not_attempted`, `pushed`, or `failed`;
+- `ACCEPTED_FILES` must list audited accepted changed files or `NONE`;
+- `CHECKPOINT_REF` must point to the checkpoint event or record after checkpoint attempt, otherwise `NONE`;
+- task registry entries must not contain full task packet, RESULT, or audit contents.
+
+---
+
+# ACCEPTED_ARTIFACTS.md schema
+
+## Назначение
+
+`ACCEPTED_ARTIFACTS.md` фиксирует acceptance state артефактов по bounded references.
+
+## Формат записи
+
+```text
+ARTIFACT_ID:
+ARTIFACT_TYPE:
+ARTIFACT_REF:
+STATUS:
+SOURCE_TASK:
+SOURCE_RESULT_REF:
+AUDIT_REF:
+SUPERSEDES:
+SUPERSEDED_BY:
+COMMIT_HASH:
+BRANCH:
+PUSH_STATUS:
+CHECKPOINT_REF:
+ACCEPTED_AT:
+UPDATED_AT:
+NOTES:
+```
+
+## STATUS допустимые значения
+
+```text
+draft
+accepted
+failed
+superseded
+```
+
+## Правила
+
+- `draft`, `accepted`, `failed`, and `superseded` must remain distinct states;
+- `ARTIFACT_REF`, `SOURCE_RESULT_REF`, and `AUDIT_REF` must be bounded references or `NONE`;
+- superseded artifacts must remain traceable through `SUPERSEDES` and `SUPERSEDED_BY`;
+- `COMMIT_HASH` is required after a successful post-audit Git checkpoint and may be `NONE` before checkpoint;
+- `BRANCH` is required after a post-audit Git checkpoint and may be `NONE` before checkpoint;
+- `PUSH_STATUS` must be one of `not_required`, `not_attempted`, `pushed`, or `failed`;
+- `CHECKPOINT_REF` must point to the checkpoint event or record after checkpoint attempt, otherwise `NONE`;
+- accepted artifacts registry entries must not contain full artifact contents.
+
+---
+
+# ORCHESTRATOR_EVENTS_LOG.md schema
+
+## Назначение
+
+`ORCHESTRATOR_EVENTS_LOG.md` фиксирует material orchestrator events and routing decisions.
+
+## Формат записи
+
+```text
+DATE:
+EVENT_TYPE:
+ACTOR:
+TASK_ID:
+GATE_ID:
+ACTION_ID:
+STATUS:
+SUMMARY:
+INPUT_REFS:
+OUTPUT_REFS:
+COMMIT_HASH:
+BRANCH:
+PUSH_STATUS:
+ACCEPTED_FILES:
+FAILURE_REASON:
+NEXT_ACTION_REF:
+```
+
+## EVENT_TYPE допустимые значения
+
+```text
+bootstrap
+owner_pause
+validator_result
+checkpoint
+manual_intervention
+task_dispatch
+result_route
+audit_route
+correction_route
+state_update
+violation_recovery
+```
+
+## ACTOR допустимые значения
+
+```text
+orchestrator
+project_owner
+validator
+system
+```
+
+## Правила
+
+- bootstrap, owner pause, validator result, checkpoint, and manual intervention events must be representable;
+- `COMMIT_HASH` is required for successful checkpoint events and must be `NONE` otherwise;
+- `BRANCH`, `PUSH_STATUS`, and `ACCEPTED_FILES` are required for checkpoint events;
+- `PUSH_STATUS` must be one of `not_required`, `not_attempted`, `pushed`, or `failed`;
+- `FAILURE_REASON` must be populated for failed checkpoint, validator, or recovery events and must not include secret values;
+- `INPUT_REFS`, `OUTPUT_REFS`, and `NEXT_ACTION_REF` must use bounded references or `NONE`;
+- orchestrator events log entries must not contain full task packet, RESULT, or audit contents.
+
+---
+
+# STATUS_SUMMARY.md schema
+
+`STATUS_SUMMARY.md` is a human-readable runtime summary only. It is validated
+through runtime tuple consistency and final smoke checks, not through a JSON
+Schema sidecar; no `status_summary.schema.json` sidecar is defined by this
+package.
+
+## Назначение
+
+`STATUS_SUMMARY.md` фиксирует compact operational summary текущего состояния.
+
+## Обязательные поля
+
+```text
+PROJECT_STATUS:
+CURRENT_PHASE:
+CURRENT_GATE:
+GATE_STATUS:
+LAST_ACCEPTED_RESULT:
+LAST_FAILED_RESULT:
+ACTIVE_BLOCKERS:
+ACTIVE_GAPS:
+NEXT_ACTION:
+LAUNCH_READINESS:
+UPDATED_AT:
+PROJECT_STATE_REF:
+CURRENT_GATE_REF:
+NEXT_ACTION_REF:
+TASK_REGISTRY_REF:
+ACCEPTED_ARTIFACTS_REF:
+AGENT_RESULTS_LOG_REF:
+ORCHESTRATOR_EVENTS_LOG_REF:
+```
+
+## LAUNCH_READINESS допустимые значения
+
+```text
+not_started
+not_ready
+blocked
+ready
+launched
+not_applicable
+```
+
+## Правила
+
+- `PROJECT_STATUS` must match `PROJECT_STATE.md`;
+- `CURRENT_GATE` and `GATE_STATUS` must match `CURRENT_GATE.md`;
+- `LAST_ACCEPTED_RESULT` and `LAST_FAILED_RESULT` must reference bounded result records or `NONE`;
+- `ACTIVE_BLOCKERS` must list blocker ids or `NONE`;
+- `ACTIVE_GAPS` must list GAP ids or `NONE`;
+- `NEXT_ACTION` must summarize exactly one governed next action;
+- `LAUNCH_READINESS` must summarize launch gate state when applicable, otherwise `not_applicable`.
+
+---
+
+## Runtime state tuple validation
+
+The orchestrator must validate the combined runtime state tuple before dispatch:
+
+```text
+PROJECT_STATE.CURRENT_PHASE
+PROJECT_STATE.PROJECT_STATUS
+PROJECT_STATE.ACTIVE_DOC_ROOT
+PROJECT_STATE.PACKAGE_VERSION
+PROJECT_STATE.GOVERNANCE_RULESET_VERSION
+PROJECT_STATE.RUNTIME_SCHEMA_VERSION
+PROJECT_STATE.PROJECT_SLUG
+PROJECT_STATE.WORKSPACE_TYPE
+PROJECT_STATE.WORKSPACE_IDENTITY_REF
+PROJECT_STATE.REPOSITORY_LOCK_REF
+PROJECT_STATE.EXPECTED_GIT_REMOTE
+PROJECT_STATE.ACTUAL_GIT_REMOTE
+PROJECT_STATE.EXPECTED_BRANCH
+PROJECT_STATE.ACTUAL_BRANCH
+PROJECT_STATE.PUSH_ALLOWED
+PROJECT_STATE.IDENTITY_VALIDATION_STATUS
+PROJECT_STATE.IDENTITY_VALIDATION_ERROR
+PROJECT_STATE.REPOSITORY_LOCK_STATUS
+PROJECT_STATE.CHECKPOINT_ELIGIBILITY
+PROJECT_STATE.AUDIT_STATUS
+PROJECT_STATE.CHECKPOINT_ELIGIBILITY_STATUS
+PROJECT_STATE.CHECKPOINT_PREFLIGHT_STATUS
+PROJECT_STATE.CHECKPOINT_PREFLIGHT_REF
+PROJECT_STATE.CHECKPOINT_RECEIPT_REF
+PROJECT_STATE.COMMIT_STATUS
+PROJECT_STATE.LAST_COMMIT_HASH
+PROJECT_STATE.LAST_COMMIT_BRANCH
+PROJECT_STATE.PUSH_STATUS
+PROJECT_STATE.LAST_PUSH_REMOTE
+PROJECT_STATE.LAST_PUSH_BRANCH
+PROJECT_STATE.LAST_PUSH_TARGET_STATUS
+PROJECT_STATE.PROJECT_CHECKPOINT_STATUS
+PROJECT_STATE.CHECKPOINT_BLOCKED_BY
+PROJECT_STATE.LAST_CHECKPOINT_FAILURE_REASON
+CURRENT_GATE.GATE_TYPE
+CURRENT_GATE.STATUS
+CURRENT_GATE.OWNER_ROLE
+CURRENT_GATE.TASK_ID
+CURRENT_GATE.TASK_PACKET
+CURRENT_GATE.ACTION_SEMANTIC
+CURRENT_GATE.WORKSPACE_IDENTITY_STATUS
+CURRENT_GATE.REPOSITORY_LOCK_STATUS
+CURRENT_GATE.CHECKPOINT_ELIGIBILITY
+CURRENT_GATE.CHECKPOINT_ELIGIBILITY_STATUS
+CURRENT_GATE.PROJECT_CHECKPOINT_STATUS
+NEXT_ACTION.ACTION_TYPE
+NEXT_ACTION.TARGET_ROLE
+NEXT_ACTION.TASK_ID
+NEXT_ACTION.TASK_PACKET
+NEXT_ACTION.DEPENDENCY_STATUS
+NEXT_ACTION.ACTION_SEMANTIC
+NEXT_ACTION.WORKSPACE_IDENTITY_REQUIRED
+NEXT_ACTION.REPOSITORY_LOCK_REQUIRED
+NEXT_ACTION.CHECKPOINT_POLICY
+NEXT_ACTION.CHECKPOINT_PREFLIGHT_REQUIRED
+NEXT_ACTION.CHECKPOINT_RECEIPT_REQUIRED
+NEXT_ACTION.CHECKPOINT_RECEIPT_REF
+NEXT_ACTION.REQUESTER_RETURN_CONTEXT
+GAP_REGISTER.active_gaps
+TASK_REGISTRY.task_statuses
+TASK_REGISTRY.dependencies
+TASK_REGISTRY.requester_return_metadata
+TASK_REGISTRY.result_refs
+TASK_REGISTRY.audit_refs
+TASK_REGISTRY.correction_links
+TASK_REGISTRY.commit_hashes
+ACCEPTED_ARTIFACTS.artifact_statuses
+ACCEPTED_ARTIFACTS.audit_refs
+ORCHESTRATOR_EVENTS_LOG.latest_events
+STATUS_SUMMARY.project_status
+STATUS_SUMMARY.current_gate
+STATUS_SUMMARY.last_accepted_result
+STATUS_SUMMARY.last_failed_result
+STATUS_SUMMARY.active_blockers
+STATUS_SUMMARY.active_gaps
+STATUS_SUMMARY.next_action
+STATUS_SUMMARY.launch_readiness
+PROJECT_STATE.active_blockers
+PROJECT_STATE.active_branches
+```
+
+A set of runtime files can be locally valid but globally invalid.
+If tuple validation fails, the orchestrator must enter correction flow.
+
+## Schema/template parity
+
+The following templates must be compatible with this schema:
+
+```text
+agent-system/04_state/PROJECT_STATE_TEMPLATE.md
+agent-system/04_state/CURRENT_GATE_TEMPLATE.md
+agent-system/04_state/NEXT_ACTION_TEMPLATE.md
+agent-system/04_state/TASK_REGISTRY_TEMPLATE.md
+agent-system/04_state/ACCEPTED_ARTIFACTS_TEMPLATE.md
+agent-system/05_gap_flow/GAP_REGISTER_TEMPLATE.md
+agent-system/06_logs/AGENT_RESULTS_LOG_TEMPLATE.md
+agent-system/06_logs/ORCHESTRATOR_EVENTS_LOG_TEMPLATE.md
+agent-system/06_logs/STATUS_SUMMARY_TEMPLATE.md
+```
+
+Workspace identity and repository lock fields in `PROJECT_STATE.md` must also
+remain compatible with:
+
+```text
+agent-system/03_templates/WORKSPACE_IDENTITY_TEMPLATE.md
+agent-system/03_templates/REPOSITORY_LOCK_TEMPLATE.md
+```
+
+Checkpoint eligibility fields must remain compatible with:
+
+```text
+agent-system/03_templates/CHECKPOINT_ELIGIBILITY_TEMPLATE.md
+```
+
+If schema and templates conflict, bootstrap is invalid and governance freeze applies.
+
+# Transition authority
+
+This document defines runtime state structure only.
+
+Authoritative runtime transition rules, forbidden transitions, terminal completion rules, and invalid-state detection are defined in:
+
+```text
+agent-system/02_runtime/STATE_TRANSITION_RULES.md
+```
+
+Detailed documentation-first runtime consistency checks are defined in:
+
+```text
+agent-system/09_validators/RUNTIME_CONSISTENCY_RULES.md
+```
+
+Structural runtime state validation in this schema does not authorize role, phase, gate, action, terminal, GAP, blocker, or workflow transitions.
+
+If runtime state is structurally invalid, or if a runtime state tuple is incompatible with authoritative transition rules, recovery routing is governed by:
+
+```text
+agent-system/02_runtime/STATE_TRANSITION_RULES.md
+agent-system/02_runtime/VIOLATION_RECOVERY.md
+```
+
+---
+
+# Versioning
+
+Runtime schema может изменяться только через отдельную задачу на обновление universal package.
+
+Изменения schema должны быть:
+- зафиксированы в файле;
+- применены к шаблонам runtime state;
+- учтены в ORCHESTRATOR_RUNTIME_LOOP;
+- при необходимости проверены тестовым pipeline.

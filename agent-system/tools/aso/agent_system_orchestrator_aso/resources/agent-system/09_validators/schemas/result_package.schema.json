@@ -1,0 +1,190 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://agent-system.local/schemas/result_package.schema.json",
+  "title": "RESULT_PACKAGE",
+  "description": "P5 structured package envelope for profile-agent RESULT evidence. This is not storage or lifecycle integration.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "package_id",
+    "schema_version",
+    "package_version",
+    "governance_ruleset_version",
+    "runtime_schema_version",
+    "artifact_package_schema_version",
+    "result_ref",
+    "task_id",
+    "agent_instance_id",
+    "role",
+    "status",
+    "acceptance_status",
+    "changed_files",
+    "created_files",
+    "deleted_files",
+    "structured_artifacts",
+    "commands_run",
+    "tests_run",
+    "evidence",
+    "scope_verification",
+    "forbidden_changes_check",
+    "risks",
+    "limitations",
+    "blockers",
+    "gaps",
+    "next_recommended_action",
+    "reuse_allowed",
+    "agent_termination_required",
+    "validation"
+  ],
+  "properties": {
+    "package_id": {
+      "type": "string",
+      "pattern": "^RESULT_PACKAGE_[A-Za-z0-9_:-]+$"
+    },
+    "schema_version": { "type": "string", "const": "1.0.0" },
+    "package_version": { "type": "string", "const": "3.7.9" },
+    "governance_ruleset_version": { "type": "string", "const": "3.7.9" },
+    "runtime_schema_version": { "type": "string", "const": "3.1.1" },
+    "artifact_package_schema_version": { "type": "string", "const": "1.1.0" },
+    "result_ref": {
+      "type": "string",
+      "pattern": "^project-runtime/results/worker/RESULT_[A-Za-z0-9_:-]+_ATTEMPT_[0-9]+\\.md$"
+    },
+    "task_id": { "type": "string", "minLength": 1 },
+    "agent_instance_id": { "type": "string", "minLength": 1 },
+    "role": { "$ref": "#/$defs/profileRole" },
+    "status": { "$ref": "#/$defs/resultStatus" },
+    "acceptance_status": { "type": "string", "const": "accepted" },
+    "changed_files": { "$ref": "#/$defs/listOrNone" },
+    "created_files": { "$ref": "#/$defs/listOrNone" },
+    "deleted_files": { "$ref": "#/$defs/listOrNone" },
+    "structured_artifacts": {
+      "oneOf": [
+        { "const": "NONE" },
+        {
+          "type": "array",
+          "items": { "$ref": "#/$defs/structuredArtifactRef" }
+        }
+      ]
+    },
+    "commands_run": { "$ref": "#/$defs/listOrNone" },
+    "tests_run": { "$ref": "#/$defs/listOrNone" },
+    "evidence": { "$ref": "#/$defs/listOrNone" },
+    "scope_verification": { "$ref": "#/$defs/listOrNone" },
+    "forbidden_changes_check": { "$ref": "#/$defs/listOrNone" },
+    "risks": { "$ref": "#/$defs/listOrNone" },
+    "limitations": { "$ref": "#/$defs/listOrNone" },
+    "blockers": { "$ref": "#/$defs/listOrNone" },
+    "gaps": {
+      "oneOf": [
+        { "const": "NONE" },
+        {
+          "type": "array",
+          "items": { "$ref": "#/$defs/gap" }
+        }
+      ]
+    },
+    "next_recommended_action": { "$ref": "#/$defs/listOrNone" },
+    "reuse_allowed": { "const": false },
+    "agent_termination_required": { "const": true },
+    "validation": { "$ref": "#/$defs/validationSummary" }
+  },
+  "$defs": {
+    "profileRole": {
+      "type": "string",
+      "enum": [
+        "requirements_analyst",
+        "solution_architect",
+        "designer",
+        "developer",
+        "auditor",
+        "tester",
+        "technical_writer",
+        "devops_setup_engineer",
+        "release_manager"
+      ]
+    },
+    "resultStatus": {
+      "type": "string",
+      "enum": ["pass", "fail", "blocked", "gap"]
+    },
+    "listOrNone": {
+      "oneOf": [
+        { "const": "NONE" },
+        { "type": "array", "items": { "type": "string", "minLength": 1 } }
+      ]
+    },
+    "structuredArtifactRef": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["artifact_id", "artifact_type", "path", "sha256"],
+      "properties": {
+        "artifact_id": { "type": "string", "minLength": 1 },
+        "artifact_type": { "type": "string", "minLength": 1 },
+        "path": { "$ref": "#/$defs/packagePath" },
+        "sha256": {
+          "oneOf": [
+            { "const": "PENDING" },
+            { "type": "string", "pattern": "^sha256:[a-f0-9]{64}$" }
+          ]
+        }
+      }
+    },
+    "packagePath": {
+      "type": "string",
+      "minLength": 1,
+      "not": {
+        "anyOf": [
+          { "pattern": "^(\\.venv|project-input|project-runtime|project-archive)(/|$)" },
+          { "pattern": "(^|/)\\.\\.(?:/|$)" }
+        ]
+      }
+    },
+    "gap": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["gap_id", "type", "blocks", "question_to_owner", "recommended_options", "recommended_option", "reason"],
+      "properties": {
+        "gap_id": { "type": "string", "minLength": 1 },
+        "type": {
+          "type": "string",
+          "enum": ["business", "functional", "technical", "documentation", "acceptance", "runtime"]
+        },
+        "blocks": { "type": "string", "minLength": 1 },
+        "question_to_owner": { "type": "string", "minLength": 1 },
+        "recommended_options": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["A", "B", "C"],
+          "properties": {
+            "A": { "type": "string", "minLength": 1 },
+            "B": { "type": "string", "minLength": 1 },
+            "C": { "type": "string", "minLength": 1 }
+          }
+        },
+        "recommended_option": { "type": "string", "enum": ["A", "B", "C"] },
+        "reason": { "type": "string", "minLength": 1 }
+      }
+    },
+    "validationSummary": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["status", "validators", "notes"],
+      "properties": {
+        "status": { "type": "string", "enum": ["not_run", "passed", "failed", "blocked"] },
+        "validators": {
+          "oneOf": [
+            { "const": "NONE" },
+            { "type": "array", "items": { "type": "string", "minLength": 1 } }
+          ]
+        },
+        "notes": {
+          "oneOf": [
+            { "const": "NONE" },
+            { "type": "array", "items": { "type": "string", "minLength": 1 } }
+          ]
+        }
+      }
+    }
+  }
+}

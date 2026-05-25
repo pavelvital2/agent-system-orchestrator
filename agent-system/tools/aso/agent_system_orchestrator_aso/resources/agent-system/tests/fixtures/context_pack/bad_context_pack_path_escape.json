@@ -1,0 +1,23 @@
+{
+  "task_id": "TASK_BAD_PATH_ESCAPE",
+  "required_docs": [
+    {
+      "path": "../README.md",
+      "sections": [
+        "Overview"
+      ],
+      "why_needed": "This fixture intentionally attempts to escape the repository root"
+    }
+  ],
+  "forbidden_docs": [
+    "project-archive/"
+  ],
+  "source_of_truth": [
+    "../README.md"
+  ],
+  "context_budget": {
+    "max_docs": 3,
+    "max_sections_per_doc": 4,
+    "max_chars_total": 5000
+  }
+}

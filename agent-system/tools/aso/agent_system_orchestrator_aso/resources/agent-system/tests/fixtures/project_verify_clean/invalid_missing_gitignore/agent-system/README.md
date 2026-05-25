@@ -1,0 +1,1 @@
+# Vendored Agent System Fixture

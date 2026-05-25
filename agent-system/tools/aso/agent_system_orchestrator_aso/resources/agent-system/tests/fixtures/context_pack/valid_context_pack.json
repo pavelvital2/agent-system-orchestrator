@@ -1,0 +1,33 @@
+{
+  "task_id": "TASK_ASO_STAGE1_DEV_004_VALIDATE_CONTEXT_PACK",
+  "required_docs": [
+    {
+      "path": "agent-system/README.md",
+      "sections": [
+        "ASO helper CLI"
+      ],
+      "why_needed": "Current command surface and read-only ASO helper boundary"
+    },
+    {
+      "path": "agent-system/09_validators/TASK_PACKET_SCHEMA_VALIDATION_RULES.md",
+      "sections": [
+        "Dispatch validation",
+        "Path validation"
+      ],
+      "why_needed": "Task packet context restrictions for active dispatch and source references"
+    }
+  ],
+  "forbidden_docs": [
+    "project-archive/",
+    "project-runtime/"
+  ],
+  "source_of_truth": [
+    "agent-system/README.md",
+    "agent-system/09_validators/TASK_PACKET_SCHEMA_VALIDATION_RULES.md"
+  ],
+  "context_budget": {
+    "max_docs": 5,
+    "max_sections_per_doc": 4,
+    "max_chars_total": 5000
+  }
+}

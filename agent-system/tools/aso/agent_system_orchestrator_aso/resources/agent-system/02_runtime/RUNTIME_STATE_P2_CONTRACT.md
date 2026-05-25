@@ -76,6 +76,12 @@ updated_by
 content
 ```
 
+Runtime write commands must record factual current UTC timestamps in
+`YYYY-MM-DDTHH:MM:SSZ` form by default. Deterministic timestamps are allowed
+only when a command exposes an explicit test/fixture switch such as
+`--deterministic-timestamps`; that switch must not change schema versions or
+sidecar shape.
+
 Recommended optional envelope fields are:
 
 ```text

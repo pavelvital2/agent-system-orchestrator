@@ -1,0 +1,30 @@
+{
+  "task_id": "TASK_EXAMPLE_001",
+  "required_docs": [
+    {
+      "path": "agent-system/README.md",
+      "sections": [
+        "ASO helper CLI"
+      ],
+      "why_needed": "Bounded source context needed for the receiving task",
+      "sha256": "optional-known-section-or-file-hash"
+    }
+  ],
+  "forbidden_docs": [
+    "project-archive/",
+    "project-input/",
+    "project-runtime/"
+  ],
+  "source_of_truth": [
+    "agent-system/README.md"
+  ],
+  "accepted_artifact_packages": [],
+  "rendered_views": [],
+  "context_mode": "routine",
+  "reference_docs": [],
+  "context_budget": {
+    "max_docs": 5,
+    "max_sections_per_doc": 8,
+    "max_chars_total": 40000
+  }
+}

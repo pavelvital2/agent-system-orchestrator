@@ -1,0 +1,985 @@
+# TASK_PACKET_TEMPLATE
+
+## Назначение
+
+Этот шаблон определяет обязательную структуру bounded task packet.
+
+Каждая bounded-задача проекта должна существовать как отдельный markdown-файл, созданный проектировщиком по этому шаблону.
+
+Цель шаблона:
+- стандартизировать task packets;
+- минимизировать context drift;
+- обеспечить deterministic orchestration;
+- ограничить scope агента;
+- обеспечить стабильный audit flow;
+- обеспечить минимальный REQUIRED_DOCS package.
+- отделить dispatchable task packets от non-dispatchable `TASK_PROPOSAL`
+  drafts.
+
+Dispatchable task packets must validate against:
+
+```text
+agent-system/09_validators/TASK_PACKET_SCHEMA_VALIDATION_RULES.md
+agent-system/scripts/validate_task_packet.py
+```
+
+`TASK_PROPOSAL` files are governed by:
+
+```text
+agent-system/03_templates/TASK_PROPOSAL_TEMPLATE.md
+```
+
+They are non-dispatchable and must not be used as `NEXT_ACTION.TASK_PACKET`.
+
+---
+
+# TASK PACKET
+
+Dispatchable marker:
+
+```text
+# TASK PACKET
+```
+
+Rules:
+
+- a file that does not declare `# TASK PACKET` is not a dispatchable task
+  packet;
+- a file that declares `# TASK PROPOSAL` or `TASK_PROPOSAL` is a
+  non-dispatchable proposal unless it is converted into this full template;
+- selecting a proposal or malformed task file for `create_agent` is an
+  `invalid_task_packet_schema` blocker;
+- invalid dispatchable task packets also block post-audit checkpoint before
+  `git add`.
+
+## TASK_ID
+
+```text
+<TASK_ID>
+```
+
+Правила:
+- TASK_ID должен быть уникальным;
+- TASK_ID нельзя переиспользовать;
+- superseded task должен получать новый TASK_ID;
+- TASK_ID должен быть стабильным после audit acceptance.
+
+Пример:
+
+```text
+TASK_DEV_APP_001
+```
+
+---
+
+## TASK_STATUS
+
+```text
+active | completed | superseded | deprecated
+```
+
+Rules:
+
+- only `active` task packets may be selected by `NEXT_ACTION`;
+- `completed` task packets are historical accepted/completed records;
+- `superseded` task packets cannot be dispatched;
+- `deprecated` task packets cannot be used as source-of-truth.
+
+---
+
+## TASK_KIND
+
+```text
+bootstrap | normal | research_dependency | design_continuation | task_continuation | correction | audit | testing | setup | launch | handover
+```
+
+Rules:
+
+- `TASK_KIND` classifies task routing semantics without assigning a second
+  profile role;
+- `research_dependency` must follow `REQUESTER_RETURN_PROTOCOL.md`;
+- `design_continuation` must use only independently audited research inputs;
+- `normal` is used when no special dependency/continuation semantics apply.
+
+---
+
+## TASK_COMPLEXITY
+
+```text
+low | medium | high | xhigh
+```
+
+Rules:
+
+- `TASK_COMPLEXITY` classifies task difficulty and governance risk before
+  dispatch;
+- complexity is independent from role assignment and must not add a second
+  task or role;
+- lifecycle/state/transition changes, security/secrets policy, final
+  acceptance, cross-link validation, audit tasks, and corrections after failed
+  audit are at least `high`;
+- requirements analysis and architecture/design tasks are `xhigh` unless a
+  narrower governed task packet explicitly proves a lower floor;
+- `TASK_COMPLEXITY` participates in `REASONING_LEVEL_REQUIRED` resolution.
+
+---
+
+## SUPERSEDES
+
+```text
+<TASK_ID | NONE>
+```
+
+## SUPERSEDED_BY
+
+```text
+<TASK_ID | NONE>
+```
+
+Rules:
+
+- replacing a task requires a new `TASK_ID`;
+- old and new task packets cannot both be active;
+- superseded task packets must not appear in `NEXT_ACTION`;
+- superseded task packets must not be included in `REQUIRED_DOCS` for new work.
+
+---
+
+## CORRECTION_OF
+
+```text
+<TASK_ID | RESULT_REF | NONE>
+```
+
+## SOURCE_RESULT_REF
+
+```text
+<RESULT_REF | NONE>
+```
+
+## ATTEMPT_NO
+
+```text
+<number | NONE>
+```
+
+## FAILURE_TYPE
+
+```text
+governance | workflow | filesystem | runtime_state | audit | testing | gap | blocked | none
+```
+
+Rules:
+
+- correction must be a bounded task;
+- correction must use a fresh agent context;
+- correction must not silently expand scope unless the solution architect creates a new bounded task;
+- correction must follow mandatory audit/testing/documentation path;
+- SOURCE_RESULT_REF must reference the result or violation that triggered correction when applicable;
+- SOURCE_RESULT_REF must be `NONE` only when no triggering result or violation applies;
+- FAILURE_TYPE must classify the correction trigger;
+- FAILURE_TYPE must be `none` only when the task is not a correction or no correction trigger applies.
+
+---
+
+## TASK_TITLE
+
+Краткое название bounded-задачи.
+
+Пример:
+
+```text
+Implement local task service
+```
+
+---
+
+## TASK_TYPE
+
+```text
+requirements_analyst
+solution_architect
+designer
+developer
+auditor
+tester
+technical_writer
+devops_setup_engineer
+release_manager
+```
+
+Задача должна относиться только к одному profile execution role type.
+
+Control pseudo-roles `orchestrator`, `project_owner`, and `none` are not valid
+TASK_TYPE values unless a governance-only exception is explicitly documented.
+
+---
+
+## TARGET_ROLE
+
+```text
+<requirements_analyst | solution_architect | designer | developer | auditor | tester | technical_writer | devops_setup_engineer | release_manager>
+```
+
+Rules:
+- TARGET_ROLE is the role that must execute this task;
+- TARGET_ROLE must match TASK_TYPE for profile execution tasks unless the packet explicitly documents a governed exception;
+- `solution_architect` is the canonical design role; `designer` is a deprecated
+  compatibility alias that validators resolve to `solution_architect` with a
+  warning;
+- control pseudo-roles `orchestrator`, `project_owner`, and `none` are valid only in control/routing fields such as NEXT_ROLE_ON_* where the template permits them;
+- a task packet must not assign work to multiple profile roles.
+
+---
+
+## AGENT_LIFECYCLE_POLICY
+
+```text
+one_agent_one_task_delete_after_result
+```
+
+Rules:
+
+- every dispatchable task packet must use this exact lifecycle policy;
+- one agent = one task = one RESULT;
+- after RESULT, the orchestrator must record the required lifecycle events,
+  terminate the profile-agent instance, and delete or render inaccessible the
+  raw agent context for future work;
+- if physical context deletion is unavailable, logical context deletion is
+  still mandatory: no further messages, no reuse, and no downstream source of
+  truth from raw agent context;
+- correction, retry, audit, and next-task work require a fresh task packet
+  where applicable and a fresh agent context.
+
+---
+
+## REASONING_LEVEL
+
+```text
+VALUE: low | medium | high | xhigh
+OVERRIDE_REASON: <reason | NONE>
+```
+
+Rules:
+
+- `role_default` is valid only as source/policy metadata, not as
+  `REASONING_LEVEL.VALUE`;
+- allowed source metadata values are `explicit`, `role_default`, `gate_floor`,
+  `escalated`, and `fallback`;
+- a task packet may raise reasoning level freely;
+- a task packet may lower below role default only for mechanical bounded tasks
+  and must include `OVERRIDE_REASON`;
+- a task packet must not lower below a gate-required floor;
+- `low` is allowed only for mechanical bounded tasks and is forbidden for
+  design, requirements analysis, audit, correction after failed audit,
+  lifecycle/state/transition changes, security/secrets policy, launch/release
+  readiness, final acceptance, and cross-link validation.
+
+Gate-required floors are defined in:
+
+```text
+agent-system/09_validators/REASONING_LEVEL_VALIDATION_RULES.md
+```
+
+---
+
+## REASONING_LEVEL_REQUIRED
+
+```text
+low | medium | high | xhigh
+```
+
+Rules:
+
+- `REASONING_LEVEL_REQUIRED` is the minimum runner reasoning level permitted
+  for dispatch;
+- it must be the highest applicable level among role default, task packet
+  `REASONING_LEVEL.VALUE`, gate-required floor, and `TASK_COMPLEXITY`;
+- tester tasks require at least `high`;
+- auditor tasks require `xhigh`;
+- requested or configured runner reasoning below `REASONING_LEVEL_REQUIRED`
+  makes dispatch non-compliant, invalidates the worker RESULT, and blocks
+  auditor pass, checkpoint, commit, and push.
+
+---
+
+## DEPENDENCIES
+
+```text
+- <TASK_ID | audit result | runtime gate | NONE>
+```
+
+Rules:
+- dependencies must be explicit and bounded;
+- a dependency is ready only after required audit/checkpoint gates are satisfied;
+- a task must not be dispatched while a required dependency is failed, blocked, superseded, or missing.
+
+---
+
+## DEPENDENCY_STATUS
+
+```text
+ready | blocked | pending | none
+```
+
+Rules:
+- `ready` means all listed dependencies are satisfied for dispatch;
+- `blocked` means at least one dependency prevents dispatch;
+- `pending` means dependency work is known but incomplete;
+- `none` is allowed only when DEPENDENCIES is `NONE`.
+
+---
+
+## REQUESTED_BY_ROLE
+
+```text
+<requirements_analyst | solution_architect | designer | developer | auditor | tester | technical_writer | devops_setup_engineer | release_manager | NONE>
+```
+
+## REQUESTED_BY_TASK
+
+```text
+<TASK_ID | NONE>
+```
+
+## RESEARCH_QUESTION_ID
+
+```text
+<QUESTION_ID | NONE>
+```
+
+## RESEARCH_PURPOSE
+
+```text
+<purpose | NONE>
+```
+
+## RESEARCH_QUESTIONS
+
+```text
+- <exact factual question> | NONE
+```
+
+## ALLOWED_SOURCES
+
+```text
+- <allowed source> | NONE
+```
+
+## FORBIDDEN_SOURCES
+
+```text
+- <forbidden source> | NONE
+```
+
+## EXPECTED_EVIDENCE
+
+```text
+- <expected research evidence> | NONE
+```
+
+## EXPECTED_OUTPUT
+
+```text
+- <expected research output> | NONE
+```
+
+## RETURN_TO_REQUESTER_AFTER_AUDIT_PASS
+
+```text
+yes | no
+```
+
+## RETURN_TO_ROLE_AFTER_AUDIT_PASS
+
+```text
+<requirements_analyst | solution_architect | designer | developer | auditor | tester | technical_writer | devops_setup_engineer | release_manager | none>
+```
+
+## RETURN_TASK_AFTER_AUDIT_PASS
+
+```text
+<TASK_ID | task packet path | NONE>
+```
+
+Rules:
+
+- requester return metadata is mandatory for `TASK_KIND:
+  research_dependency`, `design_continuation`, and `task_continuation`;
+- research dependency return to requester is allowed only after independent
+  audit pass and any required checkpoint;
+- audit `fail`, `blocked`, or `gap` must route to correction/blocked/GAP
+  handling, not requester continuation;
+- the orchestrator must use explicit return metadata and must not infer return
+  targets from context.
+
+---
+
+## PURPOSE
+
+Краткая цель задачи.
+
+Правила:
+- только одна bounded цель;
+- без скрытых подзадач;
+- без “и заодно”.
+
+---
+
+## SOURCE_OF_TRUTH
+
+Список документов, которые являются source-of-truth для этой задачи.
+
+Пример:
+
+```text
+- project-docs/01_architecture/DATA_MODEL.md
+- project-docs/01_architecture/WEB_CONTRACT.md
+```
+
+SOURCE_OF_TRUTH должен быть подмножеством REQUIRED_DOCS.
+
+---
+
+## SCOPE_IN
+
+Список того, что агент обязан сделать.
+
+Правила:
+- каждый пункт должен быть проверяемым;
+- scope должен быть bounded;
+- scope не должен требовать чтения всего проекта;
+- scope не должен подразумевать скрытые задачи.
+
+Пример:
+
+```text
+- реализовать SQLite persistence
+- реализовать create task flow
+- реализовать delete task flow
+```
+
+---
+
+## SCOPE_OUT
+
+Список того, что агенту запрещено делать.
+
+Правила:
+- scope OUT обязателен;
+- scope OUT должен ограничивать expansion behavior;
+- если есть высокий риск scope creep — он должен быть явно перечислен.
+
+Пример:
+
+```text
+- не добавлять auth
+- не добавлять search
+- не менять architecture docs
+```
+
+---
+
+## REQUIRED_DOCS
+
+Минимальный набор документов, разрешённых агенту.
+
+Правила:
+- REQUIRED_DOCS должен быть минимальным;
+- нельзя передавать весь проект;
+- нельзя передавать deprecated docs;
+- нельзя передавать giant execution docs;
+- документы должны находиться внутри ACTIVE_DOC_ROOT, кроме runtime/system docs;
+- агент не должен читать документы вне REQUIRED_DOCS.
+
+Пример:
+
+```text
+- project-docs/03_tasks/TASK_DEV_APP_001.md
+- project-docs/01_architecture/DATA_MODEL.md
+- project-docs/01_architecture/WEB_CONTRACT.md
+```
+
+---
+
+## INPUTS
+
+Внешние входные данные задачи.
+
+Примеры:
+- RESULT предыдущего агента;
+- runtime state;
+- uploaded file;
+- external config.
+
+Если inputs отсутствуют:
+
+```text
+NONE
+```
+
+---
+
+## READ_INPUTS
+
+Inputs or external package documents the agent must read in addition to REQUIRED_DOCS.
+
+Examples:
+- task graph;
+- acceptance criteria;
+- prior RESULT reference;
+- owner decision record.
+
+If no additional inputs are required:
+
+```text
+NONE
+```
+
+READ_INPUTS must not expand scope beyond this task packet.
+
+---
+
+## EXPECTED_OUTPUTS
+
+Что агент должен вернуть.
+
+Пример:
+
+```text
+- updated app.py
+- RESULT according to AGENT_RESULT_TEMPLATE
+- candidate artifact package under project-runtime/artifacts/candidates/<TASK_ID>/
+```
+
+Rules:
+- when the task creates packageable agent output, EXPECTED_OUTPUTS must ask
+  for a candidate artifact package under
+  `project-runtime/artifacts/candidates/<TASK_ID>/`;
+- profile agents may write candidate artifact packages only when the task
+  packet includes that path in `ALLOWED_FILE_CHANGES`;
+- candidate packages are proposals for later acceptance and must not be used
+  as source-of-truth context for another agent;
+- only accepted packages under `project-runtime/artifacts/accepted/` and
+  rendered views under `project-runtime/rendered/` may be consumed by context
+  packs.
+
+---
+
+## ALLOWED_FILE_CHANGES
+
+Какие файлы или зоны проекта разрешено изменять.
+
+Пример:
+
+```text
+- app.py
+- src/tasks/*
+- project-runtime/artifacts/candidates/<TASK_ID>/*
+```
+
+Правила:
+- список должен быть bounded;
+- wildcard разрешён только если он действительно необходим;
+- изменение файлов вне списка считается workflow violation.
+- candidate artifact package writes must remain under
+  `project-runtime/artifacts/candidates/<TASK_ID>/` and must not create
+  accepted, rejected, rendered, lifecycle, dispatch, checkpoint, commit, or
+  push side effects.
+
+---
+
+## FORBIDDEN_FILE_CHANGES
+
+Какие файлы запрещено изменять.
+
+Пример:
+
+```text
+- agent-system/*
+- project-runtime/*
+- project-archive/*
+```
+
+---
+
+## ACCEPTANCE_CRITERIA
+
+Проверяемые критерии завершения задачи.
+
+Правила:
+- каждый критерий должен быть проверяемым;
+- критерии не должны быть расплывчатыми;
+- критерии должны соответствовать scope IN;
+- acceptance criteria не должны расширять scope.
+
+Пример:
+
+```text
+- task persists after restart
+- status supports only active/done
+- delete removes task from SQLite
+```
+
+---
+
+## EVIDENCE_REQUIREMENTS
+
+Какой evidence обязан предоставить агент.
+
+Примеры:
+- command output;
+- HTTP response;
+- screenshot;
+- test log;
+- RESULT reference;
+- file diff summary.
+
+Если evidence не требуется:
+
+```text
+NONE
+```
+
+---
+
+## SETUP_HOOKS
+
+Setup actions or checks required before task execution.
+
+Examples:
+- verify local dependencies are installed;
+- confirm runtime state file exists;
+- ensure required service is stopped before editing.
+
+If no setup hook is required:
+
+```text
+NONE
+```
+
+Rules:
+- setup hooks must be bounded and non-secret;
+- setup hooks must not perform deployment or launch unless explicitly in scope;
+- setup hooks must not bypass task dependencies or audit gates.
+
+---
+
+## LAUNCH_HOOKS
+
+Launch, run, or smoke actions allowed after task execution.
+
+Examples:
+- run local smoke command;
+- start local development service for verification;
+- capture launch readiness evidence.
+
+If no launch hook is required:
+
+```text
+NONE
+```
+
+Rules:
+- launch hooks must be explicit before an agent runs them;
+- production launch requires a dedicated governed launch task;
+- launch evidence must be recorded in RESULT when hooks are executed.
+
+---
+
+## RESULT_PATH
+
+Where the orchestrator should store or reference the agent RESULT.
+
+Example:
+
+```text
+project-runtime/results/worker/RESULT_<TASK_ID>_ATTEMPT_<N>.md
+project-runtime/results/audit/AUDIT_RESULT_<TASK_ID>_ATTEMPT_<N>.md
+```
+
+If the runtime uses a log reference instead of a file path:
+
+```text
+project-runtime/AGENT_RESULTS_LOG.md#<RESULT_REF>
+```
+
+Rules:
+- RESULT_PATH must be deterministic;
+- RESULT_PATH must use the `RESULT_` prefix for new worker result files;
+- RESULT_PATH must use the `AUDIT_RESULT_` prefix for new auditor result
+  files;
+- new worker result files must be under `project-runtime/results/worker/`;
+- new auditor result files must be under `project-runtime/results/audit/`;
+- `project-runtime/agent-results/` is compatibility/read-only legacy storage
+  for historical worker RESULT evidence and must not be used for new result
+  files;
+- RESULT_PATH must not contain secrets;
+- RESULT_PATH must be compatible with filesystem governance and runtime state.
+
+---
+
+## RISK_REQUIREMENTS
+
+Какие риски агент обязан явно указать.
+
+Примеры:
+- untested runtime behavior;
+- temporary workaround;
+- partial implementation;
+- environment dependency.
+
+Если рисков нет:
+
+```text
+NONE
+```
+
+---
+
+## MANDATORY_WORKFLOW
+
+Обязательный следующий workflow.
+
+Пример:
+
+```text
+developer → auditor
+```
+
+или:
+
+```text
+tester(pass) → technical_writer
+tester(fail) → developer
+tester(blocked) → orchestrator
+```
+
+Workflow не должен противоречить:
+- ORCHESTRATOR_RUNTIME_LOOP.md
+- role instructions;
+- governance rules.
+
+---
+
+## NEXT_ROLE_ON_PASS
+
+Роль следующего агента при STATUS: pass.
+
+Пример:
+
+```text
+auditor
+```
+
+Если terminal task:
+
+```text
+none
+```
+
+---
+
+## NEXT_ROLE_ON_FAIL
+
+Следующая роль при STATUS: fail.
+
+Пример:
+
+```text
+developer
+```
+
+---
+
+## NEXT_ROLE_ON_BLOCKED
+
+Следующая роль при STATUS: blocked.
+
+Обычно:
+
+```text
+orchestrator
+```
+
+---
+
+## NEXT_ROLE_ON_GAP
+
+Следующая роль при STATUS: gap.
+
+Обычно:
+
+```text
+orchestrator
+```
+
+Allowed NEXT_ROLE_ON_* values use the control/target role enum:
+
+```text
+orchestrator
+requirements_analyst
+solution_architect
+designer
+developer
+auditor
+tester
+technical_writer
+devops_setup_engineer
+release_manager
+project_owner
+none
+```
+
+---
+
+## AUDIT_REQUIREMENTS
+
+```text
+mandatory
+optional
+none
+```
+
+Правила:
+- после solution_architect — mandatory;
+- после developer — mandatory;
+- optional допустим только если это явно разрешено governance.
+
+---
+
+## TESTING_REQUIREMENTS
+
+```text
+mandatory
+optional
+none
+```
+
+Если testing required:
+- должен существовать отдельный tester task packet.
+
+---
+
+## DOCUMENTATION_REQUIREMENTS
+
+```text
+mandatory
+optional
+none
+```
+
+Если documentation required:
+- должен существовать отдельный technical writer task packet.
+
+---
+
+## FILESYSTEM_GOVERNANCE
+
+Task packet обязан соответствовать:
+
+```text
+agent-system/02_runtime/FILESYSTEM_GOVERNANCE.md
+```
+
+Task packet не должен:
+- использовать deprecated docs;
+- изменять forbidden zones;
+- нарушать ACTIVE_DOC_ROOT;
+- смешивать runtime/docs/source zones.
+- grant commit or push authority to a profile agent.
+- bypass `TASK_PACKET_SCHEMA_VALIDATION_RULES.md`.
+
+Git authority rule:
+
+```text
+Profile agents never commit or push.
+Task packets cannot grant commit/push authority to profile agents.
+Git checkpoint is orchestrator-owned only and runs only after auditor STATUS: pass.
+```
+
+Location rule:
+
+```text
+Ordinary dispatchable task packets must be inside ACTIVE_DOC_ROOT.
+```
+
+The only first-bootstrap exception outside `ACTIVE_DOC_ROOT` is:
+
+```text
+project-runtime/bootstrap/TASK_BOOTSTRAP_<TARGET_ROLE>_001.md
+```
+
+This exception is valid only for the first profile-agent dispatch, only when
+`<TARGET_ROLE>` is populated by the selected first profile route, and only when
+the file is a full schema-valid bootstrap task packet.
+
+---
+
+## RUNTIME_GOVERNANCE
+
+Task packet обязан соответствовать:
+
+```text
+agent-system/02_runtime/ORCHESTRATOR_RUNTIME_LOOP.md
+```
+
+Task packet не должен:
+- нарушать mandatory workflow transitions;
+- bypass audit;
+- bypass correction flow;
+- bypass runtime routing rules.
+- bypass dispatch-time or checkpoint-time task packet schema validation.
+
+Task packet обязан быть совместим с:
+`agent-system/04_state/RUNTIME_STATE_SCHEMA.md`
+
+Task packet must also be compatible with:
+
+```text
+agent-system/02_runtime/GOVERNANCE_AUTHORITY.md
+agent-system/02_runtime/STATE_TRANSITION_RULES.md
+agent-system/02_runtime/VIOLATION_RECOVERY.md
+agent-system/02_runtime/ACCEPTED_STATE_LOCKING.md
+```
+
+---
+
+## RESULT_FORMAT
+
+Агент обязан вернуть RESULT строго по:
+
+```text
+agent-system/03_templates/AGENT_RESULT_TEMPLATE.md
+```
+
+---
+
+## TERMINAL_CONDITIONS
+
+Если задача terminal:
+- явно указать terminal conditions;
+- указать, кто переводит pipeline в completed state.
+
+Обычно:
+
+```text
+orchestrator finalization
+```
+
+---
+
+## NOTES
+
+Дополнительные bounded notes.
+
+Правила:
+- notes не должны расширять scope;
+- notes не заменяют acceptance criteria;
+- notes не должны содержать скрытых задач.
+
+Если notes отсутствуют:
+
+```text
+NONE
+```

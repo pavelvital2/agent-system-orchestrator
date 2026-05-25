@@ -1,0 +1,220 @@
+{
+  "contract_id": "ASO_RUNTIME_STATE_SCHEMA_3_1_1",
+  "description": "JSON-first runtime state sidecar contract for ASO Runtime Schema 3.1.1. This contract is validated with Python stdlib checks; it is not an external jsonschema dependency.",
+  "governance_ruleset_version": "3.7.9",
+  "package_version": "3.7.9",
+  "artifact_package_schema_version": "1.1.0",
+  "runtime_schema_version": "3.1.1",
+  "state_root": "project-runtime/state",
+  "sidecar_envelope": {
+    "required_fields": [
+      "schema_version",
+      "sidecar_type",
+      "runtime_schema_version",
+      "state_revision",
+      "updated_at",
+      "updated_by",
+      "content"
+    ],
+    "optional_fields": [
+      "markdown_source",
+      "source_hash",
+      "previous_revision_hash",
+      "migration_source_schema"
+    ],
+    "rules": [
+      "schema_version and runtime_schema_version must both be 3.1.1 for current sidecars.",
+      "sidecar_type must match the filename stem.",
+      "state_revision must be a positive integer.",
+      "updated_at must be an RFC 3339 UTC timestamp ending in Z.",
+      "updated_by must identify the writer; governed runtime mutations are orchestrator-owned.",
+      "content must be a JSON object."
+    ]
+  },
+  "sidecars": {
+    "PROJECT_STATE": {
+      "filename": "PROJECT_STATE.json",
+      "required": true,
+      "content_expectations": [
+        "Identifies project metadata, active runtime schema, identity references, lifecycle phase, project status, action semantic, checkpoint posture, active branches, blockers, gaps, and last accepted result references."
+      ]
+    },
+    "TASK_REGISTRY": {
+      "filename": "TASK_REGISTRY.json",
+      "required": true,
+      "content_expectations": [
+        "Contains registry_revision and tasks.",
+        "Each task entry must have a stable task_id, owner role, status, dependencies, result/audit references, accepted files, checkpoint reference, and created/updated timestamps.",
+        "Task ids referenced by NEXT_ACTION, CURRENT_GATE, PROJECT_STATE active branches, and ACCEPTED_ARTIFACTS must exist here unless explicitly NONE."
+      ]
+    },
+    "NEXT_ACTION": {
+      "filename": "NEXT_ACTION.json",
+      "required": true,
+      "content_expectations": [
+        "Defines the next orchestrator-visible action, target role, task reference, dependency status, action semantic, workspace/repository/checkpoint requirements, requester-return context, required docs, expected result, and instruction text.",
+        "A checkpoint-capable action requires audit-pass evidence before checkpoint execution can be considered valid."
+      ]
+    },
+    "CURRENT_GATE": {
+      "filename": "CURRENT_GATE.json",
+      "required": true,
+      "content_expectations": [
+        "Defines the active governance gate, gate type, status, owner role, task reference, identity/repository/checkpoint statuses, required next role, evidence, blocking status, and notes."
+      ]
+    },
+    "WORKSPACE_IDENTITY": {
+      "filename": "WORKSPACE_IDENTITY.json",
+      "required": true,
+      "content_expectations": [
+        "Defines workspace identity, workspace type, expected and actual Git remote/branch, identity validation status, repository lock status, push permission, validation timestamp, and validation errors.",
+        "Identity values must agree with matching PROJECT_STATE and REPOSITORY_LOCK values when those sidecars are present."
+      ]
+    },
+    "REPOSITORY_LOCK": {
+      "filename": "REPOSITORY_LOCK.json",
+      "required": false,
+      "content_expectations": [
+        "Defines the accepted repository identity lock, expected remote, expected branch, push policy, lock status, accepted task/audit evidence, and lock revision.",
+        "Required before validators may treat push-capable checkpoint posture as ready."
+      ]
+    },
+    "ACCEPTED_ARTIFACTS": {
+      "filename": "ACCEPTED_ARTIFACTS.json",
+      "required": false,
+      "content_expectations": [
+        "Lists accepted artifacts with bounded references, source task/result/audit references, supersession links, commit/checkpoint evidence, accepted_at, updated_at, and notes.",
+        "Artifact source tasks must exist in TASK_REGISTRY unless explicitly NONE."
+      ]
+    },
+    "CHECKPOINT_STATE": {
+      "filename": "CHECKPOINT_STATE.json",
+      "required": false,
+      "content_expectations": [
+        "Records checkpoint readiness, preflight status, receipt reference, commit/push status, last commit/push evidence, blocked_by entries, and last failure reason.",
+        "Does not authorize checkpoint execution; it is state evidence for later bounded checkpoint tooling."
+      ]
+    },
+    "SCHEMA_MANIFEST": {
+      "filename": "SCHEMA_MANIFEST.json",
+      "required": true,
+      "content_expectations": [
+        "Records runtime_schema_version, package_version, governance_ruleset_version, state_root, required and optional sidecars, contract document reference, generated fixture expectations, and compatibility policy.",
+        "Allows validators and dashboards to discover the active schema contract without reading owner runtime roots."
+      ]
+    }
+  },
+  "allowed_statuses": {
+    "lifecycle": [
+      "bootstrap",
+      "requirements",
+      "design",
+      "design_audit",
+      "implementation",
+      "implementation_audit",
+      "audit",
+      "testing",
+      "setup",
+      "run",
+      "launch",
+      "documentation",
+      "handover",
+      "correction",
+      "blocked",
+      "finalization",
+      "final_acceptance",
+      "completed"
+    ],
+    "checkpoint": [
+      "not_required",
+      "not_run",
+      "pending",
+      "eligible",
+      "ineligible",
+      "passed",
+      "failed",
+      "blocked"
+    ],
+    "action": [
+      "ready",
+      "blocked",
+      "completed",
+      "not_applicable"
+    ],
+    "action_type": [
+      "create_agent",
+      "route_result",
+      "update_state",
+      "wait_for_owner",
+      "correction",
+      "finalize",
+      "stop"
+    ],
+    "action_semantic": [
+      "normal",
+      "wait_for_owner",
+      "pause",
+      "stop_terminal",
+      "completed_state_transition"
+    ],
+    "compatibility": [
+      "current",
+      "compatible_migration_available",
+      "compatible_legacy_read_only",
+      "unsupported",
+      "malformed"
+    ]
+  },
+  "validation_rules": [
+    "Malformed JSON fails closed.",
+    "A sidecar root must be a JSON object.",
+    "Required envelope fields must exist and have governed types.",
+    "Unknown sidecar types fail.",
+    "schema_version and runtime_schema_version must match each other for current 3.1.1 sidecars.",
+    "Current sidecars using schema_version other than 3.1.1 are not silently current; validators must report compatibility or migration status.",
+    "NEXT_ACTION task_id must refer to TASK_REGISTRY unless explicitly NONE.",
+    "CURRENT_GATE task_id must refer to TASK_REGISTRY unless explicitly NONE.",
+    "PROJECT_STATE active branch current_task references must refer to TASK_REGISTRY unless explicitly NONE.",
+    "ACCEPTED_ARTIFACTS source_task references must refer to TASK_REGISTRY unless explicitly NONE.",
+    "WORKSPACE_IDENTITY, REPOSITORY_LOCK, and PROJECT_STATE repository identity fields must agree when present.",
+    "Checkpoint-capable actions require audit-pass evidence before readiness can pass."
+  ],
+  "migration_compatibility": {
+    "supported_source_schema_versions": [
+      "2.0.0",
+      "3.0.0",
+      "3.1.0"
+    ],
+    "current_schema_version": "3.1.1",
+    "compatible_source_status": "compatible_migration_available",
+    "default_unsupported_status": "unsupported",
+    "rules": [
+      "Compatible legacy sidecars may be read for diagnostics and deterministic migration planning.",
+      "Legacy sidecars must not be treated as current P2 state without migration.",
+      "Migration to 3.1.1 must add runtime_schema_version, preserve state_revision where valid, set migration_source_schema, and produce deterministic JSON.",
+      "Malformed, ambiguous, or unsupported source state fails closed and must not be rewritten."
+    ]
+  },
+  "fixture_expectations": {
+    "valid_current_fixture": [
+      "Includes all required sidecars.",
+      "May omit optional sidecars only when SCHEMA_MANIFEST records the reason.",
+      "All current sidecars use schema_version and runtime_schema_version 3.1.1.",
+      "All task references resolve through TASK_REGISTRY.",
+      "SCHEMA_MANIFEST points to this contract document."
+    ],
+    "legacy_compatibility_fixture": [
+      "Existing schema_version 2.0.0, 3.0.0, and 3.1.0 fixtures remain compatibility fixtures.",
+      "Validators report migration compatibility diagnostics instead of silently treating them as current P2 state.",
+      "Strict current-schema fixtures should be added separately from legacy Stage 2 fixtures."
+    ],
+    "negative_fixtures": [
+      "Malformed JSON fails.",
+      "Missing required envelope fields fail.",
+      "Unknown sidecar type fails.",
+      "Mismatched schema_version and runtime_schema_version fails for current P2 validation.",
+      "Missing task references fail.",
+      "Workspace identity or repository lock mismatch fails where comparable fields are present."
+    ]
+  }
+}

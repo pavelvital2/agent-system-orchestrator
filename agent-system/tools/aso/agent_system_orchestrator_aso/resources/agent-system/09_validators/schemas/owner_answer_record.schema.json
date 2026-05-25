@@ -1,0 +1,74 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://agent-system.local/schemas/owner_answer_record.schema.json",
+  "title": "OWNER_ANSWER_RECORD",
+  "description": "Corrected P4 owner answer record contract. The record links an owner answer to one question and one gap; accepted design changes still require governed update and audit.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "answer_record_id",
+    "project_id",
+    "question_id",
+    "gap_id",
+    "question_ref",
+    "selected_option",
+    "owner_answer_summary",
+    "answered_by",
+    "answered_at",
+    "status",
+    "design_update_required",
+    "accepted_source_of_truth_update",
+    "audit_refs"
+  ],
+  "properties": {
+    "schema_version": { "type": "string", "const": "1.0.0" },
+    "answer_record_id": { "type": "string", "pattern": "^ANS-[A-Za-z0-9._-]+$" },
+    "project_id": { "type": "string", "minLength": 1 },
+    "question_id": { "type": "string", "pattern": "^Q-[A-Za-z0-9._-]+$" },
+    "gap_id": { "type": "string", "pattern": "^GAP-[A-Za-z0-9._-]+$" },
+    "question_ref": { "type": "string", "minLength": 1 },
+    "selected_option": {
+      "oneOf": [
+        { "type": "string", "pattern": "^[A-Z][A-Z0-9_-]*$" },
+        { "const": "FREE_TEXT" },
+        { "const": "NONE" }
+      ]
+    },
+    "owner_free_text": { "type": "string" },
+    "owner_answer_summary": { "type": "string", "minLength": 1 },
+    "answered_by": { "type": "string", "minLength": 1 },
+    "answered_at": { "type": "string", "format": "date-time" },
+    "status": {
+      "type": "string",
+      "enum": [
+        "received",
+        "accepted_pending_design_update",
+        "integrated_pending_audit",
+        "accepted",
+        "superseded",
+        "rejected_invalid_link"
+      ]
+    },
+    "design_update_required": { "type": "boolean" },
+    "design_update_ref": {
+      "oneOf": [
+        { "type": "string", "minLength": 1 },
+        { "const": "NONE" }
+      ]
+    },
+    "accepted_source_of_truth_update": {
+      "oneOf": [
+        { "type": "string", "minLength": 1 },
+        { "const": "PENDING" },
+        { "const": "NONE" }
+      ]
+    },
+    "audit_refs": {
+      "oneOf": [
+        { "const": "NONE" },
+        { "type": "array", "items": { "type": "string", "minLength": 1 } }
+      ]
+    }
+  }
+}

@@ -24,6 +24,6 @@ include = ["agent_system_orchestrator_aso*"]
 
 [tool.setuptools.package-data]
 "agent_system_orchestrator_aso.resources" = [
-    "agent-system/**/*.json",
-    "agent-system/**/*.md",
+    "RESOURCE_MANIFEST.json",
+    "agent-system/**/*",
 ]

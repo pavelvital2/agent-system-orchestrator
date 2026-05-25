@@ -1,0 +1,230 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://agent-system.local/schemas/gap_register.schema.json",
+  "title": "GAP_REGISTER",
+  "description": "Corrected P4 design gap register contract. This schema validates artifact shape, links, blocking fields, and status values; it does not semantically read TZ or generate owner questions.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "project_id",
+    "document_id",
+    "status",
+    "source_refs",
+    "gaps"
+  ],
+  "properties": {
+    "schema_version": { "type": "string", "const": "1.0.0" },
+    "project_id": { "type": "string", "minLength": 1 },
+    "document_id": { "type": "string", "minLength": 1 },
+    "status": { "$ref": "#/$defs/documentStatus" },
+    "source_refs": { "$ref": "#/$defs/nonEmptyStringArray" },
+    "question_card_refs": { "$ref": "#/$defs/stringArrayOrNone" },
+    "assumption_refs": { "$ref": "#/$defs/stringArrayOrNone" },
+    "audit_refs": { "$ref": "#/$defs/stringArrayOrNone" },
+    "gaps": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/gapRecord" }
+    }
+  },
+  "$defs": {
+    "documentStatus": {
+      "type": "string",
+      "enum": ["draft", "ready_for_audit", "accepted", "superseded"]
+    },
+    "gapType": {
+      "type": "string",
+      "enum": [
+        "functionality",
+        "functional_workflow",
+        "user_workflow",
+        "user_roles",
+        "business_rules",
+        "interface_behavior",
+        "information_visualization",
+        "reports_exports",
+        "notifications",
+        "approval_behavior",
+        "operational_constraints",
+        "content_text",
+        "priority_scope",
+        "acceptance_expectations",
+        "source_conflict",
+        "missing_source",
+        "out_of_scope",
+        "other_product_gap"
+      ]
+    },
+    "blockingType": {
+      "type": "string",
+      "enum": [
+        "blocking_now",
+        "deferred_until_stage",
+        "non_blocking_assumption",
+        "optional"
+      ]
+    },
+    "stageName": {
+      "type": "string",
+      "enum": [
+        "intake",
+        "requirements",
+        "design",
+        "ux_design",
+        "architecture",
+        "implementation",
+        "testing",
+        "setup",
+        "run",
+        "launch",
+        "documentation",
+        "handover",
+        "final_acceptance",
+        "terminal",
+        "not_applicable"
+      ]
+    },
+    "namedStage": {
+      "type": "string",
+      "enum": [
+        "intake",
+        "requirements",
+        "design",
+        "ux_design",
+        "architecture",
+        "implementation",
+        "testing",
+        "setup",
+        "run",
+        "launch",
+        "documentation",
+        "handover",
+        "final_acceptance",
+        "terminal"
+      ]
+    },
+    "gapStatus": {
+      "type": "string",
+      "enum": [
+        "open",
+        "question_needed",
+        "question_drafted",
+        "question_ready",
+        "waiting_for_owner",
+        "answered",
+        "assumption_active",
+        "deferred",
+        "closed",
+        "superseded"
+      ]
+    },
+    "stringArrayOrNone": {
+      "oneOf": [
+        { "const": "NONE" },
+        { "type": "array", "items": { "type": "string", "minLength": 1 } }
+      ]
+    },
+    "nonEmptyStringArray": {
+      "type": "array",
+      "minItems": 1,
+      "items": { "type": "string", "minLength": 1 }
+    },
+    "gapRecord": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "gap_id",
+        "description",
+        "source_ref",
+        "gap_type",
+        "user_impact",
+        "blocking_type",
+        "blocking_stage",
+        "can_continue_until",
+        "owner_input_required",
+        "question_card_id",
+        "assumption_id",
+        "status"
+      ],
+      "properties": {
+        "gap_id": { "type": "string", "pattern": "^GAP-[A-Za-z0-9._-]+$" },
+        "description": { "type": "string", "minLength": 1 },
+        "source_ref": { "type": "string", "minLength": 1 },
+        "gap_type": { "$ref": "#/$defs/gapType" },
+        "user_impact": { "type": "string", "minLength": 1 },
+        "blocking_type": { "$ref": "#/$defs/blockingType" },
+        "blocking_stage": { "$ref": "#/$defs/stageName" },
+        "can_continue_until": { "$ref": "#/$defs/stageName" },
+        "owner_input_required": { "type": "boolean" },
+        "question_card_id": {
+          "oneOf": [
+            { "type": "string", "pattern": "^Q-[A-Za-z0-9._-]+$" },
+            { "const": "NONE" }
+          ]
+        },
+        "assumption_id": {
+          "oneOf": [
+            { "type": "string", "pattern": "^ASM-[A-Za-z0-9._-]+$" },
+            { "const": "NONE" }
+          ]
+        },
+        "owner_answer_record_id": {
+          "oneOf": [
+            { "type": "string", "pattern": "^ANS-[A-Za-z0-9._-]+$" },
+            { "const": "NONE" }
+          ]
+        },
+        "closure_evidence_ref": { "type": "string" },
+        "status": { "$ref": "#/$defs/gapStatus" },
+        "audit_refs": { "$ref": "#/$defs/stringArrayOrNone" }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": { "owner_input_required": { "const": true } },
+            "required": ["owner_input_required"]
+          },
+          "then": {
+            "properties": {
+              "question_card_id": { "type": "string", "pattern": "^Q-[A-Za-z0-9._-]+$" }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": { "blocking_type": { "const": "non_blocking_assumption" } },
+            "required": ["blocking_type"]
+          },
+          "then": {
+            "properties": {
+              "assumption_id": { "type": "string", "pattern": "^ASM-[A-Za-z0-9._-]+$" }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": { "blocking_type": { "const": "deferred_until_stage" } },
+            "required": ["blocking_type"]
+          },
+          "then": {
+            "properties": {
+              "blocking_stage": { "$ref": "#/$defs/namedStage" },
+              "can_continue_until": { "$ref": "#/$defs/namedStage" }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": { "blocking_type": { "const": "blocking_now" } },
+            "required": ["blocking_type"]
+          },
+          "then": {
+            "properties": {
+              "blocking_stage": { "$ref": "#/$defs/namedStage" }
+            }
+          }
+        }
+      ]
+    }
+  }
+}

@@ -1,0 +1,123 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://agent-system.local/schemas/proposal_artifact.schema.json",
+  "title": "PROPOSAL_ARTIFACT",
+  "description": "P3 proposal artifact contract. A checkpoint proposal is only an instruction proposal and is not checkpoint execution, commit, push, or checkpoint receipt evidence.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "proposal_id",
+    "proposal_type",
+    "schema_version",
+    "package_version",
+    "runtime_schema_version",
+    "created_at",
+    "created_by",
+    "target_root",
+    "target_workspace_identity",
+    "base_state_hashes",
+    "required_validators",
+    "operations",
+    "safety_class",
+    "status",
+    "human_summary"
+  ],
+  "properties": {
+    "proposal_id": {
+      "type": "string",
+      "pattern": "^PROPOSAL-[A-Za-z0-9_.:-]+$"
+    },
+    "proposal_type": {
+      "type": "string",
+      "enum": ["next_task", "transition", "checkpoint"]
+    },
+    "schema_version": {
+      "type": "string",
+      "const": "1.0.0"
+    },
+    "package_version": {
+      "type": "string",
+      "const": "3.7.9"
+    },
+    "runtime_schema_version": {
+      "type": "string",
+      "const": "3.1.1"
+    },
+    "created_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "created_by": {
+      "type": "string",
+      "minLength": 1
+    },
+    "target_root": {
+      "type": "string",
+      "minLength": 1
+    },
+    "target_workspace_identity": {
+      "type": "object"
+    },
+    "base_state_hashes": {
+      "$ref": "#/$defs/stateHashes"
+    },
+    "required_validators": {
+      "type": "array",
+      "items": { "type": "string", "minLength": 1 }
+    },
+    "operations": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/operation" }
+    },
+    "safety_class": {
+      "type": "string",
+      "enum": ["read_only_plan", "runtime_state_only", "checkpoint_proposal_only"]
+    },
+    "status": {
+      "type": "string",
+      "enum": ["proposed", "blocked", "applied", "rejected", "superseded"]
+    },
+    "human_summary": {
+      "type": "string",
+      "minLength": 1
+    }
+  },
+  "allOf": [
+    {
+      "if": {
+        "properties": { "proposal_type": { "const": "checkpoint" } },
+        "required": ["proposal_type"]
+      },
+      "then": {
+        "properties": { "safety_class": { "const": "checkpoint_proposal_only" } }
+      }
+    }
+  ],
+  "$defs": {
+    "stateHashes": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "string",
+        "pattern": "^sha256:[a-f0-9]{64}$"
+      }
+    },
+    "operation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["operation_id", "operation_type", "target", "description"],
+      "properties": {
+        "operation_id": { "type": "string", "minLength": 1 },
+        "operation_type": {
+          "type": "string",
+          "enum": ["sidecar_replace", "sidecar_patch", "receipt_write", "report_write"]
+        },
+        "target": { "type": "string", "minLength": 1 },
+        "description": { "type": "string", "minLength": 1 },
+        "fields": {
+          "type": "array",
+          "items": { "type": "string", "minLength": 1 }
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,45 @@
+{
+  "package_id": "RESULT_PACKAGE_TASK_TEMPLATE_ATTEMPT_001",
+  "schema_version": "1.0.0",
+  "package_version": "3.7.9",
+  "governance_ruleset_version": "3.7.9",
+  "runtime_schema_version": "3.1.1",
+  "artifact_package_schema_version": "1.1.0",
+  "result_ref": "project-runtime/results/worker/RESULT_TASK_TEMPLATE_ATTEMPT_001.md",
+  "task_id": "TASK_TEMPLATE",
+  "agent_instance_id": "agent_TASK_TEMPLATE_attempt_001",
+  "role": "developer",
+  "status": "pass",
+  "acceptance_status": "accepted",
+  "changed_files": "NONE",
+  "created_files": "NONE",
+  "deleted_files": "NONE",
+  "structured_artifacts": "NONE",
+  "commands_run": "NONE",
+  "tests_run": "NONE",
+  "evidence": [
+    "RESULT_STATUS: pass"
+  ],
+  "scope_verification": [
+    "No runtime state, dispatch, checkpoint, commit, or push performed by this package template."
+  ],
+  "forbidden_changes_check": [
+    "Workspace-local roots are not publishable package artifacts."
+  ],
+  "risks": "NONE",
+  "limitations": "NONE",
+  "blockers": "NONE",
+  "gaps": "NONE",
+  "next_recommended_action": [
+    "CREATE_AUDITOR"
+  ],
+  "reuse_allowed": false,
+  "agent_termination_required": true,
+  "validation": {
+    "status": "not_run",
+    "validators": "NONE",
+    "notes": [
+      "Template only. It does not create result storage or lifecycle integration."
+    ]
+  }
+}

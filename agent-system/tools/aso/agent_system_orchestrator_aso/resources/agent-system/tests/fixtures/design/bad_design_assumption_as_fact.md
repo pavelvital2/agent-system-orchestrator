@@ -1,0 +1,152 @@
+# Bad Design Fixture: Assumption As Fact
+
+## REQUIREMENTS_TRACEABILITY_MATRIX
+REQUIREMENT_ID: REQ-001
+SOURCE_REF: project-docs/requirements.md#REQ-001
+DESIGN_RESPONSE: Add validator.
+DOWNSTREAM_ARTIFACTS: TASK_DEV_001
+ACCEPTANCE_LINK: AC-006
+STATUS: covered
+
+## MVP_BOUNDARY
+IN_SCOPE: Design validator.
+OUT_OF_SCOPE: Mutation.
+MVP_ACCEPTANCE: AC-006
+DEFERRALS: NONE
+SOURCE_REFS: project-docs/requirements.md#REQ-001
+PRODUCT_CAPABILITY_LEVEL: task_complete
+CAPABILITY_SCOPE: Design validation.
+CAPABILITY_ACCEPTANCE_REF: AC-006
+CAPABILITY_SOURCE_REF: project-docs/requirements.md#REQ-001
+
+## NON_GOALS
+NON_GOAL_ID: NG-001
+DESCRIPTION: No mutation.
+REASON: Read-only stage.
+SOURCE_OR_DECISION_REF: DEC-001
+IMPACT_ON_TASKS: NONE
+
+## ASSUMPTIONS_REGISTER
+ASSUMPTION_ID: ASM-001
+STATEMENT: The owner accepts all default architecture choices.
+BASIS: Planning convenience.
+IMPACT: Could change implementation scope.
+VALIDATION_PATH: owner_decision
+EXPIRY_OR_REVIEW_TRIGGER: Before implementation.
+
+## GAP_REGISTER_UPDATES
+GAP_ID: NONE
+TYPE: none
+STATUS: resolved
+BLOCKS: NONE
+QUESTION_TO_OWNER: NONE
+RECOMMENDED_OPTIONS: NONE
+RECOMMENDED_OPTION: NONE
+REASON: NONE
+TARGET_REGISTER: NONE
+
+## ARCHITECTURE_DECISIONS
+DECISION_ID: DEC-001
+DECISION: Treat the unapproved owner default as accepted architecture.
+SOURCE_REFS: project-docs/requirements.md#REQ-001
+OPTIONS_CONSIDERED: NONE
+RATIONALE: Assumption used as fact.
+CONSEQUENCES: Downstream task proceeds without source evidence.
+ASSUMPTION_REFS: ASM-001
+ASSUMPTION_USED_AS_FACT: yes
+GAP_REFS: NONE
+RESEARCH_DEPENDENCY_REFS: NONE
+TASK_REFS: TASK_DEV_001
+STATUS: accepted
+
+## MODULE_CONTRACTS
+MODULE_ID: MOD-001
+PURPOSE: Validator command.
+OWNED_BEHAVIOR: Inspect design.
+PUBLIC_INTERFACE: aso validate-design DESIGN.md
+DEPENDENCIES: NONE
+INPUTS: DESIGN.md
+OUTPUTS: report
+ERROR_HANDLING: finding
+FILES_OR_PATHS: agent-system/tools/aso/agent_system_orchestrator_aso/aso_tool/commands/validate_design.py
+TASK_REFS: TASK_DEV_001
+SOURCE_REFS: project-docs/requirements.md#REQ-001
+
+## DATA_CONTRACTS
+DATA_CONTRACT_ID: DATA-001
+ENTITY_OR_PAYLOAD: report
+FIELDS: status findings
+VALIDATION_RULES: deterministic rule IDs
+LIFECYCLE_OR_STATE_RULES: read-only
+READERS: tests
+WRITERS: command
+BACKWARD_COMPATIBILITY: direct script
+SECURITY_OR_PRIVACY_NOTES: no secrets
+SOURCE_REFS: project-docs/requirements.md#REQ-001
+TASK_REFS: TASK_DEV_001
+
+## RUNTIME_MODEL
+ENTRYPOINTS: aso validate-design DESIGN.md
+PROCESS_MODEL: local
+CONFIGURATION: CLI
+STATE_AND_STORAGE: none
+EXTERNAL_DEPENDENCIES: NONE
+FAILURE_MODES: findings
+OBSERVABILITY: stdout
+LOCAL_RUN_OR_SMOKE_COMMANDS: aso validate-design DESIGN.md
+SOURCE_REFS: project-docs/requirements.md#REQ-001
+TASK_REFS: TASK_DEV_001
+
+## TESTING_STRATEGY
+UNIT_OR_STATIC_CHECKS: unittest
+INTEGRATION_CHECKS: fixtures
+RUNTIME_SMOKE_CHECKS: --help
+ACCEPTANCE_SCENARIOS: valid passes
+NEGATIVE_OR_FAILURE_CHECKS: bad fixtures fail
+EVIDENCE_REQUIRED: output
+TESTING_TASK_REFS: TASK_DEV_001
+SOURCE_REFS: project-docs/requirements.md#REQ-001
+
+## TASK_DAG
+NODE_ID: NODE-001
+TASK_OR_ARTIFACT_REF: TASK_DEV_001
+ROLE: developer
+DEPENDS_ON: design_audit_pass_then_checkpoint
+UNBLOCKS: validator
+GATE_REQUIRED: design_audit_pass_then_checkpoint
+DISPATCH_STATUS: dispatchable
+
+## DISPATCHABLE_TASK_PACKETS
+ARTIFACT_REF: TASK_DEV_001
+CLASSIFICATION: task_packet
+DISPATCH_STATUS: dispatchable
+SCHEMA_STATUS: passed
+TARGET_ROLE: developer
+TASK_KIND: correction
+REQUIRED_DOCS: agent-system/03_templates/DESIGN_OUTPUT_CONTRACT.md
+ACCEPTANCE_SUMMARY: Validator works.
+DEPENDENCIES: design_audit_pass_then_checkpoint
+NEXT_ACTION_ELIGIBLE: yes
+GATE_REQUIRED: design_audit_pass_then_checkpoint
+ALLOWED_FILE_CHANGES: agent-system/tools/aso/**
+
+## AUDIT_PLAN
+DESIGN_SCOPE_CHECKS: check scope
+SOURCE_TRACEABILITY_CHECKS: check source
+ASSUMPTION_GAP_RESEARCH_SEPARATION_CHECKS: check separation
+DECISION_SOURCE_CHECKS: check decisions
+TASK_PACKET_SCHEMA_CHECKS: check tasks
+DOWNSTREAM_DISPATCH_CHECKS: check gates
+RISK_CHECKS: check risks
+REQUIRED_EVIDENCE: tests
+
+## RISK_REGISTER
+RISK_ID: RISK-001
+CATEGORY: validation
+DESCRIPTION: structural validator
+LIKELIHOOD: low
+IMPACT: low
+MITIGATION: tests
+OWNER_OR_NEXT_TASK: TASK_DEV_001
+SOURCE_OR_DECISION_REF: DEC-001
+STATUS: accepted

@@ -1,0 +1,95 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://agent-system.local/schemas/deferred_gap.schema.json",
+  "title": "DEFERRED_GAP",
+  "description": "Corrected P4 deferred gap contract for a gap that may continue until a named blocking stage.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "project_id",
+    "gap_id",
+    "gap_summary",
+    "owner_visible_impact",
+    "why_can_continue_now",
+    "blocking_stage",
+    "can_continue_until",
+    "question_id",
+    "question_status",
+    "current_owner_safe_assumption",
+    "affected_documents",
+    "status",
+    "audit_refs"
+  ],
+  "properties": {
+    "schema_version": { "type": "string", "const": "1.0.0" },
+    "project_id": { "type": "string", "minLength": 1 },
+    "gap_id": { "type": "string", "pattern": "^GAP-[A-Za-z0-9._-]+$" },
+    "gap_summary": { "type": "string", "minLength": 1 },
+    "owner_visible_impact": { "type": "string", "minLength": 1 },
+    "why_can_continue_now": { "type": "string", "minLength": 1 },
+    "blocking_stage": { "$ref": "#/$defs/stageName" },
+    "can_continue_until": { "$ref": "#/$defs/stageName" },
+    "question_id": {
+      "oneOf": [
+        { "type": "string", "pattern": "^Q-[A-Za-z0-9._-]+$" },
+        { "const": "NONE" }
+      ]
+    },
+    "question_status": {
+      "type": "string",
+      "enum": [
+        "not_required",
+        "question_needed",
+        "question_drafted",
+        "question_ready",
+        "waiting_for_owner",
+        "answered",
+        "integrated",
+        "closed"
+      ]
+    },
+    "current_owner_safe_assumption": {
+      "oneOf": [
+        { "type": "string", "minLength": 1 },
+        { "const": "NONE" }
+      ]
+    },
+    "affected_documents": {
+      "type": "array",
+      "minItems": 1,
+      "items": { "type": "string", "minLength": 1 }
+    },
+    "status": {
+      "type": "string",
+      "enum": ["deferred", "waiting_for_owner", "answered", "integrated", "closed", "superseded"]
+    },
+    "audit_refs": {
+      "oneOf": [
+        { "const": "NONE" },
+        { "type": "array", "items": { "type": "string", "minLength": 1 } }
+      ]
+    }
+  },
+  "$defs": {
+    "stageName": {
+      "type": "string",
+      "enum": [
+        "intake",
+        "requirements",
+        "design",
+        "ux_design",
+        "architecture",
+        "implementation",
+        "testing",
+        "setup",
+        "run",
+        "launch",
+        "documentation",
+        "handover",
+        "final_acceptance",
+        "terminal"
+      ]
+    }
+  }
+}

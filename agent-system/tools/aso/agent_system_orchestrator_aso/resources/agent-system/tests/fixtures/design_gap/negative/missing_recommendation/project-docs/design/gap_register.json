@@ -1,0 +1,37 @@
+{
+  "schema_version": "1.0.0",
+  "project_id": "fixture-project",
+  "document_id": "GAP-REGISTER-001",
+  "status": "accepted",
+  "source_refs": [
+    "project-input/TZ.md"
+  ],
+  "question_card_refs": [
+    "project-docs/design/questions/Q-001.json"
+  ],
+  "assumption_refs": "NONE",
+  "audit_refs": [
+    "project-runtime/audits/AUDIT_Q_001_PASS.md"
+  ],
+  "gaps": [
+    {
+      "gap_id": "GAP-001",
+      "description": "The source does not say whether staff should approve requests before they are accepted.",
+      "source_ref": "project-input/TZ.md",
+      "gap_type": "approval_behavior",
+      "user_impact": "Changes the request flow and what the customer sees after submitting.",
+      "blocking_type": "deferred_until_stage",
+      "blocking_stage": "implementation",
+      "can_continue_until": "design",
+      "owner_input_required": true,
+      "question_card_id": "Q-001",
+      "assumption_id": "NONE",
+      "owner_answer_record_id": "NONE",
+      "closure_evidence_ref": "NONE",
+      "status": "question_ready",
+      "audit_refs": [
+        "project-runtime/audits/AUDIT_Q_001_PASS.md"
+      ]
+    }
+  ]
+}

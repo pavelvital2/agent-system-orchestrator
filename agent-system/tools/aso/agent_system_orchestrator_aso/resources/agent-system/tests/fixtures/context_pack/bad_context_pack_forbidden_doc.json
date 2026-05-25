@@ -1,0 +1,23 @@
+{
+  "task_id": "TASK_BAD_FORBIDDEN_DOC",
+  "required_docs": [
+    {
+      "path": "agent-system/02_runtime/STATE_TRANSITION_RULES.md",
+      "sections": [
+        "Forbidden transitions"
+      ],
+      "why_needed": "This path is intentionally forbidden by the context pack"
+    }
+  ],
+  "forbidden_docs": [
+    "agent-system/02_runtime/"
+  ],
+  "source_of_truth": [
+    "agent-system/02_runtime/STATE_TRANSITION_RULES.md"
+  ],
+  "context_budget": {
+    "max_docs": 3,
+    "max_sections_per_doc": 4,
+    "max_chars_total": 5000
+  }
+}
