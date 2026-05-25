@@ -12,6 +12,7 @@ from typing import Any
 from . import state_verify
 from .. import correction_routing
 from .. import dispatch_receipts
+from .. import handoff_artifacts
 from .. import result_parser
 from .. import resources
 from .. import transition_engine
@@ -870,6 +871,9 @@ def can_dispatch_agent(
         "dispatch_receipt_required": dispatchable,
         "dispatch_receipt_schema_ref": dispatch_receipts.SCHEMA_RELATIVE_PATH,
         "dispatch_receipt_ref_template": dispatch_receipts.RECEIPT_REF_TEMPLATE,
+        "handoff_artifact_schema_ref": handoff_artifacts.SCHEMA_RELATIVE_PATH,
+        "handoff_ref_template": handoff_artifacts.HANDOFF_REF_TEMPLATE,
+        "prompt_ref_template": handoff_artifacts.PROMPT_REF_TEMPLATE,
         "external_runner_command_template": dispatch_receipts.EXTERNAL_RUNNER_COMMAND_TEMPLATE,
         "receipt_writer_command_template": dispatch_receipts.WRITER_COMMAND_TEMPLATE,
         "runner_semantics": dispatch_receipts.RUNNER_SEMANTICS,
@@ -922,6 +926,9 @@ def _non_dispatchability(
         "dispatch_receipt_required": False,
         "dispatch_receipt_schema_ref": dispatch_receipts.SCHEMA_RELATIVE_PATH,
         "dispatch_receipt_ref_template": dispatch_receipts.RECEIPT_REF_TEMPLATE,
+        "handoff_artifact_schema_ref": handoff_artifacts.SCHEMA_RELATIVE_PATH,
+        "handoff_ref_template": handoff_artifacts.HANDOFF_REF_TEMPLATE,
+        "prompt_ref_template": handoff_artifacts.PROMPT_REF_TEMPLATE,
         "external_runner_command_template": dispatch_receipts.EXTERNAL_RUNNER_COMMAND_TEMPLATE,
         "receipt_writer_command_template": dispatch_receipts.WRITER_COMMAND_TEMPLATE,
         "runner_semantics": dispatch_receipts.RUNNER_SEMANTICS,
@@ -1246,6 +1253,18 @@ def _plan(
         reasoning_effort=resolved_reasoning_level,
         required=bool(dispatchability.get("dispatchable")),
     )
+    handoff_packet_fields: dict[str, str] = {}
+    if task_packet:
+        handoff_packet_fields, _ = _read_task_packet_fields(root, task_packet)
+    handoff_artifact = handoff_artifacts.handoff_plan(
+        contract=_safe_runtime_contract(),
+        task_id=task_id,
+        role=target_role,
+        resolved_reasoning_level=resolved_reasoning_level,
+        task_packet=task_packet,
+        packet_fields=handoff_packet_fields,
+        dispatchable=bool(dispatchability.get("dispatchable")),
+    )
     return {
         "tool": "aso",
         "command": "plan-next",
@@ -1265,6 +1284,7 @@ def _plan(
         "resolved_reasoning_level": resolved_reasoning_level,
         "reasoning_source": reasoning_source,
         "dispatch_receipt": dispatch_receipt,
+        "handoff_artifact": handoff_artifact,
         "correction_routing": correction_route,
         "blocking_rules": blocking_rules,
         "evidence": {

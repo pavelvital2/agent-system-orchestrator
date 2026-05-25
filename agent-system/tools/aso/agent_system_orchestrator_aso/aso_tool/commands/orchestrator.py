@@ -447,6 +447,7 @@ def _status_report(root: Path) -> dict[str, object]:
         "recommended_next_action": plan_report.get("recommended_next_action"),
         "dispatchable": bool(dispatchability.get("dispatchable")),
         "dispatchability": dispatchability,
+        "handoff_artifact": plan_report.get("handoff_artifact", {}),
         "next_route": next_route,
         "summary": {
             "current_phase": project_state.get("current_phase") or project_state.get("CURRENT_PHASE"),
@@ -494,6 +495,7 @@ def _next_report(root: Path) -> dict[str, object]:
         "recommended_next_action": plan_report.get("recommended_next_action"),
         "dispatchable": bool(dispatchability.get("dispatchable")),
         "dispatchability": dispatchability,
+        "handoff_artifact": plan_report.get("handoff_artifact", {}),
         "next_route": _next_route_summary(plan_report),
         "next_action": next_action,
         "summary": {

@@ -245,6 +245,31 @@ ORCHESTRATOR_RUNTIME_CONTRACT_JSON = r"""{
     "writer_command_template": "python3 agent-system/tools/aso/aso.py dispatch receipt --root <WORKSPACE_ROOT> --agent-instance-id <AGENT_INSTANCE_ID> --task-id <TASK_ID> --role <ROLE> --reasoning-effort <REASONING_EFFORT> --prompt-ref <PROMPT_REF> --handoff-ref <HANDOFF_REF> --runner external_codex_cli --model <MODEL_OR_UNKNOWN> --confirm-write",
     "live_dispatch_performed_by_aso": false
   },
+  "handoff_artifact_contract": {
+    "schema_ref": "agent-system/09_validators/schemas/orchestrator_handoff.schema.json",
+    "template_ref": "agent-system/03_templates/orchestrator_handoff.template.json",
+    "handoff_ref_template": "project-runtime/handoffs/<TASK_ID>.json",
+    "prompt_ref_template": "project-runtime/handoffs/<TASK_ID>.prompt.md",
+    "expected_result_ref_template": "project-runtime/results/worker/RESULT_<TASK_ID>_ATTEMPT_001.md",
+    "expected_audit_result_ref_template": "project-runtime/results/audit/AUDIT_RESULT_<TASK_ID>_ATTEMPT_001.md",
+    "expected_artifact_package_ref_template": "project-runtime/artifacts/candidates/<TASK_ID>/manifest.json",
+    "required_fields": [
+      "task_id",
+      "role",
+      "resolved_reasoning_level",
+      "required_docs",
+      "forbidden_docs",
+      "prompt_ref",
+      "expected_result_path",
+      "expected_artifact_package_path",
+      "lifecycle_policy"
+    ],
+    "forbidden_governance_corpus_rule": "Routine handoffs must not include the full governance corpus unless context_mode is debug, explain, or violation_recovery and a reference reason or validator_required authorization is recorded.",
+    "runner": "external_codex_cli",
+    "runner_semantics": "ASO emits reproducible handoff JSON and dispatch receipts for externally invoked Codex CLI runs; ASO does not execute the runner, daemonize work, or mutate task outputs.",
+    "external_runner_command_template": "codex exec -C <WORKSPACE_ROOT> -m <MODEL> -c model_reasoning_effort=\"<REASONING_EFFORT>\" - < <PROMPT_REF>",
+    "live_dispatch_performed_by_aso": false
+  },
   "artifact_contracts": {
     "candidate_manifest_canonical": "manifest.json",
     "candidate_manifest_legacy_aliases": [
@@ -306,6 +331,7 @@ ORCHESTRATOR_RUNTIME_CONTRACT_JSON = r"""{
       "required_docs_by_role",
       "reasoning_floor_by_role",
       "dispatch_receipt_contract",
+      "handoff_artifact_contract",
       "artifact_contracts",
       "audit_gate_rules",
       "checkpoint_rules",

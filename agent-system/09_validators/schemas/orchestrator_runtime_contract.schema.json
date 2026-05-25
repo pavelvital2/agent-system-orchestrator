@@ -19,6 +19,7 @@
     "required_docs_by_role",
     "reasoning_floor_by_role",
     "dispatch_receipt_contract",
+    "handoff_artifact_contract",
     "artifact_contracts",
     "audit_gate_rules",
     "checkpoint_rules",
@@ -213,6 +214,69 @@
           "minLength": 1
         },
         "writer_command_template": { "type": "string", "minLength": 1 },
+        "live_dispatch_performed_by_aso": { "const": false }
+      },
+      "additionalProperties": true
+    },
+    "handoff_artifact_contract": {
+      "type": "object",
+      "required": [
+        "schema_ref",
+        "template_ref",
+        "handoff_ref_template",
+        "prompt_ref_template",
+        "expected_result_ref_template",
+        "expected_audit_result_ref_template",
+        "expected_artifact_package_ref_template",
+        "required_fields",
+        "forbidden_governance_corpus_rule",
+        "runner",
+        "runner_semantics",
+        "external_runner_command_template",
+        "live_dispatch_performed_by_aso"
+      ],
+      "properties": {
+        "schema_ref": {
+          "type": "string",
+          "const": "agent-system/09_validators/schemas/orchestrator_handoff.schema.json"
+        },
+        "template_ref": {
+          "type": "string",
+          "const": "agent-system/03_templates/orchestrator_handoff.template.json"
+        },
+        "handoff_ref_template": {
+          "type": "string",
+          "const": "project-runtime/handoffs/<TASK_ID>.json"
+        },
+        "prompt_ref_template": {
+          "type": "string",
+          "const": "project-runtime/handoffs/<TASK_ID>.prompt.md"
+        },
+        "expected_result_ref_template": {
+          "type": "string",
+          "const": "project-runtime/results/worker/RESULT_<TASK_ID>_ATTEMPT_001.md"
+        },
+        "expected_audit_result_ref_template": {
+          "type": "string",
+          "const": "project-runtime/results/audit/AUDIT_RESULT_<TASK_ID>_ATTEMPT_001.md"
+        },
+        "expected_artifact_package_ref_template": {
+          "type": "string",
+          "const": "project-runtime/artifacts/candidates/<TASK_ID>/manifest.json"
+        },
+        "required_fields": {
+          "type": "array",
+          "items": { "type": "string", "minLength": 1 },
+          "minItems": 1,
+          "uniqueItems": true
+        },
+        "forbidden_governance_corpus_rule": { "type": "string", "minLength": 1 },
+        "runner": {
+          "type": "string",
+          "enum": ["external_codex_cli"]
+        },
+        "runner_semantics": { "type": "string", "minLength": 1 },
+        "external_runner_command_template": { "type": "string", "minLength": 1 },
         "live_dispatch_performed_by_aso": { "const": false }
       },
       "additionalProperties": true

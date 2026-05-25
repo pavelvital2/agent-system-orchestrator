@@ -110,6 +110,18 @@
       "type": "string",
       "const": "project-runtime/agents/dispatches/<AGENT_INSTANCE_ID>.json"
     },
+    "handoff_artifact_schema_ref": {
+      "type": "string",
+      "const": "agent-system/09_validators/schemas/orchestrator_handoff.schema.json"
+    },
+    "handoff_ref_template": {
+      "type": "string",
+      "const": "project-runtime/handoffs/<TASK_ID>.json"
+    },
+    "prompt_ref_template": {
+      "type": "string",
+      "const": "project-runtime/handoffs/<TASK_ID>.prompt.md"
+    },
     "external_runner_command_template": {
       "type": "string",
       "const": "codex exec -C <WORKSPACE_ROOT> -m <MODEL> -c model_reasoning_effort=\"<REASONING_EFFORT>\" - < <PROMPT_REF>"

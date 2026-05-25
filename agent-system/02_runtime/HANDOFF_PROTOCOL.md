@@ -50,6 +50,50 @@ all templates, full changelog, release notes, or all validator docs. Reference
 docs are allowed only in `debug`, `explain`, or `violation_recovery` mode with
 an explicit reason, or when a validator marks them required.
 
+## Profile-Agent Dispatch Handoff JSON
+
+For external profile-agent runners, the orchestrator may emit a deterministic
+machine-readable handoff artifact before ASO has a live dispatcher:
+
+```text
+agent-system/09_validators/schemas/orchestrator_handoff.schema.json
+agent-system/03_templates/orchestrator_handoff.template.json
+project-runtime/handoffs/<TASK_ID>.json
+project-runtime/handoffs/<TASK_ID>.prompt.md
+```
+
+The handoff JSON must name:
+
+- `task_id`;
+- `role`;
+- `resolved_reasoning_level`;
+- `required_docs`;
+- `forbidden_docs`;
+- `prompt_ref`;
+- `expected_result_path`;
+- `expected_artifact_package_path`;
+- `lifecycle_policy`.
+
+Routine handoff JSON must set `governance_corpus_included: false` and must not
+include broad governance corpus paths. Debug, explain, or violation-recovery
+handoffs may include reference docs only when the handoff records an explicit
+reference reason or validator-required authorization.
+
+ASO does not execute Codex, run a daemon, or mutate task outputs for this
+contract. The external runner contract is:
+
+```text
+codex exec -C <WORKSPACE_ROOT> -m <MODEL> -c model_reasoning_effort="<REASONING_EFFORT>" - < <PROMPT_REF>
+```
+
+The runner must return a RESULT at the handoff's `expected_result_path` and any
+candidate artifact package at `expected_artifact_package_path`. After launch,
+the orchestrator records verifiable runner evidence with:
+
+```text
+python3 agent-system/tools/aso/aso.py dispatch receipt --root <WORKSPACE_ROOT> --agent-instance-id <AGENT_INSTANCE_ID> --task-id <TASK_ID> --role <ROLE> --reasoning-effort <REASONING_EFFORT> --prompt-ref <PROMPT_REF> --handoff-ref <HANDOFF_REF> --runner external_codex_cli --model <MODEL_OR_UNKNOWN> --confirm-write
+```
+
 ## Status Lifecycle
 
 Allowed statuses:

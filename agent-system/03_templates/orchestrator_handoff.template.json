@@ -1,0 +1,86 @@
+{
+  "handoff_type": "ORCHESTRATOR_HANDOFF",
+  "schema_version": "1.0.0",
+  "task_id": "<TASK_ID>",
+  "role": "<PROFILE_ROLE>",
+  "resolved_reasoning_level": "<low|medium|high|xhigh>",
+  "context_mode": "routine",
+  "handoff_ref": "project-runtime/handoffs/<TASK_ID>.json",
+  "prompt_ref": "project-runtime/handoffs/<TASK_ID>.prompt.md",
+  "required_docs": [
+    {
+      "path": "agent-system/02_runtime/ORCHESTRATOR_RUNTIME_CONTRACT.json",
+      "sections": ["<runtime_contract_required_sections>"],
+      "why_needed": "Compact operational transition and routine handoff contract.",
+      "source": "routine"
+    },
+    {
+      "path": "<TASK_PACKET_REF>",
+      "sections": ["Bounded task-relevant sections"],
+      "why_needed": "Current task packet for this bounded handoff.",
+      "source": "routine"
+    },
+    {
+      "path": "<TARGET_ROLE_DOC_REF>",
+      "sections": ["Role rules for this target role"],
+      "why_needed": "Specific role instructions for target role <PROFILE_ROLE>.",
+      "source": "routine"
+    }
+  ],
+  "required_doc_tokens": ["<required_docs_by_role tokens>"],
+  "forbidden_docs": [
+    "agent-system/01_roles/",
+    "agent-system/03_templates/",
+    "agent-system/GOVERNANCE_CHANGELOG.md",
+    "agent-system/11_release/",
+    "agent-system/09_validators/"
+  ],
+  "forbidden_doc_tokens": [
+    "all_role_docs",
+    "all_templates",
+    "full_changelog",
+    "all_validator_docs",
+    "release_notes",
+    "historical_contracts"
+  ],
+  "reference_docs": [],
+  "reference_doc_inclusion_rule": "Reference docs outside routine handoff inputs require context_mode debug, explain, or violation_recovery plus an explicit reference reason or validator_required=true.",
+  "routine_context_includes": [
+    "runtime_contract_required_sections",
+    "project-runtime/state/*.json",
+    "project-runtime/agents/instances.jsonl",
+    "current_task_packet",
+    "current_event_reference",
+    "current_result_or_audit_result_reference",
+    "current_artifact_manifest_or_receipt_reference",
+    "specific_target_role_doc",
+    "target_role_required_doc_tokens"
+  ],
+  "governance_corpus_included": false,
+  "current_state_refs": [
+    "project-runtime/state/*.json",
+    "project-runtime/agents/instances.jsonl"
+  ],
+  "current_event_result_artifact_refs": {
+    "event": "NONE",
+    "result_or_audit_result": "NONE",
+    "artifact_manifest_or_receipt": "NONE"
+  },
+  "expected_result_path": "project-runtime/results/worker/RESULT_<TASK_ID>_ATTEMPT_001.md",
+  "expected_artifact_package_path": "project-runtime/artifacts/candidates/<TASK_ID>/manifest.json",
+  "lifecycle_policy": "one_agent_one_task_delete_after_result",
+  "expected_receipt_ref_template": "project-runtime/agents/dispatches/<AGENT_INSTANCE_ID>.json",
+  "external_runner_contract": {
+    "runner": "external_codex_cli",
+    "runner_semantics": "ASO records dispatch evidence for an externally invoked Codex CLI run; ASO does not execute the runner, daemonize work, or mutate task outputs.",
+    "external_runner_command_template": "codex exec -C <WORKSPACE_ROOT> -m <MODEL> -c model_reasoning_effort=\"<REASONING_EFFORT>\" - < <PROMPT_REF>",
+    "receipt_writer_command_template": "python3 agent-system/tools/aso/aso.py dispatch receipt --root <WORKSPACE_ROOT> --agent-instance-id <AGENT_INSTANCE_ID> --task-id <TASK_ID> --role <ROLE> --reasoning-effort <REASONING_EFFORT> --prompt-ref <PROMPT_REF> --handoff-ref <HANDOFF_REF> --runner external_codex_cli --model <MODEL_OR_UNKNOWN> --confirm-write",
+    "live_dispatch_performed_by_aso": false
+  },
+  "result_contract_ref": "agent-system/03_templates/AGENT_RESULT_TEMPLATE.md",
+  "artifact_package_manifest": "manifest.json",
+  "lifecycle_policy_enforcement": {
+    "reuse_allowed": false,
+    "agent_termination_required": true
+  }
+}

@@ -132,6 +132,42 @@ class OrchestratorRuntimeContractTests(unittest.TestCase):
             }.issubset(set(receipt_contract["required_fields"]))
         )
 
+    def test_contract_defines_profile_agent_handoff_artifact_contract(self) -> None:
+        contract = transition_engine.load_runtime_contract()
+        handoff_contract = contract["handoff_artifact_contract"]
+
+        self.assertEqual(
+            handoff_contract["schema_ref"],
+            "agent-system/09_validators/schemas/orchestrator_handoff.schema.json",
+        )
+        self.assertEqual(
+            handoff_contract["template_ref"],
+            "agent-system/03_templates/orchestrator_handoff.template.json",
+        )
+        self.assertEqual(handoff_contract["handoff_ref_template"], "project-runtime/handoffs/<TASK_ID>.json")
+        self.assertEqual(handoff_contract["prompt_ref_template"], "project-runtime/handoffs/<TASK_ID>.prompt.md")
+        self.assertEqual(
+            handoff_contract["expected_artifact_package_ref_template"],
+            "project-runtime/artifacts/candidates/<TASK_ID>/manifest.json",
+        )
+        self.assertEqual(handoff_contract["runner"], "external_codex_cli")
+        self.assertFalse(handoff_contract["live_dispatch_performed_by_aso"])
+        self.assertIn("model_reasoning_effort", handoff_contract["external_runner_command_template"])
+        self.assertIn("full governance corpus", handoff_contract["forbidden_governance_corpus_rule"])
+        self.assertTrue(
+            {
+                "task_id",
+                "role",
+                "resolved_reasoning_level",
+                "required_docs",
+                "forbidden_docs",
+                "prompt_ref",
+                "expected_result_path",
+                "expected_artifact_package_path",
+                "lifecycle_policy",
+            }.issubset(set(handoff_contract["required_fields"]))
+        )
+
 
 if __name__ == "__main__":
     unittest.main()

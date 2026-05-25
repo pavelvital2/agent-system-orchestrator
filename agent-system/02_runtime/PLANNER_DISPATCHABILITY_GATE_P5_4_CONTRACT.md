@@ -164,6 +164,10 @@ reason codes, and the canonical invalid tuple.
       "source": "agent-system/09_validators/schemas/dispatch_receipt.schema.json"
     },
     {
+      "name": "handoff_artifact_contract",
+      "source": "agent-system/09_validators/schemas/orchestrator_handoff.schema.json"
+    },
+    {
       "name": "workspace_identity_status",
       "source": "PROJECT_STATE.content.identity_validation_status"
     },
@@ -263,6 +267,7 @@ reason codes, and the canonical invalid tuple.
     "recommended_next_action_CREATE_AGENT_requires_task_packet_present_and_dispatch_valid",
     "recommended_next_action_CREATE_AGENT_requires_resolved_reasoning_level",
     "recommended_next_action_CREATE_AGENT_requires_dispatch_receipt_contract",
+    "recommended_next_action_CREATE_AGENT_requires_orchestrator_handoff_contract",
     "recommended_next_action_CREATE_AGENT_requires_no_failed_required_checks",
     "recommended_next_action_CREATE_AGENT_must_not_perform_live_dispatch"
   ],
@@ -408,6 +413,8 @@ The dispatchability evidence must include:
 - `resolved_reasoning_level` and `reasoning_source`;
 - dispatch receipt schema, receipt path template, writer command template, and
   external runner command template;
+- handoff artifact schema, handoff path template, prompt path template, and
+  the top-level `handoff_artifact` proposal section;
 - `checks[]` with stable `check_id`, `passed`, `severity`, `reason_code`, and
   `evidence`;
 - `reasons[]` with stable `reason_code`, `message`, and `input_ref`;
@@ -425,6 +432,21 @@ dispatch receipt path template:
 ```text
 project-runtime/agents/dispatches/<AGENT_INSTANCE_ID>.json
 ```
+
+For every dispatchable recommendation, the report must also include a
+machine-readable `handoff_artifact.payload` conforming to:
+
+```text
+agent-system/09_validators/schemas/orchestrator_handoff.schema.json
+```
+
+Routine handoff payloads must not include the full governance corpus. They must
+set `governance_corpus_included: false`, list broad corpus paths under
+`forbidden_docs`, and include only compact runtime contract sections, current
+state refs, current task packet, the specific target role doc, and target role
+required doc tokens. Non-dispatchable recommendations must not emit a profile
+handoff payload; they may include `handoff_artifact.required: false` and an
+empty payload.
 
 ASO does not execute Codex directly in this P58 boundary. The external dispatch
 contract is:

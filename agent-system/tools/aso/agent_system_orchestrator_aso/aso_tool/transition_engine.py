@@ -7,6 +7,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Iterable, Mapping
 
+from . import dispatch_receipts
 from . import resources
 from . import runtime_contract_fallback
 
@@ -295,6 +296,7 @@ def validate_runtime_contract(contract: Mapping[str, Any]) -> ContractValidation
         "required_docs_by_role",
         "reasoning_floor_by_role",
         "dispatch_receipt_contract",
+        "handoff_artifact_contract",
         "artifact_contracts",
         "audit_gate_rules",
         "checkpoint_rules",
@@ -382,6 +384,44 @@ def validate_runtime_contract(contract: Mapping[str, Any]) -> ContractValidation
         for field in ("runner", "model", "reasoning_effort", "prompt_ref", "task_id", "role", "started_at", "handoff_ref"):
             if field not in required_receipt_fields:
                 errors.append(f"dispatch_receipt_contract.required_fields missing {field}")
+
+    handoff_artifact = _mapping(contract.get("handoff_artifact_contract"))
+    if not handoff_artifact:
+        errors.append("handoff_artifact_contract must be an object")
+    else:
+        expected_values = {
+            "schema_ref": "agent-system/09_validators/schemas/orchestrator_handoff.schema.json",
+            "template_ref": "agent-system/03_templates/orchestrator_handoff.template.json",
+            "handoff_ref_template": "project-runtime/handoffs/<TASK_ID>.json",
+            "prompt_ref_template": "project-runtime/handoffs/<TASK_ID>.prompt.md",
+            "expected_result_ref_template": "project-runtime/results/worker/RESULT_<TASK_ID>_ATTEMPT_001.md",
+            "expected_audit_result_ref_template": "project-runtime/results/audit/AUDIT_RESULT_<TASK_ID>_ATTEMPT_001.md",
+            "expected_artifact_package_ref_template": "project-runtime/artifacts/candidates/<TASK_ID>/manifest.json",
+            "runner": "external_codex_cli",
+            "external_runner_command_template": dispatch_receipts.EXTERNAL_RUNNER_COMMAND_TEMPLATE,
+        }
+        for field, expected in expected_values.items():
+            if handoff_artifact.get(field) != expected:
+                errors.append(f"handoff_artifact_contract.{field} must be {expected}")
+        if handoff_artifact.get("live_dispatch_performed_by_aso") is not False:
+            errors.append("handoff_artifact_contract.live_dispatch_performed_by_aso must be false")
+        for field in ("forbidden_governance_corpus_rule", "runner_semantics"):
+            if not _text(handoff_artifact.get(field)):
+                errors.append(f"handoff_artifact_contract.{field} is required")
+        required_handoff_fields = set(_string_list(handoff_artifact.get("required_fields")))
+        for field in (
+            "task_id",
+            "role",
+            "resolved_reasoning_level",
+            "required_docs",
+            "forbidden_docs",
+            "prompt_ref",
+            "expected_result_path",
+            "expected_artifact_package_path",
+            "lifecycle_policy",
+        ):
+            if field not in required_handoff_fields:
+                errors.append(f"handoff_artifact_contract.required_fields missing {field}")
 
     artifact_contracts = _mapping(contract.get("artifact_contracts"))
     if artifact_contracts.get("candidate_manifest_canonical") != "manifest.json":
