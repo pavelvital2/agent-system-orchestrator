@@ -11,6 +11,7 @@ from typing import Any
 
 from .. import correction_routing
 from .. import result_parser
+from .. import state_materialization
 
 
 EXIT_OK = 0
@@ -395,6 +396,11 @@ def run_receive_result(args: argparse.Namespace) -> int:
     except OSError as exc:
         print(f"aso lifecycle receive-result: failed to write event: {exc}", file=sys.stderr)
         return EXIT_IO_ERROR
+    materialization = state_materialization.materialize_after_confirmed_write(root)
+    report["state_materialization"] = materialization.to_json()
+    if not materialization.ok:
+        print(json.dumps(report, indent=2, sort_keys=True))
+        return EXIT_IO_ERROR
     report["mutations_performed"] = True
     print(json.dumps(report, indent=2, sort_keys=True))
     return EXIT_OK
@@ -482,6 +488,11 @@ def run_terminate_agent(args: argparse.Namespace) -> int:
                 handle.write(json.dumps(audit_ready_event, sort_keys=True) + "\n")
     except OSError as exc:
         print(f"aso lifecycle terminate-agent: failed to write event: {exc}", file=sys.stderr)
+        return EXIT_IO_ERROR
+    materialization = state_materialization.materialize_after_confirmed_write(root)
+    report["state_materialization"] = materialization.to_json()
+    if not materialization.ok:
+        print(json.dumps(report, indent=2, sort_keys=True))
         return EXIT_IO_ERROR
     report["mutations_performed"] = True
     print(json.dumps(report, indent=2, sort_keys=True))

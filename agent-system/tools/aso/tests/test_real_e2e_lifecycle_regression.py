@@ -273,11 +273,10 @@ class RealE2ELifecycleRegressionTests(unittest.TestCase):
             )
 
             verify_after_result = run_aso(workspace, "state", "verify", "--strict", "--json-out", str(verify_after_result_json))
-            self.assertEqual(verify_after_result.returncode, 1, verify_after_result.stdout + verify_after_result.stderr)
+            self.assertEqual(verify_after_result.returncode, 0, verify_after_result.stdout + verify_after_result.stderr)
             verify_report = load_json(verify_after_result_json)
-            verify_rule_ids = {finding["rule_id"] for finding in verify_report["findings"]}
-            self.assertIn("RUNTIME_NEXT_ACTION_STALE", verify_rule_ids)
-            self.assertIn("RUNTIME_LIFECYCLE_RESULT_REGISTRY_STALE", verify_rule_ids)
+            self.assertEqual(verify_report["status"], "passed")
+            self.assertEqual(verify_report["findings"], [])
             self.assertEqual(verify_report["reconciliation"]["current_state"], "RESULT_PENDING_ARTIFACT_ACCEPTANCE")
             self.assertEqual(
                 verify_report["reconciliation"]["next_action"]["recommended_next_action"],
@@ -285,9 +284,10 @@ class RealE2ELifecycleRegressionTests(unittest.TestCase):
             )
 
             plan_after_result = run_aso(workspace, "plan-next", "--strict", "--json-out", str(plan_after_result_json))
-            self.assertEqual(plan_after_result.returncode, 1, plan_after_result.stdout + plan_after_result.stderr)
+            self.assertEqual(plan_after_result.returncode, 0, plan_after_result.stdout + plan_after_result.stderr)
             result_plan = load_json(plan_after_result_json)
             self.assertEqual(result_plan["recommended_next_action"], "ACCEPT_ARTIFACT")
+            self.assertEqual(result_plan["route_status"], "ready")
             self.assertNotEqual(result_plan["recommended_next_action"], "CREATE_AGENT")
             self.assertEqual(result_plan["evidence"]["transition_engine"]["current_state"], "RESULT_PENDING_ARTIFACT_ACCEPTANCE")
 
@@ -328,6 +328,7 @@ class RealE2ELifecycleRegressionTests(unittest.TestCase):
             artifact_accept = load_json(artifact_accept_json)
             accepted_manifest = workspace / artifact_accept["receipt"]["artifact_ref"]
             self.assertEqual(artifact_accept["status"], "written")
+            self.assertEqual(artifact_accept["state_materialization"]["status"], "written")
             self.assertEqual(accepted_manifest.name, "manifest.json")
             self.assertTrue(accepted_manifest.is_file())
             self.assertFalse((accepted_manifest.parent / "artifact_package_manifest.json").exists())
@@ -346,11 +347,14 @@ class RealE2ELifecycleRegressionTests(unittest.TestCase):
                 event_types(workspace),
                 ["RESULT_RECEIVED", "ARTIFACT_ACCEPTED", "AGENT_TERMINATED", "AUDIT_ROUTE_READY"],
             )
+            verify_after_terminate = run_aso(workspace, "state", "verify", "--strict", "--json-out", str(verify_after_result_json))
+            self.assertEqual(verify_after_terminate.returncode, 0, verify_after_terminate.stdout + verify_after_terminate.stderr)
 
             plan_after_terminate = run_aso(workspace, "plan-next", "--strict", "--json-out", str(plan_after_terminate_json))
-            self.assertEqual(plan_after_terminate.returncode, 1, plan_after_terminate.stdout + plan_after_terminate.stderr)
+            self.assertEqual(plan_after_terminate.returncode, 0, plan_after_terminate.stdout + plan_after_terminate.stderr)
             terminate_plan = load_json(plan_after_terminate_json)
             self.assertEqual(terminate_plan["recommended_next_action"], "WAIT_FOR_AUDIT_RESULT")
+            self.assertEqual(terminate_plan["route_status"], "ready")
             self.assertEqual(terminate_plan["target_role"], "auditor")
             self.assertNotEqual(terminate_plan["recommended_next_action"], "CREATE_AGENT")
             self.assertEqual(terminate_plan["evidence"]["transition_engine"]["current_state"], "AUDIT_PENDING")
@@ -366,6 +370,8 @@ class RealE2ELifecycleRegressionTests(unittest.TestCase):
                     "--confirm-write",
                 )
             )
+            verify_after_audit_fail = run_aso(workspace, "state", "verify", "--strict", "--json-out", str(verify_after_result_json))
+            self.assertEqual(verify_after_audit_fail.returncode, 0, verify_after_audit_fail.stdout + verify_after_audit_fail.stderr)
             plan_after_audit_fail = run_aso(
                 workspace,
                 "plan-next",
@@ -373,9 +379,10 @@ class RealE2ELifecycleRegressionTests(unittest.TestCase):
                 "--json-out",
                 str(plan_after_audit_fail_json),
             )
-            self.assertEqual(plan_after_audit_fail.returncode, 1, plan_after_audit_fail.stdout + plan_after_audit_fail.stderr)
+            self.assertEqual(plan_after_audit_fail.returncode, 0, plan_after_audit_fail.stdout + plan_after_audit_fail.stderr)
             correction_plan = load_json(plan_after_audit_fail_json)
             self.assertEqual(correction_plan["recommended_next_action"], "CORRECTION_REQUIRED")
+            self.assertEqual(correction_plan["route_status"], "ready")
             self.assertEqual(correction_plan["evidence"]["transition_engine"]["current_state"], "CORRECTION_REQUIRED")
             self.assertEqual(correction_plan["correction_routing"]["route"], "CORRECTION_REQUIRED")
             self.assertTrue(correction_plan["correction_routing"]["checkpoint_preflight_blocked"])
@@ -398,7 +405,7 @@ class RealE2ELifecycleRegressionTests(unittest.TestCase):
                 finding["rule_id"]
                 for finding in checkpoint_report["evidence"]["state_verify"]["findings"]
             }
-            self.assertIn("RUNTIME_LIFECYCLE_CORRECTION_REGISTRY_STALE", state_verify_rule_ids)
+            self.assertNotIn("RUNTIME_LIFECYCLE_CORRECTION_REGISTRY_STALE", state_verify_rule_ids)
 
 
 if __name__ == "__main__":

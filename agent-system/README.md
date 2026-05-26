@@ -170,6 +170,12 @@ P1 command boundary, Runtime Schema `3.1.1`, and Artifact Package Schema
 `CREATE_AGENT` only after proving the current next action can dispatch a
 profile agent with a valid role, task id, task packet, task registry entry,
 gate state, and workspace/repository baseline.
+`plan-next --strict` exits `0` when it produces a valid route/action, including
+non-dispatch routes such as `ACCEPT_ARTIFACT` and `CORRECTION_REQUIRED`; exits
+`1` when governance blocks routing; exits `2` for command/runtime errors such
+as an unwritable JSON report path; and exits `3` when state is invalid or
+corrupt. JSON reports include `route_status`, `fatal`, and `exit_code` for this
+route-level contract while preserving the existing `status` field.
 The dispatchability authority for identity and repository readiness is
 `PROJECT_STATE`: `identity_validation_status` is limited to
 `not_checked | passed | failed | blocked`, and `repository_lock_status` is

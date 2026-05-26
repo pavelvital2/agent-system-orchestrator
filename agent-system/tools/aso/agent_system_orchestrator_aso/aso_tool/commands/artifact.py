@@ -12,7 +12,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
-from .. import artifact_storage, runtime_schema_contracts
+from .. import artifact_storage, runtime_schema_contracts, state_materialization
 from . import output_policy
 
 
@@ -708,6 +708,11 @@ def _run_classify(args: argparse.Namespace, target_bucket: str) -> int:
                 receipt_path.parent.mkdir(parents=True, exist_ok=True)
                 receipt_path.write_text(_json_bytes(receipt), encoding="utf-8")
                 _append_lifecycle_event(root, event)
+                materialization = state_materialization.materialize_after_confirmed_write(root)
+                report["state_materialization"] = materialization.to_json()
+                if not materialization.ok:
+                    print(f"aso {report['command']}: failed to materialize state sidecars: {materialization.error}", file=sys.stderr)
+                    return EXIT_IO_ERROR
                 report["receipt"] = receipt
                 report["receipt_ref"] = receipt_relpath
                 report["event"] = event

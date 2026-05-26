@@ -97,8 +97,9 @@ class OrchestratorHandoffContractTests(unittest.TestCase):
 
         code, _, stderr = self._run(["plan-next", "--root", str(root), "--strict", "--json-out", str(out)])
 
-        self.assertEqual(code, 1, stderr)
+        self.assertEqual(code, 0, stderr)
         report = json.loads(out.read_text(encoding="utf-8"))
+        self.assertEqual(report["route_status"], "ready")
         self.assertFalse(report["dispatchable"])
         handoff = report["handoff_artifact"]
         self.assertFalse(handoff["required"])

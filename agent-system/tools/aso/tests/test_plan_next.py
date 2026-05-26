@@ -68,6 +68,16 @@ def run_plan_next(root: Path, *extra: str) -> subprocess.CompletedProcess[str]:
     )
 
 
+def run_aso(root: Path, *extra: str) -> subprocess.CompletedProcess[str]:
+    return subprocess.run(
+        [sys.executable, str(CLI), *extra, "--root", str(root)],
+        check=False,
+        text=True,
+        capture_output=True,
+        cwd=REPO_ROOT,
+    )
+
+
 def copy_valid_workspace(tmp: str) -> Path:
     root = Path(tmp) / "workspace"
     shutil.copytree(VALID_WORKSPACE, root)
@@ -190,6 +200,35 @@ def make_tz_placeholder(root: Path) -> None:
     update_markdown_field(root, "PROJECT_STATE.md", "TZ_PATH", "project-input/TZ.md")
 
 
+def write_result(root: Path, *, status: str = "pass", role: str = "developer") -> str:
+    task_id = "TASK_FIXTURE_STATE_001"
+    prefix = "AUDIT_RESULT" if role == "auditor" else "RESULT"
+    folder = "audit" if role == "auditor" else "worker"
+    ref = f"project-runtime/results/{folder}/{prefix}_{task_id}_ATTEMPT_001.md"
+    agent = f"audit_{task_id}_attempt_001" if role == "auditor" else f"agent_{task_id}_attempt_001"
+    path = root / ref
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(
+        "\n".join(
+            [
+                f"{prefix}:",
+                f"STATUS: {status}",
+                f"TASK_ID: {task_id}",
+                f"AGENT_INSTANCE_ID: {agent}",
+                f"ROLE: {role}",
+                f"TASK: {task_id}",
+                "SUMMARY:",
+                "plan-next exit contract fixture.",
+                "REUSE_ALLOWED: false",
+                "AGENT_TERMINATION_REQUIRED: true",
+                "",
+            ]
+        ),
+        encoding="utf-8",
+    )
+    return ref
+
+
 def set_task(root: Path, **updates: object) -> None:
     payload = load_sidecar(root, "TASK_REGISTRY.json")
     body = content(payload)
@@ -271,6 +310,68 @@ class PlanNextCommandTests(unittest.TestCase):
             self.assertEqual(report["blocking_rules"], [])
             self.assertEqual(mtimes_before, {path: path.stat().st_mtime_ns for path in tracked})
 
+    def test_exit_zero_for_materialized_accept_artifact_route(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = copy_valid_workspace(tmp)
+            make_tz_valid(root)
+            result_ref = write_result(root)
+            receive = run_aso(
+                root,
+                "lifecycle",
+                "receive-result",
+                "--from-result",
+                result_ref,
+                "--confirm-write",
+            )
+            json_out = Path(tmp) / "plan-next-accept-artifact.json"
+
+            result = run_plan_next(root, "--strict", "--json-out", str(json_out))
+
+            self.assertEqual(receive.returncode, 0, receive.stdout + receive.stderr)
+            self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+            report = json.loads(json_out.read_text(encoding="utf-8"))
+            self.assertEqual(report["recommended_next_action"], "ACCEPT_ARTIFACT")
+            self.assertEqual(report["route_status"], "ready")
+            self.assertFalse(report["fatal"])
+            self.assertEqual(report["exit_code"], 0)
+
+    def test_exit_contract_distinguishes_block_runtime_error_and_invalid_state(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = copy_valid_workspace(tmp)
+            make_tz_placeholder(root)
+            blocked_json = Path(tmp) / "plan-next-blocked.json"
+
+            blocked = run_plan_next(root, "--strict", "--json-out", str(blocked_json))
+
+            self.assertEqual(blocked.returncode, 1, blocked.stdout + blocked.stderr)
+            blocked_report = json.loads(blocked_json.read_text(encoding="utf-8"))
+            self.assertEqual(blocked_report["route_status"], "governance_blocked")
+            self.assertFalse(blocked_report["fatal"])
+            self.assertEqual(blocked_report["exit_code"], 1)
+
+        with tempfile.TemporaryDirectory() as tmp:
+            root = copy_valid_workspace(tmp)
+            make_tz_valid(root)
+            missing_parent = Path(tmp) / "missing" / "plan-next.json"
+
+            runtime_error = run_plan_next(root, "--strict", "--json-out", str(missing_parent))
+
+            self.assertEqual(runtime_error.returncode, 2, runtime_error.stdout + runtime_error.stderr)
+
+        with tempfile.TemporaryDirectory() as tmp:
+            root = copy_valid_workspace(tmp)
+            make_tz_valid(root)
+            (root / "project-runtime/state/NEXT_ACTION.json").write_text("{not json\n", encoding="utf-8")
+            invalid_json = Path(tmp) / "plan-next-invalid-state.json"
+
+            invalid = run_plan_next(root, "--strict", "--json-out", str(invalid_json))
+
+            self.assertEqual(invalid.returncode, 3, invalid.stdout + invalid.stderr)
+            invalid_report = json.loads(invalid_json.read_text(encoding="utf-8"))
+            self.assertEqual(invalid_report["route_status"], "invalid_state")
+            self.assertTrue(invalid_report["fatal"])
+            self.assertEqual(invalid_report["exit_code"], 3)
+
     def test_placeholder_tz_blocks_dispatchability(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             root = copy_valid_workspace(tmp)
@@ -292,9 +393,11 @@ class PlanNextCommandTests(unittest.TestCase):
 
             result = run_plan_next(root, "--strict", "--json-out", str(json_out))
 
-            self.assertEqual(result.returncode, 1, result.stdout + result.stderr)
+            self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
             report = json.loads(json_out.read_text(encoding="utf-8"))
             self.assertEqual(report["status"], "correction_required")
+            self.assertEqual(report["route_status"], "ready")
+            self.assertFalse(report["fatal"])
             self.assertEqual(report["recommended_next_action"], "CORRECTION_REQUIRED")
             self.assertNotEqual(report["recommended_next_action"], "CREATE_AGENT")
             self.assertFalse(report["dispatchable"])
@@ -587,7 +690,7 @@ class PlanNextCommandTests(unittest.TestCase):
             {
                 "name": "correction/orchestrator/NONE",
                 "configure": correction_orchestrator_none,
-                "returncode": 1,
+                "returncode": 0,
                 "status": "correction_required",
                 "recommended": "CORRECTION_REQUIRED",
                 "dispatchable": False,
@@ -806,6 +909,7 @@ class PlanNextCommandTests(unittest.TestCase):
                 self.assertTrue(report["read_only"])
                 self.assertFalse(report["mutations_performed"])
                 self.assertEqual(report["status"], case["status"])
+                self.assertEqual(report["exit_code"], case["returncode"])
                 self.assertEqual(report["recommended_next_action"], case["recommended"])
                 self.assertEqual(report["target_role"], case["target_role"])
                 self.assertEqual(report["dispatchable"], case["dispatchable"])

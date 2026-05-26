@@ -21,7 +21,9 @@ from .. import transition_engine
 
 EXIT_OK = 0
 EXIT_BLOCKED = 1
-EXIT_IO_ERROR = 3
+EXIT_RUNTIME_ERROR = 2
+EXIT_INVALID_STATE = 3
+EXIT_IO_ERROR = EXIT_RUNTIME_ERROR
 
 RULES_RELATIVE_PATH = Path("agent-system/09_validators/rules/governance_rules.json")
 NONE_VALUES = {"", "NONE", "none", "null", "UNKNOWN"}
@@ -71,6 +73,15 @@ PROJECT_STATE_READY_REPOSITORY_LOCK_STATUSES = {"accepted"}
 PROJECT_STATE_READY_BASELINE_STATUSES = {"passed"}
 PROJECT_STATE_IDENTITY_STATUSES = state_verify.ENUM_FIELDS[("PROJECT_STATE", "identity_validation_status")]
 PROJECT_STATE_REPOSITORY_LOCK_STATUSES = state_verify.ENUM_FIELDS[("PROJECT_STATE", "repository_lock_status")]
+INVALID_STATE_RULE_IDS = {
+    "SIDECAR_JSON_PARSE_ERROR",
+    "SIDECAR_TOP_LEVEL_NOT_OBJECT",
+    "SIDECAR_REQUIRED_SIDECAR_MISSING",
+    "SIDECAR_SCHEMA_VERSION_MISSING_OR_INVALID",
+    "RUNTIME_LIFECYCLE_LOG_JSON_INVALID",
+    "RUNTIME_LIFECYCLE_LOG_EVENT_INVALID",
+    "RUNTIME_LIFECYCLE_LOG_UNREADABLE",
+}
 
 
 def _is_none(value: object) -> bool:
@@ -1400,6 +1411,56 @@ def _write_json(path_text: str, report: dict[str, object]) -> bool:
     return True
 
 
+def _state_verify_findings(report: dict[str, object]) -> list[dict[str, object]]:
+    evidence = report.get("evidence")
+    if not isinstance(evidence, dict):
+        return []
+    state_verify_evidence = evidence.get("state_verify")
+    if not isinstance(state_verify_evidence, dict):
+        return []
+    findings = state_verify_evidence.get("findings")
+    return [dict(item) for item in findings if isinstance(item, dict)] if isinstance(findings, list) else []
+
+
+def _has_invalid_state(report: dict[str, object]) -> bool:
+    for finding in _state_verify_findings(report):
+        if finding.get("severity") != "error":
+            continue
+        rule_id = str(finding.get("rule_id") or "")
+        if rule_id in INVALID_STATE_RULE_IDS:
+            return True
+    return False
+
+
+def _has_valid_correction_route(report: dict[str, object]) -> bool:
+    if report.get("recommended_next_action") != "CORRECTION_REQUIRED":
+        return False
+    correction_route = report.get("correction_routing")
+    if isinstance(correction_route, dict) and correction_route.get("route") == "CORRECTION_REQUIRED":
+        return True
+    dispatchability = report.get("dispatchability")
+    if isinstance(dispatchability, dict) and dispatchability.get("action_type") == "correction":
+        return report.get("status") == "correction_required"
+    evidence = report.get("evidence")
+    if isinstance(evidence, dict):
+        next_action = evidence.get("next_action")
+        if isinstance(next_action, dict) and next_action.get("routing_action_type") == "correction":
+            return True
+    return False
+
+
+def _route_exit_contract(report: dict[str, object], verify_exit_code: int) -> tuple[str, bool, int]:
+    if _has_invalid_state(report):
+        return "invalid_state", True, EXIT_INVALID_STATE
+    if verify_exit_code == state_verify.EXIT_IO_ERROR:
+        return "runtime_error", True, EXIT_RUNTIME_ERROR
+    if _has_valid_correction_route(report):
+        return "ready", False, EXIT_OK
+    if report.get("status") == "ready":
+        return "ready", False, EXIT_OK
+    return "governance_blocked", False, EXIT_BLOCKED
+
+
 def run(args: argparse.Namespace) -> int:
     """Run the dry-run planner."""
 
@@ -1408,7 +1469,11 @@ def run(args: argparse.Namespace) -> int:
     sidecars = _load_sidecars(root)
     rules, rules_evidence = _load_governance_rules(root)
     report = _plan(root, bool(args.strict), verify_report, verify_exit_code, sidecars, rules, rules_evidence)
+    route_status, fatal, exit_code = _route_exit_contract(report, verify_exit_code)
+    report["route_status"] = route_status
+    report["fatal"] = fatal
+    report["exit_code"] = exit_code
     _print_text(report)
     if args.json_out and not _write_json(str(args.json_out), report):
-        return EXIT_IO_ERROR
-    return EXIT_OK if report["status"] == "ready" else EXIT_BLOCKED
+        return EXIT_RUNTIME_ERROR
+    return exit_code

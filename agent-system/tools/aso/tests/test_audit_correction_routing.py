@@ -344,9 +344,11 @@ class AuditCorrectionRoutingTests(unittest.TestCase):
 
             result = run_aso(root, "plan-next", "--strict", "--json-out", str(json_out))
 
-            self.assertEqual(result.returncode, 1, result.stdout + result.stderr)
+            self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
             report = json.loads(json_out.read_text(encoding="utf-8"))
             self.assertEqual(report["recommended_next_action"], "CORRECTION_REQUIRED")
+            self.assertEqual(report["route_status"], "ready")
+            self.assertFalse(report["fatal"])
             self.assertNotEqual(report["recommended_next_action"], "CHECKPOINT_PREFLIGHT")
             self.assertFalse(report["dispatchability"]["dispatchable"])
             self.assertEqual(report["dispatchability"]["status"], "correction_required")

@@ -1440,6 +1440,13 @@ def recommendation_from_next_action_content(next_action: Mapping[str, object]) -
     action_type = _text(next_action.get("action_type"))
     target_role = _text(next_action.get("target_role"))
     checkpoint_policy = _text(next_action.get("checkpoint_policy"))
+    action_id = _text(next_action.get("action_id")).upper().replace("-", "_")
+    instruction = _text(next_action.get("instruction_for_orchestrator")).upper().replace("-", "_")
+    route_hint = f"{action_id} {instruction}"
+    if "ACCEPT_ARTIFACT" in route_hint:
+        return "ACCEPT_ARTIFACT"
+    if "TERMINATE_AGENT" in route_hint:
+        return "TERMINATE_AGENT"
     if checkpoint_policy in {"local_only", "commit_and_push"} or next_action.get("checkpoint_preflight_required") is True:
         return "CHECKPOINT_PREFLIGHT"
     if action_type == "create_agent":

@@ -271,7 +271,7 @@ def full_auditor_lifecycle_events(root: Path, audit_status: str) -> list[dict[st
 
 
 class LifecycleStateReconciliationTests(unittest.TestCase):
-    def test_result_received_makes_create_agent_next_action_stale(self) -> None:
+    def test_manual_result_received_log_without_sidecar_materialization_is_stale(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             root = copy_valid_workspace(tmp)
             make_tz_valid(root)
@@ -309,7 +309,38 @@ class LifecycleStateReconciliationTests(unittest.TestCase):
             self.assertIn("RUNTIME_NEXT_ACTION_STALE", status_rule_ids)
             self.assertEqual(status_report["summary"]["runtime_consistency"], "FAIL")
 
-    def test_agent_terminated_routes_auditor_from_transition_engine(self) -> None:
+    def test_confirmed_receive_result_materializes_accept_artifact_route(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = copy_valid_workspace(tmp)
+            make_tz_valid(root)
+            write_result(root)
+            receive = run_aso(
+                root,
+                "lifecycle",
+                "receive-result",
+                "--from-result",
+                RESULT_REF,
+                "--confirm-write",
+            )
+            verify_json = Path(tmp) / "state-verify.json"
+            plan_json = Path(tmp) / "plan-next.json"
+
+            verify = run_aso(root, "state", "verify", "--strict", "--json-out", str(verify_json))
+            plan = run_aso(root, "plan-next", "--strict", "--json-out", str(plan_json))
+
+            self.assertEqual(receive.returncode, 0, receive.stdout + receive.stderr)
+            receive_report = json.loads(receive.stdout)
+            self.assertEqual(receive_report["state_materialization"]["status"], "written")
+            self.assertEqual(verify.returncode, 0, verify.stdout + verify.stderr)
+            verify_report = json.loads(verify_json.read_text(encoding="utf-8"))
+            self.assertEqual(verify_report["status"], "passed")
+            self.assertEqual(plan.returncode, 0, plan.stdout + plan.stderr)
+            plan_report = json.loads(plan_json.read_text(encoding="utf-8"))
+            self.assertEqual(plan_report["recommended_next_action"], "ACCEPT_ARTIFACT")
+            self.assertEqual(plan_report["route_status"], "ready")
+            self.assertFalse(plan_report["fatal"])
+
+    def test_manual_agent_terminated_log_routes_auditor_but_remains_stale(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             root = copy_valid_workspace(tmp)
             make_tz_valid(root)
@@ -351,9 +382,10 @@ class LifecycleStateReconciliationTests(unittest.TestCase):
 
             result = run_aso(root, "plan-next", "--strict", "--json-out", str(json_out))
 
-            self.assertEqual(result.returncode, 1, result.stdout + result.stderr)
+            self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
             report = json.loads(json_out.read_text(encoding="utf-8"))
             self.assertEqual(report["recommended_next_action"], "CORRECTION_REQUIRED")
+            self.assertEqual(report["route_status"], "ready")
             self.assertEqual(report["evidence"]["transition_engine"]["current_state"], "CORRECTION_REQUIRED")
 
     def test_full_auditor_fail_lifecycle_keeps_correction_route_after_auditor_routing(self) -> None:
@@ -368,9 +400,10 @@ class LifecycleStateReconciliationTests(unittest.TestCase):
 
             result = run_aso(root, "plan-next", "--strict", "--json-out", str(json_out))
 
-            self.assertEqual(result.returncode, 1, result.stdout + result.stderr)
+            self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
             report = json.loads(json_out.read_text(encoding="utf-8"))
             self.assertEqual(report["recommended_next_action"], "CORRECTION_REQUIRED")
+            self.assertEqual(report["route_status"], "ready")
             self.assertNotEqual(report["recommended_next_action"], "WAIT_FOR_AUDIT_RESULT")
             transition = report["evidence"]["transition_engine"]
             self.assertEqual(transition["current_state"], "CORRECTION_REQUIRED")
