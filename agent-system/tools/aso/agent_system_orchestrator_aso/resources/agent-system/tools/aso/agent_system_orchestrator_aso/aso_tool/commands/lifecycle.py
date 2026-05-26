@@ -180,17 +180,7 @@ def _validate_request(root: Path, result_path: Path) -> tuple[dict[str, Any], li
                     reason_code=reason_code,
                 )
             )
-    if role not in {
-        "requirements_analyst",
-        "solution_architect",
-        "designer",
-        "developer",
-        "auditor",
-        "tester",
-        "technical_writer",
-        "devops_setup_engineer",
-        "release_manager",
-    }:
+    if role not in result_parser.VALID_ROLES:
         findings.append(_error("LIFECYCLE_RESULT_FORMAT_002", f"RESULT ROLE={role or 'MISSING'} is not a supported agent role.", result_ref, "Record a canonical profile role or auditor before termination."))
     if result_parser.as_string(fields, "REUSE_ALLOWED").lower() != "false":
         findings.append(_error("LIFECYCLE_RESULT_FORMAT_003", "RESULT must declare REUSE_ALLOWED: false.", result_ref, "Set REUSE_ALLOWED: false before terminating the agent instance."))

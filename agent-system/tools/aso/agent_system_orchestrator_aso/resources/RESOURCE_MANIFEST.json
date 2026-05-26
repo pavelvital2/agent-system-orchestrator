@@ -129,8 +129,8 @@
       "size": 37122
     },
     "agent-system/02_runtime/PLANNER_DISPATCHABILITY_GATE_P5_4_CONTRACT.md": {
-      "sha256": "94e8839f9bb32c01bbe176ca282eb180b90a259834c480c088c06425155ff2e3",
-      "size": 18908
+      "sha256": "02a00303a39842a1aa9ecc19ac173969b149860ed1d776d28b0e1017a466f14f",
+      "size": 19114
     },
     "agent-system/02_runtime/POST_AUDIT_GIT_CHECKPOINT.md": {
       "sha256": "f1d8a90256fc8e1ff1a22b87d253eff6a80e9febe3f4bbadab2120050d02246e",
@@ -649,12 +649,12 @@
       "size": 2533
     },
     "agent-system/09_validators/schemas/dispatch_receipt.schema.json": {
-      "sha256": "dc81b17530d6f424eef219139401f0a31cbf7262eeb1cf65d7b5be6cec05bdc4",
-      "size": 2384
+      "sha256": "535c76e4743bdc1d10bf851f6686ad89e373f6c0b10935486a5d270ee427f5bb",
+      "size": 2304
     },
     "agent-system/09_validators/schemas/dispatchability_gate.schema.json": {
-      "sha256": "71041f5943285da9423533d029f614f090f3161ec6979e33bedd4dc19c5ebc87",
-      "size": 13444
+      "sha256": "a373fae02bd35a3c853828e6825c49f3c7201ca4486292248f791e576f86c255",
+      "size": 13397
     },
     "agent-system/09_validators/schemas/gap_register.schema.json": {
       "sha256": "dd6ce9ed33b538639e1822fe1fd8503356fa0f55ba12cebd6cdc1e49c29b9a94",
@@ -669,8 +669,8 @@
       "size": 2850
     },
     "agent-system/09_validators/schemas/orchestrator_handoff.schema.json": {
-      "sha256": "852ae8f3afe394413cd927df61883a6a45ae7a86cbba4b9cc53f9c8d5c969e5d",
-      "size": 5853
+      "sha256": "c591d1cc856773a0cb9a423160544edbe8b251459ce107f12668fe3592dc5395",
+      "size": 5773
     },
     "agent-system/09_validators/schemas/orchestrator_runtime_contract.schema.json": {
       "sha256": "0438e4a92d80a4aa05c6c342b2680a38d9d2f2dc96e31501a2ace054161e2b17",
@@ -1509,8 +1509,8 @@
       "size": 5203
     },
     "agent-system/tools/aso/agent_system_orchestrator_aso/aso_tool/aso.py": {
-      "sha256": "54cfb805150a1f60592bba643569a447797535d4d2819a63b6cab86390da8faa",
-      "size": 63951
+      "sha256": "43368051b68987c85f82767aa70f6b5598f8dc7872c0e295cbf97bc4506143ae",
+      "size": 63738
     },
     "agent-system/tools/aso/agent_system_orchestrator_aso/aso_tool/commands/__init__.py": {
       "sha256": "2ffe32d295224e404d912c93b09fdbbb116140aa0d4cd40ae90eb0c21781d804",
@@ -1565,8 +1565,8 @@
       "size": 14752
     },
     "agent-system/tools/aso/agent_system_orchestrator_aso/aso_tool/commands/lifecycle.py": {
-      "sha256": "89635708119f931e658b84d6dd11a1e4c9474eb397fec01826c722d21d03e0d1",
-      "size": 20393
+      "sha256": "f25515065ceabb03f875076ac91e9afda5ba9779df71cbbbc7bc527f998dc305",
+      "size": 20183
     },
     "agent-system/tools/aso/agent_system_orchestrator_aso/aso_tool/commands/lint.py": {
       "sha256": "5eef292f1756669be5fe53183d0ab3f47e94f2ecc794bcd5abff8acf79cc34ba",
@@ -1597,8 +1597,8 @@
       "size": 754
     },
     "agent-system/tools/aso/agent_system_orchestrator_aso/aso_tool/commands/plan_next.py": {
-      "sha256": "450b01f9b449b60c32ac218c7f6ee5ccf7c84db5ea3a6c41334ac7ceaafccdb4",
-      "size": 53278
+      "sha256": "96b101c7b7d3fa77f448d3317babae936a222a8c9aae80b2da4cc1d72040c08a",
+      "size": 54990
     },
     "agent-system/tools/aso/agent_system_orchestrator_aso/aso_tool/commands/project.py": {
       "sha256": "8e199b6c034e2cac90b52df54a6e2aa1fcd7ba09318323aa654abce9c9ec56e9",
@@ -1617,8 +1617,8 @@
       "size": 16564
     },
     "agent-system/tools/aso/agent_system_orchestrator_aso/aso_tool/commands/record_result.py": {
-      "sha256": "18313929473810958d39fc1eab91d60f9075b0678fa40db28f7a34aeca66b96c",
-      "size": 32080
+      "sha256": "0b7f38a7fbbc56d70add5059859ed48e03c5678f37a47d36c50d1130099aac81",
+      "size": 32130
     },
     "agent-system/tools/aso/agent_system_orchestrator_aso/aso_tool/commands/repair_hints.py": {
       "sha256": "7a819427016b015277b37baf85edd79ffb081737b0e8d9d4ecd0df99aade73bc",
@@ -1665,12 +1665,12 @@
       "size": 7081
     },
     "agent-system/tools/aso/agent_system_orchestrator_aso/aso_tool/dispatch_receipts.py": {
-      "sha256": "35c51a56d4d9d237e560e02564ab0d9ed02e63de3d7d89c21d791ea1fc4f82b9",
-      "size": 8921
+      "sha256": "d39d66a4139183c253d5729a7c8d12c00a7c0388dc4a757b7c0805e512d83ee7",
+      "size": 8809
     },
     "agent-system/tools/aso/agent_system_orchestrator_aso/aso_tool/handoff_artifacts.py": {
-      "sha256": "1f24495076a40ce62c5bef3ccbe46e1f41c8b5111d4629a91d7a86dd87ca2b6b",
-      "size": 19066
+      "sha256": "f1f6716ef7f18605f4485db2cdce1f5786300a74f896222ebaaae9753194c4e5",
+      "size": 19086
     },
     "agent-system/tools/aso/agent_system_orchestrator_aso/aso_tool/lockfile.py": {
       "sha256": "a5073020d4afefde48e8ee36c9199d34744eae6e628b99710111c973373270db",
@@ -1697,8 +1697,12 @@
       "size": 9613
     },
     "agent-system/tools/aso/agent_system_orchestrator_aso/aso_tool/result_parser.py": {
-      "sha256": "2e70e0c386f433f5ee28fb3eb8bdda4bfb213cacff02b49683e4d6428fe8481d",
-      "size": 18180
+      "sha256": "9909d8f1c8a55ed999c581505a37f55a1e60362310b7e90a8b4d55be6ba94982",
+      "size": 18438
+    },
+    "agent-system/tools/aso/agent_system_orchestrator_aso/aso_tool/role_registry.py": {
+      "sha256": "9ff059984d9c94081f6c763f7ee8da030c9c9c6b83740deecce70e00553a2628",
+      "size": 2451
     },
     "agent-system/tools/aso/agent_system_orchestrator_aso/aso_tool/rules/__init__.py": {
       "sha256": "669f95b4a4f260d6634cfc6a591a7cef7ffd65ac17c86ad3749597df252d08ae",
@@ -1725,8 +1729,8 @@
       "size": 393
     },
     "agent-system/tools/aso/agent_system_orchestrator_aso/aso_tool/transition_engine.py": {
-      "sha256": "bbf8f4242719f6dac07e28c4884223a59770da81c8d9636e92b8dcf7ffe5530b",
-      "size": 61577
+      "sha256": "42964f63f3092180a5fe074804519d7fd883eb0c955335f2f74c6c76da207ba3",
+      "size": 61605
     },
     "agent-system/tools/aso/agent_system_orchestrator_aso/cli.py": {
       "sha256": "b04aad461cb9882463e3818ab753a7ec30d2108bb07823b0ca75dcdc36823e3d",

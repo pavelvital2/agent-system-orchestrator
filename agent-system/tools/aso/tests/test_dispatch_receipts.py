@@ -15,6 +15,8 @@ ASO_TOOL_ROOT = REPO_ROOT / "agent-system" / "tools" / "aso"
 sys.path.insert(0, str(ASO_TOOL_ROOT))
 
 from agent_system_orchestrator_aso.aso_tool import dispatch_receipts  # noqa: E402
+from agent_system_orchestrator_aso.aso_tool import role_registry  # noqa: E402
+from agent_system_orchestrator_aso.aso_tool import aso  # noqa: E402
 
 
 def run_aso(*args: str) -> subprocess.CompletedProcess[str]:
@@ -28,6 +30,17 @@ def run_aso(*args: str) -> subprocess.CompletedProcess[str]:
 
 
 class DispatchReceiptTests(unittest.TestCase):
+    def test_dispatch_receipt_cli_role_choices_match_runtime_contract(self) -> None:
+        parser = aso.build_parser()
+        command_action = next(action for action in parser._actions if action.dest == "command")
+        dispatch_parser = command_action.choices["dispatch"]
+        dispatch_action = next(action for action in dispatch_parser._actions if action.dest == "dispatch_command")
+        receipt_parser = dispatch_action.choices["receipt"]
+        role_action = next(action for action in receipt_parser._actions if action.dest == "role")
+
+        self.assertEqual(tuple(role_action.choices), role_registry.dispatchable_roles())
+        self.assertNotIn("release_manager", role_action.choices)
+
     def test_dispatch_receipt_command_writes_external_runner_receipt(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp) / "workspace"
@@ -83,6 +96,24 @@ class DispatchReceiptTests(unittest.TestCase):
             )
             self.assertIn("model_reasoning_effort", receipt["external_runner_command_template"])
             self.assertTrue(dispatch_receipts.validate_dispatch_receipt(receipt).passed)
+
+    def test_dispatch_receipt_rejects_lifecycle_system_role(self) -> None:
+        receipt = dispatch_receipts.build_dispatch_receipt(
+            agent_instance_id="agent_TASK_DEMO_001_attempt_001",
+            task_id="TASK_DEMO_001",
+            role="release_manager",
+            runner="external_codex_cli",
+            model="UNKNOWN",
+            reasoning_effort="high",
+            prompt_ref="project-runtime/handoffs/TASK_DEMO_001.prompt.md",
+            handoff_ref="project-runtime/handoffs/TASK_DEMO_001.json",
+            started_at="2026-05-25T00:00:00Z",
+        )
+
+        validation = dispatch_receipts.validate_dispatch_receipt(receipt)
+
+        self.assertFalse(validation.passed)
+        self.assertIn("runtime-contract dispatchable profile role", "; ".join(validation.errors))
 
     def test_reasoning_compliance_uses_receipt_not_stderr(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:

@@ -60,17 +60,17 @@ reason codes, and the canonical invalid tuple.
   "profile_execution_roles": [
     "requirements_analyst",
     "solution_architect",
-    "designer",
     "developer",
-    "auditor",
     "tester",
-    "technical_writer",
+    "auditor",
+    "technical_writer"
+  ],
+  "deprecated_profile_role_aliases": {},
+  "lifecycle_system_roles": [
+    "designer",
     "devops_setup_engineer",
     "release_manager"
   ],
-  "deprecated_profile_role_aliases": {
-    "designer": "solution_architect"
-  },
   "control_or_pseudo_roles": [
     "orchestrator",
     "project_owner",
@@ -301,25 +301,33 @@ reason codes, and the canonical invalid tuple.
 
 ## Role And Action Classes
 
-Profile execution roles accepted by historical task packet schemas are:
+Profile execution roles for dispatch are derived from the active
+`ORCHESTRATOR_RUNTIME_CONTRACT.json` `allowed_roles` list minus
+`forbidden_dispatch_roles`. In the current contract they are:
 
 ```text
 requirements_analyst
 solution_architect
-designer
 developer
-auditor
 tester
+auditor
 technical_writer
+```
+
+Lifecycle/system role labels accepted by historical artifacts are separate from
+profile dispatch authority:
+
+```text
+designer
 devops_setup_engineer
 release_manager
 ```
 
-`designer` is a deprecated compatibility alias. The dispatchability gate must
-normalize `TARGET_ROLE: designer` and task-packet `TARGET_ROLE: designer` to
-`solution_architect` for planner output and compatibility checks. A
-`CREATE_AGENT` dispatchability report must use `target_role: solution_architect`;
-it must not expose direct `target_role: designer` dispatch.
+These roles are not dispatchable profile roles unless the active runtime
+contract explicitly includes them in `allowed_roles` and does not list them in
+`forbidden_dispatch_roles`. A `CREATE_AGENT` dispatchability report must not use
+`designer`, `devops_setup_engineer`, or `release_manager` as `target_role` under
+the current contract.
 
 Control and routing pseudo-roles include:
 

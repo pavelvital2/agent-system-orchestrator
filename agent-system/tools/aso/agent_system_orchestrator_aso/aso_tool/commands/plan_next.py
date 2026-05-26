@@ -13,6 +13,7 @@ from . import state_init, state_verify
 from .. import correction_routing
 from .. import dispatch_receipts
 from .. import handoff_artifacts
+from .. import role_registry
 from .. import result_parser
 from .. import resources
 from .. import transition_engine
@@ -24,19 +25,10 @@ EXIT_IO_ERROR = 3
 
 RULES_RELATIVE_PATH = Path("agent-system/09_validators/rules/governance_rules.json")
 NONE_VALUES = {"", "NONE", "none", "null", "UNKNOWN"}
-PROFILE_EXECUTION_ROLES = {
-    "requirements_analyst",
-    "solution_architect",
-    "designer",
-    "developer",
-    "auditor",
-    "tester",
-    "technical_writer",
-    "devops_setup_engineer",
-    "release_manager",
-}
-DEPRECATED_PROFILE_ROLE_ALIASES = {"designer": "solution_architect"}
-CONTROL_OR_PSEUDO_ROLES = {"orchestrator", "project_owner", "owner", "none"}
+PROFILE_EXECUTION_ROLES = set(role_registry.dispatchable_roles())
+LIFECYCLE_SYSTEM_ROLES = set(role_registry.legacy_lifecycle_system_roles())
+DEPRECATED_PROFILE_ROLE_ALIASES: dict[str, str] = {}
+CONTROL_OR_PSEUDO_ROLES = set(role_registry.control_or_pseudo_roles())
 NON_DISPATCH_ACTION_TYPES = {
     "correction": "CORRECTION_REQUIRED",
     "update_state": "UPDATE_STATE",
@@ -429,6 +421,8 @@ def _role_class(target_role: str) -> str:
         return "control_or_pseudo"
     if role in PROFILE_EXECUTION_ROLES:
         return "profile_execution"
+    if role in LIFECYCLE_SYSTEM_ROLES:
+        return "unknown"
     return "unknown"
 
 

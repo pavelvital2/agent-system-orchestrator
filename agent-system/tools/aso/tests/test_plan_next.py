@@ -558,12 +558,12 @@ class PlanNextCommandTests(unittest.TestCase):
         def auditor_route_not_required(root: Path) -> None:
             set_next_action(root, target_role="auditor")
 
-        def designer_alias_compatibility(root: Path) -> None:
-            set_next_action(root, target_role="designer")
-            set_current_gate(root, required_next_role="solution_architect")
-            set_task(root, task_type="solution_architect", owner_role="solution_architect")
-            update_task_packet_field(root, packet, "TASK_TYPE", "solution_architect")
-            update_task_packet_field(root, packet, "TARGET_ROLE", "designer")
+        def lifecycle_system_role_forbidden(root: Path) -> None:
+            set_next_action(root, target_role="release_manager")
+            set_current_gate(root, required_next_role="release_manager")
+            set_task(root, task_type="release_manager", owner_role="release_manager")
+            update_task_packet_field(root, packet, "TASK_TYPE", "release_manager")
+            update_task_packet_field(root, packet, "TARGET_ROLE", "release_manager")
 
         def bootstrap_valid_packet(root: Path) -> None:
             set_project_state(root, current_phase="bootstrap", baseline_tracking_status="not_checked")
@@ -716,15 +716,19 @@ class PlanNextCommandTests(unittest.TestCase):
                 "reason_codes": {"current_gate_blocks_dispatch"},
             },
             {
-                "name": "create_agent/designer_alias/compatibility",
-                "configure": designer_alias_compatibility,
-                "returncode": 0,
-                "status": "ready",
-                "recommended": "CREATE_AGENT",
-                "dispatchable": True,
-                "role_class": "profile_execution",
-                "target_role": "solution_architect",
-                "reason_codes": set(),
+                "name": "create_agent/lifecycle_system_role/forbidden",
+                "configure": lifecycle_system_role_forbidden,
+                "returncode": 1,
+                "status": "blocked",
+                "recommended": "CORRECTION_REQUIRED",
+                "dispatchable": False,
+                "role_class": "unknown",
+                "target_role": "release_manager",
+                "reason_codes": {
+                    "target_role_not_profile_execution",
+                    "task_packet_not_dispatch_valid",
+                    "reasoning_floor_unresolved",
+                },
             },
             {
                 "name": "stop",

@@ -9,6 +9,8 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any, Mapping
 
+from . import role_registry
+
 
 RECEIPT_TYPE = "DISPATCH_RECEIPT"
 SCHEMA_VERSION = "1.0.0"
@@ -40,17 +42,7 @@ WRITER_COMMAND_TEMPLATE = (
 )
 LEVELS = ("low", "medium", "high", "xhigh")
 LEVEL_RANK = {level: index for index, level in enumerate(LEVELS)}
-PROFILE_ROLES = {
-    "requirements_analyst",
-    "solution_architect",
-    "designer",
-    "developer",
-    "auditor",
-    "tester",
-    "technical_writer",
-    "devops_setup_engineer",
-    "release_manager",
-}
+PROFILE_ROLES = role_registry.dispatchable_roles()
 AGENT_INSTANCE_ID_RE = re.compile(r"^[A-Za-z0-9_.:-]+$")
 RFC3339_UTC_RE = re.compile(r"^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z$")
 NONE_VALUES = {"", "NONE", "none", "null", "UNKNOWN"}
@@ -175,7 +167,7 @@ def validate_dispatch_receipt(payload: Mapping[str, Any]) -> DispatchReceiptVali
         if value in NONE_VALUES:
             errors.append(f"{field} must be a concrete non-empty reference")
     if _text(payload.get("role")) not in PROFILE_ROLES:
-        errors.append("role must be a profile execution role")
+        errors.append("role must be a runtime-contract dispatchable profile role")
     if _text(payload.get("reasoning_effort")) not in LEVEL_RANK:
         errors.append("reasoning_effort must be one of low, medium, high, xhigh")
     model = _text(payload.get("model"))

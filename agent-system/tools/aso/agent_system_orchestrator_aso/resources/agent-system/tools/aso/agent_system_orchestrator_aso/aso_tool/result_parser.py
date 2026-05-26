@@ -7,9 +7,13 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Iterable, Mapping
 
+from . import role_registry
+
 
 RESULT_STATUSES = {"pass", "fail", "blocked", "gap"}
-PROFILE_ROLES = {
+PROFILE_ROLES = set(role_registry.dispatchable_roles()) - {"auditor"}
+LEGACY_LIFECYCLE_SYSTEM_ROLES = set(role_registry.legacy_lifecycle_system_roles())
+LEGACY_PROFILE_RESULT_ROLES = {
     "requirements_analyst",
     "solution_architect",
     "designer",
@@ -19,7 +23,7 @@ PROFILE_ROLES = {
     "devops_setup_engineer",
     "release_manager",
 }
-VALID_ROLES = PROFILE_ROLES | {"auditor"}
+VALID_ROLES = PROFILE_ROLES | LEGACY_LIFECYCLE_SYSTEM_ROLES | LEGACY_PROFILE_RESULT_ROLES | {"auditor"}
 REQUIRED_RESULT_FIELDS = (
     "STATUS",
     "TASK_ID",

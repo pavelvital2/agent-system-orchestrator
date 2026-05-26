@@ -59,13 +59,10 @@
       "enum": [
         "requirements_analyst",
         "solution_architect",
-        "designer",
         "developer",
-        "auditor",
         "tester",
-        "technical_writer",
-        "devops_setup_engineer",
-        "release_manager"
+        "auditor",
+        "technical_writer"
       ]
     },
     "started_at": {

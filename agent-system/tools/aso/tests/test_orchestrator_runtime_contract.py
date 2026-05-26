@@ -18,6 +18,7 @@ sys.path.insert(0, str(ASO_TOOL_ROOT))
 
 from agent_system_orchestrator_aso.aso_tool import transition_engine  # noqa: E402
 from agent_system_orchestrator_aso.aso_tool import runtime_contract_fallback  # noqa: E402
+from agent_system_orchestrator_aso.aso_tool import role_registry  # noqa: E402
 
 
 class OrchestratorRuntimeContractTests(unittest.TestCase):
@@ -103,6 +104,20 @@ class OrchestratorRuntimeContractTests(unittest.TestCase):
                 self.assertIn(contract["reasoning_floor_by_role"][role], {"medium", "high", "xhigh", "maximum"})
                 self.assertIn(role, contract["required_docs_by_role"])
                 self.assertGreater(len(contract["required_docs_by_role"][role]), 0)
+
+    def test_dispatch_roles_are_derived_from_runtime_contract(self) -> None:
+        contract = transition_engine.load_runtime_contract()
+        expected = tuple(
+            role
+            for role in contract["allowed_roles"]
+            if role not in set(contract["forbidden_dispatch_roles"])
+        )
+
+        self.assertEqual(role_registry.dispatchable_roles(contract), expected)
+        self.assertNotIn("release_manager", role_registry.dispatchable_roles(contract))
+        self.assertNotIn("devops_setup_engineer", role_registry.dispatchable_roles(contract))
+        self.assertNotIn("designer", role_registry.dispatchable_roles(contract))
+        self.assertIn("release_manager", role_registry.legacy_lifecycle_system_roles())
 
     def test_contract_defines_external_dispatch_receipt_contract(self) -> None:
         contract = transition_engine.load_runtime_contract()

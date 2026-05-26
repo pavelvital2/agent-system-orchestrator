@@ -329,7 +329,7 @@ def validate_handoff_artifact(payload: Mapping[str, Any]) -> HandoffValidationRe
     if not task_id or task_id == NONE_REF or not TASK_ID_RE.match(task_id):
         errors.append("task_id must be a concrete task id using letters, numbers, underscore, dash, or colon")
     if _text(payload.get("role")) not in dispatch_receipts.PROFILE_ROLES:
-        errors.append("role must be a profile execution role")
+        errors.append("role must be a runtime-contract dispatchable profile role")
     if _text(payload.get("resolved_reasoning_level")) not in dispatch_receipts.LEVEL_RANK:
         errors.append("resolved_reasoning_level must be one of low, medium, high, xhigh")
 

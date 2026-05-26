@@ -8,6 +8,7 @@ import sys
 from pathlib import Path
 
 from . import artifact_storage
+from . import role_registry
 from . import runtime_schema_contracts
 from .commands import (
     apply,
@@ -429,17 +430,7 @@ def build_parser() -> argparse.ArgumentParser:
     dispatch_receipt_parser.add_argument(
         "--role",
         required=True,
-        choices=(
-            "requirements_analyst",
-            "solution_architect",
-            "designer",
-            "developer",
-            "auditor",
-            "tester",
-            "technical_writer",
-            "devops_setup_engineer",
-            "release_manager",
-        ),
+        choices=role_registry.dispatchable_roles(),
     )
     dispatch_receipt_parser.add_argument(
         "--runner",

@@ -8,6 +8,7 @@ from pathlib import Path
 from typing import Any, Iterable, Mapping
 
 from . import dispatch_receipts
+from . import role_registry
 from . import resources
 from . import runtime_contract_fallback
 
@@ -658,12 +659,12 @@ def derive_transition(
         )
 
     normalized_target_role = target_role.strip()
-    if event_name == "CREATE_AGENT_DISPATCHED" and normalized_target_role in _string_list(contract.get("forbidden_dispatch_roles")):
+    if event_name == "CREATE_AGENT_DISPATCHED" and not role_registry.is_dispatchable_role(normalized_target_role, contract):
         findings.append(
             _finding(
                 "RUNTIME_FORBIDDEN_DISPATCH_ROLE",
                 "error",
-                "Runtime contract forbids dispatching this role.",
+                "Runtime contract does not permit dispatching this role.",
                 f"target_role={normalized_target_role}",
                 "Dispatch only allowed profile roles; route control/orchestrator work as non-dispatch correction/update_state.",
             )
@@ -1496,12 +1497,12 @@ def explain_next_action_from_sidecars(
                 "Regenerate NEXT_ACTION from the runtime contract and current state sidecars.",
             )
         )
-    if actual in {"CREATE_AGENT", "CREATE_AUDITOR"} and target_role in _string_list(contract.get("forbidden_dispatch_roles")):
+    if actual in {"CREATE_AGENT", "CREATE_AUDITOR"} and not role_registry.is_dispatchable_role(target_role, contract):
         findings.append(
             _finding(
                 "RUNTIME_FORBIDDEN_DISPATCH_ROLE",
                 "error",
-                "Stored NEXT_ACTION targets a role that the runtime contract forbids for dispatch.",
+                "Stored NEXT_ACTION targets a role that the runtime contract does not permit for dispatch.",
                 f"target_role={target_role}",
                 "Use a non-dispatch correction/update_state action for control roles.",
             )

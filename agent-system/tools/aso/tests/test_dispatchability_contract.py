@@ -14,8 +14,8 @@ except ImportError:  # pragma: no cover - optional dependency in minimal envs
 
 REPO_ROOT = Path(__file__).resolve().parents[4]
 CONTRACT_PATH = REPO_ROOT / "agent-system/02_runtime/PLANNER_DISPATCHABILITY_GATE_P5_4_CONTRACT.md"
+RUNTIME_CONTRACT_PATH = REPO_ROOT / "agent-system/02_runtime/ORCHESTRATOR_RUNTIME_CONTRACT.json"
 SCHEMA_PATH = REPO_ROOT / "agent-system/09_validators/schemas/dispatchability_gate.schema.json"
-TASK_PACKET_SCHEMA_PATH = REPO_ROOT / "agent-system/09_validators/schemas/task_packet.schema.json"
 
 
 def load_contract() -> dict[str, object]:
@@ -91,6 +91,20 @@ def load_dispatchability_schema() -> dict[str, object]:
     return schema
 
 
+def runtime_contract_dispatchable_roles() -> list[str]:
+    runtime_contract = json.loads(RUNTIME_CONTRACT_PATH.read_text(encoding="utf-8"))
+    if not isinstance(runtime_contract, dict):
+        raise AssertionError("runtime contract must be a dictionary")
+    allowed_roles = runtime_contract["allowed_roles"]
+    forbidden_roles = runtime_contract["forbidden_dispatch_roles"]
+    if not isinstance(allowed_roles, list):
+        raise AssertionError("runtime_contract.allowed_roles must be a list")
+    if not isinstance(forbidden_roles, list):
+        raise AssertionError("runtime_contract.forbidden_dispatch_roles must be a list")
+    forbidden = {role for role in forbidden_roles if isinstance(role, str)}
+    return [role for role in allowed_roles if isinstance(role, str) and role not in forbidden]
+
+
 def object_at(payload: dict[str, object], key: str, context: str) -> dict[str, object]:
     value = payload[key]
     if not isinstance(value, dict):
@@ -153,14 +167,22 @@ def required_passed_check_ids(schema: dict[str, object]) -> set[str]:
 class DispatchabilityContractTests(unittest.TestCase):
     def test_machine_contract_distinguishes_profile_and_control_roles(self) -> None:
         contract = load_contract()
-        task_packet_schema = json.loads(TASK_PACKET_SCHEMA_PATH.read_text(encoding="utf-8"))
+        runtime_contract = json.loads(RUNTIME_CONTRACT_PATH.read_text(encoding="utf-8"))
 
         profile_roles = contract["profile_execution_roles"]
+        lifecycle_system_roles = contract["lifecycle_system_roles"]
         control_roles = contract["control_or_pseudo_roles"]
+        expected_dispatch_roles = [
+            role
+            for role in runtime_contract["allowed_roles"]
+            if role not in set(runtime_contract["forbidden_dispatch_roles"])
+        ]
 
-        self.assertEqual(profile_roles, task_packet_schema["properties"]["TARGET_ROLE"]["enum"])
+        self.assertEqual(profile_roles, expected_dispatch_roles)
         self.assertIn("auditor", profile_roles)
-        self.assertEqual(contract["deprecated_profile_role_aliases"], {"designer": "solution_architect"})
+        self.assertEqual(contract["deprecated_profile_role_aliases"], {})
+        self.assertEqual(lifecycle_system_roles, ["designer", "devops_setup_engineer", "release_manager"])
+        self.assertTrue(set(profile_roles).isdisjoint(set(lifecycle_system_roles)))
         self.assertIn("orchestrator", control_roles)
         self.assertIn("project_owner", control_roles)
         self.assertIn("owner", control_roles)
@@ -253,15 +275,7 @@ class DispatchabilityContractTests(unittest.TestCase):
         self.assertEqual(object_at(properties, "task_packet", "CREATE_AGENT.then.properties")["$ref"], "#/$defs/realDispatchValue")
         self.assertEqual(
             list_at(object_at(properties, "target_role", "CREATE_AGENT.then.properties"), "enum", "CREATE_AGENT.target_role"),
-            [
-                "requirements_analyst",
-                "solution_architect",
-                "developer",
-                "tester",
-                "technical_writer",
-                "devops_setup_engineer",
-                "release_manager",
-            ],
+            runtime_contract_dispatchable_roles(),
         )
 
     def test_dispatchability_schema_stdlib_preserves_create_auditor_constraints(self) -> None:
@@ -378,6 +392,38 @@ class DispatchabilityContractTests(unittest.TestCase):
         self.assertEqual(list(validator.iter_errors(dispatchable)), [])
         self.assertEqual(list(validator.iter_errors(dispatchable_auditor)), [])
         self.assertEqual(list(validator.iter_errors(canonical_invalid)), [])
+
+    @unittest.skipIf(Draft202012Validator is None, "jsonschema is not installed")
+    def test_schema_create_agent_target_roles_match_runtime_dispatch_roles(self) -> None:
+        schema = json.loads(SCHEMA_PATH.read_text(encoding="utf-8"))
+        validator = Draft202012Validator(schema)
+        dispatchable_roles = runtime_contract_dispatchable_roles()
+
+        self.assertEqual(
+            dispatchable_roles,
+            [
+                "requirements_analyst",
+                "solution_architect",
+                "developer",
+                "tester",
+                "auditor",
+                "technical_writer",
+            ],
+        )
+
+        for role in dispatchable_roles:
+            with self.subTest(role=role):
+                report = valid_create_agent_report(schema)
+                report["target_role"] = role
+                self.assertEqual(list(validator.iter_errors(report)), [])
+
+        for role in ("devops_setup_engineer", "release_manager", "designer", "orchestrator"):
+            with self.subTest(role=role):
+                report = valid_create_agent_report(schema)
+                report["target_role"] = role
+                errors = sorted(validator.iter_errors(report), key=lambda error: list(error.path))
+                self.assertTrue(errors)
+                self.assertIn(f"'{role}' is not one of", "\n".join(error.message for error in errors))
 
     @unittest.skipIf(Draft202012Validator is None, "jsonschema is not installed")
     def test_schema_rejects_create_agent_for_control_role_or_live_dispatch(self) -> None:

@@ -11,6 +11,7 @@ from typing import Any
 
 from .. import correction_routing, runtime_schema_contracts
 from .. import result_parser
+from .. import role_registry
 from .. import transition_engine
 
 
@@ -322,7 +323,7 @@ def _dispatchable_downstream_packet(root: Path | None, task_packet_ref: str) -> 
     if missing:
         return False, f"downstream task packet missing required fields: {', '.join(missing)}"
     target_role = fields.get("TARGET_ROLE", "")
-    if target_role not in VALID_ROLES:
+    if not role_registry.is_dispatchable_role(target_role):
         return False, f"downstream task packet TARGET_ROLE={target_role or 'NONE'} is not dispatchable"
     return True, f"dispatchable downstream task packet exists: {task_packet_ref}"
 
