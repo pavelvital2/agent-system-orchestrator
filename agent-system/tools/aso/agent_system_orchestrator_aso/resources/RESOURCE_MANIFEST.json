@@ -977,8 +977,8 @@
       "size": 6456
     },
     "agent-system/scripts/run_governance_smoke_tests.py": {
-      "sha256": "be542ae203eb4890039624fbea00bfe5875856cebb43a3c6d39aa7f5d9e8e852",
-      "size": 8638
+      "sha256": "2d1420f88643a78cef9b039e1395fe9ebe3be9475cb38be10c11a79a1a5787ff",
+      "size": 8662
     },
     "agent-system/scripts/run_governance_smoke_tests.sh": {
       "sha256": "0099d739e076e1d00ffae73581a21aacba934de2ac659a9f72fd89388febd45f",

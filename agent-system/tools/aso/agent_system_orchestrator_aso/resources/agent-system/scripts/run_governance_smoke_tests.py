@@ -9,7 +9,7 @@ import subprocess
 import sys
 import time
 from dataclasses import asdict, dataclass
-from datetime import UTC, datetime
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Sequence
 
@@ -18,6 +18,7 @@ SCRIPT_DIR = Path(__file__).resolve().parent
 REPO_ROOT = SCRIPT_DIR.parents[1]
 DEFAULT_SHELL_RUNNER = SCRIPT_DIR / "run_governance_smoke_tests.sh"
 STATUS_VALUES = ("passed", "failed", "timeout", "skipped")
+UTC = timezone.utc
 
 
 @dataclass
