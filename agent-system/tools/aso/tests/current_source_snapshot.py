@@ -59,6 +59,8 @@ def create_current_source_snapshot(repo_root: Path, destination: Path) -> Path:
             _copy_file(repo_root, destination, relpath)
 
     subprocess.run(["git", "init", "-q"], cwd=destination, check=True)
+    subprocess.run(["git", "config", "gc.auto", "0"], cwd=destination, check=True)
+    subprocess.run(["git", "config", "maintenance.auto", "false"], cwd=destination, check=True)
     subprocess.run(["git", "config", "user.email", "aso-test@example.invalid"], cwd=destination, check=True)
     subprocess.run(["git", "config", "user.name", "ASO Test"], cwd=destination, check=True)
     subprocess.run(["git", "add", "."], cwd=destination, check=True)

@@ -6,6 +6,7 @@ import subprocess
 import sys
 import tempfile
 import unittest
+import uuid
 from pathlib import Path
 
 TESTS_DIR = Path(__file__).resolve().parent
@@ -92,7 +93,7 @@ exit 1
         *extra_args: str,
     ) -> subprocess.CompletedProcess[str]:
         fake_python = self._fake_python_for_venv_creation(temp_dir)
-        source_snapshot = create_current_source_snapshot(REPO_ROOT, temp_dir / "source-snapshot")
+        source_snapshot = create_current_source_snapshot(REPO_ROOT, temp_dir / f"source-snapshot-{uuid.uuid4().hex}")
         return subprocess.run(
             [
                 "bash",
