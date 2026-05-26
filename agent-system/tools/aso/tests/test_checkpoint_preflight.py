@@ -23,7 +23,7 @@ VALID_WORKSPACE = FIXTURE_ROOT / "valid_workspace"
 
 PACKAGE_README = """# Package
 
-Use the read-only ASO helper at `agent-system/tools/aso/aso.py`.
+Use the ASO helper at `agent-system/tools/aso/aso.py` for read-only diagnostics plus explicit confirmed writes.
 
 ```text
 python3 agent-system/tools/aso/aso.py status --root . --mode package
@@ -32,7 +32,7 @@ python3 agent-system/tools/aso/aso.py status --root /path/to/project --mode work
 python3 agent-system/tools/aso/aso.py lint --root /path/to/project --mode workspace --strict
 ```
 
-It does not provide mutation, dispatch, or checkpoint commands.
+It does not dispatch live agents, execute checkpoints, or run daemons.
 """
 
 AUDIT_FAIL_RESULT = """AUDIT_RESULT:

@@ -949,20 +949,20 @@
       "size": 3928
     },
     "agent-system/GOVERNANCE_CHANGELOG.md": {
-      "sha256": "0923943ebc9eb2744cc8d47b9c67b4de499a10faeab2b278ec74b368b2346592",
-      "size": 134114
+      "sha256": "a819374a261bfdf68a1a1c93eca15870306b9264048d297a94a70004d618d3f6",
+      "size": 136754
     },
     "agent-system/ORCHESTRATOR_RUNTIME_CONTRACT.json": {
       "sha256": "8d9bc3e62e32dfa1f36a6cb20a76378ac30f48cc04ed76f1fd2d11f8b9253dc1",
       "size": 12167
     },
     "agent-system/PACKAGE_VERSIONING.md": {
-      "sha256": "db756599f10796c8c0759b068e8db02c57192d4eeea17070d25be58dd37b6eff",
-      "size": 24856
+      "sha256": "af1a2325e5044906dd3aafbd44aa96836c8adca9914f5532c8b6eebc938eb7c5",
+      "size": 24930
     },
     "agent-system/README.md": {
-      "sha256": "84d06760416632210b0f77cff49bd7773c9cf4647e8635227837e5f68d495647",
-      "size": 39415
+      "sha256": "2c53ee2f1586402ea9d5b09b2421126f7483fbfcfc06206f971426ff8e954b3a",
+      "size": 40345
     },
     "agent-system/scripts/checkpoint_preflight.sh": {
       "sha256": "2a09ca60456af7caa0d57648a329dffd52d718ce0df4a6a98f59ddf18db013bb",
@@ -1585,8 +1585,8 @@
       "size": 3437
     },
     "agent-system/tools/aso/agent_system_orchestrator_aso/aso_tool/commands/package_checks.py": {
-      "sha256": "334bac8945da05febff2fd75e96081b4877c3039a79b05636d44bf1db8405b78",
-      "size": 34731
+      "sha256": "e3d63cbded8936cc837e9421cb4354178392fa49809291b763fa7b048e22eedb",
+      "size": 49724
     },
     "agent-system/tools/aso/agent_system_orchestrator_aso/aso_tool/commands/package_layout.py": {
       "sha256": "159f7c89224a6eb281b4ddf28ef290788bc18868385f6aaf0a5d4a020efc9bf0",

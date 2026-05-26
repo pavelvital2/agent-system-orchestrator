@@ -72,6 +72,9 @@ package schema, and the Project Factory P1 command boundary. It does not claim
 full real-product Telegram bot generation and does not add semantic TZ reading,
 product-intake automation, daemon mode, live dispatch, product generation,
 secret collection, or checkpoint execution.
+The installed ASO helper supports read-only diagnostics plus explicit confirmed
+writes; mutating surfaces document their guarding mode or confirmation flag and
+bounded write roots.
 P57 release validation is recorded in
 `agent-system/11_release/ASO_P57_DOC_RUNTIME_CLEANUP_V3_7_8_VALIDATION_REPORT.md`;
 post-push GitHub Actions evidence for the final pushed HEAD is recorded in
@@ -261,8 +264,9 @@ aso state migrate --root agent-system/tests/fixtures/state/valid_workspace --to 
 
 `aso state init --dry-run` writes no files. Confirmed initialization requires a
 real workspace-local TZ document passed with `--tz` and `--confirm-write`, and
-writes only local ignored workspace sidecars under `project-runtime/state/`.
-Confirmed runtime writes use current UTC timestamps by default;
+writes only local ignored workspace files under `project-runtime/state/`,
+derived `project-runtime/*.md` compatibility views, and the canonical
+`project-input` TZ path. Confirmed runtime writes use current UTC timestamps by default;
 `--deterministic-timestamps` is reserved for tests and fixtures.
 `aso state migrate --dry-run` emits a deterministic plan for compatible legacy
 sidecars; confirmed migration requires
@@ -324,8 +328,10 @@ These commands are local and guarded. Proposal dry-runs write no workspace
 state except an explicit allowed `--json-out`; `--confirm-write` may persist a
 proposal only under `project-runtime/proposals/`. Apply writes nothing unless
 `--confirm-apply` is supplied, the proposal is fresh for the same workspace,
-and every guard passes. Checkpoint proposal records eligibility evidence only;
-it does not stage, commit, push, tag, or execute a checkpoint.
+and every guard passes; confirmed apply writes only supported state sidecars,
+receipts, and reports under `project-runtime/state`, `project-runtime/receipts`,
+and `project-runtime/reports`. Checkpoint proposal records eligibility evidence
+only; it does not stage, commit, push, tag, or execute a checkpoint.
 
 Create and verify a local vendored generated project without secrets or remote
 access:

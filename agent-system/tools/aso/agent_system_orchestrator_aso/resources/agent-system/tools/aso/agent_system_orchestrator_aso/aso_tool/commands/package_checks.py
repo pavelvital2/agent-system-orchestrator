@@ -1,7 +1,10 @@
-"""Read-only package repository checks for ASO CLI package mode."""
+"""Package repository checks for ASO CLI package mode."""
 
 from __future__ import annotations
 
+import argparse
+import hashlib
+import json
 import os
 import re
 import subprocess
@@ -14,7 +17,7 @@ from .. import resources
 try:
     import tomllib
 except ModuleNotFoundError:  # pragma: no cover - Python < 3.11 fallback
-    tomllib = None
+    import tomli as tomllib
 
 
 GENERATED_ROOTS = ("project-runtime", "project-input", "project-archive")
@@ -45,8 +48,141 @@ README_REQUIRED_TERMS = (
     ("workspace mode", "--mode workspace"),
     ("status command", "status"),
     ("lint command", "lint"),
-    ("read-only behavior", "read-only"),
-    ("no mutation/dispatch/checkpoint commands", "mutation, dispatch, or checkpoint"),
+    ("read-only diagnostics", "read-only diagnostics"),
+    ("confirmed writes", "explicit confirmed writes"),
+    ("no live dispatch/checkpoint", "dispatch live agents, execute checkpoints"),
+)
+AUTHORITY_SURFACE_RULE_ID = "PACKAGE_AUTHORITY_001"
+CONTROLLED_MUTATION_OPTIONS = ("--confirm-write", "--confirm-apply", "--confirm-publish")
+AUTHORITY_SURFACE_CONTRACT: tuple[dict[str, object], ...] = (
+    {
+        "command": ("design", "decision", "record"),
+        "confirmation_options": ("--confirm-write",),
+        "allowed_write_roots": ("project-runtime/owner-decisions",),
+        "tests": ("agent-system/tools/aso/tests/test_design_governance.py",),
+    },
+    {
+        "command": ("intake", "bootstrap"),
+        "confirmation_options": ("--confirm-write",),
+        "allowed_write_roots": ("project-runtime/tasks", "project-runtime/state"),
+        "tests": ("agent-system/tools/aso/tests/test_intake_bootstrap.py",),
+    },
+    {
+        "command": ("dispatch", "receipt"),
+        "confirmation_options": ("--confirm-write",),
+        "allowed_write_roots": ("project-runtime/agents/dispatches",),
+        "tests": ("agent-system/tools/aso/tests/test_dispatch_receipts.py",),
+    },
+    {
+        "command": ("propose", "next-task"),
+        "confirmation_options": ("--confirm-write",),
+        "allowed_write_roots": ("project-runtime/proposals",),
+        "tests": ("agent-system/tools/aso/tests/test_propose_next_task.py",),
+    },
+    {
+        "command": ("propose", "transition"),
+        "confirmation_options": ("--confirm-write",),
+        "allowed_write_roots": ("project-runtime/proposals",),
+        "tests": ("agent-system/tools/aso/tests/test_propose_transition.py",),
+    },
+    {
+        "command": ("propose", "checkpoint"),
+        "confirmation_options": ("--confirm-write",),
+        "allowed_write_roots": ("project-runtime/proposals",),
+        "tests": ("agent-system/tools/aso/tests/test_propose_checkpoint.py",),
+    },
+    {
+        "command": ("apply",),
+        "confirmation_options": ("--confirm-apply",),
+        "allowed_write_roots": (
+            "project-runtime/state",
+            "project-runtime/receipts",
+            "project-runtime/reports",
+        ),
+        "tests": ("agent-system/tools/aso/tests/test_apply.py",),
+    },
+    {
+        "command": ("artifact", "accept"),
+        "confirmation_options": ("--confirm-write",),
+        "allowed_write_roots": (
+            "project-runtime/artifacts/accepted",
+            "project-runtime/receipts/artifacts",
+            "project-runtime/agents/instances.jsonl",
+        ),
+        "tests": ("agent-system/tools/aso/tests/test_artifact.py",),
+    },
+    {
+        "command": ("artifact", "reject"),
+        "confirmation_options": ("--confirm-write",),
+        "allowed_write_roots": (
+            "project-runtime/artifacts/rejected",
+            "project-runtime/receipts/artifacts",
+        ),
+        "tests": ("agent-system/tools/aso/tests/test_artifact.py",),
+    },
+    {
+        "command": ("artifact", "render"),
+        "confirmation_options": ("--confirm-write",),
+        "allowed_write_roots": ("project-runtime/reports", "project-runtime/rendered"),
+        "tests": ("agent-system/tools/aso/tests/test_artifact.py",),
+    },
+    {
+        "command": ("lifecycle", "receive-result"),
+        "confirmation_options": ("--confirm-write",),
+        "allowed_write_roots": ("project-runtime/agents/instances.jsonl", "project-runtime"),
+        "tests": ("agent-system/tools/aso/tests/test_lifecycle.py",),
+    },
+    {
+        "command": ("lifecycle", "terminate-agent"),
+        "confirmation_options": ("--confirm-write",),
+        "allowed_write_roots": ("project-runtime/agents/instances.jsonl", "project-runtime"),
+        "tests": ("agent-system/tools/aso/tests/test_lifecycle.py",),
+    },
+    {
+        "command": ("state", "init"),
+        "confirmation_options": ("--confirm-write",),
+        "allowed_write_roots": ("project-runtime/state", "project-runtime", "project-input"),
+        "tests": ("agent-system/tools/aso/tests/test_state_init.py",),
+    },
+    {
+        "command": ("state", "migrate"),
+        "confirmation_options": ("--confirm-write",),
+        "allowed_write_roots": ("project-runtime/state", "project-runtime/reports", "project-runtime/receipts"),
+        "tests": ("agent-system/tools/aso/tests/test_state_migrate.py",),
+    },
+    {
+        "command": ("state", "render"),
+        "confirmation_options": ("--confirm-write",),
+        "allowed_write_roots": ("project-runtime/*.md", "project-runtime/reports", "project-runtime/rendered"),
+        "tests": ("agent-system/tools/aso/tests/test_state_render.py",),
+    },
+    {
+        "command": ("project", "create"),
+        "confirmation_options": ("--local", "--confirm-publish"),
+        "allowed_write_roots": (
+            "explicit --target",
+            "project-input",
+            "project-runtime",
+            "project-archive",
+            "agent-system",
+            "aso.lock",
+        ),
+        "tests": ("agent-system/tools/aso/tests/test_project.py",),
+    },
+    {
+        "command": ("wizard",),
+        "confirmation_options": (),
+        "confirmation_terms": ("explicit confirmation",),
+        "allowed_write_roots": (
+            "explicit target",
+            "project-input",
+            "project-runtime",
+            "project-archive",
+            "agent-system",
+            "aso.lock",
+        ),
+        "tests": ("agent-system/tools/aso/tests/test_wizard.py",),
+    },
 )
 CANONICAL_PACKAGE_RELPATH = "agent-system/tools/aso/agent_system_orchestrator_aso"
 CANONICAL_TOOL_RELPATH = f"{CANONICAL_PACKAGE_RELPATH}/aso_tool"
@@ -58,14 +194,15 @@ LEGACY_TOP_LEVEL_TREE_RELPATHS = (
     "agent-system/tools/aso/parsers",
     "agent-system/tools/aso/rules",
 )
-PYPROJECT_DISCOVERY_MARKERS = (
-    'aso = "agent_system_orchestrator_aso.cli:main"',
-    'where = ["agent-system/tools/aso"]',
-    'include = ["agent_system_orchestrator_aso*"]',
-)
 CONSOLE_ENTRYPOINT = "agent_system_orchestrator_aso.cli:main"
 WORKFLOW_DIR_RELPATH = ".github/workflows"
 WORKFLOW_TRIGGER_MARKERS = ("upgrade/",)
+RESOURCE_SOURCE_SYNC_RELPATHS = (
+    "agent-system/00_start/ORCHESTRATOR_START.md",
+    "agent-system/02_runtime/ORCHESTRATOR_RUNTIME_CONTRACT.json",
+    "agent-system/tools/aso/aso.py",
+    "agent-system/09_validators/rules/governance_rules.json",
+)
 
 
 @dataclass(frozen=True)
@@ -134,6 +271,7 @@ def inspect_package(root: Path) -> PackageInspection:
     _check_tracked_root_duplicate(tracked_root_duplicate_files, findings)
     _check_workflows(root, files, findings)
     _check_readmes(root, files, readmes, findings)
+    _check_authority_surface(root, findings)
     _check_gitignore(root, files, findings)
 
     return PackageInspection(
@@ -307,101 +445,86 @@ def _check_package_layout(
         )
         return
 
-    if tomllib is not None:
-        try:
-            metadata = tomllib.loads(pyproject_text)
-        except tomllib.TOMLDecodeError as exc:
-            findings.append(
-                Finding(
-                    "PACKAGE_LAYOUT_006",
-                    "error",
-                    "pyproject.toml is invalid",
-                    f"pyproject.toml could not be parsed: {exc}.",
-                    ["pyproject.toml"],
-                    "Restore valid pyproject.toml package discovery metadata.",
-                )
-            )
-            return
-
-        project = metadata.get("project", {})
-        scripts = project.get("scripts", {}) if isinstance(project, dict) else {}
-        aso_entrypoint = scripts.get("aso") if isinstance(scripts, dict) else None
-        tool = metadata.get("tool", {})
-        setuptools = tool.get("setuptools", {}) if isinstance(tool, dict) else {}
-        packages = setuptools.get("packages", {}) if isinstance(setuptools, dict) else {}
-        find_config = packages.get("find", {}) if isinstance(packages, dict) else {}
-        where = find_config.get("where", []) if isinstance(find_config, dict) else []
-        include = find_config.get("include", []) if isinstance(find_config, dict) else []
-        package_data = setuptools.get("package-data", {}) if isinstance(setuptools, dict) else {}
-        resource_package_data = (
-            package_data.get("agent_system_orchestrator_aso.resources")
-            if isinstance(package_data, dict)
-            else None
-        )
-
-        if aso_entrypoint != CONSOLE_ENTRYPOINT:
-            findings.append(
-                Finding(
-                    "PACKAGE_LAYOUT_007",
-                    "error",
-                    "Console script entrypoint is not canonical",
-                    f"pyproject.toml project.scripts.aso must be {CONSOLE_ENTRYPOINT!r}.",
-                    ["pyproject.toml"],
-                    "Point the aso console script at agent_system_orchestrator_aso.cli:main.",
-                )
-            )
-        if CANONICAL_PACKAGE_RELPATH.rsplit("/", 1)[0] not in where:
-            findings.append(
-                Finding(
-                    "PACKAGE_LAYOUT_006",
-                    "error",
-                    "pyproject package discovery root is not canonical",
-                    "pyproject.toml must set tool.setuptools.packages.find.where to agent-system/tools/aso.",
-                    ["pyproject.toml"],
-                    "Point setuptools package discovery at agent-system/tools/aso.",
-                )
-            )
-        if "agent_system_orchestrator_aso*" not in include:
-            findings.append(
-                Finding(
-                    "PACKAGE_LAYOUT_006",
-                    "error",
-                    "pyproject package include pattern is not canonical",
-                    "pyproject.toml must include agent_system_orchestrator_aso* packages.",
-                    ["pyproject.toml"],
-                    "Keep setuptools package discovery limited to agent_system_orchestrator_aso*.",
-                )
-            )
-        if (
-            not isinstance(resource_package_data, list)
-            or "RESOURCE_MANIFEST.json" not in resource_package_data
-            or "agent-system/**/*" not in resource_package_data
-        ):
-            findings.append(
-                Finding(
-                    "PACKAGE_RESOURCES_003",
-                    "error",
-                    "Resource package data is incomplete",
-                    (
-                        "pyproject.toml must include RESOURCE_MANIFEST.json and agent-system/**/* "
-                        "for agent_system_orchestrator_aso.resources package data."
-                    ),
-                    ["pyproject.toml"],
-                    "Declare complete ASO resource package data so wheels include vendored Project Factory resources.",
-                )
-            )
-        return
-
-    missing_markers = [marker for marker in PYPROJECT_DISCOVERY_MARKERS if marker not in pyproject_text]
-    if missing_markers:
+    try:
+        metadata = tomllib.loads(pyproject_text)
+    except tomllib.TOMLDecodeError as exc:
         findings.append(
             Finding(
                 "PACKAGE_LAYOUT_006",
                 "error",
-                "pyproject package discovery is not canonical",
-                f"pyproject.toml is missing: {', '.join(missing_markers)}.",
+                "pyproject.toml is invalid",
+                f"pyproject.toml could not be parsed: {exc}.",
                 ["pyproject.toml"],
-                "Point setuptools package discovery at agent-system/tools/aso and keep the aso console script entrypoint.",
+                "Restore valid pyproject.toml package discovery metadata.",
+            )
+        )
+        return
+
+    project = metadata.get("project", {})
+    scripts = project.get("scripts", {}) if isinstance(project, dict) else {}
+    aso_entrypoint = scripts.get("aso") if isinstance(scripts, dict) else None
+    tool = metadata.get("tool", {})
+    setuptools = tool.get("setuptools", {}) if isinstance(tool, dict) else {}
+    packages = setuptools.get("packages", {}) if isinstance(setuptools, dict) else {}
+    find_config = packages.get("find", {}) if isinstance(packages, dict) else {}
+    where = find_config.get("where", []) if isinstance(find_config, dict) else []
+    include = find_config.get("include", []) if isinstance(find_config, dict) else []
+    package_data = setuptools.get("package-data", {}) if isinstance(setuptools, dict) else {}
+    resource_package_data = (
+        package_data.get("agent_system_orchestrator_aso.resources")
+        if isinstance(package_data, dict)
+        else None
+    )
+
+    if aso_entrypoint != CONSOLE_ENTRYPOINT:
+        findings.append(
+            Finding(
+                "PACKAGE_LAYOUT_007",
+                "error",
+                "Console script entrypoint is not canonical",
+                f"pyproject.toml project.scripts.aso must be {CONSOLE_ENTRYPOINT!r}.",
+                ["pyproject.toml"],
+                "Point the aso console script at agent_system_orchestrator_aso.cli:main.",
+            )
+        )
+    if CANONICAL_PACKAGE_RELPATH.rsplit("/", 1)[0] not in where:
+        findings.append(
+            Finding(
+                "PACKAGE_LAYOUT_006",
+                "error",
+                "pyproject package discovery root is not canonical",
+                "pyproject.toml must set tool.setuptools.packages.find.where to agent-system/tools/aso.",
+                ["pyproject.toml"],
+                "Point setuptools package discovery at agent-system/tools/aso.",
+            )
+        )
+    if "agent_system_orchestrator_aso*" not in include:
+        findings.append(
+            Finding(
+                "PACKAGE_LAYOUT_006",
+                "error",
+                "pyproject package include pattern is not canonical",
+                "pyproject.toml must include agent_system_orchestrator_aso* packages.",
+                ["pyproject.toml"],
+                "Keep setuptools package discovery limited to agent_system_orchestrator_aso*.",
+            )
+        )
+    if (
+        not isinstance(resource_package_data, list)
+        or "RESOURCE_MANIFEST.json" not in resource_package_data
+        or "agent-system/**/*" not in resource_package_data
+    ):
+        findings.append(
+            Finding(
+                "PACKAGE_RESOURCES_003",
+                "error",
+                "Resource package data is incomplete",
+                (
+                    "pyproject.toml must include RESOURCE_MANIFEST.json and agent-system/**/* "
+                    "for agent_system_orchestrator_aso.resources package data."
+                ),
+                ["pyproject.toml"],
+                "Declare complete ASO resource package data so wheels include vendored Project Factory resources.",
             )
         )
 
@@ -478,6 +601,92 @@ def _check_packaged_resources(
                 "; ".join(check.errors[:10]),
                 [CANONICAL_RESOURCES_RELPATH],
                 "Regenerate the packaged resource tree and RESOURCE_MANIFEST.json from a clean ASO source tree.",
+            )
+        )
+        return
+
+    _check_root_resource_sync(root, resources_root, findings)
+
+
+def _check_root_resource_sync(root: Path, resources_root: Path, findings: list[Finding]) -> None:
+    if not all(
+        (root / relpath).exists()
+        for relpath in (
+            "agent-system/00_start",
+            "agent-system/02_runtime",
+            "agent-system/09_validators",
+        )
+    ):
+        return
+
+    manifest_path = resources_root / resources.RESOURCE_MANIFEST
+    try:
+        manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    except (OSError, UnicodeDecodeError, json.JSONDecodeError) as exc:
+        findings.append(
+            Finding(
+                "PACKAGE_RESOURCES_002",
+                "error",
+                "Packaged ASO resource manifest is unreadable",
+                f"{manifest_path.relative_to(root).as_posix()}: {exc}",
+                [CANONICAL_RESOURCES_RELPATH],
+                "Restore a readable packaged resource manifest.",
+            )
+        )
+        return
+
+    manifest_files = manifest.get("files") if isinstance(manifest, dict) else None
+    if not isinstance(manifest_files, dict):
+        findings.append(
+            Finding(
+                "PACKAGE_RESOURCES_002",
+                "error",
+                "Packaged ASO resource manifest is invalid",
+                "RESOURCE_MANIFEST.json files entry is missing or invalid.",
+                [CANONICAL_RESOURCES_RELPATH],
+                "Regenerate RESOURCE_MANIFEST.json from a clean ASO source tree.",
+            )
+        )
+        return
+
+    mismatches: list[str] = []
+    for relpath in RESOURCE_SOURCE_SYNC_RELPATHS:
+        source_path = root / relpath
+        packaged_path = resources_root / relpath
+        if not source_path.is_file():
+            mismatches.append(f"{relpath} missing from root source")
+            continue
+        if not packaged_path.is_file():
+            mismatches.append(f"{relpath} missing from packaged resources")
+            continue
+        metadata = manifest_files.get(relpath)
+        if not isinstance(metadata, dict):
+            mismatches.append(f"{relpath} missing from resource manifest")
+            continue
+        try:
+            source_data = source_path.read_bytes()
+            packaged_data = packaged_path.read_bytes()
+        except OSError as exc:
+            mismatches.append(f"{relpath} could not be read: {exc}")
+            continue
+        source_hash = hashlib.sha256(source_data).hexdigest()
+        packaged_hash = hashlib.sha256(packaged_data).hexdigest()
+        manifest_hash = metadata.get("sha256")
+        manifest_size = metadata.get("size")
+        if source_data != packaged_data or source_hash != packaged_hash:
+            mismatches.append(f"{relpath} root sha256={source_hash} packaged sha256={packaged_hash}")
+        if manifest_hash != packaged_hash or manifest_size != len(packaged_data):
+            mismatches.append(f"{relpath} manifest metadata does not match packaged resource")
+
+    if mismatches:
+        findings.append(
+            Finding(
+                "PACKAGE_RESOURCES_005",
+                "error",
+                "Packaged ASO resources differ from root source resources",
+                "; ".join(mismatches[:10]),
+                RESOURCE_SOURCE_SYNC_RELPATHS,
+                "Regenerate packaged ASO resources from the root source tree before building wheels or sdists.",
             )
         )
 
@@ -854,7 +1063,7 @@ def _check_readmes(
                     "README claims no CLI wrapper",
                     f"{relpath} claims the package has no CLI wrapper, but agent-system/tools/aso exists.",
                     [relpath, "agent-system/tools/aso"],
-                    "Update README wording to describe the read-only ASO helper CLI.",
+                    "Update README wording to describe ASO read-only diagnostics plus explicit confirmed writes.",
                 )
             )
             continue
@@ -878,6 +1087,182 @@ def _check_readmes(
             )
         else:
             readmes[relpath] = "consistent"
+
+
+def _check_authority_surface(root: Path, findings: list[Finding]) -> None:
+    """Verify write-capable public command surfaces against the authority inventory."""
+
+    try:
+        from .. import aso as aso_cli
+
+        parser = aso_cli.build_parser()
+    except Exception as exc:  # pragma: no cover - defensive package-mode guard
+        findings.append(
+            Finding(
+                AUTHORITY_SURFACE_RULE_ID,
+                "error",
+                "ASO authority surface could not be inspected",
+                f"The argparse command tree could not be built: {exc}.",
+                [CANONICAL_TOOL_RELPATH],
+                "Repair the ASO parser so package-layout can verify write authority surfaces.",
+            )
+        )
+        return
+
+    command_parsers = _collect_command_parsers(parser)
+    inventory = {
+        tuple(item["command"]): item
+        for item in AUTHORITY_SURFACE_CONTRACT
+        if isinstance(item.get("command"), tuple)
+    }
+    findings.extend(_authority_inventory_findings(root, command_parsers, inventory))
+    findings.extend(_unexpected_confirmation_findings(command_parsers, inventory))
+
+
+def _collect_command_parsers(parser: argparse.ArgumentParser) -> dict[tuple[str, ...], argparse.ArgumentParser]:
+    collected: dict[tuple[str, ...], argparse.ArgumentParser] = {}
+
+    def visit(current: argparse.ArgumentParser, path: tuple[str, ...]) -> None:
+        if path:
+            collected[path] = current
+        for action in current._actions:
+            if not isinstance(action, argparse._SubParsersAction):
+                continue
+            for name, child in action.choices.items():
+                visit(child, (*path, name))
+
+    visit(parser, ())
+    return collected
+
+
+def _parser_options(parser: argparse.ArgumentParser) -> set[str]:
+    return {
+        option
+        for action in parser._actions
+        for option in getattr(action, "option_strings", ())
+    }
+
+
+def _parser_authority_text(parser: argparse.ArgumentParser) -> str:
+    parts = [
+        str(parser.description or ""),
+        str(parser.epilog or ""),
+    ]
+    for action in parser._actions:
+        parts.extend(str(option) for option in getattr(action, "option_strings", ()))
+        parts.append(str(getattr(action, "help", "") or ""))
+        parts.append(str(getattr(action, "metavar", "") or ""))
+    return "\n".join(parts).lower()
+
+
+def _authority_inventory_findings(
+    root: Path,
+    command_parsers: dict[tuple[str, ...], argparse.ArgumentParser],
+    inventory: dict[tuple[str, ...], dict[str, object]],
+) -> list[Finding]:
+    findings: list[Finding] = []
+    inventory_tests = sorted(
+        {
+            test_path
+            for contract in inventory.values()
+            for test_path in _string_tuple(contract.get("tests"))
+        }
+    )
+    verify_tests = any((root / test_path).is_file() for test_path in inventory_tests)
+
+    for command, contract in sorted(inventory.items()):
+        parser = command_parsers.get(command)
+        command_text = " ".join(command)
+        if parser is None:
+            findings.append(
+                Finding(
+                    AUTHORITY_SURFACE_RULE_ID,
+                    "error",
+                    "Mutating command inventory references a missing command",
+                    f"Authority inventory command {command_text!r} is not present in the public argparse tree.",
+                    [CANONICAL_TOOL_RELPATH],
+                    "Keep the authority inventory synchronized with the existing public command tree.",
+                )
+            )
+            continue
+
+        options = _parser_options(parser)
+        missing_options = [
+            option
+            for option in _string_tuple(contract.get("confirmation_options"))
+            if option not in options
+        ]
+        authority_text = _parser_authority_text(parser)
+        missing_terms = [
+            term
+            for term in _string_tuple(contract.get("confirmation_terms"))
+            if term.lower() not in authority_text
+        ]
+        missing_roots = [
+            root_text
+            for root_text in _string_tuple(contract.get("allowed_write_roots"))
+            if root_text.lower() not in authority_text
+        ]
+        missing_tests = [
+            test_path
+            for test_path in _string_tuple(contract.get("tests"))
+            if verify_tests and not (root / test_path).is_file()
+        ]
+        if missing_options or missing_terms or missing_roots or missing_tests:
+            details: list[str] = []
+            if missing_options:
+                details.append(f"missing confirmation option(s): {', '.join(missing_options)}")
+            if missing_terms:
+                details.append(f"missing confirmation wording: {', '.join(missing_terms)}")
+            if missing_roots:
+                details.append(f"missing allowed write root wording: {', '.join(missing_roots)}")
+            if missing_tests:
+                details.append(f"missing test coverage file(s): {', '.join(missing_tests)}")
+            findings.append(
+                Finding(
+                    AUTHORITY_SURFACE_RULE_ID,
+                    "error",
+                    "Mutating command authority surface is incomplete",
+                    f"{command_text}: {'; '.join(details)}.",
+                    [CANONICAL_TOOL_RELPATH, *list(_string_tuple(contract.get("tests")))],
+                    "Each mutating command surface must expose its confirmation gate, bounded write roots, and local tests.",
+                )
+            )
+
+    return findings
+
+
+def _unexpected_confirmation_findings(
+    command_parsers: dict[tuple[str, ...], argparse.ArgumentParser],
+    inventory: dict[tuple[str, ...], dict[str, object]],
+) -> list[Finding]:
+    findings: list[Finding] = []
+    for command, parser in sorted(command_parsers.items()):
+        options = _parser_options(parser)
+        present = sorted(set(CONTROLLED_MUTATION_OPTIONS).intersection(options))
+        if present and command not in inventory:
+            findings.append(
+                Finding(
+                    AUTHORITY_SURFACE_RULE_ID,
+                    "error",
+                    "Uninventoried mutating command option is present",
+                    (
+                        f"{' '.join(command)} exposes {', '.join(present)} but is not listed "
+                        "in the package authority surface inventory."
+                    ),
+                    [CANONICAL_TOOL_RELPATH],
+                    "Add the existing command to AUTHORITY_SURFACE_CONTRACT or remove the unintended write gate.",
+                )
+            )
+    return findings
+
+
+def _string_tuple(value: object) -> tuple[str, ...]:
+    if isinstance(value, tuple):
+        return tuple(item for item in value if isinstance(item, str))
+    if isinstance(value, list):
+        return tuple(item for item in value if isinstance(item, str))
+    return ()
 
 
 def _check_gitignore(

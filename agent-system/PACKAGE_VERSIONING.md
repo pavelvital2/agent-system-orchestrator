@@ -93,7 +93,8 @@ CURRENT_GOVERNANCE_RULESET_VERSION: 3.0.0
 CURRENT_RUNTIME_SCHEMA_VERSION: 3.0.0
 ```
 
-This major update introduces the experimental read-only ASO helper CLI and
+This major update introduces the experimental filesystem-governed ASO
+control-plane CLI with read-only diagnostics and explicit confirmed writes. It
 requires explicit package/workspace mode selection for package repository and
 target workspace validation. Package repository cleanup policy treats root
 generated workspace artifacts as non-package state: root

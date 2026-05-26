@@ -76,8 +76,9 @@ def _minimal_layout_fixture(root: Path) -> None:
     readme = (
         "ASO CLI path: agent-system/tools/aso/aso.py\n"
         "Use --mode package for package mode and --mode workspace for workspace mode.\n"
-        "The status command and lint command are read-only.\n"
-        "The helper does not provide mutation, dispatch, or checkpoint authority.\n"
+        "The status command and lint command are read-only diagnostics.\n"
+        "The helper supports read-only diagnostics plus explicit confirmed writes.\n"
+        "The helper does not dispatch live agents, execute checkpoints, or run daemons.\n"
     )
     _write(root / "README.md", readme)
     _write(root / "agent-system" / "README.md", readme)

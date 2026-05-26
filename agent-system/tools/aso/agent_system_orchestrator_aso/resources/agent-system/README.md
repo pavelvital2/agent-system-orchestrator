@@ -160,7 +160,8 @@ accepted repository lock explicitly allows it.
 The package includes a filesystem-governed ASO helper CLI at
 `agent-system/tools/aso/aso.py`. Most commands are read-only diagnostics or
 dry-run proposals, while Project Factory commands may create generated
-projects only within explicit target paths.
+projects only within explicit target paths and other mutating surfaces require
+explicit confirmation before bounded writes.
 
 This P58 schema/template version sync records the active package
 metadata as the governed `3.7.9` package/governance tuple with runtime schema
@@ -170,6 +171,12 @@ P1 command boundary, Runtime Schema `3.1.1`, and Artifact Package Schema
 `CREATE_AGENT` only after proving the current next action can dispatch a
 profile agent with a valid role, task id, task packet, task registry entry,
 gate state, and workspace/repository baseline.
+`plan-next --strict` exits `0` when it produces a valid route/action, including
+non-dispatch routes such as `ACCEPT_ARTIFACT` and `CORRECTION_REQUIRED`; exits
+`1` when governance blocks routing; exits `2` for command/runtime errors such
+as an unwritable JSON report path; and exits `3` when state is invalid or
+corrupt. JSON reports include `route_status`, `fatal`, and `exit_code` for this
+route-level contract while preserving the existing `status` field.
 The dispatchability authority for identity and repository readiness is
 `PROJECT_STATE`: `identity_validation_status` is limited to
 `not_checked | passed | failed | blocked`, and `repository_lock_status` is
@@ -350,8 +357,9 @@ python3 agent-system/tools/aso/aso.py checkpoint-preflight --root . --mode packa
 
 `aso validate-rules` checks the packaged governance rule registry. `aso state
 init --dry-run` writes no files; confirmed initialization requires
-`--confirm-write` and writes only local ignored workspace sidecars under the
-selected root. Confirmed runtime writes use current UTC timestamps by default;
+`--confirm-write` and writes only local ignored workspace state under
+`project-runtime/state`, derived `project-runtime/*.md` compatibility views,
+and the canonical `project-input` TZ path. Confirmed runtime writes use current UTC timestamps by default;
 `--deterministic-timestamps` on `state init` and `intake bootstrap` is reserved
 for tests, golden fixtures, and reproducible documentation captures. `aso state
 migrate --dry-run` emits a deterministic migration plan for compatible legacy
@@ -386,7 +394,9 @@ Proposal commands default to dry-run. `--confirm-write` may write only proposal
 artifacts under `project-runtime/proposals/`. `aso apply --dry-run` validates
 a proposal and writes no state. `aso apply --confirm-apply` is required before
 any supported runtime-state mutation and must emit a receipt under
-`project-runtime/receipts/`. Checkpoint proposal is not checkpoint execution.
+`project-runtime/receipts/`; confirmed apply writes only under
+`project-runtime/state`, `project-runtime/receipts`, and
+`project-runtime/reports`. Checkpoint proposal is not checkpoint execution.
 
 ```text
 python3 agent-system/tools/aso/aso.py propose --help
@@ -443,8 +453,10 @@ fixtures, rule validation, state sidecar verification, dry-run next-action
 planning, static dashboard rendering to `/tmp`, checkpoint preflight, and the
 local Stage 3 diagnostics. `make install-smoke` performs a clean isolated
 install from a source archive. `make install-test-smoke` repeats that clean
-install with the supported `[test]` extra and imports `jsonschema` from the
-temporary virtual environment instead of relying on an ambient global package.
+install with the supported `[test]` extra, imports `jsonschema` from the
+temporary virtual environment, and runs an installed Project Factory local
+create plus `verify-clean` smoke. Python 3.10 receives the conditional `tomli`
+runtime dependency for TOML parsing while Python 3.11+ uses stdlib `tomllib`.
 `make ci` runs `test`, `smoke`, `doctor`, `lint`, clean install smoke, clean
 `[test]` install smoke, real-TZ E2E smoke, source contamination guard, and
 `git diff --check`. The GitHub Actions workflow runs the same `make ci`
@@ -472,16 +484,17 @@ dashboard rendering, checkpoint eligibility preflight, archive verify
 inspection, P5 artifact package validation and classification, lifecycle
 receipt materialization, and Project Factory scoped generated-project helpers.
 Diagnostic, validator, planning, dashboard, archive, and checkpoint-preflight
-surfaces remain read-only, dry-run, or proposal-only. State writes are limited to
-explicit `state init --confirm-write`, `state migrate --confirm-write`, and
-generated-project local initialization under ignored workspace roots. Project
-Factory commands may create generated projects and, when a later publish flow
-is explicitly confirmed, publish only clean generated-project files from
-explicit target paths. Outside the P3 local runtime-state proposal/apply
-boundary, ASO does not provide a runtime daemon, live agent dispatch,
-checkpoint execution, general package/runtime mutation, commit, or push
-authority. For package lint compatibility, this scoped boundary is also
-stated as: ASO diagnostic surfaces do not provide general mutation, dispatch, or checkpoint authority.
+surfaces remain read-only, dry-run, or proposal-only. The helper supports
+read-only diagnostics plus explicit confirmed writes. State writes are limited
+to explicit `state init --confirm-write`, `state migrate --confirm-write`,
+`state render --confirm-write`, guarded lifecycle receipt commands, artifact
+classification commands, P3 `apply --confirm-apply`, and generated-project
+local initialization under ignored workspace roots. Project Factory commands
+may create generated projects and, when a later publish flow is explicitly
+confirmed, publish only clean generated-project files from explicit target
+paths. Outside these bounded write surfaces, ASO does not provide a runtime
+daemon, dispatch live agents, execute checkpoints, perform general
+package/runtime mutation, commit, or push authority.
 
 Profile-agent completion follows the P5 artifact package sequence:
 

@@ -33,7 +33,8 @@ class PackagingCommandTests(unittest.TestCase):
         )
 
         self.assertEqual(result.returncode, 0, result.stderr)
-        self.assertIn("Read-only Agent System Orchestrator control-plane helper.", result.stdout)
+        self.assertIn("Filesystem-governed ASO control-plane CLI with read-only diagnostics", result.stdout)
+        self.assertIn("explicit confirmed writes.", result.stdout)
         self.assertIn("status", result.stdout)
         self.assertIn("lint", result.stdout)
         self.assertIn("doctor", result.stdout)

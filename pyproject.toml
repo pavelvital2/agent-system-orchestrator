@@ -5,7 +5,7 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "agent-system-orchestrator"
 version = "3.7.9"
-description = "Filesystem-governed Agent System Orchestrator package with read-only ASO helper CLI."
+description = "Filesystem-governed ASO control-plane CLI with read-only diagnostics and explicit confirmed writes."
 readme = "README.md"
 requires-python = ">=3.10"
 dependencies = [

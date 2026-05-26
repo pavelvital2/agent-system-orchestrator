@@ -18,7 +18,8 @@ The package is a filesystem-governed instruction, template, lifecycle, and
 validation system for Codex CLI orchestration. It includes a
 filesystem-governed ASO helper CLI at `agent-system/tools/aso/aso.py`: most
 commands are read-only diagnostics or dry-run proposals, while Project Factory
-commands may create generated projects only within explicit target paths.
+commands may create generated projects only within explicit target paths and
+other mutating surfaces require explicit confirmation before bounded writes.
 
 This P58 schema/template version sync records the active package
 metadata as the governed `3.7.9` package/governance tuple with runtime schema
@@ -275,8 +276,9 @@ python3 agent-system/tools/aso/aso.py checkpoint-preflight --root . --mode packa
 
 `aso state init --dry-run` writes no files. Confirmed initialization requires a
 real workspace-local TZ document passed with `--tz` and `--confirm-write`, and
-writes only local ignored workspace state under the selected root. Confirmed
-runtime writes use current UTC timestamps by default;
+writes only local ignored workspace state under `project-runtime/state`,
+derived `project-runtime/*.md` compatibility views, and the canonical
+`project-input` TZ path. Confirmed runtime writes use current UTC timestamps by default;
 `--deterministic-timestamps` is reserved for tests and fixtures. `aso state
 migrate --dry-run` emits a deterministic migration plan for compatible legacy
 sidecars; confirmed migration requires
@@ -318,8 +320,9 @@ Runtime Schema `3.1.1` state. Proposal commands do not dispatch agents, do not
 write canonical state sidecars, and do not commit or push. Checkpoint proposal
 is checkpoint eligibility evidence only; it is not checkpoint execution.
 Confirmed apply requires `--confirm-apply`, re-runs guards, and may write only
-supported runtime-state changes plus receipts under ignored workspace runtime
-roots.
+supported runtime-state changes, receipts, and reports under
+`project-runtime/state`, `project-runtime/receipts`, and
+`project-runtime/reports`.
 
 ```text
 python3 agent-system/tools/aso/aso.py propose --help
@@ -493,19 +496,19 @@ dashboard rendering, checkpoint eligibility preflight, archive verify
 inspection, P4 design governance, and Project Factory scoped generated-project
 helpers. Diagnostic, validator, design-governance, planning, dashboard,
 archive, and checkpoint-preflight surfaces
-remain read-only, dry-run, or proposal-only. State writes are limited to
-explicit `state init --confirm-write`, `state migrate --confirm-write`, and
+remain read-only, dry-run, or proposal-only. The helper supports read-only
+diagnostics plus explicit confirmed writes. State writes are limited to
+explicit `state init --confirm-write`, `state migrate --confirm-write`,
+`state render --confirm-write`, guarded lifecycle receipt commands,
+artifact classification commands, P3 `apply --confirm-apply`, and
 generated-project local initialization under ignored workspace roots. Design
 decision recording is limited to explicit `design decision record
 --confirm-write` under ignored local owner-decision runtime roots. Project
 Factory commands may create generated projects and, when a later publish flow
 is explicitly confirmed, publish only clean generated-project files from
-explicit target paths. Outside the P3 local runtime-state proposal/apply
-boundary and the P4 owner-decision recording boundary, ASO does not provide a
-runtime daemon, live agent dispatch, checkpoint execution, general
-package/runtime mutation, commit, or push authority. For package lint
-compatibility, this scoped boundary is also stated as: ASO diagnostic surfaces
-do not provide general mutation, dispatch, or checkpoint authority.
+explicit target paths. Outside these bounded write surfaces, ASO does not
+provide a runtime daemon, dispatch live agents, execute checkpoints, perform
+general package/runtime mutation, commit, or push authority.
 
 ## Publication boundary
 

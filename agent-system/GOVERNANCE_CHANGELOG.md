@@ -2404,3 +2404,51 @@ AUTHORIZED_BY: project_owner
 AUDIT_REQUIRED: yes
 STATUS: accepted
 ```
+
+```text
+CHANGE_ID: GOV-2026-05-26-090
+CHANGE_TITLE: TASK_ASO_P58F1_090_AUTHORITY_SURFACE_AND_PACKAGE_METADATA_CONTRACT
+DATE: 2026-05-26
+PACKAGE_VERSION_BEFORE: 3.7.9
+PACKAGE_VERSION_AFTER: 3.7.9
+GOVERNANCE_RULESET_BEFORE: 3.7.9
+GOVERNANCE_RULESET_AFTER: 3.7.9
+RUNTIME_SCHEMA_BEFORE: 3.1.1
+RUNTIME_SCHEMA_AFTER: 3.1.1
+ARTIFACT_PACKAGE_SCHEMA_BEFORE: 1.1.0
+ARTIFACT_PACKAGE_SCHEMA_AFTER: 1.1.0
+CHANGE_TYPE: correction
+CHANGE_SUBTYPE: authority_surface_and_package_metadata_contract
+AFFECTED_FILES:
+- pyproject.toml
+- README.md
+- README_INSTALL.md
+- agent-system/PACKAGE_VERSIONING.md
+- agent-system/README.md
+- agent-system/GOVERNANCE_CHANGELOG.md
+- agent-system/tools/aso/agent_system_orchestrator_aso/aso_tool/aso.py
+- agent-system/tools/aso/agent_system_orchestrator_aso/aso_tool/commands/package_checks.py
+- agent-system/tools/aso/agent_system_orchestrator_aso/resources/RESOURCE_MANIFEST.json
+- agent-system/tools/aso/agent_system_orchestrator_aso/resources/agent-system/PACKAGE_VERSIONING.md
+- agent-system/tools/aso/agent_system_orchestrator_aso/resources/agent-system/tools/aso/agent_system_orchestrator_aso/aso_tool/commands/package_checks.py
+- agent-system/tools/aso/tests/test_checkpoint_preflight.py
+- agent-system/tools/aso/tests/test_cli_mode_guard.py
+- agent-system/tools/aso/tests/test_doctor.py
+- agent-system/tools/aso/tests/test_lint.py
+- agent-system/tools/aso/tests/test_package_layout.py
+- agent-system/tools/aso/tests/test_package_sync.py
+- agent-system/tools/aso/tests/test_packaging.py
+- agent-system/tools/aso/tests/test_status.py
+AFFECTED_INVARIANTS:
+- Package metadata must describe ASO as read-only diagnostics plus explicit confirmed writes, not as globally read-only.
+- Existing mutating public command surfaces must remain inventoried with confirmation gates, bounded write roots, and local test coverage where practical.
+- `package-layout verify --strict` must structurally inspect the command authority surface and fail on missing gates or uninventoried confirmation options.
+AFFECTED_TRANSITIONS:
+- package-layout strict verification -> authority surface inventory -> metadata wording consistency.
+SCHEMA_TEMPLATE_IMPACT: none; Runtime Schema 3.1.1 and Artifact Package Schema 1.1.0 are preserved.
+MIGRATION_REQUIRED: no
+MIGRATION_NOTE: Package wording and structural package verification only; no active project-runtime migration, runtime schema change, artifact package schema change, live dispatch executor, checkpoint executor, daemon, product-intake engine, external worker, product generation, or secret collection is introduced.
+AUTHORIZED_BY: project_owner
+AUDIT_REQUIRED: yes
+STATUS: accepted
+```

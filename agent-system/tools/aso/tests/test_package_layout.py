@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import hashlib
+import argparse
 import json
 import os
 import subprocess
@@ -11,6 +12,11 @@ from pathlib import Path
 
 
 CLI = Path(__file__).resolve().parents[1] / "aso.py"
+ASO_TOOL_ROOT = Path(__file__).resolve().parents[1]
+if str(ASO_TOOL_ROOT) not in sys.path:
+    sys.path.insert(0, str(ASO_TOOL_ROOT))
+
+from agent_system_orchestrator_aso.aso_tool.commands import package_checks
 
 
 def _write(path: Path, text: str) -> None:
@@ -22,8 +28,9 @@ def _readme_text() -> str:
     return (
         "ASO CLI path: agent-system/tools/aso/aso.py\n"
         "Use --mode package for package mode and --mode workspace for workspace mode.\n"
-        "The status command and lint command are read-only.\n"
-        "The helper does not provide mutation, dispatch, or checkpoint authority.\n"
+        "The status command and lint command are read-only diagnostics.\n"
+        "The helper supports read-only diagnostics plus explicit confirmed writes.\n"
+        "The helper does not dispatch live agents, execute checkpoints, or run daemons.\n"
     )
 
 
@@ -251,6 +258,48 @@ class PackageLayoutTests(unittest.TestCase):
 
         self.assertEqual(result.returncode, 1, result.stderr)
         self.assertIn("PACKAGE_RESOURCES_005", {finding["rule_id"] for finding in report["findings"]})
+
+    def test_authority_surface_missing_confirmation_fails(self) -> None:
+        parser = argparse.ArgumentParser(prog="aso")
+        subparsers = parser.add_subparsers(dest="command")
+        state_parser = subparsers.add_parser("state")
+        state_subparsers = state_parser.add_subparsers(dest="state_command")
+        init_parser = state_subparsers.add_parser(
+            "init",
+            description="Writes project-runtime/state, project-runtime, and project-input.",
+        )
+        init_parser.add_argument("--dry-run", action="store_true")
+        command_parsers = package_checks._collect_command_parsers(parser)
+
+        findings = package_checks._authority_inventory_findings(
+            Path("/tmp/minimal"),
+            command_parsers,
+            {
+                ("state", "init"): {
+                    "command": ("state", "init"),
+                    "confirmation_options": ("--confirm-write",),
+                    "allowed_write_roots": ("project-runtime/state", "project-runtime", "project-input"),
+                    "tests": (),
+                }
+            },
+        )
+
+        self.assertEqual({finding.rule_id for finding in findings}, {"PACKAGE_AUTHORITY_001"})
+        self.assertIn("missing confirmation option", findings[0].details)
+
+    def test_authority_surface_uninventoried_confirmation_fails(self) -> None:
+        parser = argparse.ArgumentParser(prog="aso")
+        subparsers = parser.add_subparsers(dest="command")
+        parser_with_write_gate = subparsers.add_parser("new-surface")
+        parser_with_write_gate.add_argument("--confirm-write", action="store_true")
+
+        findings = package_checks._unexpected_confirmation_findings(
+            package_checks._collect_command_parsers(parser),
+            {},
+        )
+
+        self.assertEqual({finding.rule_id for finding in findings}, {"PACKAGE_AUTHORITY_001"})
+        self.assertIn("not listed", findings[0].details)
 
 
 if __name__ == "__main__":
