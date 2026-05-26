@@ -21,16 +21,20 @@ commands are read-only diagnostics or dry-run proposals, while Project Factory
 commands may create generated projects only within explicit target paths and
 other mutating surfaces require explicit confirmation before bounded writes.
 
-This P58 schema/template version sync records the active package
+This P58/P58F1 no-upgrade correction line records the active package
 metadata as the governed `3.7.9` package/governance tuple with runtime schema
 `3.1.1` and artifact package schema `1.1.0`. It preserves installed real-TZ
 intake guidance, release validation evidence, clean install semantics, source
-hygiene, and CI E2E smoke coverage;
+hygiene, and filesystem/governance lifecycle E2E smoke coverage;
 the P5.4 planner Dispatchability Gate remains the active authority:
 `plan-next` may recommend `CREATE_AGENT` only after proving the current next
 action can dispatch a profile agent with a valid role, task id, task packet,
-task registry entry, gate state, and workspace/repository baseline. ASO
-remains a governance and control conveyor: it validates bootstrap state
+task registry entry, gate state, and workspace/repository baseline. ASO Current
+smoke and regression targets exercise package install, filesystem state
+lifecycle, governance routing, audit/correction transitions, and source-hygiene
+boundaries. They are not full automatic product generation tests and do not
+prove generated application completeness.
+ASO remains a governance and control conveyor: it validates bootstrap state
 consistency and repair routes, but it does not interpret raw TZ content,
 replace project designer reasoning, generate product questions from TZ,
 install product-intake code or a product-intake engine, run a daemon, dispatch
@@ -58,11 +62,16 @@ P57 release evidence is recorded in
 `agent-system/11_release/ASO_P57_DOC_RUNTIME_CLEANUP_V3_7_8_RELEASE_NOTES.md`
 and
 `agent-system/11_release/ASO_P57_DOC_RUNTIME_CLEANUP_V3_7_8_VALIDATION_REPORT.md`.
-Post-push remote CI evidence for the final pushed HEAD is recorded separately
-in
+The in-repository remote CI evidence selector/procedure for P57 is recorded in
 `agent-system/11_release/ASO_P57_DOC_RUNTIME_CLEANUP_V3_7_8_REMOTE_CI_EVIDENCE.md`
-after GitHub Actions completes. P57 documents final real-TZ readiness criteria
-but does not claim final real-TZ acceptance beyond the required smoke target.
+without recording an immutable final run id or final post-push HEAD evidence.
+P57 documents final real-TZ readiness criteria but does not claim final real-TZ
+acceptance beyond the required smoke target.
+For P57, P58, and P58F1 release evidence, in-repository files may define the
+remote CI selector/procedure. Immutable final run id, final HEAD,
+status, and URL evidence is recorded in the external release/audit RESULT after
+the final push so the evidence process does not create an infinite commit/CI
+loop.
 
 The corrected P4 governance boundary is documented in
 `agent-system/02_runtime/PROJECT_DESIGN_GAP_GOVERNANCE_P4_CONTRACT.md`.
@@ -469,6 +478,10 @@ clean install smoke, clean `[test]` install smoke, real-TZ E2E smoke, source
 contamination guard, and whitespace diff checks. CI should use the same local
 `make ci` command and must not require secrets, network credentials, real
 remotes, publishing permissions, or live automation authority.
+`make e2e-real-tz-smoke` is a filesystem/governance lifecycle E2E smoke for
+real-TZ intake/bootstrap and read-only planning. The target name is retained
+for compatibility; it is not a full automatic product generator or live runner
+acceptance target.
 
 Final local and CI validation commands for this package are:
 

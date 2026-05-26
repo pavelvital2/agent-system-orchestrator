@@ -35,7 +35,7 @@ P57 covers these accepted task results:
 | `TASK_ASO_P57_060_CLI_MODE_OMISSION_GUARD` | package/workspace mode omission guard documented and covered |
 | `TASK_ASO_P57_070_PACKAGE_SYNC_BOUNDARY_DOCS` | deprecated package-sync alias boundary documented without duplicate package trees |
 | `TASK_ASO_P57_080_ORCHESTRATOR_AGENT_GOVERNANCE_HARDENING` | one-agent/one-task lifecycle, reasoning floor, task complexity, and lifecycle policy governance hardened |
-| `TASK_ASO_P57_090_RELEASE_VALIDATION_AND_REMOTE_CI_EVIDENCE` | final release notes, local validation report, changelog entry, and post-push remote CI evidence recorded |
+| `TASK_ASO_P57_090_RELEASE_VALIDATION_AND_REMOTE_CI_EVIDENCE` | final release notes, local validation report, changelog entry, and remote CI selector/procedure recorded |
 
 ## Validation Evidence
 
@@ -45,15 +45,16 @@ Local release validation is recorded in:
 agent-system/11_release/ASO_P57_DOC_RUNTIME_CLEANUP_V3_7_8_VALIDATION_REPORT.md
 ```
 
-Post-push GitHub Actions evidence for the final pushed HEAD is recorded in:
+The remote CI selector/procedure for the final pushed HEAD is defined in:
 
 ```text
 agent-system/11_release/ASO_P57_DOC_RUNTIME_CLEANUP_V3_7_8_REMOTE_CI_EVIDENCE.md
 ```
 
-The remote CI evidence file is a post-push observation. It must not be filled
-before the final pushed HEAD has a completed `ASO Package Governance` run with
-`CONCLUSION: success`.
+The in-repository remote CI evidence file defines the selector/procedure only.
+Immutable final run id, final HEAD, status, and URL evidence belongs in the
+external release/audit RESULT after the final push, once the final pushed HEAD
+has a completed `ASO Package Governance` run with `CONCLUSION: success`.
 
 ## Final Real-TZ Readiness Boundary
 

@@ -8,7 +8,7 @@
 - Validation date: 2026-05-24
 - Validation completed: 2026-05-24T16:23:12Z
 - Validation timezone basis: local commands ran from the package checkout;
-  remote CI evidence is recorded separately in UTC after push.
+  remote CI evidence is selected separately after push.
 
 ## Version Tuple
 
@@ -23,8 +23,10 @@ DESIGN_GAP_GOVERNANCE_SCHEMA_VERSION: 1.0.0
 ## Scope
 
 This report records final P57 local validation and release-evidence closure.
-Remote GitHub Actions evidence is intentionally recorded in the separate
-post-push evidence file after the final pushed HEAD completes CI.
+Remote GitHub Actions evidence is intentionally defined as a selector/procedure
+in the separate remote CI evidence file. Immutable final run id, final HEAD,
+status, and URL evidence belongs in the external release/audit RESULT after the
+final push.
 
 Release notes:
 
@@ -50,7 +52,7 @@ agent-system/11_release/ASO_P57_DOC_RUNTIME_CLEANUP_V3_7_8_REMOTE_CI_EVIDENCE.md
 | `TASK_ASO_P57_060_CLI_MODE_OMISSION_GUARD` | `08a6bdf8683056f03b47714661f67646b153f7c2`; GitHub Actions run `26365282676` success | omitted package/workspace mode ambiguity guard documented and tested |
 | `TASK_ASO_P57_070_PACKAGE_SYNC_BOUNDARY_DOCS` | `c1f27b10a9e850a024baf04d98bdceb0eaa6e719`; GitHub Actions run `26365548963` success | deprecated package-sync alias boundary documented and tested |
 | `TASK_ASO_P57_080_ORCHESTRATOR_AGENT_GOVERNANCE_HARDENING` | `d26c2b6fbd4c35a29c9e8dd1adc86b9b30d1a970`; GitHub Actions run `26366064526` success | `GOV-2026-05-24-011` accepted; one-agent/one-task, reasoning-floor, task complexity, and lifecycle-policy governance hardened |
-| `TASK_ASO_P57_090_RELEASE_VALIDATION_AND_REMOTE_CI_EVIDENCE` | this report, release notes, changelog entry `GOV-2026-05-24-012`, and post-push remote CI evidence file | final P57 local validation and remote CI evidence closure |
+| `TASK_ASO_P57_090_RELEASE_VALIDATION_AND_REMOTE_CI_EVIDENCE` | this report, release notes, changelog entry `GOV-2026-05-24-012`, and remote CI selector/procedure file | final P57 local validation and remote CI evidence closure |
 
 ## Active Tuple Coherence
 
@@ -122,6 +124,8 @@ Expected result is empty output. No P57 release evidence may track root
 ## Result
 
 - STATUS: passed-local-validation.
-- FINAL_REMOTE_CI_FOR_FINAL_PUSHED_HEAD: recorded only in the post-push remote
-  CI evidence file.
+- FINAL_REMOTE_CI_FOR_FINAL_PUSHED_HEAD: the in-repo remote CI evidence file
+  defines the selector/procedure only; immutable final run id, final HEAD,
+  status, and URL evidence are recorded in the external release/audit RESULT
+  after the final push.
 - FINAL_REAL_TZ_ACCEPTANCE: not run or claimed by this patch.

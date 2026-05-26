@@ -64,24 +64,33 @@ ASO with normal dependency and build isolation behavior. The installer must
 still verify the canonical package from this checkout, not a root-level
 duplicate Python tree.
 
-This install document covers package version `3.7.9` with runtime schema
-`3.1.1` and artifact package schema `1.1.0`. P57 documents ASO workflow
-readiness through installed real-TZ intake/bootstrap and read-only plan-next
-dispatchability while preserving the Runtime State sidecar schema, the artifact
-package schema, and the Project Factory P1 command boundary. It does not claim
-full real-product Telegram bot generation and does not add semantic TZ reading,
-product-intake automation, daemon mode, live dispatch, product generation,
-secret collection, or checkpoint execution.
+This install document covers the P58/P58F1 no-upgrade correction context:
+package version `3.7.9` with runtime schema `3.1.1` and artifact package schema
+`1.1.0`. P57 documents ASO workflow readiness through installed real-TZ
+intake/bootstrap and read-only plan-next dispatchability while preserving the
+Runtime State sidecar schema, the artifact package schema, and the Project
+Factory P1 command boundary. Current real-TZ and real-E2E wording refers to
+filesystem/governance lifecycle E2E smoke coverage for package install,
+state lifecycle, governance routing, and read-only planning. It is not full automatic
+product generation, does not claim full real-product Telegram bot
+generation, and does not add semantic TZ reading, product-intake automation,
+daemon mode, live dispatch, live runner behavior, product generation, secret
+collection, or checkpoint execution.
 The installed ASO helper supports read-only diagnostics plus explicit confirmed
 writes; mutating surfaces document their guarding mode or confirmation flag and
 bounded write roots.
 P57 release validation is recorded in
 `agent-system/11_release/ASO_P57_DOC_RUNTIME_CLEANUP_V3_7_8_VALIDATION_REPORT.md`;
-post-push GitHub Actions evidence for the final pushed HEAD is recorded in
+the in-repository remote CI evidence selector/procedure for P57 is recorded in
 `agent-system/11_release/ASO_P57_DOC_RUNTIME_CLEANUP_V3_7_8_REMOTE_CI_EVIDENCE.md`.
+It does not record an immutable final run id or final post-push HEAD evidence.
 Final real-TZ readiness criteria are documented, but final real-TZ acceptance
-requires explicit owner instruction after P57 merge readiness and remote CI
-evidence.
+requires explicit owner instruction after P57 merge readiness and external
+remote CI evidence.
+In-repository remote CI evidence files define the selector/procedure only.
+Immutable final run id, final HEAD, status, and URL evidence belongs in the
+external release/audit RESULT after the final push, avoiding an infinite commit/CI
+loop.
 
 Both installers accept a Python executable and virtual environment path:
 

@@ -62,6 +62,9 @@ install-test-smoke:
 	PYTHONDONTWRITEBYTECODE=1 "$$tmp_dir/venv/bin/aso" project verify-clean --root "$$tmp_dir/project" --strict >/dev/null; \
 	PYTHONDONTWRITEBYTECODE=1 "$$tmp_dir/venv/bin/python" -c "import importlib.metadata as md; import jsonschema; assert md.version('jsonschema'); assert jsonschema.__name__ == 'jsonschema'; print(md.version('jsonschema'))"
 
+# Compatibility target name: this is a filesystem/governance lifecycle E2E
+# smoke for real-TZ intake/bootstrap and read-only planning, not full automatic product generation,
+# not a live runner, and not product acceptance.
 e2e-real-tz-smoke:
 	PYTHONDONTWRITEBYTECODE=1 $(PYTHON) -m unittest agent-system/tools/aso/tests/test_real_tz_e2e_smoke.py -v
 
