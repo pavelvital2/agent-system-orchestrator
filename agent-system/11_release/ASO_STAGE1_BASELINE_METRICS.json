@@ -1,0 +1,393 @@
+{
+  "task_id": "TASK_ASO_S1_010_BASELINE_METRICS_AND_REPRODUCTION",
+  "generated_at_utc": "2026-05-28T18:56:11Z",
+  "baseline_scope": "ASO Stage 1 defect remediation baseline freeze",
+  "baseline_source": {
+    "branch": "correction/aso-stage1-defect-remediation-v3.8.0",
+    "base_branch": "correction/aso-p58-no-upgrade-working-state-fixpack-v3.7.9",
+    "base_head": "903e8a8946da95e784931f6610391ec33fd12733",
+    "package_version": "3.7.9",
+    "governance_ruleset_version": "3.7.9",
+    "runtime_schema_version": "3.1.1",
+    "artifact_package_schema_version": "1.1.0"
+  },
+  "metric_definitions": {
+    "before": "Current v3.7.9 baseline before any Stage 1 remediation behavior changes.",
+    "after_task_010": "State after TASK_ASO_S1_010, which adds evidence only and intentionally changes no runtime behavior.",
+    "after_stage1_final": "Reserved for TASK_ASO_S1_180 final regression comparison."
+  },
+  "before_metrics": {
+    "cli_top_level_command_count": 27,
+    "cli_command_leaf_count": 59,
+    "allowed_lifecycle_event_count": 10,
+    "state_transition_source_count": 7,
+    "state_transition_edge_count": 8,
+    "terminal_state_count": 1,
+    "terminal_reached": false,
+    "terminal_state_is_checkpoint_eligible": true,
+    "project_completed_state_available": false,
+    "no_next_action_available": false,
+    "lifecycle_finalize_command_available": false,
+    "known_defect_count": 20,
+    "defect_status_counts": {
+      "reproduced": 11,
+      "already_fixed": 7,
+      "not_reproducible": 0,
+      "blocked_by_missing_environment_evidence": 2
+    },
+    "unresolved_finding_count": 13,
+    "correction_loop_counts": {
+      "known_stage1_defects": 20,
+      "unresolved_reproduced_or_blocked_defects": 13,
+      "runtime_correction_states": 2,
+      "audit_fail_to_correction_transition_edges": 1,
+      "effective_resolution_graph_required_fields": 4,
+      "effective_resolution_graph_present_fields": 1,
+      "effective_resolution_graph_missing_fields": 3
+    },
+    "test_results": {
+      "required_verification_command_count": 6,
+      "required_verification_passed_count": 5,
+      "required_verification_failed_count": 1,
+      "aso_unittest_discover_tests": 497,
+      "aso_unittest_discover_failures": 0,
+      "make_test_aso_tests": 497,
+      "make_test_top_level_tests": 6,
+      "make_smoke_assertions": 18,
+      "make_doctor_findings": 0,
+      "install_smoke_passed": true,
+      "editable_install_exact_command_passed": false
+    },
+    "stdout_size_estimates": {
+      "required_gate_stdout_bytes_excluding_install_smoke": 70200,
+      "install_smoke_stdout_bytes": 550000,
+      "all_baseline_validation_stdout_bytes": 620200,
+      "estimate": true,
+      "basis": "Exact logs were not persisted; estimates are based on observed command output, 497 verbose unittest lines, smoke summaries, and install-smoke build output truncation."
+    },
+    "diff_size_estimates": {
+      "pre_task_diff_files": 0,
+      "pre_task_diff_bytes": 0,
+      "post_task_runtime_behavior_diff_files": 0,
+      "post_task_release_evidence_files": 2,
+      "post_task_diff_bytes_estimate": 27889,
+      "estimate_pending_final_diff": false
+    }
+  },
+  "after_task_010_metrics": {
+    "runtime_behavior_files_changed": 0,
+    "test_files_changed": 0,
+    "release_evidence_files_added": 2,
+    "defects_closed_by_task": 0,
+    "cli_top_level_command_count": 27,
+    "cli_command_leaf_count": 59,
+    "allowed_lifecycle_event_count": 10,
+    "state_transition_edge_count": 8,
+    "terminal_reached": false,
+    "unresolved_finding_count": 13
+  },
+  "after_stage1_final": {
+    "status": "pending_TASK_ASO_S1_180_STAGE1_REGRESSION_RELEASE_GATE",
+    "expected_comparison_source": "agent-system/11_release/ASO_STAGE1_BASELINE_METRICS.json"
+  },
+  "runtime_contract_snapshot": {
+    "allowed_events": [
+      "CREATE_AGENT_RECOMMENDED",
+      "CREATE_AGENT_DISPATCHED",
+      "RESULT_RECEIVED",
+      "ARTIFACT_ACCEPTED",
+      "AGENT_TERMINATED",
+      "AUDIT_ROUTE_READY",
+      "AUDIT_RESULT_RECEIVED_PASS",
+      "AUDIT_RESULT_RECEIVED_FAIL",
+      "CORRECTION_REQUIRED",
+      "CHECKPOINT_ELIGIBLE"
+    ],
+    "terminal_states": [
+      "CHECKPOINT_ELIGIBLE"
+    ],
+    "checkpoint_eligible_next_action": {
+      "recommended_next_action": "CHECKPOINT_PREFLIGHT",
+      "action_type": "update_state",
+      "target_role": "orchestrator",
+      "checkpoint_policy": "local_only",
+      "dispatchable": false
+    }
+  },
+  "validation_results": [
+    {
+      "command": "git status --short --branch",
+      "result": "passed",
+      "summary": "Clean working tree on correction/aso-stage1-defect-remediation-v3.8.0 before evidence edits."
+    },
+    {
+      "command": "python3 -m pip install -e \".[test]\"",
+      "result": "failed",
+      "summary": "Failed before package mutation because the system Python is PEP 668 externally managed."
+    },
+    {
+      "command": "PYTHONDONTWRITEBYTECODE=1 make source-contamination-guard",
+      "result": "passed_after_cache_cleanup",
+      "summary": "Initial run found ignored Python bytecode cache artifacts; cache cleanup was performed and the guard then passed."
+    },
+    {
+      "command": "PYTHONDONTWRITEBYTECODE=1 make install-smoke",
+      "result": "passed",
+      "summary": "Clean source install, installed CLI smoke, wheel install smoke, and sdist install smoke passed from temporary directories."
+    },
+    {
+      "command": "PYTHONDONTWRITEBYTECODE=1 python3 -m unittest discover -s agent-system/tools/aso/tests -v",
+      "result": "passed",
+      "summary": "497 tests passed in 295.060s."
+    },
+    {
+      "command": "PYTHONDONTWRITEBYTECODE=1 make test",
+      "result": "passed",
+      "summary": "Source hygiene passed; 497 ASO tests passed in 289.560s; 6 top-level tests passed in 0.600s."
+    },
+    {
+      "command": "PYTHONDONTWRITEBYTECODE=1 make smoke",
+      "result": "passed",
+      "summary": "Package status, lint, doctor, package-layout, design/context/rules/state/plan/dashboard/checkpoint/governance smoke passed; SMOKE_RESULT: passed (18 assertions)."
+    },
+    {
+      "command": "PYTHONDONTWRITEBYTECODE=1 make doctor",
+      "result": "passed",
+      "summary": "ASO doctor passed with 0 errors, 0 warnings, 0 info, and 0 findings."
+    }
+  ],
+  "defect_reproduction_matrix": [
+    {
+      "id": "D01",
+      "area": "Terminal state",
+      "status": "reproduced",
+      "evidence": [
+        "agent-system/02_runtime/ORCHESTRATOR_RUNTIME_CONTRACT.json terminal_states contains only CHECKPOINT_ELIGIBLE.",
+        "PYTHONDONTWRITEBYTECODE=1 python3 agent-system/tools/aso/aso.py lifecycle --help lists receive-result and terminate-agent only.",
+        "agent-system/tools/aso/tests/test_lifecycle_state_reconciliation.py::test_full_auditor_pass_lifecycle_keeps_checkpoint_route_after_auditor_routing"
+      ],
+      "finding": "PROJECT_COMPLETED, FINAL_CHECKPOINT_COMPLETE, NO_NEXT_ACTION, and lifecycle finalize are not available in the baseline."
+    },
+    {
+      "id": "D02",
+      "area": "State machine",
+      "status": "reproduced",
+      "evidence": [
+        "Read-only source inventory found routing/action literals in multiple command modules including plan_next.py, record_result.py, checkpoint_preflight.py, status.py, dashboard.py, and orchestrator.py.",
+        "agent-system/tools/aso/tests/test_transition_engine.py covers a central transition engine but does not prove all commands are thin wrappers over it."
+      ],
+      "finding": "The baseline still needs the Task 030 authority pass before declaring the transition engine the only operational route source."
+    },
+    {
+      "id": "D03",
+      "area": "NEXT_ACTION",
+      "status": "reproduced",
+      "evidence": [
+        "agent-system/tools/aso/tests/test_lifecycle_state_reconciliation.py::test_manual_result_received_log_without_sidecar_materialization_is_stale",
+        "agent-system/tools/aso/tests/test_transition_engine.py::test_sidecar_next_action_consistency_detects_stale_stop",
+        "agent-system/tools/aso/tests/test_state_verify.py::test_stale_next_action_action_types_fail"
+      ],
+      "finding": "The stale sidecar mode is reproducible and guarded, but NEXT_ACTION is not yet a derived/cache view."
+    },
+    {
+      "id": "D04",
+      "area": "Lifecycle mutation",
+      "status": "reproduced",
+      "evidence": [
+        "agent-system/tools/aso/tests/test_lifecycle_state_reconciliation.py::test_manual_result_received_log_without_sidecar_materialization_is_stale",
+        "agent-system/tools/aso/tests/test_lifecycle_state_reconciliation.py::test_confirmed_receive_result_materializes_accept_artifact_route"
+      ],
+      "finding": "Manual append-only lifecycle events can diverge from materialized sidecars; structured receive-result mitigates only the confirmed command path."
+    },
+    {
+      "id": "D05",
+      "area": "Result lifecycle",
+      "status": "reproduced",
+      "evidence": [
+        "agent-system/tools/aso/tests/test_record_result.py::test_profile_pass_inside_workspace_requires_accepted_result_package_before_audit_route",
+        "agent-system/tools/aso/tests/test_lifecycle.py::test_terminate_agent_requires_artifact_accepted_receipt_event"
+      ],
+      "finding": "Profile pass routing still requires accepted result-package bookkeeping; separate result-only lifecycle mode is not present."
+    },
+    {
+      "id": "D06",
+      "area": "Audit result",
+      "status": "already_fixed",
+      "evidence": [
+        "agent-system/tools/aso/agent_system_orchestrator_aso/aso_tool/commands/lifecycle.py emits AUDIT_RESULT_RECEIPT.",
+        "agent-system/tools/aso/tests/test_audit_correction_routing.py::test_lifecycle_failed_audit_uses_receipt_and_does_not_emit_audit_route_ready"
+      ],
+      "finding": "The baseline already records governed audit result receipts for the tested failed-audit lifecycle path."
+    },
+    {
+      "id": "D07",
+      "area": "RESULT parser",
+      "status": "already_fixed",
+      "evidence": [
+        "agent-system/tools/aso/tests/test_result_parser.py",
+        "agent-system/tools/aso/tests/test_record_result.py::test_audit_statuses_missing_from_runtime_contract_fail_closed"
+      ],
+      "finding": "The current command paths have shared parser coverage for RESULT and AUDIT_RESULT parsing."
+    },
+    {
+      "id": "D08",
+      "area": "Artifact manifest",
+      "status": "already_fixed",
+      "evidence": [
+        "agent-system/tools/aso/tests/test_artifact_manifest_contract.py::test_runtime_contract_declares_canonical_manifest_and_legacy_alias",
+        "agent-system/tools/aso/tests/test_artifact_manifest_contract.py::test_accepting_legacy_manifest_materializes_canonical_accepted_manifest",
+        "agent-system/02_runtime/ORCHESTRATOR_RUNTIME_CONTRACT.json artifact_contracts"
+      ],
+      "finding": "Canonical manifest.json plus legacy artifact_package_manifest.json alias behavior is present in the baseline."
+    },
+    {
+      "id": "D09",
+      "area": "Audit/correction",
+      "status": "already_fixed",
+      "evidence": [
+        "agent-system/tools/aso/tests/test_audit_correction_routing.py::test_record_result_audit_fail_outputs_correction_route",
+        "agent-system/tools/aso/tests/test_audit_correction_routing.py::test_plan_next_checkpoint_attempt_with_failed_audit_routes_correction",
+        "agent-system/tools/aso/tests/test_checkpoint.py::test_checkpoint_preflight_blocks_failed_audit_with_correction_routing"
+      ],
+      "finding": "Failed audit routes to CORRECTION_REQUIRED and blocks checkpoint in the current tested paths."
+    },
+    {
+      "id": "D10",
+      "area": "Correction resolution",
+      "status": "reproduced",
+      "evidence": [
+        "Read-only rg for correction_of, resolved_by, effective_status found no active implementation references.",
+        "agent-system/tools/aso/tests does not contain test_correction_resolution_graph.py in the baseline."
+      ],
+      "finding": "The effective correction-resolution graph is not implemented; only superseded_by appears in existing artifact/state metadata."
+    },
+    {
+      "id": "D11",
+      "area": "Source boundary",
+      "status": "reproduced",
+      "evidence": [
+        "Read-only rg for SB0, SB1, SB2, SB3, and SB4 found no active severity-tier implementation.",
+        "agent-system/tools/aso/tests/test_context_pack_build.py and test_validate_context_pack.py cover forbidden/bounded context but not SB0-SB4 tiers."
+      ],
+      "finding": "The baseline has coarse source/context guards but no severity-tier model."
+    },
+    {
+      "id": "D12",
+      "area": "Context",
+      "status": "already_fixed",
+      "evidence": [
+        "agent-system/02_runtime/ORCHESTRATOR_RUNTIME_CONTRACT.json routine_context_policy",
+        "agent-system/tools/aso/tests/test_orchestrator_context_minimization.py::test_routine_context_uses_compact_machine_readable_inputs",
+        "agent-system/tools/aso/tests/test_orchestrator_context_minimization.py::test_routine_context_rejects_broad_reference_corpus"
+      ],
+      "finding": "Routine context minimization and broad-corpus rejection are already covered in the baseline."
+    },
+    {
+      "id": "D13",
+      "area": "Role contracts",
+      "status": "blocked_by_missing_environment_evidence",
+      "evidence": [
+        "No live invalid worker-output corpus was available in the task environment.",
+        "agent-system/tools/aso/tests has parser and schema fixtures, but the future focused test_role_output_contracts.py is absent from the baseline."
+      ],
+      "finding": "Schema-invalid real role outputs cannot be reproduced without captured agent outputs; existing malformed fixtures do not prove the real role-output defect."
+    },
+    {
+      "id": "D14",
+      "area": "State sidecars",
+      "status": "reproduced",
+      "evidence": [
+        "agent-system/tools/aso/tests/test_lifecycle_state_reconciliation.py::test_manual_result_received_log_without_sidecar_materialization_is_stale",
+        "agent-system/tools/aso/tests/test_state_render.py::test_confirm_write_materializes_markdown_views_from_json_sidecars"
+      ],
+      "finding": "Manual sidecar/log drift remains reproducible; structured render/materialization exists but does not remove the drift class."
+    },
+    {
+      "id": "D15",
+      "area": "Reporting",
+      "status": "reproduced",
+      "evidence": [
+        "Read-only focused-test inventory found no test_operator_reporting.py in agent-system/tools/aso/tests.",
+        "Existing release reports under agent-system/11_release are manual evidence files."
+      ],
+      "finding": "Operator report/final run receipt generation is not automated in the baseline."
+    },
+    {
+      "id": "D16",
+      "area": "Output",
+      "status": "reproduced",
+      "evidence": [
+        "PYTHONDONTWRITEBYTECODE=1 make install-smoke passed but emitted large build/copy output; observed output required truncation by the tool.",
+        "stdout_size_estimates.install_smoke_stdout_bytes is 550000."
+      ],
+      "finding": "Baseline installed-package validation output is noisy; compact stdout and diff-to-file defaults are not complete."
+    },
+    {
+      "id": "D17",
+      "area": "Bootstrap/docs",
+      "status": "already_fixed",
+      "evidence": [
+        "agent-system/tools/aso/tests/test_state_init.py::test_confirm_write_creates_current_sidecars_that_verify_strict",
+        "agent-system/tools/aso/tests/test_intake_bootstrap.py::test_bootstrap_creates_dispatchable_requirements_task",
+        "PYTHONDONTWRITEBYTECODE=1 make install-smoke"
+      ],
+      "finding": "Bootstrap materialization and generated workspace install smoke paths are covered in the baseline."
+    },
+    {
+      "id": "D18",
+      "area": "Enums/schema",
+      "status": "already_fixed",
+      "evidence": [
+        "agent-system/tools/aso/tests/test_version_coherence.py",
+        "agent-system/tools/aso/tests/test_runtime_schema_contracts.py",
+        "agent-system/tools/aso/tests/test_state_verify.py::test_task_registry_unknown_task_kind_fails"
+      ],
+      "finding": "Active version/schema/task-kind drift guards pass in the baseline."
+    },
+    {
+      "id": "D19",
+      "area": "Checkpoint/git",
+      "status": "blocked_by_missing_environment_evidence",
+      "evidence": [
+        "PYTHONDONTWRITEBYTECODE=1 make smoke checkpoint-preflight package path passed with eligible=true.",
+        "No live workspace checkpoint evidence conflict was available to reproduce a .gitignore/evidence-selection failure.",
+        "Focused test_checkpoint_evidence_selection.py is absent from the baseline."
+      ],
+      "finding": "The package preflight is green, but the known .gitignore/evidence-selection conflict needs a live or fixture workspace to reproduce."
+    },
+    {
+      "id": "D20",
+      "area": "Installer/deps",
+      "status": "reproduced",
+      "evidence": [
+        "python3 -m pip install -e \".[test]\" failed with externally-managed-environment.",
+        "PYTHONDONTWRITEBYTECODE=1 make install-smoke passed using isolated temporary virtual environments."
+      ],
+      "finding": "The exact developer editable install path is environment-sensitive; clean isolated install paths work, but the user-facing install model remains Stage 1 follow-up."
+    }
+  ],
+  "unresolved_findings": [
+    "D01 terminal project completion is missing.",
+    "D02 transition-engine authority is not proven across every routing command.",
+    "D03 NEXT_ACTION can still be stale, although guards detect it.",
+    "D04 append-only lifecycle logs can diverge from materialized state.",
+    "D05 result-only lifecycle mode is not separated from artifact-package lifecycle.",
+    "D10 effective correction-resolution graph is missing.",
+    "D11 source-boundary severity tiers SB0-SB4 are missing.",
+    "D13 real role-output invalidity needs live environment evidence.",
+    "D14 manual sidecar drift remains reproducible.",
+    "D15 operator report/final receipt automation is missing.",
+    "D16 stdout and build output remain noisy.",
+    "D19 checkpoint evidence conflict needs live workspace evidence.",
+    "D20 exact editable install is blocked by PEP 668 in this environment."
+  ],
+  "defects_closed_by_task_010": [],
+  "stage2_scope_status": {
+    "live_runner_automation_added": false,
+    "autonomous_external_worker_dispatch_added": false,
+    "daemon_mode_added": false,
+    "aso_studio_ui_added": false,
+    "secret_collector_added": false,
+    "automatic_product_generator_added": false
+  }
+}
