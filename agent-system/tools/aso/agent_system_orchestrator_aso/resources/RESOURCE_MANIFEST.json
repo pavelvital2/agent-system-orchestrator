@@ -121,8 +121,8 @@
       "size": 4580
     },
     "agent-system/02_runtime/ORCHESTRATOR_RUNTIME_CONTRACT.json": {
-      "sha256": "8d9bc3e62e32dfa1f36a6cb20a76378ac30f48cc04ed76f1fd2d11f8b9253dc1",
-      "size": 12167
+      "sha256": "07e2c4087495e4919441edfcbaf5ba7033037e9da72c700dd42c0c8a523ca7ed",
+      "size": 13844
     },
     "agent-system/02_runtime/ORCHESTRATOR_RUNTIME_LOOP.md": {
       "sha256": "ceb54eb0491d8ad4a7e7c46842d7ba9d018657b199c4320e7b24679bd6c63483",
@@ -953,8 +953,8 @@
       "size": 136754
     },
     "agent-system/ORCHESTRATOR_RUNTIME_CONTRACT.json": {
-      "sha256": "8d9bc3e62e32dfa1f36a6cb20a76378ac30f48cc04ed76f1fd2d11f8b9253dc1",
-      "size": 12167
+      "sha256": "07e2c4087495e4919441edfcbaf5ba7033037e9da72c700dd42c0c8a523ca7ed",
+      "size": 13844
     },
     "agent-system/PACKAGE_VERSIONING.md": {
       "sha256": "af1a2325e5044906dd3aafbd44aa96836c8adca9914f5532c8b6eebc938eb7c5",

@@ -134,6 +134,49 @@ class TransitionEngineTests(unittest.TestCase):
         self.assertEqual(failed.next_state, "CORRECTION_REQUIRED")
         self.assertEqual(failed.next_action["recommended_next_action"], "CORRECTION_REQUIRED")
 
+    def test_checkpoint_eligible_is_intermediate_and_completion_is_explicit(self) -> None:
+        self.assertNotIn("CHECKPOINT_ELIGIBLE", self.contract["terminal_states"])
+        self.assertIn("PROJECT_COMPLETED", self.contract["terminal_states"])
+        self.assertIn("NO_NEXT_ACTION", self.contract["terminal_states"])
+
+        checkpoint_pass = transition_engine.derive_transition(
+            self.contract,
+            "CHECKPOINT_ELIGIBLE",
+            "CHECKPOINT_PREFLIGHT_PASS",
+            task_id="TASK_001",
+        )
+        checkpoint_complete = transition_engine.derive_transition(
+            self.contract,
+            "FINAL_AUDIT_PASS",
+            "CHECKPOINT_COMMITTED_OR_ARCHIVED",
+            task_id="TASK_001",
+        )
+        finalized = transition_engine.derive_transition(
+            self.contract,
+            "FINAL_CHECKPOINT_COMPLETE",
+            "FINALIZE",
+            task_id="TASK_001",
+        )
+        terminal = transition_engine.derive_transition(
+            self.contract,
+            "PROJECT_COMPLETED",
+            "NO_NEXT_ACTION",
+            task_id="TASK_001",
+        )
+
+        self.assertTrue(checkpoint_pass.allowed, checkpoint_pass.to_json())
+        self.assertEqual(checkpoint_pass.next_state, "FINAL_AUDIT_PASS")
+        self.assertEqual(checkpoint_pass.next_action["recommended_next_action"], "CHECKPOINT_PREFLIGHT")
+        self.assertTrue(checkpoint_complete.allowed, checkpoint_complete.to_json())
+        self.assertEqual(checkpoint_complete.next_state, "FINAL_CHECKPOINT_COMPLETE")
+        self.assertEqual(checkpoint_complete.next_action["recommended_next_action"], "FINALIZE")
+        self.assertTrue(finalized.allowed, finalized.to_json())
+        self.assertEqual(finalized.next_state, "PROJECT_COMPLETED")
+        self.assertEqual(finalized.next_action["recommended_next_action"], "NO_NEXT_ACTION")
+        self.assertTrue(terminal.allowed, terminal.to_json())
+        self.assertEqual(terminal.next_state, "NO_NEXT_ACTION")
+        self.assertEqual(terminal.next_action["recommended_next_action"], "NO_NEXT_ACTION")
+
     def test_record_result_route_uses_contract_next_actions(self) -> None:
         profile_pass = transition_engine.derive_result_route(
             self.contract,

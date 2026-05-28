@@ -469,6 +469,8 @@ def _non_dispatch_status(action_type: str, recommended_next_action: str) -> str:
         return "frozen"
     if recommended_next_action == "BOOTSTRAP_PREP":
         return "bootstrap_required"
+    if recommended_next_action == "NO_NEXT_ACTION":
+        return "stopped"
     if recommended_next_action == "STOP" or action_type == "stop":
         return "stopped"
     if recommended_next_action == "CORRECTION_REQUIRED" or action_type == "correction":
@@ -1021,6 +1023,13 @@ def _needs_bootstrap_reconciliation(
     )
 
 
+def _is_project_completed(project_state: dict[str, object]) -> bool:
+    return (
+        project_state.get("project_status") == "completed"
+        or project_state.get("current_phase") == "completed"
+    )
+
+
 def _plan(
     root: Path,
     strict: bool,
@@ -1129,6 +1138,32 @@ def _plan(
                 "Active/open bootstrap with mandatory inputs cannot route to terminal STOP before first dispatch.",
                 "route=repair_bootstrap_state/create_or_reference_bootstrap_task_packet",
             )
+        )
+    elif _is_project_completed(project_state) and verify_exit_code == 0:
+        if isinstance(derived_next_action, dict):
+            routing_next_action.update(derived_next_action)
+        action_type = _as_text(routing_next_action.get("action_type")) or "stop"
+        target_role = _as_text(routing_next_action.get("target_role")) or "none"
+        task_id = "NONE"
+        task_packet = "NONE"
+        recommended_next_action = (
+            _as_text(routing_next_action.get("recommended_next_action"))
+            or "NO_NEXT_ACTION"
+        )
+        dispatchability = _non_dispatchability(
+            action_type,
+            target_role,
+            task_id,
+            task_packet,
+            recommended_next_action,
+            "stopped",
+            reasons=[
+                _reason(
+                    "project_completed",
+                    "PROJECT_COMPLETED has no further orchestrator action.",
+                    "PROJECT_STATE.content.project_status",
+                )
+            ],
         )
     elif lifecycle_derived and isinstance(derived_next_action, dict):
         routing_next_action.update(derived_next_action)

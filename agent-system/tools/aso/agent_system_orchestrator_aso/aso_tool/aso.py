@@ -1067,6 +1067,36 @@ def build_parser() -> argparse.ArgumentParser:
     )
     terminate_agent_parser.set_defaults(handler=lifecycle.run_terminate_agent)
 
+    finalize_parser = lifecycle_subparsers.add_parser(
+        "finalize",
+        help="Finalize a project into PROJECT_COMPLETED terminal state.",
+        description=(
+            "Validate final audit/checkpoint completion, then with --confirm-write "
+            "write PROJECT_COMPLETED sidecars, a finalization receipt, and verify the "
+            "terminal state. Confirmed writes are limited to project-runtime/state, "
+            "project-runtime/receipts/lifecycle, and project-runtime Markdown views. "
+            "Without --confirm-write this is a dry-run."
+        ),
+    )
+    _add_root_argument(finalize_parser, validate=False)
+    finalize_mode = finalize_parser.add_mutually_exclusive_group()
+    finalize_mode.add_argument(
+        "--dry-run",
+        action="store_true",
+        help="Validate and render the finalization plan without mutating runtime state.",
+    )
+    finalize_mode.add_argument(
+        "--confirm-write",
+        action="store_true",
+        help="Write terminal sidecars and a project finalization receipt.",
+    )
+    finalize_parser.add_argument(
+        "--json-out",
+        metavar="PATH",
+        help="Write the finalization dry-run or receipt report JSON to PATH.",
+    )
+    finalize_parser.set_defaults(handler=lifecycle.run_finalize)
+
     incident_parser = subparsers.add_parser(
         "incident",
         help="Incident recovery proposal commands.",

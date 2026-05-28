@@ -27,6 +27,11 @@ LIFECYCLE_EVENT_STATES = {
     "AUDIT_RESULT_RECEIVED_FAIL": "CORRECTION_REQUIRED",
     "CORRECTION_REQUIRED": "CORRECTION_REQUIRED",
     "CHECKPOINT_ELIGIBLE": "CHECKPOINT_ELIGIBLE",
+    "CHECKPOINT_PREFLIGHT_PASS": "FINAL_AUDIT_PASS",
+    "CHECKPOINT_COMMITTED_OR_ARCHIVED": "FINAL_CHECKPOINT_COMPLETE",
+    "FINALIZE": "PROJECT_COMPLETED",
+    "PROJECT_COMPLETED": "PROJECT_COMPLETED",
+    "NO_NEXT_ACTION": "NO_NEXT_ACTION",
 }
 AUDIT_RESULT_EVENTS = {
     "AUDIT_RESULT_RECEIVED",
@@ -47,6 +52,8 @@ LIFECYCLE_PROGRESS_STATES = {
     "CORRECTION_REQUIRED",
     "CORRECTION_AGENT_RUNNING",
     "CHECKPOINT_ELIGIBLE",
+    "FINAL_AUDIT_PASS",
+    "FINAL_CHECKPOINT_COMPLETE",
 }
 
 
@@ -907,6 +914,11 @@ def _truthy_refs(value: object) -> list[str]:
     return [item.strip() for item in value if isinstance(item, str) and not _is_none(item)]
 
 
+def _truthy_text(value: object) -> str:
+    text = _text(value)
+    return "" if _is_none(text) else text
+
+
 def _has_audit_evidence(task: Mapping[str, object], sidecars: Mapping[str, Mapping[str, object]], task_id: str) -> bool:
     if _truthy_refs(task.get("audit_refs")):
         return True
@@ -1349,6 +1361,22 @@ def _infer_contract_state(
     tasks = _tasks_by_id(sidecars)
     task_id = _active_task_id(project_state, current_gate, next_action)
     lifecycle_findings: tuple[TransitionFinding, ...] = ()
+    completed_signals: dict[str, object] = {
+        "state_source": "sidecars",
+        "task_id": task_id,
+        "task_status": "",
+        "next_action_type": _text(next_action.get("action_type")),
+        "target_role": _text(next_action.get("target_role")),
+        "checkpoint_policy": _text(next_action.get("checkpoint_policy")),
+        "current_phase": _text(project_state.get("current_phase")),
+        "project_status": _text(project_state.get("project_status")),
+    }
+    if (
+        _text(project_state.get("project_status")) == "completed"
+        or _text(project_state.get("current_phase")) == "completed"
+    ):
+        return "PROJECT_COMPLETED", completed_signals, tuple(_lifecycle_log_findings(sidecars))
+
     if contract is not None:
         lifecycle_state, lifecycle_signals, lifecycle_findings = _lifecycle_state(contract, sidecars, task_id)
         if lifecycle_state:
@@ -1376,6 +1404,9 @@ def _infer_contract_state(
     checkpoint_preflight_required = next_action.get("checkpoint_preflight_required") is True
     current_phase = _text(project_state.get("current_phase"))
     project_status = _text(project_state.get("project_status"))
+    project_checkpoint_status = _text(project_state.get("project_checkpoint_status"))
+    checkpoint_preflight_status = _text(project_state.get("checkpoint_preflight_status"))
+    checkpoint_receipt_ref = _truthy_text(project_state.get("checkpoint_receipt_ref"))
 
     signals: dict[str, object] = {
         "state_source": "sidecars",
@@ -1388,7 +1419,7 @@ def _infer_contract_state(
         "project_status": project_status,
     }
 
-    if project_status in {"completed", "archived"} or current_phase == "completed":
+    if project_status == "archived":
         return "TERMINAL_STOP", signals, lifecycle_findings
     if current_phase == "correction":
         return "CORRECTION_REQUIRED", signals, lifecycle_findings
@@ -1398,6 +1429,17 @@ def _infer_contract_state(
         return "CORRECTION_REQUIRED", signals, lifecycle_findings
     if task_status in {"failed", "blocked"}:
         return "CORRECTION_REQUIRED", signals, lifecycle_findings
+    if (
+        action_type == "finalize"
+        or current_phase in {"finalization", "final_acceptance"}
+    ) and (
+        project_checkpoint_status == "passed"
+        or bool(checkpoint_receipt_ref)
+        or _text(current_gate.get("project_checkpoint_status")) == "passed"
+    ):
+        return "FINAL_CHECKPOINT_COMPLETE", signals, lifecycle_findings
+    if checkpoint_preflight_status == "passed" and task_status in {"audit_passed", "checkpoint_done", "completed"}:
+        return "FINAL_AUDIT_PASS", signals, lifecycle_findings
     if task_status in {"audit_passed", "checkpoint_done", "completed"} or _has_audit_evidence(task, sidecars, task_id):
         return "CHECKPOINT_ELIGIBLE", signals, lifecycle_findings
     if checkpoint_policy in {"local_only", "commit_and_push"} or checkpoint_preflight_required:
@@ -1443,6 +1485,8 @@ def recommendation_from_next_action_content(next_action: Mapping[str, object]) -
     action_id = _text(next_action.get("action_id")).upper().replace("-", "_")
     instruction = _text(next_action.get("instruction_for_orchestrator")).upper().replace("-", "_")
     route_hint = f"{action_id} {instruction}"
+    if "NO_NEXT_ACTION" in route_hint:
+        return "NO_NEXT_ACTION"
     if "ACCEPT_ARTIFACT" in route_hint:
         return "ACCEPT_ARTIFACT"
     if "TERMINATE_AGENT" in route_hint:

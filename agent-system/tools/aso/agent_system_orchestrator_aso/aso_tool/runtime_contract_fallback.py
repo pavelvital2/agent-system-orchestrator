@@ -35,7 +35,12 @@ ORCHESTRATOR_RUNTIME_CONTRACT_JSON = r"""{
     "AUDIT_RESULT_RECEIVED_PASS",
     "AUDIT_RESULT_RECEIVED_FAIL",
     "CORRECTION_REQUIRED",
-    "CHECKPOINT_ELIGIBLE"
+    "CHECKPOINT_ELIGIBLE",
+    "CHECKPOINT_PREFLIGHT_PASS",
+    "CHECKPOINT_COMMITTED_OR_ARCHIVED",
+    "FINALIZE",
+    "PROJECT_COMPLETED",
+    "NO_NEXT_ACTION"
   ],
   "event_aliases": {
     "agent_task_dispatched": "CREATE_AGENT_DISPATCHED",
@@ -49,7 +54,12 @@ ORCHESTRATOR_RUNTIME_CONTRACT_JSON = r"""{
     "AUDIT_RESULT_RECEIVED": {
       "pass": "AUDIT_RESULT_RECEIVED_PASS",
       "fail": "AUDIT_RESULT_RECEIVED_FAIL"
-    }
+    },
+    "checkpoint_preflight_pass": "CHECKPOINT_PREFLIGHT_PASS",
+    "checkpoint_committed_or_archived": "CHECKPOINT_COMMITTED_OR_ARCHIVED",
+    "finalize": "FINALIZE",
+    "project_completed": "PROJECT_COMPLETED",
+    "no_next_action": "NO_NEXT_ACTION"
   },
   "state_transitions": {
     "TASK_READY": {
@@ -71,12 +81,25 @@ ORCHESTRATOR_RUNTIME_CONTRACT_JSON = r"""{
       "AUDIT_RESULT_RECEIVED_PASS": "CHECKPOINT_ELIGIBLE",
       "AUDIT_RESULT_RECEIVED_FAIL": "CORRECTION_REQUIRED"
     },
+    "CHECKPOINT_ELIGIBLE": {
+      "CHECKPOINT_PREFLIGHT_PASS": "FINAL_AUDIT_PASS"
+    },
+    "FINAL_AUDIT_PASS": {
+      "CHECKPOINT_COMMITTED_OR_ARCHIVED": "FINAL_CHECKPOINT_COMPLETE"
+    },
+    "FINAL_CHECKPOINT_COMPLETE": {
+      "FINALIZE": "PROJECT_COMPLETED"
+    },
+    "PROJECT_COMPLETED": {
+      "NO_NEXT_ACTION": "NO_NEXT_ACTION"
+    },
     "CORRECTION_REQUIRED": {
       "CREATE_AGENT_DISPATCHED": "CORRECTION_AGENT_RUNNING"
     }
   },
   "terminal_states": [
-    "CHECKPOINT_ELIGIBLE"
+    "PROJECT_COMPLETED",
+    "NO_NEXT_ACTION"
   ],
   "forbidden_transitions": [
     {
@@ -87,7 +110,11 @@ ORCHESTRATOR_RUNTIME_CONTRACT_JSON = r"""{
         "AGENT_TERMINATED",
         "AUDIT_PENDING",
         "CORRECTION_REQUIRED",
-        "CHECKPOINT_ELIGIBLE"
+        "CHECKPOINT_ELIGIBLE",
+        "FINAL_AUDIT_PASS",
+        "FINAL_CHECKPOINT_COMPLETE",
+        "PROJECT_COMPLETED",
+        "NO_NEXT_ACTION"
       ],
       "event": "CREATE_AGENT_DISPATCHED",
       "same_task": true,
@@ -157,6 +184,31 @@ ORCHESTRATOR_RUNTIME_CONTRACT_JSON = r"""{
       "checkpoint_policy": "local_only",
       "dispatchable": false
     },
+    "FINAL_AUDIT_PASS": {
+      "recommended_next_action": "CHECKPOINT_PREFLIGHT",
+      "action_type": "update_state",
+      "target_role": "orchestrator",
+      "checkpoint_policy": "local_only",
+      "dispatchable": false
+    },
+    "FINAL_CHECKPOINT_COMPLETE": {
+      "recommended_next_action": "FINALIZE",
+      "action_type": "finalize",
+      "target_role": "orchestrator",
+      "dispatchable": false
+    },
+    "PROJECT_COMPLETED": {
+      "recommended_next_action": "NO_NEXT_ACTION",
+      "action_type": "stop",
+      "target_role": "none",
+      "dispatchable": false
+    },
+    "NO_NEXT_ACTION": {
+      "recommended_next_action": "NO_NEXT_ACTION",
+      "action_type": "stop",
+      "target_role": "none",
+      "dispatchable": false
+    },
     "OWNER_INPUT_REQUIRED": {
       "recommended_next_action": "ASK_OWNER",
       "action_type": "wait_for_owner",
@@ -179,6 +231,9 @@ ORCHESTRATOR_RUNTIME_CONTRACT_JSON = r"""{
     ],
     "WAIT_FOR_AUDIT_RESULT": [
       "ROUTE_RESULT"
+    ],
+    "NO_NEXT_ACTION": [
+      "STOP"
     ]
   },
   "required_docs_by_role": {

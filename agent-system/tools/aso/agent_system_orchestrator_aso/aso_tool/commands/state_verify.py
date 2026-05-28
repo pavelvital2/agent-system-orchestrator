@@ -1371,6 +1371,131 @@ def _checkpoint_findings(root: Path, sidecars: dict[str, dict[str, object]]) -> 
     ]
 
 
+def _nonempty_terminal_blockers(value: object) -> list[str]:
+    if isinstance(value, list):
+        blockers: list[str] = []
+        for item in value:
+            if isinstance(item, str) and not _is_none(item):
+                blockers.append(item.strip())
+            elif isinstance(item, dict):
+                blocker_id = item.get("blocker_id")
+                status = item.get("status")
+                if isinstance(blocker_id, str) and not _is_none(blocker_id):
+                    blockers.append(f"{blocker_id}:{status or 'unknown'}")
+                elif item:
+                    blockers.append(json.dumps(item, sort_keys=True))
+        return blockers
+    if isinstance(value, str) and not _is_none(value):
+        return [value.strip()]
+    if isinstance(value, dict) and value:
+        return [json.dumps(value, sort_keys=True)]
+    return []
+
+
+def _terminal_completion_findings(sidecars: dict[str, dict[str, object]]) -> list[Finding]:
+    project_state = _content(sidecars, "PROJECT_STATE")
+    current_gate = _content(sidecars, "CURRENT_GATE")
+    next_action = _content(sidecars, "NEXT_ACTION")
+    terminal_claimed = (
+        project_state.get("project_status") == "completed"
+        or project_state.get("current_phase") == "completed"
+    )
+    if not terminal_claimed:
+        return []
+
+    findings: list[Finding] = []
+    tasks = _content(sidecars, "TASK_REGISTRY").get("tasks")
+    unresolved: list[str] = []
+    if isinstance(tasks, list):
+        for task in tasks:
+            if not isinstance(task, dict):
+                continue
+            status = task.get("status")
+            if status in {"failed", "blocked", "audit_pending"}:
+                unresolved.append(f"{task.get('task_id', 'UNKNOWN')}:{status}")
+    if unresolved:
+        findings.append(
+            _finding(
+                "PROJECT_COMPLETED_UNRESOLVED_TASKS",
+                "PROJECT_COMPLETED has unresolved task states",
+                f"PROJECT_COMPLETED is invalid with unresolved failed/blocked/audit_pending tasks: {', '.join(unresolved)}.",
+                "project-runtime/state/TASK_REGISTRY.json",
+                "content.tasks[].status",
+                "Resolve, supersede, or correct failed/blocked/audit_pending tasks before lifecycle finalize can complete the project.",
+            )
+        )
+
+    stale_blockers = sorted(
+        set(
+            _nonempty_terminal_blockers(project_state.get("active_blockers"))
+            + _nonempty_terminal_blockers(project_state.get("active_gaps"))
+            + _nonempty_terminal_blockers(project_state.get("checkpoint_blocked_by"))
+            + _nonempty_terminal_blockers(next_action.get("blocked_by"))
+            + _nonempty_terminal_blockers(current_gate.get("blocking_status"))
+        )
+    )
+    if stale_blockers:
+        findings.append(
+            _finding(
+                "PROJECT_COMPLETED_STALE_BLOCKERS",
+                "PROJECT_COMPLETED has stale blockers",
+                f"PROJECT_COMPLETED is invalid with active/stale blockers: {', '.join(stale_blockers)}.",
+                "project-runtime/state/PROJECT_STATE.json",
+                "content.active_blockers",
+                "Clear checkpoint blockers, active blockers, and active GAPs before marking the project completed.",
+            )
+        )
+
+    audit_status = project_state.get("audit_status")
+    if audit_status not in {"passed", "not_applicable"}:
+        findings.append(
+            _finding(
+                "PROJECT_COMPLETED_AUDIT_STATUS_INVALID",
+                "PROJECT_COMPLETED audit status is not terminal-pass",
+                f"PROJECT_STATE.content.audit_status={audit_status!r} is not valid for PROJECT_COMPLETED.",
+                "project-runtime/state/PROJECT_STATE.json",
+                "content.audit_status",
+                "Record mandatory audit pass evidence before project completion.",
+            )
+        )
+
+    checkpoint_status = project_state.get("project_checkpoint_status")
+    if checkpoint_status in {"pending", "failed", "blocked"}:
+        findings.append(
+            _finding(
+                "PROJECT_COMPLETED_CHECKPOINT_STATUS_INVALID",
+                "PROJECT_COMPLETED checkpoint status is unresolved",
+                f"PROJECT_STATE.content.project_checkpoint_status={checkpoint_status!r} is not valid for PROJECT_COMPLETED.",
+                "project-runtime/state/PROJECT_STATE.json",
+                "content.project_checkpoint_status",
+                "Complete or explicitly mark checkpoint not_required before project completion.",
+            )
+        )
+
+    route_valid = (
+        current_gate.get("gate_type") == "terminal"
+        and current_gate.get("status") == "passed"
+        and next_action.get("action_type") == "stop"
+        and next_action.get("target_role") == "none"
+        and next_action.get("action_semantic") == "stop_terminal"
+    )
+    if not route_valid:
+        findings.append(
+            _finding(
+                "PROJECT_COMPLETED_ROUTE_INVALID",
+                "PROJECT_COMPLETED terminal route is incomplete",
+                (
+                    "PROJECT_COMPLETED requires CURRENT_GATE terminal/passed and "
+                    "NEXT_ACTION stop/none/stop_terminal."
+                ),
+                "project-runtime/state/NEXT_ACTION.json",
+                "content.action_type",
+                "Run aso lifecycle finalize --root WORKSPACE --confirm-write to create the terminal route.",
+            )
+        )
+    return findings
+
+
 def _bootstrap_semantic_findings(root: Path, sidecars: dict[str, dict[str, object]]) -> list[Finding]:
     project_state = _content(sidecars, "PROJECT_STATE")
     current_gate = _content(sidecars, "CURRENT_GATE")
@@ -1677,6 +1802,7 @@ def _report(root: Path, strict: bool) -> tuple[dict[str, object], int]:
     findings.extend(_artifact_package_findings(loaded_sidecars))
     findings.extend(_checkpoint_findings(root, loaded_sidecars))
     findings.extend(_bootstrap_semantic_findings(root, loaded_sidecars))
+    findings.extend(_terminal_completion_findings(loaded_sidecars))
     reconciliation_enabled = current_p2_state or lifecycle_has_evidence
     if reconciliation_enabled:
         findings.extend(_transition_engine_findings(loaded_sidecars))
