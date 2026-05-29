@@ -639,7 +639,7 @@ def _finalization_error(rule_id: str, message: str, path: str, recommendation: s
     }
 
 
-def _finalization_findings(sidecars: dict[str, dict[str, Any]]) -> list[dict[str, str]]:
+def _finalization_findings(root: Path, sidecars: dict[str, dict[str, Any]]) -> list[dict[str, str]]:
     findings: list[dict[str, str]] = []
     missing = sorted(set(("PROJECT_STATE", "CURRENT_GATE", "NEXT_ACTION", "TASK_REGISTRY")) - set(sidecars))
     if missing:
@@ -656,24 +656,20 @@ def _finalization_findings(sidecars: dict[str, dict[str, Any]]) -> list[dict[str
     project_state = _content(sidecars["PROJECT_STATE"])
     current_gate = _content(sidecars["CURRENT_GATE"])
     next_action = _content(sidecars["NEXT_ACTION"])
-    task_registry = _content(sidecars["TASK_REGISTRY"])
 
-    unresolved: list[str] = []
-    tasks = task_registry.get("tasks")
-    if isinstance(tasks, list):
-        for task in tasks:
-            if not isinstance(task, Mapping):
-                continue
-            status = task.get("status")
-            if status in {"failed", "blocked", "audit_pending"}:
-                unresolved.append(f"{task.get('task_id', 'UNKNOWN')}:{status}")
+    rollup = transition_engine.task_effective_status_rollup(root, sidecars)
+    unresolved = [
+        f"{item.get('task_id', 'UNKNOWN')}:{item.get('effective_status', 'UNKNOWN')}"
+        for item in rollup.get("unresolved_effective_tasks", [])
+        if isinstance(item, dict)
+    ]
     if unresolved:
         findings.append(
             _finalization_error(
                 "LIFECYCLE_FINALIZE_UNRESOLVED_TASKS",
-                "Cannot finalize with unresolved failed/blocked/audit_pending tasks: " + ", ".join(unresolved),
+                "Cannot finalize with unresolved effective failed/blocked/audit_pending tasks: " + ", ".join(unresolved),
                 "project-runtime/state/TASK_REGISTRY.json",
-                "Resolve, supersede, or correct unresolved tasks before project completion.",
+                "Resolve, supersede, or correct unresolved tasks with valid resolution evidence before project completion.",
             )
         )
 
@@ -1166,7 +1162,7 @@ def run_finalize(args: argparse.Namespace) -> int:
         return _emit_finalize_report(args, report, EXIT_OK)
 
     if not findings:
-        findings.extend(_finalization_findings(sidecars))
+        findings.extend(_finalization_findings(root, sidecars))
     if (
         not findings
         and not already_completed

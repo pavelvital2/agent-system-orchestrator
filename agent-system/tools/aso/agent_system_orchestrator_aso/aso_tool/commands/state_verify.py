@@ -72,6 +72,19 @@ CONTROL_OR_TARGET_ROLES = PROFILE_ROLES | {"orchestrator", "project_owner", "non
 OWNER_ROLES = PROFILE_ROLES | {"orchestrator", "project_owner"}
 ACTION_SEMANTICS = {"normal", "wait_for_owner", "pause", "stop_terminal", "completed_state_transition"}
 BLOCKER_TYPES = {"owner_decision", "pause", "audit_fail", "gap", "runtime", "dependency", "governance", "other"}
+TASK_STATUSES = {
+    "pending",
+    "ready",
+    "running",
+    "audit_pending",
+    "audit_passed",
+    "checkpoint_done",
+    "blocked",
+    "failed",
+    "superseded",
+    "completed",
+}
+TASK_RESOLUTION_STATUSES = {"not_required", "unresolved", "resolved", "superseded"}
 
 
 @dataclass(frozen=True)
@@ -418,18 +431,10 @@ ENUM_FIELDS = {
         "handover",
     },
     ("TASK_REGISTRY", "tasks[].owner_role"): CONTROL_OR_TARGET_ROLES,
-    ("TASK_REGISTRY", "tasks[].status"): {
-        "pending",
-        "ready",
-        "running",
-        "audit_pending",
-        "audit_passed",
-        "checkpoint_done",
-        "blocked",
-        "failed",
-        "superseded",
-        "completed",
-    },
+    ("TASK_REGISTRY", "tasks[].status"): TASK_STATUSES,
+    ("TASK_REGISTRY", "tasks[].raw_status"): TASK_STATUSES,
+    ("TASK_REGISTRY", "tasks[].resolution_status"): TASK_RESOLUTION_STATUSES,
+    ("TASK_REGISTRY", "tasks[].effective_status"): TASK_STATUSES,
     ("TASK_REGISTRY", "tasks[].requested_by_role"): PROFILE_ROLES | {"NONE"},
     ("TASK_REGISTRY", "tasks[].return_to_role_after_audit_pass"): PROFILE_ROLES | {"none"},
     ("TASK_REGISTRY", "tasks[].push_status"): {"not_required", "not_attempted", "pushed", "failed"},
@@ -512,11 +517,26 @@ LIST_ITEM_LIST_OR_NONE_FIELDS = {
     ("TASK_REGISTRY", "tasks[].result_refs"),
     ("TASK_REGISTRY", "tasks[].audit_refs"),
     ("TASK_REGISTRY", "tasks[].correction_links"),
+    ("TASK_REGISTRY", "tasks[].correction_of"),
+    ("TASK_REGISTRY", "tasks[].resolved_by"),
+    ("TASK_REGISTRY", "tasks[].superseded_by"),
     ("TASK_REGISTRY", "tasks[].accepted_files"),
 }
 
 LIST_ITEM_BOOLEAN_FIELDS = {
     ("TASK_REGISTRY", "tasks[].return_to_requester_after_audit_pass"),
+}
+
+LIST_ITEM_OPTIONAL_FIELDS = {
+    ("TASK_REGISTRY", "tasks"): (
+        "correction_of",
+        "resolved_by",
+        "superseded_by",
+        "effective_audit_ref",
+        "raw_status",
+        "resolution_status",
+        "effective_status",
+    ),
 }
 
 
@@ -704,6 +724,8 @@ def _validate_list_items(spec: SidecarSpec, content: dict[str, object], relpath:
         value = content.get(field)
         if not isinstance(value, list):
             continue
+        optional_fields = LIST_ITEM_OPTIONAL_FIELDS.get((spec.sidecar_type, field), ())
+        allowed_fields = tuple(dict.fromkeys([*item_fields, *optional_fields]))
         for index, item in enumerate(value):
             item_path = f"content.{field}[{index}]"
             if not isinstance(item, dict):
@@ -730,7 +752,7 @@ def _validate_list_items(spec: SidecarSpec, content: dict[str, object], relpath:
                             "Populate every required governed field from the sidecar contract.",
                         )
                     )
-            unknown = sorted(set(item) - set(item_fields))
+            unknown = sorted(set(item) - set(allowed_fields))
             for extra in unknown:
                 findings.append(
                     _finding(
@@ -742,7 +764,7 @@ def _validate_list_items(spec: SidecarSpec, content: dict[str, object], relpath:
                         "Remove unknown governed fields or update the contract in a separate bounded task.",
                     )
                 )
-            for item_field in item_fields:
+            for item_field in allowed_fields:
                 if item_field not in item:
                     continue
                 item_value = item[item_field]
@@ -1478,6 +1500,45 @@ def _audit_failure_route_findings(root: Path, sidecars: dict[str, dict[str, obje
     return findings
 
 
+def _task_effective_status_findings(root: Path, sidecars: dict[str, dict[str, object]]) -> list[Finding]:
+    rollup = transition_engine.task_effective_status_rollup(root, sidecars)
+    invalid = rollup.get("invalid_resolution_declarations")
+    if not isinstance(invalid, list):
+        return []
+    findings: list[Finding] = []
+    for item in invalid:
+        if not isinstance(item, dict):
+            continue
+        task_id = str(item.get("task_id") or "UNKNOWN")
+        task_index = item.get("task_index")
+        validation_errors = item.get("validation_errors")
+        if not isinstance(validation_errors, list):
+            continue
+        for error in validation_errors:
+            if not isinstance(error, dict):
+                continue
+            rule_id = str(error.get("rule_id") or "TASK_EFFECTIVE_STATUS_INVALID")
+            field = str(error.get("field") or "effective_status")
+            findings.append(
+                _finding(
+                    rule_id,
+                    "TASK_REGISTRY effective status resolution is invalid",
+                    json.dumps(
+                        {
+                            "task_id": task_id,
+                            "task_index": task_index,
+                            "resolution_error": error,
+                        },
+                        sort_keys=True,
+                    ),
+                    "project-runtime/state/TASK_REGISTRY.json",
+                    f"content.tasks[{task_index}].{field}" if isinstance(task_index, int) else f"content.tasks[].{field}",
+                    "Declare effective status only when it matches computed correction-resolution evidence.",
+                )
+            )
+    return findings
+
+
 def _nonempty_terminal_blockers(value: object) -> list[str]:
     if isinstance(value, list):
         blockers: list[str] = []
@@ -1499,7 +1560,7 @@ def _nonempty_terminal_blockers(value: object) -> list[str]:
     return []
 
 
-def _terminal_completion_findings(sidecars: dict[str, dict[str, object]]) -> list[Finding]:
+def _terminal_completion_findings(root: Path, sidecars: dict[str, dict[str, object]]) -> list[Finding]:
     project_state = _content(sidecars, "PROJECT_STATE")
     current_gate = _content(sidecars, "CURRENT_GATE")
     next_action = _content(sidecars, "NEXT_ACTION")
@@ -1511,24 +1572,24 @@ def _terminal_completion_findings(sidecars: dict[str, dict[str, object]]) -> lis
         return []
 
     findings: list[Finding] = []
-    tasks = _content(sidecars, "TASK_REGISTRY").get("tasks")
-    unresolved: list[str] = []
-    if isinstance(tasks, list):
-        for task in tasks:
-            if not isinstance(task, dict):
-                continue
-            status = task.get("status")
-            if status in {"failed", "blocked", "audit_pending"}:
-                unresolved.append(f"{task.get('task_id', 'UNKNOWN')}:{status}")
+    rollup = transition_engine.task_effective_status_rollup(root, sidecars)
+    unresolved = [
+        f"{item.get('task_id', 'UNKNOWN')}:{item.get('effective_status', 'UNKNOWN')}"
+        for item in rollup.get("unresolved_effective_tasks", [])
+        if isinstance(item, dict)
+    ]
     if unresolved:
         findings.append(
             _finding(
                 "PROJECT_COMPLETED_UNRESOLVED_TASKS",
                 "PROJECT_COMPLETED has unresolved task states",
-                f"PROJECT_COMPLETED is invalid with unresolved failed/blocked/audit_pending tasks: {', '.join(unresolved)}.",
+                (
+                    "PROJECT_COMPLETED is invalid with unresolved effective "
+                    f"failed/blocked/audit_pending tasks: {', '.join(unresolved)}."
+                ),
                 "project-runtime/state/TASK_REGISTRY.json",
-                "content.tasks[].status",
-                "Resolve, supersede, or correct failed/blocked/audit_pending tasks before lifecycle finalize can complete the project.",
+                "content.tasks[].effective_status",
+                "Resolve, supersede, or correct failed/blocked/audit_pending tasks with valid resolution evidence before lifecycle finalize can complete the project.",
             )
         )
 
@@ -1905,8 +1966,9 @@ def _report(root: Path, strict: bool) -> tuple[dict[str, object], int]:
     findings.extend(_artifact_package_findings(loaded_sidecars))
     findings.extend(_checkpoint_findings(root, loaded_sidecars))
     findings.extend(_audit_failure_route_findings(root, loaded_sidecars))
+    findings.extend(_task_effective_status_findings(root, loaded_sidecars))
     findings.extend(_bootstrap_semantic_findings(root, loaded_sidecars))
-    findings.extend(_terminal_completion_findings(loaded_sidecars))
+    findings.extend(_terminal_completion_findings(root, loaded_sidecars))
     reconciliation_enabled = current_p2_state or lifecycle_has_evidence
     if reconciliation_enabled:
         findings.extend(_transition_engine_findings(loaded_sidecars))
@@ -1955,6 +2017,7 @@ def _build_report(
     )
     all_present = sorted(set(present) | set(optional_present))
     all_missing = sorted(set(missing) | set(optional_missing)) if current_p2_state else sorted(missing)
+    task_effective_rollup = transition_engine.task_effective_status_rollup(root, sidecars)
     return {
         "tool": "aso",
         "command": "state verify",
@@ -1976,6 +2039,7 @@ def _build_report(
             "optional_sidecars_present": optional_present,
             "optional_sidecars_missing": optional_missing,
             "task_registry_count": len(_task_registry(sidecars)),
+            "task_effective_status_rollup": task_effective_rollup,
         },
         "runtime_schema_contract": runtime_schema_contracts.contract_summary(),
         "reconciliation": reconciliation,

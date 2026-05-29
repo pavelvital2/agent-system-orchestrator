@@ -82,6 +82,9 @@ DERIVED_NEXT_ACTION_CACHE_FIELDS = (
     "checkpoint_preflight_required",
     "checkpoint_receipt_required",
 )
+TASK_EFFECTIVE_BLOCKING_STATUSES = {"failed", "blocked", "audit_pending"}
+TASK_TERMINAL_SUCCESS_STATUSES = {"audit_passed", "checkpoint_done", "completed"}
+RESOLUTION_STATUSES = {"not_required", "unresolved", "resolved", "superseded"}
 
 
 class RuntimeContractError(ValueError):
@@ -1125,11 +1128,153 @@ def _valid_pass_payloads(parsed_refs: Iterable[Mapping[str, object]], passed_ref
     ]
 
 
+def _task_resolution_refs(task: Mapping[str, object], field: str) -> list[str]:
+    return _truthy_refs(task.get(field))
+
+
+def _task_ref_matches(refs: Iterable[str], candidates: Iterable[str]) -> bool:
+    candidate_set = {candidate for candidate in candidates if candidate and not _is_none(candidate)}
+    return any(ref in candidate_set for ref in refs if ref and not _is_none(ref))
+
+
+def _audit_ref_records(sidecars: Mapping[str, Mapping[str, object]]) -> list[dict[str, Any]]:
+    records: list[dict[str, Any]] = []
+    tasks = _content(sidecars, "TASK_REGISTRY").get("tasks")
+    if isinstance(tasks, list):
+        for task_index, task in enumerate(tasks):
+            if not isinstance(task, Mapping):
+                continue
+            task_id = _truthy_text(task.get("task_id"))
+            for audit_index, ref in enumerate(_truthy_refs(task.get("audit_refs"))):
+                records.append(
+                    {
+                        "ref": ref,
+                        "source_type": "task_registry",
+                        "task_id": task_id,
+                        "task_index": task_index,
+                        "audit_index": audit_index,
+                        "task": dict(task),
+                        "source_path": "project-runtime/state/TASK_REGISTRY.json",
+                        "source_field": f"content.tasks[{task_index}].audit_refs",
+                    }
+                )
+
+    seen = {_text(record.get("ref")) for record in records}
+    global_refs = [*_current_gate_audit_refs(sidecars), *_all_accepted_artifact_audit_refs(sidecars)]
+    for global_index, ref in enumerate(ref for ref in global_refs if ref not in seen):
+        records.append(
+            {
+                "ref": ref,
+                "source_type": "global_audit_refs",
+                "task_id": "",
+                "task_index": None,
+                "audit_index": global_index,
+                "task": {},
+                "source_path": "project-runtime/state/CURRENT_GATE.json",
+                "source_field": "content.gate_evidence",
+            }
+        )
+        seen.add(ref)
+    return records
+
+
+def _global_audit_resolution_context(
+    workspace_root: Path,
+    sidecars: Mapping[str, Mapping[str, object]],
+) -> dict[str, Any]:
+    records = _audit_ref_records(sidecars)
+    ordered_refs = [record["ref"] for record in records if isinstance(record.get("ref"), str)]
+    inspection = result_parser.inspect_audit_references(workspace_root, ordered_refs, task_id="", strict=True)
+    parsed_refs = [dict(item) for item in inspection["parsed_refs"] if isinstance(item, Mapping)]
+    raw_invalid_refs = [dict(item) for item in inspection["invalid_refs"] if isinstance(item, Mapping)]
+    passed_refs = [ref for ref in inspection["passed_refs"] if isinstance(ref, str)]
+    record_by_ref: dict[str, dict[str, Any]] = {}
+    for record in records:
+        ref = _text(record.get("ref"))
+        if ref and ref not in record_by_ref:
+            record_by_ref[ref] = dict(record)
+
+    tasks_by_id = _tasks_by_id(sidecars)
+    failed_audit_refs = {
+        _text(item.get("ref"))
+        for item in raw_invalid_refs
+        if _is_status_fail_audit_invalid(item) and _text(item.get("ref"))
+    }
+    return {
+        "ordered_refs": ordered_refs,
+        "ref_order": {ref: index for index, ref in enumerate(dict.fromkeys(ordered_refs))},
+        "records": records,
+        "record_by_ref": record_by_ref,
+        "tasks_by_id": tasks_by_id,
+        "parsed_refs": parsed_refs,
+        "raw_invalid_refs": raw_invalid_refs,
+        "passed_refs": passed_refs,
+        "global_pass_items": _valid_pass_payloads(parsed_refs, passed_refs),
+        "failed_audit_refs": failed_audit_refs,
+        "unparsed_refs": list(inspection["unparsed_refs"]),
+    }
+
+
+def _resolution_link_valid(
+    pass_item: Mapping[str, object],
+    failure: Mapping[str, object],
+    *,
+    resolution_context: Mapping[str, Any] | None,
+    failed_task: Mapping[str, object],
+) -> tuple[bool, str]:
+    if resolution_context is None:
+        return True, "same evidence set"
+
+    fail_ref = _text(failure.get("ref"))
+    pass_ref = _text(pass_item.get("ref"))
+    record_by_ref = resolution_context.get("record_by_ref")
+    if not isinstance(record_by_ref, Mapping):
+        return False, "resolution context is missing audit ref records"
+
+    fail_record = _mapping(record_by_ref.get(fail_ref))
+    pass_record = _mapping(record_by_ref.get(pass_ref))
+    failed_task_map = dict(failed_task) if isinstance(failed_task, Mapping) else _mapping(fail_record.get("task"))
+    resolver_task = _mapping(pass_record.get("task"))
+    tasks_by_id = resolution_context.get("tasks_by_id")
+    if not resolver_task and isinstance(tasks_by_id, Mapping):
+        resolver_task = _mapping(tasks_by_id.get(_text(pass_item.get("task_id"))))
+
+    fail_task_id = _truthy_text(fail_record.get("task_id")) or _truthy_text(failure.get("task_id"))
+    pass_task_id = _truthy_text(pass_record.get("task_id")) or _truthy_text(pass_item.get("task_id"))
+    parsed_fail_task_id = _truthy_text(failure.get("task_id"))
+    parsed_pass_task_id = _truthy_text(pass_item.get("task_id"))
+    if parsed_pass_task_id:
+        valid_audit_task_ids = {item for item in (fail_task_id, pass_task_id, parsed_fail_task_id) if item}
+        if valid_audit_task_ids and parsed_pass_task_id not in valid_audit_task_ids:
+            return False, "passing audit task id does not match the failed or resolver task"
+
+    if fail_task_id and pass_task_id and fail_task_id == pass_task_id:
+        return True, "same registry task"
+    if parsed_fail_task_id and parsed_pass_task_id and parsed_fail_task_id == parsed_pass_task_id and not fail_task_id:
+        return True, "same audit task id"
+
+    failure_candidates = [fail_task_id, parsed_fail_task_id, fail_ref]
+    resolver_candidates = [pass_task_id, parsed_pass_task_id, pass_ref]
+    if _task_ref_matches(_task_resolution_refs(failed_task_map, "resolved_by"), resolver_candidates):
+        return True, "failed task resolved_by references resolver"
+    if _task_ref_matches(_task_resolution_refs(failed_task_map, "superseded_by"), resolver_candidates):
+        return True, "failed task superseded_by references resolver"
+    if _task_ref_matches(_task_resolution_refs(failed_task_map, "correction_links"), resolver_candidates):
+        return True, "failed task correction_links references resolver"
+    if _task_ref_matches(_task_resolution_refs(resolver_task, "correction_of"), failure_candidates):
+        return True, "resolver task correction_of references failure"
+    if _task_ref_matches(_task_resolution_refs(resolver_task, "correction_links"), failure_candidates):
+        return True, "resolver task correction_links references failure"
+    return False, "no task-level correction_of/resolved_by/superseded_by link connects pass audit to failed audit"
+
+
 def _pass_resolves_audit_failure(
     pass_item: Mapping[str, object],
     failure: Mapping[str, object],
     *,
     ref_order: Mapping[str, int],
+    resolution_context: Mapping[str, Any] | None = None,
+    failed_task: Mapping[str, object] | None = None,
 ) -> str:
     fail_ref = _text(failure.get("ref"))
     pass_ref = _text(pass_item.get("ref"))
@@ -1140,7 +1285,17 @@ def _pass_resolves_audit_failure(
 
     correction_refs = _truthy_refs(pass_item.get("correction_refs"))
     if fail_ref in correction_refs:
-        return f"passing AUDIT_RESULT {pass_ref} explicitly cites failed audit {fail_ref}"
+        link_valid, link_evidence = _resolution_link_valid(
+            pass_item,
+            failure,
+            resolution_context=resolution_context,
+            failed_task=failed_task or {},
+        )
+        if link_valid:
+            return (
+                f"passing AUDIT_RESULT {pass_ref} explicitly cites failed audit {fail_ref}; "
+                f"{link_evidence}"
+            )
     return ""
 
 
@@ -1150,6 +1305,8 @@ def _resolution_diagnostics_for_unresolved_failure(
     *,
     ref_order: Mapping[str, int],
     failed_audit_refs: set[str],
+    resolution_context: Mapping[str, Any] | None = None,
+    failed_task: Mapping[str, object] | None = None,
 ) -> list[dict[str, object]]:
     fail_ref = _text(failure.get("ref"))
     if not fail_ref:
@@ -1176,6 +1333,26 @@ def _resolution_diagnostics_for_unresolved_failure(
             )
             continue
         if fail_ref in correction_refs:
+            link_valid, link_evidence = _resolution_link_valid(
+                pass_item,
+                failure,
+                resolution_context=resolution_context,
+                failed_task=failed_task or {},
+            )
+            if not link_valid:
+                key = (pass_ref, "AUDIT_PASS_RESOLUTION_LINK_INVALID")
+                if key in seen:
+                    continue
+                seen.add(key)
+                diagnostics.append(
+                    {
+                        "rule_id": "AUDIT_PASS_RESOLUTION_LINK_INVALID",
+                        "pass_audit_ref": pass_ref,
+                        "unresolved_audit_ref": fail_ref,
+                        "message": "Passing AUDIT_RESULT cites this failed audit but lacks a valid task-level resolution link.",
+                        "link_evidence": link_evidence,
+                    }
+                )
             continue
         unknown_refs = [ref for ref in correction_refs if ref not in failed_audit_refs]
         rule_id = (
@@ -1206,14 +1383,28 @@ def _resolved_audit_failure_partition(
     passed_refs: Iterable[str],
     ordered_refs: Iterable[str],
     task: Mapping[str, object],
+    resolution_context: Mapping[str, Any] | None = None,
 ) -> tuple[list[dict[str, Any]], list[dict[str, Any]], list[dict[str, Any]]]:
-    ref_order = {ref: index for index, ref in enumerate(dict.fromkeys(ordered_refs))}
+    if resolution_context is not None and isinstance(resolution_context.get("ref_order"), Mapping):
+        ref_order = dict(resolution_context["ref_order"])
+    else:
+        ref_order = {ref: index for index, ref in enumerate(dict.fromkeys(ordered_refs))}
     pass_items = _valid_pass_payloads(parsed_refs, passed_refs)
+    if resolution_context is not None and isinstance(resolution_context.get("global_pass_items"), list):
+        pass_items = list(
+            {
+                _text(item.get("ref")): dict(item)
+                for item in [*pass_items, *resolution_context["global_pass_items"]]
+                if isinstance(item, Mapping) and _text(item.get("ref"))
+            }.values()
+        )
     failed_audit_refs = {
         _text(item.get("ref"))
         for item in invalid_refs
         if isinstance(item, Mapping) and _is_status_fail_audit_invalid(item) and _text(item.get("ref"))
     }
+    if resolution_context is not None and isinstance(resolution_context.get("failed_audit_refs"), set):
+        failed_audit_refs.update(resolution_context["failed_audit_refs"])
     remaining_invalid: list[dict[str, Any]] = []
     unresolved_failures: list[dict[str, Any]] = []
     resolved_failures: list[dict[str, Any]] = []
@@ -1230,6 +1421,8 @@ def _resolved_audit_failure_partition(
                 pass_item,
                 item,
                 ref_order=ref_order,
+                resolution_context=resolution_context,
+                failed_task=task,
             )
             if resolution:
                 resolved_by = _text(pass_item.get("ref"))
@@ -1250,6 +1443,8 @@ def _resolved_audit_failure_partition(
             pass_items,
             ref_order=ref_order,
             failed_audit_refs=failed_audit_refs,
+            resolution_context=resolution_context,
+            failed_task=task,
         )
         if diagnostics:
             unresolved_item["resolution_diagnostics"] = diagnostics
@@ -1269,6 +1464,7 @@ def _audit_pass_evidence_from_refs(
     artifact_audit_refs: Iterable[str] = (),
     gate_audit_refs: Iterable[str] = (),
     lifecycle_audit_refs: Iterable[str] = (),
+    resolution_context: Mapping[str, Any] | None = None,
 ) -> dict[str, object]:
     strict_audit_refs = list(dict.fromkeys([*task_audit_refs, *artifact_audit_refs, *gate_audit_refs]))
     lifecycle_only_refs = [ref for ref in lifecycle_audit_refs if ref not in set(strict_audit_refs)]
@@ -1295,8 +1491,29 @@ def _audit_pass_evidence_from_refs(
         passed_refs,
         ordered_refs,
         task,
+        resolution_context=resolution_context,
     )
     present = bool(passed_refs) and not invalid_refs and not unparsed_refs
+    effective_pass_refs = list(passed_refs)
+    if resolution_context is not None and resolved_failures and not effective_pass_refs:
+        for item in resolved_failures:
+            resolved_by = _text(item.get("resolved_by_audit_ref"))
+            if resolved_by:
+                effective_pass_refs.append(resolved_by)
+        effective_pass_refs = list(dict.fromkeys(effective_pass_refs))
+        parsed_by_ref = {
+            _text(item.get("ref")): dict(item)
+            for item in resolution_context.get("parsed_refs", [])
+            if isinstance(item, Mapping) and _text(item.get("ref"))
+        }
+        for ref in effective_pass_refs:
+            if ref in {item.get("ref") for item in parsed_refs if isinstance(item, Mapping)}:
+                continue
+            item = parsed_by_ref.get(ref)
+            if item:
+                parsed_refs.append(item)
+        if effective_pass_refs and not invalid_refs and not unparsed_refs:
+            present = True
     return {
         "present": present,
         "task_id": task_id,
@@ -1307,7 +1524,8 @@ def _audit_pass_evidence_from_refs(
         "current_gate_audit_evidence_refs": list(gate_audit_refs),
         "lifecycle_audit_pass_refs": list(lifecycle_audit_refs),
         "parsed_audit_results": parsed_refs,
-        "passed_audit_refs": passed_refs,
+        "passed_audit_refs": list(dict.fromkeys([*passed_refs, *effective_pass_refs])),
+        "effective_audit_ref": (list(dict.fromkeys([*passed_refs, *effective_pass_refs])) or ["NONE"])[-1],
         "invalid_audit_results": invalid_refs,
         "unresolved_audit_failures": unresolved_failures,
         "resolved_audit_failures": resolved_failures,
@@ -1335,6 +1553,7 @@ def audit_pass_evidence_from_sidecars(
     artifact_audit_refs = _accepted_artifact_audit_refs(sidecars, resolved_task_id)
     gate_audit_refs = _current_gate_audit_refs(sidecars)
     lifecycle_audit_refs = _lifecycle_audit_pass_refs(sidecars, resolved_task_id)
+    resolution_context = _global_audit_resolution_context(workspace_root, sidecars)
     return _audit_pass_evidence_from_refs(
         workspace_root,
         task_id=resolved_task_id,
@@ -1344,6 +1563,7 @@ def audit_pass_evidence_from_sidecars(
         artifact_audit_refs=artifact_audit_refs,
         gate_audit_refs=gate_audit_refs,
         lifecycle_audit_refs=lifecycle_audit_refs,
+        resolution_context=resolution_context,
     )
 
 
@@ -1449,6 +1669,7 @@ def audit_failure_evidence_from_sidecars(
     unresolved: list[dict[str, Any]] = []
     resolved: list[dict[str, Any]] = []
     inspected_refs: set[str] = set()
+    resolution_context = _global_audit_resolution_context(workspace_root, sidecars)
 
     if isinstance(tasks_payload, list):
         for index, task in enumerate(tasks_payload):
@@ -1464,6 +1685,7 @@ def audit_failure_evidence_from_sidecars(
                 task=task,
                 task_status=_text(task.get("status")),
                 task_audit_refs=audit_refs,
+                resolution_context=resolution_context,
             )
             task_evidence.append({"task_index": index, **evidence})
             inspected_refs.update(audit_refs)
@@ -1505,6 +1727,7 @@ def audit_failure_evidence_from_sidecars(
             task={},
             task_status="",
             gate_audit_refs=global_refs,
+            resolution_context=resolution_context,
         )
         task_evidence.append({"source_type": "global_audit_refs", **global_evidence})
         for item in global_evidence.get("unresolved_audit_failures", []):
@@ -1531,12 +1754,237 @@ def audit_failure_evidence_from_sidecars(
     unresolved = _dedupe_audit_failure_items(unresolved)
     resolved = _dedupe_audit_failure_items(resolved)
     unroutable = [item for item in unresolved if item.get("unroutable") is True]
+    rollup = task_effective_status_rollup(root, sidecars, resolution_context=resolution_context)
     return {
         "present": bool(unresolved),
         "unresolved_audit_failures": unresolved,
         "resolved_audit_failures": resolved,
         "unroutable_unresolved_audit_failures": unroutable,
         "task_evidence": task_evidence,
+        "task_effective_status_rollup": rollup,
+        "historical_failed_audit_count": len(resolved) + len(unresolved),
+        "resolved_historical_failed_audit_count": len(resolved),
+        "unresolved_effective_failure_count": len(unresolved),
+    }
+
+
+def _declared_task_status(task: Mapping[str, object], field: str) -> str:
+    return _truthy_text(task.get(field))
+
+
+def _latest_ref(refs: Iterable[object]) -> str:
+    result = ""
+    for ref in refs:
+        text = _truthy_text(ref)
+        if text:
+            result = text
+    return result
+
+
+def _task_effective_status_summary(
+    task: Mapping[str, object],
+    *,
+    task_id: str,
+    task_index: int,
+    audit_evidence: Mapping[str, object],
+) -> dict[str, Any]:
+    status = _text(task.get("status"))
+    raw_status = _declared_task_status(task, "raw_status") or status
+    declared_resolution_status = _declared_task_status(task, "resolution_status")
+    declared_effective_status = _declared_task_status(task, "effective_status")
+    declared_effective_audit_ref = _declared_task_status(task, "effective_audit_ref")
+    unresolved = [
+        dict(item)
+        for item in audit_evidence.get("unresolved_audit_failures", [])
+        if isinstance(item, Mapping)
+    ]
+    resolved = [
+        dict(item)
+        for item in audit_evidence.get("resolved_audit_failures", [])
+        if isinstance(item, Mapping)
+    ]
+    passed_refs = [
+        ref
+        for ref in audit_evidence.get("passed_audit_refs", [])
+        if isinstance(ref, str) and not _is_none(ref)
+    ]
+    resolved_by_refs = [
+        _text(item.get("resolved_by_audit_ref"))
+        for item in resolved
+        if _text(item.get("resolved_by_audit_ref"))
+    ]
+
+    if unresolved:
+        resolution_status = "unresolved"
+        effective_status = raw_status if raw_status in TASK_EFFECTIVE_BLOCKING_STATUSES else "failed"
+        effective_audit_ref = _latest_ref(item.get("ref") for item in unresolved) or declared_effective_audit_ref or "NONE"
+    elif resolved:
+        resolution_status = "superseded" if _truthy_refs(task.get("superseded_by")) else "resolved"
+        if raw_status in TASK_EFFECTIVE_BLOCKING_STATUSES or status in TASK_EFFECTIVE_BLOCKING_STATUSES:
+            if resolution_status == "superseded":
+                effective_status = "superseded"
+            elif status in TASK_TERMINAL_SUCCESS_STATUSES:
+                effective_status = status
+            else:
+                effective_status = "completed"
+        elif status in TASK_TERMINAL_SUCCESS_STATUSES:
+            effective_status = status
+        else:
+            effective_status = status or "completed"
+        effective_audit_ref = _latest_ref([*passed_refs, *resolved_by_refs]) or declared_effective_audit_ref or "NONE"
+    elif raw_status in TASK_EFFECTIVE_BLOCKING_STATUSES or status in TASK_EFFECTIVE_BLOCKING_STATUSES:
+        resolution_status = "unresolved"
+        effective_status = raw_status if raw_status in TASK_EFFECTIVE_BLOCKING_STATUSES else status
+        effective_audit_ref = declared_effective_audit_ref or "NONE"
+    else:
+        resolution_status = "not_required"
+        effective_status = status or raw_status or "pending"
+        effective_audit_ref = _latest_ref(passed_refs) or declared_effective_audit_ref or "NONE"
+
+    validation_errors: list[dict[str, object]] = []
+    if declared_resolution_status and declared_resolution_status not in RESOLUTION_STATUSES:
+        validation_errors.append(
+            {
+                "rule_id": "TASK_RESOLUTION_STATUS_INVALID",
+                "field": "resolution_status",
+                "declared": declared_resolution_status,
+                "computed": resolution_status,
+            }
+        )
+    elif declared_resolution_status and declared_resolution_status != resolution_status:
+        validation_errors.append(
+            {
+                "rule_id": "TASK_RESOLUTION_STATUS_MISMATCH",
+                "field": "resolution_status",
+                "declared": declared_resolution_status,
+                "computed": resolution_status,
+            }
+        )
+    if declared_effective_status and declared_effective_status != effective_status:
+        validation_errors.append(
+            {
+                "rule_id": "TASK_EFFECTIVE_STATUS_MISMATCH",
+                "field": "effective_status",
+                "declared": declared_effective_status,
+                "computed": effective_status,
+            }
+        )
+    if (
+        declared_effective_audit_ref
+        and declared_effective_audit_ref != "NONE"
+        and declared_effective_audit_ref != effective_audit_ref
+    ):
+        valid_effective_refs = set(passed_refs) | set(resolved_by_refs)
+        if declared_effective_audit_ref not in valid_effective_refs:
+            validation_errors.append(
+                {
+                    "rule_id": "TASK_EFFECTIVE_AUDIT_REF_INVALID",
+                    "field": "effective_audit_ref",
+                    "declared": declared_effective_audit_ref,
+                    "computed": effective_audit_ref,
+                }
+            )
+
+    return {
+        "task_id": task_id,
+        "task_index": task_index,
+        "status": status or "NONE",
+        "raw_status": raw_status or "NONE",
+        "resolution_status": resolution_status,
+        "effective_status": effective_status,
+        "effective_audit_ref": effective_audit_ref,
+        "declared_raw_status": _declared_task_status(task, "raw_status") or "NONE",
+        "declared_resolution_status": declared_resolution_status or "NONE",
+        "declared_effective_status": declared_effective_status or "NONE",
+        "declared_effective_audit_ref": declared_effective_audit_ref or "NONE",
+        "correction_of": _truthy_refs(task.get("correction_of")),
+        "resolved_by": _truthy_refs(task.get("resolved_by")),
+        "superseded_by": _truthy_refs(task.get("superseded_by")),
+        "audit_refs": _truthy_refs(task.get("audit_refs")),
+        "passed_audit_refs": passed_refs,
+        "unresolved_audit_failures": unresolved,
+        "resolved_audit_failures": resolved,
+        "validation_errors": validation_errors,
+    }
+
+
+def task_effective_status_rollup(
+    root: str | Path,
+    sidecars: Mapping[str, Mapping[str, object]],
+    *,
+    resolution_context: Mapping[str, Any] | None = None,
+) -> dict[str, object]:
+    """Return computed raw/effective task statuses and unresolved failure counts."""
+
+    workspace_root = Path(root)
+    context = resolution_context or _global_audit_resolution_context(workspace_root, sidecars)
+    tasks_payload = _content(sidecars, "TASK_REGISTRY").get("tasks")
+    summaries: list[dict[str, Any]] = []
+    if isinstance(tasks_payload, list):
+        for index, task in enumerate(tasks_payload):
+            if not isinstance(task, Mapping):
+                continue
+            task_id = _truthy_text(task.get("task_id")) or f"UNKNOWN_{index}"
+            evidence = _audit_pass_evidence_from_refs(
+                workspace_root,
+                task_id=task_id,
+                task=task,
+                task_status=_text(task.get("status")),
+                task_audit_refs=_truthy_refs(task.get("audit_refs")),
+                resolution_context=context,
+            )
+            summaries.append(
+                _task_effective_status_summary(
+                    task,
+                    task_id=task_id,
+                    task_index=index,
+                    audit_evidence=evidence,
+                )
+            )
+
+    unresolved_tasks = [
+        {
+            "task_id": summary["task_id"],
+            "raw_status": summary["raw_status"],
+            "effective_status": summary["effective_status"],
+            "resolution_status": summary["resolution_status"],
+            "effective_audit_ref": summary["effective_audit_ref"],
+        }
+        for summary in summaries
+        if summary.get("effective_status") in TASK_EFFECTIVE_BLOCKING_STATUSES
+    ]
+    invalid_declarations = [
+        {
+            "task_id": summary["task_id"],
+            "task_index": summary["task_index"],
+            "validation_errors": summary["validation_errors"],
+        }
+        for summary in summaries
+        if summary.get("validation_errors")
+    ]
+    historical_failures = [
+        {
+            "task_id": summary["task_id"],
+            "raw_status": summary["raw_status"],
+            "effective_status": summary["effective_status"],
+            "resolution_status": summary["resolution_status"],
+            "effective_audit_ref": summary["effective_audit_ref"],
+        }
+        for summary in summaries
+        if summary.get("raw_status") in TASK_EFFECTIVE_BLOCKING_STATUSES
+        and summary.get("effective_status") not in TASK_EFFECTIVE_BLOCKING_STATUSES
+    ]
+    return {
+        "tasks": summaries,
+        "unresolved_effective_tasks": unresolved_tasks,
+        "invalid_resolution_declarations": invalid_declarations,
+        "historical_resolved_tasks": historical_failures,
+        "counts": {
+            "tasks": len(summaries),
+            "unresolved_effective_tasks": len(unresolved_tasks),
+            "invalid_resolution_declarations": len(invalid_declarations),
+            "historical_resolved_tasks": len(historical_failures),
+        },
     }
 
 
@@ -2384,6 +2832,13 @@ def _canonical_input_summary(
         },
         "correction_records": {
             "task_correction_links": correction_links,
+            "correction_of": _truthy_refs(task.get("correction_of")),
+            "resolved_by": _truthy_refs(task.get("resolved_by")),
+            "superseded_by": _truthy_refs(task.get("superseded_by")),
+            "raw_status": _truthy_text(task.get("raw_status")) or "NONE",
+            "resolution_status": _truthy_text(task.get("resolution_status")) or "NONE",
+            "effective_status": _truthy_text(task.get("effective_status")) or "NONE",
+            "effective_audit_ref": _truthy_text(task.get("effective_audit_ref")) or "NONE",
             "project_phase": _truthy_text(_content(sidecars, "PROJECT_STATE").get("current_phase")) or "NONE",
             "active_blockers": active_blockers_from_sidecars(sidecars),
         },

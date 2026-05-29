@@ -114,6 +114,16 @@
         "artifact_package_required": { "type": "boolean" },
         "audit_refs": { "$ref": "#/$defs/listOrNone" },
         "correction_links": { "$ref": "#/$defs/listOrNone" },
+        "correction_of": { "$ref": "#/$defs/listOrNone" },
+        "resolved_by": { "$ref": "#/$defs/listOrNone" },
+        "superseded_by": { "$ref": "#/$defs/listOrNone" },
+        "effective_audit_ref": { "type": "string" },
+        "raw_status": { "$ref": "#/$defs/taskStatus" },
+        "resolution_status": {
+          "type": "string",
+          "enum": ["not_required", "unresolved", "resolved", "superseded"]
+        },
+        "effective_status": { "$ref": "#/$defs/taskStatus" },
         "commit_hash": { "type": "string" },
         "branch": { "type": "string" },
         "push_status": { "type": "string", "enum": ["not_required", "not_attempted", "pushed", "failed"] },
@@ -122,6 +132,21 @@
         "created_at": { "type": "string" },
         "updated_at": { "type": "string" }
       }
+    },
+    "taskStatus": {
+      "type": "string",
+      "enum": [
+        "pending",
+        "ready",
+        "running",
+        "audit_pending",
+        "audit_passed",
+        "checkpoint_done",
+        "blocked",
+        "failed",
+        "superseded",
+        "completed"
+      ]
     },
     "profileRole": {
       "type": "string",

@@ -217,6 +217,23 @@ Each task entry must identify the task, task packet, role, status, audit
 requirements, checkpoint requirements, requester return metadata, blockers,
 worker result references, and audit references.
 
+Task entries may also carry correction-resolution metadata:
+
+```text
+correction_of
+resolved_by
+superseded_by
+effective_audit_ref
+raw_status
+resolution_status
+effective_status
+```
+
+`raw_status` preserves the historical task state. `effective_status` is the
+computed state used by checkpoint and terminal eligibility. Failed, blocked, or
+audit-pending raw states stop blocking only when a valid resolution record or
+passing audit receipt explicitly resolves the failed audit reference.
+
 ### ACCEPTED_ARTIFACTS
 
 `ACCEPTED_ARTIFACTS` records bounded accepted output references, not artifact
