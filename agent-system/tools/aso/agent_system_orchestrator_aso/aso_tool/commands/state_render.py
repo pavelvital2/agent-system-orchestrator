@@ -8,6 +8,7 @@ import sys
 from pathlib import Path
 from typing import Iterable
 
+from .. import state_materialization
 from .. import runtime_schema_contracts
 from . import output_policy, state_verify
 
@@ -16,6 +17,23 @@ EXIT_OK = 0
 EXIT_FINDINGS = 1
 EXIT_IO_ERROR = 3
 MATERIALIZED_VIEW_TYPES = runtime_schema_contracts.ALL_SIDECARS
+NEXT_ACTION_REFRESH_BLOCKING_RULES = {
+    "SIDECAR_JSON_PARSE_ERROR",
+    "SIDECAR_TOP_LEVEL_NOT_OBJECT",
+    "SIDECAR_REQUIRED_SIDECAR_MISSING",
+    "SIDECAR_REQUIRED_FIELD_MISSING",
+    "SIDECAR_REQUIRED_FIELD_EMPTY",
+    "SIDECAR_TYPE_INVALID",
+    "SIDECAR_BOOLEAN_VALUE_INVALID",
+    "SIDECAR_ENUM_VALUE_INVALID",
+    "SIDECAR_UNKNOWN_GOVERNED_FIELD",
+    "SIDECAR_SCHEMA_VERSION_MISSING_OR_INVALID",
+    "SIDECAR_RUNTIME_SCHEMA_VERSION_INVALID",
+    "SIDECAR_TYPE_MISMATCH",
+    "SIDECAR_MARKDOWN_SOURCE_MISMATCH",
+    "SIDECAR_STATE_REVISION_INVALID",
+    "SIDECAR_TIMESTAMP_INVALID",
+}
 
 
 def _json_bytes(payload: dict[str, object]) -> str:
@@ -293,10 +311,73 @@ def render_compatibility_view(sidecar_type: str, payload: dict[str, object]) -> 
     return "\n".join(line for line in lines if line is not None).rstrip() + "\n"
 
 
+def _refresh_blocked_by_structural_findings(verify_report: dict[str, object]) -> list[dict[str, object]]:
+    findings = verify_report.get("findings")
+    if not isinstance(findings, list):
+        return []
+    blocked: list[dict[str, object]] = []
+    for finding in findings:
+        if not isinstance(finding, dict):
+            continue
+        if finding.get("severity") != "error":
+            continue
+        if str(finding.get("rule_id", "")) in NEXT_ACTION_REFRESH_BLOCKING_RULES:
+            blocked.append(finding)
+    return blocked
+
+
+def _refresh_next_action_cache(root: Path) -> tuple[list[dict[str, object]], list[dict[str, object]]]:
+    verify_report, _ = state_verify._report(root, True)
+    blocked = _refresh_blocked_by_structural_findings(verify_report)
+    if blocked:
+        return [], [
+            {
+                "rule_id": "STATE_RENDER_NEXT_ACTION_REFRESH_BLOCKED",
+                "severity": "error",
+                "title": "NEXT_ACTION cache refresh blocked by invalid state",
+                "details": "NEXT_ACTION cache refresh requires structurally valid sidecars.",
+                "path": "project-runtime/state",
+                "recommendation": "Repair sidecar schema/type/enum findings before refreshing the derived NEXT_ACTION cache.",
+                "blocked_by": [
+                    {
+                        "rule_id": item.get("rule_id", ""),
+                        "path": item.get("path", ""),
+                        "field": item.get("field", ""),
+                    }
+                    for item in blocked
+                ],
+            }
+        ]
+
+    result = state_materialization.refresh_next_action_cache(root)
+    if not result.ok:
+        return [], [
+            {
+                "rule_id": "STATE_RENDER_NEXT_ACTION_REFRESH_FAILED",
+                "severity": "error",
+                "title": "NEXT_ACTION cache refresh failed",
+                "details": result.error or "NEXT_ACTION cache refresh failed.",
+                "path": "project-runtime/state/NEXT_ACTION.json",
+                "recommendation": "Repair runtime state and rerun aso state render --confirm-write.",
+            }
+        ]
+    writes = [
+        {
+            "path": relpath,
+            "sidecar_type": "NEXT_ACTION",
+            "source": "canonical_derivation_inputs",
+            "changed": True,
+        }
+        for relpath in result.files_written
+    ]
+    return writes, []
+
+
 def materialize_compatibility_views(root: Path) -> tuple[dict[str, object], int]:
+    cache_writes, cache_findings = _refresh_next_action_cache(root)
     sidecars = _load_all_sidecars(root)
     writes: list[dict[str, object]] = []
-    findings: list[dict[str, object]] = []
+    findings: list[dict[str, object]] = list(cache_findings)
 
     for sidecar_type in MATERIALIZED_VIEW_TYPES:
         payload = sidecars.get(sidecar_type)
@@ -375,11 +456,13 @@ def materialize_compatibility_views(root: Path) -> tuple[dict[str, object], int]
         "materialization": "markdown_compatibility_views",
         "status": status,
         "canonical_state": runtime_schema_contracts.STATE_ROOT,
-        "mutations_performed": bool(writes),
+        "mutations_performed": bool(writes or cache_writes),
+        "state_cache_writes": cache_writes,
         "writes": writes,
         "findings": findings,
         "summary": {
             "errors": len(findings),
+            "state_cache_writes": len(cache_writes),
             "views_written": len(writes),
             "views_changed": sum(1 for item in writes if item.get("changed")),
         },

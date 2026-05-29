@@ -299,42 +299,40 @@ def _next_action_content(
     decision: transition_engine.TransitionDecision,
     task_packet: str,
 ) -> dict[str, Any]:
-    action = decision.next_action
-    recommended = _text(action.get("recommended_next_action")) or "NONE"
-    action_type = _text(action.get("action_type")) or "update_state"
-    target_role = _text(action.get("target_role")) or "orchestrator"
-    signals = decision.inputs.get("sidecar_state_signals")
-    signal_task_id = signals.get("task_id") if isinstance(signals, Mapping) else ""
-    task_id = _text(action.get("task_id")) or _text(signal_task_id)
-    checkpoint = recommended == "CHECKPOINT_PREFLIGHT"
-    return {
-        "action_id": f"ACTION-{recommended.replace('_', '-')}-{task_id or 'GLOBAL'}",
-        "action_type": action_type,
-        "target_role": target_role,
-        "task_id": task_id or NONE,
-        "task_packet": task_packet or _text(existing.get("task_packet")) or NONE,
-        "dependency_status": "ready",
-        "blocked_by": [],
-        "action_semantic": "normal",
-        "workspace_identity_required": bool(existing.get("workspace_identity_required")) if action_type == "create_agent" else False,
-        "repository_lock_required": bool(existing.get("repository_lock_required")) if action_type == "create_agent" else False,
-        "checkpoint_policy": _text(action.get("checkpoint_policy")) or ("local_only" if checkpoint else "no_checkpoint"),
-        "checkpoint_preflight_required": checkpoint,
-        "checkpoint_receipt_required": checkpoint,
-        "checkpoint_receipt_ref": _text(existing.get("checkpoint_receipt_ref")) or NONE,
-        "requester_return_context": existing.get("requester_return_context", NONE),
-        "blocking_or_resume_context": existing.get("blocking_or_resume_context", NONE),
-        "required_universal_docs": existing.get("required_universal_docs", []),
-        "required_project_docs": action.get("required_docs", []) if isinstance(action.get("required_docs"), list) else existing.get("required_project_docs", []),
-        "expected_result": existing.get("expected_result", []),
-        "instruction_for_orchestrator": f"Route lifecycle-derived next action {recommended}.",
+    sidecars = {
+        "NEXT_ACTION": {
+            "content": dict(existing),
+        }
     }
+    if task_packet:
+        action = dict(decision.next_action)
+        action["task_packet"] = task_packet
+        decision = transition_engine.TransitionDecision(
+            inputs=decision.inputs,
+            transition_selected=decision.transition_selected,
+            findings=decision.findings,
+            next_action=action,
+            reference_docs_used=decision.reference_docs_used,
+            allowed=decision.allowed,
+            current_state=decision.current_state,
+            event=decision.event,
+            next_state=decision.next_state,
+        )
+    return transition_engine.derived_next_action_cache_content(
+        transition_engine.load_runtime_contract(),
+        sidecars,
+        decision,
+    )
 
 
 def _task_packet_for(sidecars: Mapping[str, Mapping[str, Any]], task_id: str) -> str:
+    current_gate = _content(sidecars.get("CURRENT_GATE", {}))
+    gate_task_id = _text(current_gate.get("task_id"))
+    if (not task_id or not gate_task_id or gate_task_id == task_id) and _text(current_gate.get("task_packet")):
+        return _text(current_gate.get("task_packet"))
     task_registry = dict(sidecars.get("TASK_REGISTRY", {}))
     task = _tasks_by_id(task_registry).get(task_id, {})
-    return _text(task.get("task_packet")) or _text(_content(sidecars.get("NEXT_ACTION", {})).get("task_packet"))
+    return _text(task.get("task_packet"))
 
 
 def _materialize_next_action(payload: dict[str, Any], sidecars: Mapping[str, Mapping[str, Any]]) -> bool:
@@ -351,6 +349,25 @@ def _materialize_next_action(payload: dict[str, Any], sidecars: Mapping[str, Map
         return False
     payload["content"] = updated
     return True
+
+
+def refresh_next_action_cache(root: Path) -> MaterializationResult:
+    """Refresh only NEXT_ACTION.json as a rendered cache from canonical inputs."""
+
+    sidecars = _sidecars(root)
+    payload = sidecars.get("NEXT_ACTION")
+    if not isinstance(payload, dict):
+        return MaterializationResult("no_state_sidecars", ())
+    timestamp = utc_timestamp()
+    try:
+        if not _materialize_next_action(payload, sidecars):
+            return MaterializationResult("written", ())
+        _touch(payload, timestamp)
+        path = root / STATE_ROOT / "NEXT_ACTION.json"
+        _write_json(path, payload)
+    except (OSError, transition_engine.RuntimeContractError) as exc:
+        return MaterializationResult("failed", (), str(exc))
+    return MaterializationResult("written", (path.relative_to(root).as_posix(),))
 
 
 def _materialize_project_state(payload: dict[str, Any], sidecars: Mapping[str, Mapping[str, Any]], timestamp: str) -> bool:

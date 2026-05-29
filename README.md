@@ -236,7 +236,9 @@ python3 agent-system/tools/aso/aso.py artifact accept --root /path/to/project --
 python3 agent-system/tools/aso/aso.py lifecycle terminate-agent --root /path/to/project --from-result project-runtime/results/worker/RESULT_TASK_ID_ATTEMPT_001.md --confirm-write
 ```
 
-Run `state render --confirm-write` after manual state materialization changes.
+Run `state render --confirm-write` after manual state materialization changes;
+it refreshes a structurally valid stale `NEXT_ACTION.json` cache from
+canonical routing inputs before rendering Markdown compatibility views.
 `intake bootstrap --confirm-write` synchronizes generated Markdown
 compatibility views for all canonical Runtime Schema sidecars from JSON
 sidecars before returning.
@@ -262,9 +264,12 @@ python3 agent-system/tools/aso/aso.py validate-context-pack agent-system/tests/f
 
 Runtime State P2 command surfaces formalize JSON sidecars under
 `project-runtime/state/`. `project-runtime/state/*.json` sidecars are canonical
-for Runtime Schema `3.1.1`; Markdown runtime files are generated compatibility
-views and report outputs are diagnostics generated from JSON. The active package
-version is `3.7.9` and the active runtime schema version is `3.1.1`.
+for Runtime Schema `3.1.1`; `NEXT_ACTION.json` is the rendered
+compatibility/cache view derived from task registry, lifecycle, artifact,
+audit, gate, correction, and runtime-contract inputs. Markdown runtime files
+are generated compatibility views and report outputs are diagnostics generated
+from JSON. The active package version is `3.7.9` and the active runtime schema
+version is `3.1.1`.
 
 ```text
 python3 agent-system/tools/aso/aso.py validate-rules --root . --strict
@@ -295,7 +300,8 @@ sidecars; confirmed migration requires
 migration receipts under allowed `project-runtime/` report paths. Without
 `--confirm-write`, `aso state render` is read-only except for explicit report
 output to `/tmp` or workspace `project-runtime/reports` or
-`project-runtime/rendered` paths. With `--confirm-write`, it writes generated
+`project-runtime/rendered` paths. With `--confirm-write`, it refreshes the
+derived `NEXT_ACTION.json` cache when structurally valid and writes generated
 Markdown compatibility views for every canonical JSON sidecar.
 
 Corrected P4 design governance commands validate and route

@@ -281,18 +281,20 @@ def _workspace_report(root: Path, strict: bool) -> tuple[dict[str, object], int]
     sidecars = plan_next._load_sidecars(root)
     project_state = _content(sidecars, "PROJECT_STATE")
     next_action = _content(sidecars, "NEXT_ACTION")
+    transition_evidence = _transition_engine_evidence(root, sidecars)
+    derived_next_action_cache = transition_evidence.get("derived_next_action_cache")
+    routing_next_action = dict(next_action)
+    if isinstance(derived_next_action_cache, dict):
+        routing_next_action = dict(derived_next_action_cache)
+    elif isinstance(transition_evidence.get("next_action"), dict):
+        routing_next_action = dict(transition_evidence["next_action"])
     tasks = _tasks_by_id(sidecars)
-    task_id = _as_text(next_action.get("task_id"))
+    task_id = _as_text(routing_next_action.get("task_id"))
     task = tasks.get(task_id, {})
-    blockers = _active_blockers(project_state, next_action)
+    blockers = _active_blockers(project_state, routing_next_action)
     audit_evidence = _audit_pass_evidence(root, sidecars, task, task_id)
     correction_route = correction_routing.from_audit_inspection(root, audit_evidence.get("invalid_audit_results"))
-    transition_evidence = _transition_engine_evidence(root, sidecars)
-    try:
-        contract = transition_engine.load_runtime_contract()
-        is_checkpoint_attempt = transition_engine.is_checkpoint_next_action(contract, next_action)
-    except (OSError, transition_engine.RuntimeContractError):
-        is_checkpoint_attempt = plan_next._is_checkpoint_attempt(next_action)
+    is_checkpoint_attempt = transition_evidence.get("canonical_recommended_next_action") == "CHECKPOINT_PREFLIGHT"
     checkpoint_eligibility = _as_text(project_state.get("checkpoint_eligibility"))
     checkpoint_eligibility_status = _as_text(project_state.get("checkpoint_eligibility_status"))
 
@@ -313,8 +315,11 @@ def _workspace_report(root: Path, strict: bool) -> tuple[dict[str, object], int]
         warnings.append(
             _warning(
                 "GOV-CHECKPOINT-AUDIT-GATE",
-                "NEXT_ACTION is not currently a checkpoint attempt.",
-                f"action_type={next_action.get('action_type', 'NONE')}; checkpoint_policy={next_action.get('checkpoint_policy', 'NONE')}",
+                "Canonical transition route is not currently a checkpoint attempt.",
+                (
+                    f"canonical_recommended_next_action="
+                    f"{transition_evidence.get('canonical_recommended_next_action', 'NONE')}"
+                ),
             )
         )
 
@@ -437,6 +442,8 @@ def _workspace_report(root: Path, strict: bool) -> tuple[dict[str, object], int]
                 "checkpoint_policy": next_action.get("checkpoint_policy", ""),
                 "task_id": task_id,
                 "task_packet": next_action.get("task_packet", ""),
+                "routing_action_type": routing_next_action.get("action_type", ""),
+                "routing_checkpoint_policy": routing_next_action.get("checkpoint_policy", ""),
             },
             "project_state": {
                 "project_status": project_state.get("project_status", ""),

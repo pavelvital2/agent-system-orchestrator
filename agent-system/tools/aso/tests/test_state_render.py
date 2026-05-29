@@ -17,6 +17,46 @@ sys.path.insert(0, str(CLI.parent))
 from agent_system_orchestrator_aso.aso_tool.commands import state_init, state_render  # noqa: E402
 
 
+def load_sidecar(root: Path, name: str) -> dict[str, object]:
+    return json.loads((root / "project-runtime" / "state" / name).read_text(encoding="utf-8"))
+
+
+def write_sidecar(root: Path, name: str, payload: dict[str, object]) -> None:
+    (root / "project-runtime" / "state" / name).write_text(
+        json.dumps(payload, indent=2, sort_keys=True) + "\n",
+        encoding="utf-8",
+    )
+
+
+def fixture_task(task_id: str, status: str, task_packet: str) -> dict[str, object]:
+    return {
+        "accepted_files": [],
+        "audit_refs": [],
+        "branch": "NONE",
+        "checkpoint_ref": "NONE",
+        "commit_hash": "NONE",
+        "correction_links": [],
+        "created_at": "2026-05-21T00:00:00Z",
+        "dependencies": [],
+        "owner_role": "developer",
+        "push_status": "not_required",
+        "requested_by_role": "NONE",
+        "requested_by_task": "NONE",
+        "research_question_id": "NONE",
+        "result_refs": [],
+        "return_task_after_audit_pass": "NONE",
+        "return_to_requester_after_audit_pass": False,
+        "return_to_role_after_audit_pass": "none",
+        "status": status,
+        "task_id": task_id,
+        "task_kind": "normal",
+        "task_packet": task_packet,
+        "task_title": "State render fixture task",
+        "task_type": "developer",
+        "updated_at": "2026-05-21T00:00:00Z",
+    }
+
+
 def run_aso(*args: str) -> subprocess.CompletedProcess[str]:
     return subprocess.run(
         [sys.executable, str(CLI), *args],
@@ -261,6 +301,92 @@ class StateRenderCommandTests(unittest.TestCase):
         self.assertEqual(after_status.returncode, 0, after_status.stdout + after_status.stderr)
         self.assertEqual(after_lint.returncode, 0, after_lint.stdout + after_lint.stderr)
         self.assertEqual(after_doctor.returncode, 0, after_doctor.stdout + after_doctor.stderr)
+
+    def test_confirm_write_refreshes_stale_checkpoint_next_action_from_active_running_task(self) -> None:
+        with tempfile.TemporaryDirectory(dir="/tmp") as tmp:
+            root = Path(tmp) / "p2-workspace"
+            shutil.copytree(P2_VALID_WORKSPACE, root)
+            write_tz_file(root)
+            active_task_id = "TASK_ACTIVE_LIFECYCLE"
+            old_task_id = "TASK_OLD_CHECKPOINT_DONE"
+            active_packet = f"project-runtime/tasks/active/{active_task_id}.md"
+            old_packet = f"project-runtime/tasks/active/{old_task_id}.md"
+
+            registry = load_sidecar(root, "TASK_REGISTRY.json")
+            registry["content"]["tasks"] = [
+                fixture_task(old_task_id, "checkpoint_done", old_packet),
+                fixture_task(active_task_id, "running", active_packet),
+            ]
+            registry["content"]["tasks"][0]["audit_refs"] = ["project-runtime/results/audit/AUDIT_RESULT_OLD_ATTEMPT_001.md"]
+            write_sidecar(root, "TASK_REGISTRY.json", registry)
+
+            accepted = load_sidecar(root, "ACCEPTED_ARTIFACTS.json")
+            accepted["content"]["artifacts"] = []
+            write_sidecar(root, "ACCEPTED_ARTIFACTS.json", accepted)
+
+            project_state = load_sidecar(root, "PROJECT_STATE.json")
+            project_state["content"].update(
+                {
+                    "tz_path": "project-input/TZ.md",
+                    "current_phase": "implementation",
+                    "project_status": "active",
+                    "active_branches": [],
+                    "active_blockers": [],
+                    "checkpoint_blocked_by": [],
+                    "checkpoint_eligibility": "not_applicable",
+                    "checkpoint_eligibility_status": "not_checked",
+                    "project_checkpoint_status": "not_required",
+                }
+            )
+            write_sidecar(root, "PROJECT_STATE.json", project_state)
+
+            current_gate = load_sidecar(root, "CURRENT_GATE.json")
+            current_gate["content"].update(
+                {
+                    "status": "open",
+                    "task_id": "NONE",
+                    "task_packet": "NONE",
+                    "required_next_role": "none",
+                    "checkpoint_eligibility": "not_applicable",
+                    "checkpoint_eligibility_status": "not_checked",
+                    "project_checkpoint_status": "not_required",
+                }
+            )
+            write_sidecar(root, "CURRENT_GATE.json", current_gate)
+
+            next_action = load_sidecar(root, "NEXT_ACTION.json")
+            next_action["content"].update(
+                {
+                    "action_type": "update_state",
+                    "target_role": "orchestrator",
+                    "task_id": old_task_id,
+                    "task_packet": old_packet,
+                    "dependency_status": "ready",
+                    "blocked_by": [],
+                    "action_semantic": "normal",
+                    "checkpoint_policy": "local_only",
+                    "checkpoint_preflight_required": True,
+                    "checkpoint_receipt_required": True,
+                }
+            )
+            write_sidecar(root, "NEXT_ACTION.json", next_action)
+
+            render = run_aso("state", "render", "--root", str(root), "--confirm-write")
+            refreshed = load_sidecar(root, "NEXT_ACTION.json")["content"]
+            plan_json = Path(tmp) / "plan-next.json"
+            plan = run_aso("plan-next", "--root", str(root), "--strict", "--json-out", str(plan_json))
+            verify = run_aso("state", "verify", "--root", str(root), "--strict")
+
+            self.assertEqual(render.returncode, 0, render.stdout + render.stderr)
+            self.assertEqual(refreshed["task_id"], active_task_id)
+            self.assertEqual(refreshed["action_type"], "route_result")
+            self.assertEqual(refreshed["checkpoint_policy"], "no_checkpoint")
+            self.assertFalse(refreshed["checkpoint_preflight_required"])
+            plan_report = json.loads(plan_json.read_text(encoding="utf-8"))
+            self.assertEqual(plan_report["task_id"], active_task_id)
+            self.assertEqual(plan_report["recommended_next_action"], "WAIT_FOR_RESULT")
+            self.assertNotEqual(plan_report["recommended_next_action"], "CHECKPOINT_PREFLIGHT")
+            self.assertEqual(verify.returncode, 0, verify.stdout + verify.stderr)
 
     def test_confirm_write_rejects_report_out_combination(self) -> None:
         with tempfile.TemporaryDirectory(dir="/tmp") as tmp:

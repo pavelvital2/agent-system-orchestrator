@@ -164,9 +164,6 @@ def _active_blockers(project_state: dict[str, object], next_action: dict[str, ob
         value = project_state.get(key)
         if isinstance(value, list):
             blockers.extend(str(item).strip() for item in value if not _is_none(item))
-    value = next_action.get("blocked_by")
-    if isinstance(value, list):
-        blockers.extend(str(item).strip() for item in value if not _is_none(item))
     return sorted(set(blocker for blocker in blockers if blocker))
 
 
@@ -991,17 +988,80 @@ def _plan(
     current_gate = _content(sidecars, "CURRENT_GATE")
     next_action = _content(sidecars, "NEXT_ACTION")
     tasks = _tasks_by_id(sidecars)
-    task_id = _as_text(next_action.get("task_id"))
+    transition_evidence = _transition_engine_evidence(root, sidecars)
+    transition_selected = transition_evidence.get("transition_selected")
+    derived_next_action = transition_evidence.get("next_action")
+    derived_next_action_cache = transition_evidence.get("derived_next_action_cache")
+    correction_route: dict[str, object] = {}
+    lifecycle_derived = (
+        isinstance(transition_selected, dict)
+        and transition_selected.get("derivation") == "lifecycle_log"
+        and isinstance(derived_next_action, dict)
+    )
+    reconciliation = verify_report.get("reconciliation") if isinstance(verify_report.get("reconciliation"), dict) else {}
+    transition_findings = transition_evidence.get("findings")
+    transition_stale = (
+        isinstance(transition_findings, list)
+        and any(isinstance(item, dict) and item.get("rule_id") == "RUNTIME_NEXT_ACTION_STALE" for item in transition_findings)
+    )
+    verify_state = verify_report.get("state") if isinstance(verify_report.get("state"), dict) else {}
+    current_runtime_schema_state = bool(verify_state.get("runtime_schema_current_p2"))
+    derived_cache_authoritative = (
+        bool(reconciliation.get("enabled"))
+        and transition_stale
+        and (current_runtime_schema_state or lifecycle_derived)
+        and isinstance(transition_selected, dict)
+        and transition_selected.get("derivation") in {"sidecars", "lifecycle_log"}
+        and isinstance(derived_next_action, dict)
+    )
+    canonical_routing_available = (
+        isinstance(transition_selected, dict)
+        and transition_selected.get("derivation") in {"sidecars", "lifecycle_log"}
+        and isinstance(derived_next_action, dict)
+    )
+    cache_mismatches = transition_selected.get("cache_mismatches") if isinstance(transition_selected, dict) else []
+    task_id_cache_mismatch = (
+        isinstance(cache_mismatches, list)
+        and any(isinstance(item, dict) and item.get("field") == "task_id" for item in cache_mismatches)
+    )
+    checkpoint_cache_mismatch = (
+        isinstance(cache_mismatches, list)
+        and any(
+            isinstance(item, dict)
+            and item.get("field")
+            in {"checkpoint_policy", "checkpoint_preflight_required", "checkpoint_receipt_required"}
+            for item in cache_mismatches
+        )
+    )
+    route_cache_mismatch = (
+        isinstance(cache_mismatches, list)
+        and any(isinstance(item, dict) and item.get("field") == "action_type" for item in cache_mismatches)
+    )
+    use_canonical_routing = canonical_routing_available and (
+        lifecycle_derived
+        or current_runtime_schema_state
+        or checkpoint_cache_mismatch
+        or (derived_cache_authoritative and (task_id_cache_mismatch or route_cache_mismatch))
+    )
+    routing_next_action = dict(next_action)
+    if use_canonical_routing:
+        if isinstance(derived_next_action_cache, dict):
+            routing_next_action = dict(derived_next_action_cache)
+        else:
+            routing_next_action = dict(derived_next_action)
+        routing_next_action["recommended_next_action"] = _as_text(derived_next_action.get("recommended_next_action"))
+
+    task_id = _as_text(routing_next_action.get("task_id"))
     task = tasks.get(task_id, {})
-    action_type = _as_text(next_action.get("action_type"))
-    dependency_status = _as_text(next_action.get("dependency_status"))
-    target_role = _as_text(next_action.get("target_role"))
-    task_packet = _as_text(next_action.get("task_packet"))
-    blockers = _active_blockers(project_state, next_action)
+    action_type = _as_text(routing_next_action.get("action_type"))
+    dependency_status = _as_text(routing_next_action.get("dependency_status"))
+    target_role = _as_text(routing_next_action.get("target_role"))
+    task_packet = _as_text(routing_next_action.get("task_packet"))
+    blockers = _active_blockers(project_state, routing_next_action)
     audit_evidence = _audit_pass_evidence(root, sidecars, task, task_id)
 
     blocking_rules = _state_verify_blockers(rules, verify_report)
-    blocking_rules.extend(_placeholder_tz_blockers(root, rules, project_state, next_action))
+    blocking_rules.extend(_placeholder_tz_blockers(root, rules, project_state, routing_next_action))
     recommended_next_action = "NONE"
     dispatchability: dict[str, object] = _non_dispatchability(
         action_type,
@@ -1011,16 +1071,6 @@ def _plan(
         "NONE",
         "blocked",
     )
-    transition_evidence = _transition_engine_evidence(root, sidecars)
-    transition_selected = transition_evidence.get("transition_selected")
-    derived_next_action = transition_evidence.get("next_action")
-    correction_route: dict[str, object] = {}
-    lifecycle_derived = (
-        isinstance(transition_selected, dict)
-        and transition_selected.get("derivation") == "lifecycle_log"
-        and isinstance(derived_next_action, dict)
-    )
-    routing_next_action = dict(next_action)
 
     if rules_evidence.get("load_error"):
         blocking_rules.append(
@@ -1068,7 +1118,7 @@ def _plan(
                 ", ".join(blockers) or dependency_status,
             )
         )
-    elif _needs_bootstrap_reconciliation(root, project_state, current_gate, next_action):
+    elif _needs_bootstrap_reconciliation(root, project_state, current_gate, routing_next_action):
         recommended_next_action = "BOOTSTRAP_PREP"
         target_role = "orchestrator"
         dispatchability = _non_dispatchability(
@@ -1113,8 +1163,7 @@ def _plan(
                 )
             ],
         )
-    elif lifecycle_derived and isinstance(derived_next_action, dict):
-        routing_next_action.update(derived_next_action)
+    elif use_canonical_routing and isinstance(derived_next_action, dict):
         action_type = _as_text(routing_next_action.get("action_type"))
         target_role = _as_text(routing_next_action.get("target_role"))
         task_id = _as_text(routing_next_action.get("task_id")) or task_id
@@ -1127,7 +1176,86 @@ def _plan(
         )
         if recommended_next_action == "CORRECTION_REQUIRED":
             correction_route = _audit_fail_correction_route(root, audit_evidence, transition_evidence)
-        if action_type == "create_agent":
+        if recommended_next_action == "CHECKPOINT_PREFLIGHT":
+            if audit_evidence["present"]:
+                dispatchability = _non_dispatchability(
+                    action_type,
+                    target_role,
+                    task_id,
+                    task_packet,
+                    recommended_next_action,
+                    "blocked",
+                )
+            else:
+                correction_route = _audit_fail_correction_route(root, audit_evidence, transition_evidence)
+                recommended_next_action = "CORRECTION_REQUIRED"
+                target_role = "orchestrator"
+                dispatchability = _non_dispatchability(
+                    "correction",
+                    target_role,
+                    task_id,
+                    "NONE",
+                    recommended_next_action,
+                    "correction_required",
+                    reasons=[
+                        _reason(
+                            "audit_pass_evidence_missing",
+                            "Checkpoint preflight requires parsed audit-pass evidence from canonical task state.",
+                            "TASK_REGISTRY.content.tasks[].audit_refs",
+                        )
+                    ],
+                )
+                blocking_rules.append(
+                    _rule(
+                        rules,
+                        "GOV-CHECKPOINT-AUDIT-GATE",
+                        "Checkpoint preflight is blocked because audit-pass evidence is absent.",
+                        f"task_id={task_id or 'NONE'}",
+                    )
+                )
+                if correction_route:
+                    blocking_rules.append(
+                        _rule(
+                            rules,
+                            "GOV-AUDIT-FAIL-NO-CHECKPOINT",
+                            "AUDIT_RESULT STATUS fail routes correction and blocks checkpoint preflight.",
+                            str(correction_route.get("source_audit_result_ref", "NONE")),
+                        )
+                    )
+                if audit_evidence["invalid_audit_results"]:
+                    blocking_rules.append(
+                        _rule(
+                            rules,
+                            "GOV-CHECKPOINT-AUDIT-GATE",
+                            "Parsed AUDIT_RESULT evidence is not a pass for this task.",
+                            json.dumps(audit_evidence["invalid_audit_results"], sort_keys=True),
+                        )
+                    )
+                if audit_evidence["unparsed_audit_refs"]:
+                    blocking_rules.append(
+                        _rule(
+                            rules,
+                            "GOV-CHECKPOINT-AUDIT-GATE",
+                            "AUDIT_RESULT evidence references are missing or unreadable.",
+                            json.dumps(audit_evidence["unparsed_audit_refs"], sort_keys=True),
+                        )
+                    )
+        elif recommended_next_action == "CORRECTION_REQUIRED" and action_type == "correction":
+            dispatchability = can_dispatch_agent(
+                root,
+                action_type,
+                target_role,
+                task_id,
+                task_packet,
+                routing_next_action,
+                project_state,
+                current_gate,
+                task,
+                blocking_rules,
+            )
+            recommended_next_action = str(dispatchability["recommended_next_action"])
+            target_role = str(dispatchability["target_role"])
+        elif action_type == "create_agent":
             dispatchability = can_dispatch_agent(
                 root,
                 action_type,
@@ -1150,7 +1278,7 @@ def _plan(
                 recommended_next_action,
                 _non_dispatch_status(action_type, recommended_next_action),
             )
-    elif _is_checkpoint_attempt(next_action):
+    elif not use_canonical_routing and _is_checkpoint_attempt(next_action):
         if audit_evidence["present"]:
             recommended_next_action = "CHECKPOINT_PREFLIGHT"
             dispatchability = _non_dispatchability(
@@ -1266,7 +1394,7 @@ def _plan(
             target_role,
             task_id,
             task_packet,
-            next_action,
+            routing_next_action,
             project_state,
             current_gate,
             task,
@@ -1342,10 +1470,10 @@ def _plan(
             "next_action": {
                 "action_type": action_type,
                 "dependency_status": dependency_status,
-                "action_semantic": next_action.get("action_semantic", ""),
-                "checkpoint_policy": next_action.get("checkpoint_policy", ""),
-                "blocked_by": next_action.get("blocked_by", []),
-                "routing_source": "transition_engine" if lifecycle_derived else "stored",
+                "action_semantic": routing_next_action.get("action_semantic", ""),
+                "checkpoint_policy": routing_next_action.get("checkpoint_policy", ""),
+                "blocked_by": routing_next_action.get("blocked_by", []),
+                "routing_source": "transition_engine" if use_canonical_routing else "stored",
                 "stored_action_type": next_action.get("action_type", ""),
                 "stored_target_role": next_action.get("target_role", ""),
                 "routing_action_type": routing_next_action.get("action_type", ""),

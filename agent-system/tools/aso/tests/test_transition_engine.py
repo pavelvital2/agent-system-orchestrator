@@ -255,6 +255,82 @@ class TransitionEngineTests(unittest.TestCase):
         self.assertEqual(decision.current_state, "TASK_READY")
         self.assertIn("RUNTIME_NEXT_ACTION_STALE", {finding.rule_id for finding in decision.findings})
 
+    def test_stale_next_action_checkpoint_cache_does_not_override_active_running_task(self) -> None:
+        sidecars = {
+            "PROJECT_STATE": {
+                "content": {
+                    "current_phase": "implementation",
+                    "project_status": "active",
+                    "active_branches": [],
+                    "active_blockers": [],
+                    "checkpoint_blocked_by": [],
+                }
+            },
+            "CURRENT_GATE": {
+                "content": {
+                    "status": "open",
+                    "task_id": "NONE",
+                    "task_packet": "NONE",
+                    "required_next_role": "NONE",
+                }
+            },
+            "TASK_REGISTRY": {
+                "content": {
+                    "tasks": [
+                        {
+                            "task_id": "TASK_OLD_CHECKPOINT_DONE",
+                            "status": "checkpoint_done",
+                            "task_type": "developer",
+                            "owner_role": "developer",
+                            "task_packet": "project-runtime/tasks/active/TASK_OLD_CHECKPOINT_DONE.md",
+                            "audit_refs": ["project-runtime/results/audit/AUDIT_RESULT_OLD.md"],
+                            "result_refs": [],
+                        },
+                        {
+                            "task_id": "TASK_ACTIVE_LIFECYCLE",
+                            "status": "running",
+                            "task_type": "developer",
+                            "owner_role": "developer",
+                            "task_packet": "project-runtime/tasks/active/TASK_ACTIVE_LIFECYCLE.md",
+                            "audit_refs": [],
+                            "result_refs": [],
+                        },
+                    ]
+                }
+            },
+            "NEXT_ACTION": {
+                "content": {
+                    "action_type": "update_state",
+                    "target_role": "orchestrator",
+                    "task_id": "TASK_OLD_CHECKPOINT_DONE",
+                    "task_packet": "project-runtime/tasks/active/TASK_OLD_CHECKPOINT_DONE.md",
+                    "dependency_status": "ready",
+                    "blocked_by": [],
+                    "action_semantic": "normal",
+                    "workspace_identity_required": False,
+                    "repository_lock_required": False,
+                    "checkpoint_policy": "local_only",
+                    "checkpoint_preflight_required": True,
+                    "checkpoint_receipt_required": True,
+                }
+            },
+        }
+
+        decision = transition_engine.explain_next_action_from_sidecars(self.contract, sidecars)
+        report = transition_engine.routing_authority_report(self.contract, sidecars)
+
+        self.assertEqual(decision.inputs["sidecar_state_signals"]["task_id"], "TASK_ACTIVE_LIFECYCLE")
+        self.assertEqual(decision.current_state, "AGENT_RUNNING")
+        self.assertEqual(decision.next_action["recommended_next_action"], "WAIT_FOR_RESULT")
+        self.assertNotEqual(decision.next_action["recommended_next_action"], "CHECKPOINT_PREFLIGHT")
+        self.assertEqual(report["checkpoint_route"]["attempt"], False)
+        self.assertEqual(report["derived_next_action_cache"]["task_id"], "TASK_ACTIVE_LIFECYCLE")
+        self.assertEqual(report["derived_next_action_cache"]["checkpoint_policy"], "no_checkpoint")
+        self.assertFalse(report["derived_next_action_cache"]["checkpoint_preflight_required"])
+        rule_ids = {finding.rule_id for finding in decision.findings}
+        self.assertIn("RUNTIME_NEXT_ACTION_STALE", rule_ids)
+        self.assertIn("STALE_NEXT_ACTION_TASK_ID", rule_ids)
+
 
 if __name__ == "__main__":
     unittest.main()

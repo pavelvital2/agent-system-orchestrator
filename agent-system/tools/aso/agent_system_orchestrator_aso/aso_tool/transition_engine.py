@@ -61,6 +61,20 @@ LIFECYCLE_STATUS_CONTRACT = {
     "audit_result_statuses": ("pass", "fail"),
     "terminal_states": ("PROJECT_COMPLETED", "NO_NEXT_ACTION"),
 }
+DERIVED_NEXT_ACTION_CACHE_FIELDS = (
+    "action_type",
+    "target_role",
+    "task_id",
+    "task_packet",
+    "dependency_status",
+    "blocked_by",
+    "action_semantic",
+    "workspace_identity_required",
+    "repository_lock_required",
+    "checkpoint_policy",
+    "checkpoint_preflight_required",
+    "checkpoint_receipt_required",
+)
 
 
 class RuntimeContractError(ValueError):
@@ -905,9 +919,8 @@ def _tasks_by_id(sidecars: Mapping[str, Mapping[str, object]]) -> dict[str, dict
 def _active_task_id(
     project_state: Mapping[str, object],
     current_gate: Mapping[str, object],
-    next_action: Mapping[str, object],
 ) -> str:
-    for value in (next_action.get("task_id"), current_gate.get("task_id")):
+    for value in (current_gate.get("task_id"),):
         if isinstance(value, str) and not _is_none(value):
             return value.strip()
     branches = project_state.get("active_branches")
@@ -923,6 +936,73 @@ def _active_task_id(
 def _truthy_text(value: object) -> str:
     text = _text(value)
     return "" if _is_none(text) else text
+
+
+def _single_active_task_id(tasks: Mapping[str, Mapping[str, Any]]) -> str:
+    candidates = [
+        task_id
+        for task_id, task in tasks.items()
+        if _text(task.get("status")) not in {"", "completed", "checkpoint_done", "superseded"}
+    ]
+    return candidates[0] if len(candidates) == 1 else ""
+
+
+def _task_for_id(sidecars: Mapping[str, Mapping[str, object]], task_id: str) -> dict[str, Any]:
+    if not task_id:
+        return {}
+    return _tasks_by_id(sidecars).get(task_id, {})
+
+
+def _canonical_target_role(
+    sidecars: Mapping[str, Mapping[str, object]],
+    task_id: str,
+) -> str:
+    current_gate = _content(sidecars, "CURRENT_GATE")
+    project_state = _content(sidecars, "PROJECT_STATE")
+    gate_task_id = _truthy_text(current_gate.get("task_id"))
+    required_next_role = _truthy_text(current_gate.get("required_next_role"))
+    if required_next_role and (not task_id or (gate_task_id and gate_task_id == task_id)):
+        return required_next_role
+
+    task = _task_for_id(sidecars, task_id)
+    for value in (task.get("owner_role"), task.get("task_type")):
+        text = _truthy_text(value)
+        if text:
+            return text
+
+    branches = project_state.get("active_branches")
+    if isinstance(branches, list):
+        for branch in branches:
+            if not isinstance(branch, Mapping):
+                continue
+            if task_id and _text(branch.get("current_task")) != task_id:
+                continue
+            role = _truthy_text(branch.get("current_agent_role"))
+            if role:
+                return role
+
+    owner_role = _truthy_text(current_gate.get("owner_role"))
+    if owner_role and (not task_id or (gate_task_id and gate_task_id == task_id)):
+        return owner_role
+    return ""
+
+
+def _canonical_task_packet(
+    sidecars: Mapping[str, Mapping[str, object]],
+    task_id: str,
+) -> str:
+    current_gate = _content(sidecars, "CURRENT_GATE")
+    gate_task_id = _truthy_text(current_gate.get("task_id"))
+    gate_packet = _truthy_text(current_gate.get("task_packet"))
+    if gate_packet and (not task_id or not gate_task_id or gate_task_id == task_id):
+        return gate_packet
+
+    task = _task_for_id(sidecars, task_id)
+    packet = _truthy_text(task.get("task_packet"))
+    if packet:
+        return packet
+
+    return ""
 
 
 def contract_roles(contract: Mapping[str, Any]) -> dict[str, object]:
@@ -1003,6 +1083,25 @@ def _current_gate_audit_refs(sidecars: Mapping[str, Mapping[str, object]]) -> li
     return refs
 
 
+def _lifecycle_audit_pass_refs(
+    sidecars: Mapping[str, Mapping[str, object]],
+    task_id: str,
+) -> list[str]:
+    refs: list[str] = []
+    for event in _lifecycle_events(sidecars):
+        if task_id and _event_task_id(event) != task_id:
+            continue
+        raw_event = _raw_event_type(event)
+        status = _event_status(event)
+        event_name = "AUDIT_RESULT_RECEIVED_PASS" if raw_event == "AUDIT_RESULT_RECEIVED" and status == "pass" else raw_event
+        if event_name not in {"AUDIT_RESULT_RECEIVED_PASS", "audit_result_received_pass"}:
+            continue
+        result_ref = _event_result_ref(event)
+        if result_ref and not _is_none(result_ref):
+            refs.append(result_ref)
+    return refs
+
+
 def audit_pass_evidence_from_sidecars(
     root: str | Path,
     sidecars: Mapping[str, Mapping[str, object]],
@@ -1014,23 +1113,31 @@ def audit_pass_evidence_from_sidecars(
     workspace_root = Path(root)
     project_state = _content(sidecars, "PROJECT_STATE")
     current_gate = _content(sidecars, "CURRENT_GATE")
-    next_action = _content(sidecars, "NEXT_ACTION")
-    resolved_task_id = task_id or _active_task_id(project_state, current_gate, next_action)
-    task = _tasks_by_id(sidecars).get(resolved_task_id, {})
+    tasks = _tasks_by_id(sidecars)
+    resolved_task_id = task_id or _active_task_id(project_state, current_gate) or _single_active_task_id(tasks)
+    task = tasks.get(resolved_task_id, {})
     task_status = _text(task.get("status"))
     task_audit_refs = _truthy_refs(task.get("audit_refs"))
     artifact_audit_refs = _accepted_artifact_audit_refs(sidecars, resolved_task_id)
     gate_audit_refs = _current_gate_audit_refs(sidecars)
-    audit_refs = list(dict.fromkeys([*task_audit_refs, *artifact_audit_refs, *gate_audit_refs]))
+    lifecycle_audit_refs = _lifecycle_audit_pass_refs(sidecars, resolved_task_id)
+    strict_audit_refs = list(dict.fromkeys([*task_audit_refs, *artifact_audit_refs, *gate_audit_refs]))
+    lifecycle_only_refs = [ref for ref in lifecycle_audit_refs if ref not in set(strict_audit_refs)]
     parsed = result_parser.inspect_audit_references(
         workspace_root,
-        audit_refs,
+        strict_audit_refs,
         task_id=resolved_task_id,
         strict=True,
     )
-    invalid_refs = parsed["invalid_refs"]
-    unparsed_refs = parsed["unparsed_refs"]
-    passed_refs = parsed["passed_refs"]
+    lifecycle_parsed = result_parser.inspect_audit_references(
+        workspace_root,
+        lifecycle_only_refs,
+        task_id=resolved_task_id,
+        strict=False,
+    )
+    invalid_refs = [*parsed["invalid_refs"], *lifecycle_parsed["invalid_refs"]]
+    unparsed_refs = [*parsed["unparsed_refs"], *lifecycle_parsed["unparsed_refs"]]
+    passed_refs = list(dict.fromkeys([*parsed["passed_refs"], *lifecycle_parsed["passed_refs"]]))
     present = bool(passed_refs) and not invalid_refs and not unparsed_refs
     return {
         "present": present,
@@ -1040,7 +1147,8 @@ def audit_pass_evidence_from_sidecars(
         "task_audit_refs": task_audit_refs,
         "accepted_artifact_audit_refs": artifact_audit_refs,
         "current_gate_audit_evidence_refs": gate_audit_refs,
-        "parsed_audit_results": parsed["parsed_refs"],
+        "lifecycle_audit_pass_refs": lifecycle_audit_refs,
+        "parsed_audit_results": [*parsed["parsed_refs"], *lifecycle_parsed["parsed_refs"]],
         "passed_audit_refs": passed_refs,
         "invalid_audit_results": invalid_refs,
         "unparsed_audit_refs": unparsed_refs,
@@ -1051,7 +1159,6 @@ def active_blockers_from_sidecars(sidecars: Mapping[str, Mapping[str, object]]) 
     """Return active blockers that block routing or checkpoint by contract policy."""
 
     project_state = _content(sidecars, "PROJECT_STATE")
-    next_action = _content(sidecars, "NEXT_ACTION")
     blockers: list[str] = []
     for key in ("active_blockers", "checkpoint_blocked_by"):
         value = project_state.get(key)
@@ -1064,9 +1171,6 @@ def active_blockers_from_sidecars(sidecars: Mapping[str, Mapping[str, object]]) 
                     blockers.append(blocker_id or json.dumps(dict(item), sort_keys=True))
         elif isinstance(value, str) and not _is_none(value):
             blockers.append(value.strip())
-    value = next_action.get("blocked_by")
-    if isinstance(value, list):
-        blockers.extend(item.strip() for item in value if isinstance(item, str) and not _is_none(item))
     return sorted(dict.fromkeys(blocker for blocker in blockers if blocker))
 
 
@@ -1081,6 +1185,7 @@ def routing_authority_report(
     decision = explain_next_action_from_sidecars(contract, sidecars)
     payload = decision.to_json()
     recommended = _text(decision.next_action.get("recommended_next_action"))
+    derived_cache = derived_next_action_cache_content(contract, sidecars, decision)
     blockers = active_blockers_from_sidecars(sidecars)
     audit_evidence: dict[str, object] = {}
     if root is not None:
@@ -1103,6 +1208,7 @@ def routing_authority_report(
         {
             "contract_authoritative": True,
             "canonical_recommended_next_action": recommended or "NONE",
+            "derived_next_action_cache": derived_cache,
             "audit_gate_rules": _mapping(contract.get("audit_gate_rules")),
             "checkpoint_rules": checkpoint_rules,
             "checkpoint_route": checkpoint_route,
@@ -1405,6 +1511,8 @@ def _lifecycle_state(
 
     if not task_id:
         task_id = _last_lifecycle_task_id(events)
+    if not task_id:
+        return "", {}, tuple(findings)
     relevant_events = _relevant_lifecycle_events(contract, events, task_id)
     if not relevant_events:
         return "", {}, tuple(findings)
@@ -1527,28 +1635,6 @@ def _lifecycle_consistency_findings(
             )
         )
 
-    current_gate = _content(sidecars, "CURRENT_GATE")
-    next_action = _content(sidecars, "NEXT_ACTION")
-    if (
-        state != "TASK_READY"
-        and _text(current_gate.get("task_id")) == task_id
-        and _text(current_gate.get("status")) == "open"
-        and _text(next_action.get("action_type")) == "create_agent"
-        and _text(next_action.get("task_id")) == task_id
-    ):
-        findings.append(
-            _finding(
-                "RUNTIME_LIFECYCLE_CURRENT_GATE_STALE",
-                "error",
-                "CURRENT_GATE and NEXT_ACTION still describe initial dispatch after lifecycle progress.",
-                (
-                    f"task_id={task_id}; lifecycle_state={state}; "
-                    f"gate_required_next_role={_text(current_gate.get('required_next_role')) or 'NONE'}"
-                ),
-                "Reconcile CURRENT_GATE and NEXT_ACTION from the transition engine before dispatching again.",
-            )
-        )
-
     accepted_events = [
         event
         for event in _relevant_lifecycle_events(_mapping({}), _lifecycle_events(sidecars), task_id)
@@ -1577,17 +1663,15 @@ def _infer_contract_state(
 ) -> tuple[str, dict[str, object], tuple[TransitionFinding, ...]]:
     project_state = _content(sidecars, "PROJECT_STATE")
     current_gate = _content(sidecars, "CURRENT_GATE")
-    next_action = _content(sidecars, "NEXT_ACTION")
     tasks = _tasks_by_id(sidecars)
-    task_id = _active_task_id(project_state, current_gate, next_action)
+    task_id = _active_task_id(project_state, current_gate)
+    if not task_id:
+        task_id = _single_active_task_id(tasks)
     lifecycle_findings: tuple[TransitionFinding, ...] = ()
     completed_signals: dict[str, object] = {
         "state_source": "sidecars",
         "task_id": task_id,
         "task_status": "",
-        "next_action_type": _text(next_action.get("action_type")),
-        "target_role": _text(next_action.get("target_role")),
-        "checkpoint_policy": _text(next_action.get("checkpoint_policy")),
         "current_phase": _text(project_state.get("current_phase")),
         "project_status": _text(project_state.get("project_status")),
     }
@@ -1605,9 +1689,6 @@ def _infer_contract_state(
             lifecycle_signals.update(
                 {
                     "task_status": _text(task.get("status")),
-                    "next_action_type": _text(next_action.get("action_type")),
-                    "target_role": _text(next_action.get("target_role")),
-                    "checkpoint_policy": _text(next_action.get("checkpoint_policy")),
                     "current_phase": _text(project_state.get("current_phase")),
                     "project_status": _text(project_state.get("project_status")),
                 }
@@ -1618,53 +1699,70 @@ def _infer_contract_state(
 
     task = tasks.get(task_id, {})
     task_status = _text(task.get("status"))
-    action_type = _text(next_action.get("action_type"))
-    target_role = _text(next_action.get("target_role"))
-    checkpoint_policy = _text(next_action.get("checkpoint_policy"))
-    checkpoint_preflight_required = next_action.get("checkpoint_preflight_required") is True
     current_phase = _text(project_state.get("current_phase"))
     project_status = _text(project_state.get("project_status"))
+    audit_status = _text(project_state.get("audit_status"))
+    checkpoint_eligibility = _text(project_state.get("checkpoint_eligibility"))
+    checkpoint_eligibility_status = _text(project_state.get("checkpoint_eligibility_status"))
     project_checkpoint_status = _text(project_state.get("project_checkpoint_status"))
     checkpoint_preflight_status = _text(project_state.get("checkpoint_preflight_status"))
     checkpoint_receipt_ref = _truthy_text(project_state.get("checkpoint_receipt_ref"))
+    current_gate_type = _text(current_gate.get("gate_type"))
+    current_gate_required_role = _text(current_gate.get("required_next_role"))
+    current_gate_status = _text(current_gate.get("status"))
+    current_gate_checkpoint_status = _text(current_gate.get("project_checkpoint_status"))
+    blockers = active_blockers_from_sidecars(sidecars)
+    active_gaps = project_state.get("active_gaps")
+    has_active_gaps = isinstance(active_gaps, list) and any(
+        (isinstance(item, str) and not _is_none(item))
+        or (isinstance(item, Mapping) and item)
+        for item in active_gaps
+    )
+    has_audit_evidence = _has_audit_evidence(task, sidecars, task_id)
 
     signals: dict[str, object] = {
         "state_source": "sidecars",
         "task_id": task_id,
         "task_status": task_status,
-        "next_action_type": action_type,
-        "target_role": target_role,
-        "checkpoint_policy": checkpoint_policy,
         "current_phase": current_phase,
         "project_status": project_status,
+        "audit_status": audit_status,
+        "checkpoint_eligibility": checkpoint_eligibility,
+        "checkpoint_eligibility_status": checkpoint_eligibility_status,
+        "project_checkpoint_status": project_checkpoint_status,
+        "checkpoint_preflight_status": checkpoint_preflight_status,
+        "current_gate_type": current_gate_type,
+        "current_gate_status": current_gate_status,
+        "current_gate_required_next_role": current_gate_required_role,
     }
 
     if project_status == "archived":
         return "TERMINAL_STOP", signals, lifecycle_findings
-    if current_phase == "correction":
-        return "CORRECTION_REQUIRED", signals, lifecycle_findings
-    if project_status == "blocked" and action_type == "wait_for_owner":
-        return "OWNER_INPUT_REQUIRED", signals, lifecycle_findings
-    if project_status == "blocked" and action_type == "correction":
-        return "CORRECTION_REQUIRED", signals, lifecycle_findings
-    if task_status in {"failed", "blocked"}:
+    if task_status in {"failed", "blocked"} or current_phase == "correction" or audit_status == "failed":
         return "CORRECTION_REQUIRED", signals, lifecycle_findings
     if (
-        action_type == "finalize"
-        or current_phase in {"finalization", "final_acceptance"}
-    ) and (
-        project_checkpoint_status == "passed"
-        or bool(checkpoint_receipt_ref)
-        or _text(current_gate.get("project_checkpoint_status")) == "passed"
+        current_phase in {"finalization", "final_acceptance"}
+        and (
+            project_checkpoint_status == "passed"
+            or bool(checkpoint_receipt_ref)
+            or current_gate_checkpoint_status == "passed"
+        )
     ):
         return "FINAL_CHECKPOINT_COMPLETE", signals, lifecycle_findings
     if checkpoint_preflight_status == "passed" and task_status in {"audit_passed", "checkpoint_done", "completed"}:
         return "FINAL_AUDIT_PASS", signals, lifecycle_findings
-    if task_status in {"audit_passed", "checkpoint_done", "completed"} or _has_audit_evidence(task, sidecars, task_id):
+    if task_status in {"audit_passed", "checkpoint_done", "completed"} or has_audit_evidence:
         return "CHECKPOINT_ELIGIBLE", signals, lifecycle_findings
-    if checkpoint_policy in {"local_only", "commit_and_push"} or checkpoint_preflight_required:
+    if audit_status == "passed" and (
+        checkpoint_eligibility in {"local_only", "push_allowed"}
+        or checkpoint_eligibility_status == "eligible"
+        or current_gate.get("checkpoint_eligibility") in {"local_only", "push_allowed"}
+        or current_gate.get("checkpoint_eligibility_status") == "eligible"
+    ):
         return "CHECKPOINT_ELIGIBLE", signals, lifecycle_findings
     if task_status == "audit_pending":
+        return "AUDIT_PENDING", signals, lifecycle_findings
+    if current_gate_type == "audit" and current_gate_required_role == "auditor":
         return "AUDIT_PENDING", signals, lifecycle_findings
     if task_status == "running":
         if _truthy_refs(task.get("result_refs")):
@@ -1672,24 +1770,12 @@ def _infer_contract_state(
         return "AGENT_RUNNING", signals, lifecycle_findings
     if task_status in {"ready", "pending"}:
         return "TASK_READY", signals, lifecycle_findings
-    if action_type == "wait_for_owner":
+    if project_status == "blocked" or current_phase == "blocked" or blockers or has_active_gaps:
         return "OWNER_INPUT_REQUIRED", signals, lifecycle_findings
-    if action_type == "stop":
-        return "TERMINAL_STOP", signals, lifecycle_findings
-    if action_type == "correction":
+    if current_phase == "bootstrap" and not task_id:
         return "CORRECTION_REQUIRED", signals, lifecycle_findings
-    if action_type == "create_agent" and target_role == "auditor":
-        return "AGENT_TERMINATED", signals, lifecycle_findings
-    if action_type == "create_agent":
+    if task_id and current_gate_status == "open":
         return "TASK_READY", signals, lifecycle_findings
-    if action_type == "route_result" and target_role == "auditor":
-        return "AUDIT_PENDING", signals, lifecycle_findings
-    if action_type == "route_result":
-        return "AGENT_RUNNING", signals, lifecycle_findings
-    if action_type == "finalize":
-        return "CHECKPOINT_ELIGIBLE", signals, lifecycle_findings
-    if action_type == "update_state":
-        return "RESULT_PENDING_ARTIFACT_ACCEPTANCE", signals, lifecycle_findings
     return "CORRECTION_REQUIRED", signals, lifecycle_findings
 
 
@@ -1738,6 +1824,146 @@ def _recommendations_match(contract: Mapping[str, Any], expected: str, actual: s
     return actual in expected_aliases
 
 
+def _canonical_input_summary(
+    contract: Mapping[str, Any],
+    sidecars: Mapping[str, Mapping[str, object]],
+    signals: Mapping[str, object],
+) -> dict[str, object]:
+    task_id = _text(signals.get("task_id"))
+    tasks = _tasks_by_id(sidecars)
+    task = tasks.get(task_id, {})
+    lifecycle_events = _lifecycle_events(sidecars)
+    accepted_artifacts = _accepted_artifact_entries(sidecars)
+    result_refs = _truthy_refs(task.get("result_refs"))
+    audit_refs = _truthy_refs(task.get("audit_refs"))
+    correction_links = _truthy_refs(task.get("correction_links"))
+    artifact_receipt_refs: list[str] = []
+    for event in lifecycle_events:
+        for key in ("receipt_ref", "artifact_receipt_ref"):
+            ref = _truthy_text(event.get(key))
+            if ref:
+                artifact_receipt_refs.append(ref)
+        refs = event.get("artifact_receipt_refs")
+        if isinstance(refs, list):
+            artifact_receipt_refs.extend(item.strip() for item in refs if isinstance(item, str) and not _is_none(item))
+
+    return {
+        "task_registry": {
+            "present": "TASK_REGISTRY" in sidecars,
+            "task_count": len(tasks),
+            "task_id": task_id or "NONE",
+            "task_status": _text(task.get("status")) or "NONE",
+            "result_refs": result_refs,
+            "audit_refs": audit_refs,
+        },
+        "lifecycle_events": {
+            "present": bool(lifecycle_events),
+            "event_count": len(lifecycle_events),
+            "latest_event": _text(signals.get("latest_lifecycle_event")) or "NONE",
+        },
+        "artifact_receipts": {
+            "accepted_artifact_count": len(accepted_artifacts),
+            "receipt_refs": sorted(dict.fromkeys(artifact_receipt_refs)),
+        },
+        "audit_results": {
+            "task_audit_refs": audit_refs,
+            "accepted_artifact_audit_refs": _accepted_artifact_audit_refs(sidecars, task_id),
+            "current_gate_audit_evidence_refs": _current_gate_audit_refs(sidecars),
+        },
+        "current_gate": {
+            "present": "CURRENT_GATE" in sidecars,
+            "task_id": _truthy_text(_content(sidecars, "CURRENT_GATE").get("task_id")) or "NONE",
+            "status": _truthy_text(_content(sidecars, "CURRENT_GATE").get("status")) or "NONE",
+            "required_next_role": _truthy_text(_content(sidecars, "CURRENT_GATE").get("required_next_role")) or "NONE",
+        },
+        "correction_records": {
+            "task_correction_links": correction_links,
+            "project_phase": _truthy_text(_content(sidecars, "PROJECT_STATE").get("current_phase")) or "NONE",
+            "active_blockers": active_blockers_from_sidecars(sidecars),
+        },
+        "runtime_contract": {
+            "contract_version": _truthy_text(contract.get("contract_version")) or "NONE",
+            "runtime_schema_version": _truthy_text(contract.get("runtime_schema_version")) or "NONE",
+            "next_actions_by_state": sorted(_mapping(contract.get("next_actions_by_state"))),
+        },
+    }
+
+
+def derived_next_action_cache_content(
+    contract: Mapping[str, Any],
+    sidecars: Mapping[str, Mapping[str, object]],
+    decision: TransitionDecision | None = None,
+) -> dict[str, object]:
+    """Render the canonical NEXT_ACTION cache content from non-cache state inputs."""
+
+    if decision is None:
+        decision = explain_next_action_from_sidecars(contract, sidecars)
+    existing = _content(sidecars, "NEXT_ACTION")
+    action = decision.next_action
+    recommended = _text(action.get("recommended_next_action")) or "NONE"
+    action_type = _text(action.get("action_type")) or "update_state"
+    target_role = _text(action.get("target_role")) or "orchestrator"
+    signals = decision.inputs.get("sidecar_state_signals")
+    signal_task_id = _text(signals.get("task_id")) if isinstance(signals, Mapping) else ""
+    task_id = _text(action.get("task_id")) or signal_task_id
+    task_packet = _text(action.get("task_packet")) or _canonical_task_packet(sidecars, task_id)
+    checkpoint = recommended == "CHECKPOINT_PREFLIGHT"
+    terminal = recommended == "NO_NEXT_ACTION" or action_type == "stop"
+    stored_recommended = recommendation_from_next_action_content(existing)
+    same_recommendation = _recommendations_match(contract, recommended, stored_recommended)
+    existing_task_id = _truthy_text(existing.get("task_id"))
+    same_route_identity = same_recommendation and existing_task_id in {"", task_id}
+    derived_action_id = f"ACTION-{recommended.replace('_', '-')}-{task_id or 'GLOBAL'}"
+    derived_instruction = (
+        "NO_NEXT_ACTION: project is completed."
+        if terminal and recommended == "NO_NEXT_ACTION"
+        else f"Route lifecycle-derived next action {recommended}."
+    )
+    return {
+        "action_id": existing.get("action_id", derived_action_id) if same_route_identity else derived_action_id,
+        "action_type": action_type,
+        "target_role": target_role,
+        "task_id": "NONE" if terminal else task_id or "NONE",
+        "task_packet": "NONE" if terminal else task_packet or "NONE",
+        "dependency_status": "completed" if terminal else "ready",
+        "blocked_by": [],
+        "action_semantic": "stop_terminal" if terminal else "normal",
+        "workspace_identity_required": bool(existing.get("workspace_identity_required")) if action_type == "create_agent" else False,
+        "repository_lock_required": bool(existing.get("repository_lock_required")) if action_type == "create_agent" else False,
+        "checkpoint_policy": _text(action.get("checkpoint_policy")) or ("local_only" if checkpoint else "no_checkpoint"),
+        "checkpoint_preflight_required": checkpoint,
+        "checkpoint_receipt_required": checkpoint,
+        "checkpoint_receipt_ref": _truthy_text(existing.get("checkpoint_receipt_ref")) or "NONE",
+        "requester_return_context": existing.get("requester_return_context", "NONE"),
+        "blocking_or_resume_context": existing.get("blocking_or_resume_context", "NONE"),
+        "required_universal_docs": existing.get("required_universal_docs", []),
+        "required_project_docs": (
+            existing.get("required_project_docs", [])
+            if same_route_identity
+            else action.get("required_docs", []) if isinstance(action.get("required_docs"), list) else []
+        ),
+        "expected_result": existing.get("expected_result", []),
+        "instruction_for_orchestrator": existing.get("instruction_for_orchestrator", derived_instruction) if same_route_identity else derived_instruction,
+    }
+
+
+def next_action_cache_mismatches(stored: Mapping[str, object], expected: Mapping[str, object]) -> list[dict[str, object]]:
+    mismatches: list[dict[str, object]] = []
+    for field in DERIVED_NEXT_ACTION_CACHE_FIELDS:
+        if field not in stored:
+            continue
+        if stored.get(field) == expected.get(field):
+            continue
+        mismatches.append(
+            {
+                "field": field,
+                "expected": expected.get(field),
+                "actual": stored.get(field),
+            }
+        )
+    return mismatches
+
+
 def explain_next_action_from_sidecars(
     contract: Mapping[str, Any],
     sidecars: Mapping[str, Mapping[str, object]],
@@ -1745,8 +1971,8 @@ def explain_next_action_from_sidecars(
     state, signals, inference_findings = _infer_contract_state(contract, sidecars)
     next_action_content = _content(sidecars, "NEXT_ACTION")
     task_id = _text(signals.get("task_id"))
-    task_packet = _text(next_action_content.get("task_packet"))
-    target_role = _text(next_action_content.get("target_role"))
+    task_packet = _canonical_task_packet(sidecars, task_id)
+    target_role = _canonical_target_role(sidecars, task_id)
     derived_action = derive_next_action(
         contract,
         state,
@@ -1756,16 +1982,64 @@ def explain_next_action_from_sidecars(
     )
     expected = _text(derived_action.get("recommended_next_action"))
     actual = recommendation_from_next_action_content(next_action_content)
+    precheck_decision = TransitionDecision(
+        inputs={
+            "sidecar_state_signals": signals,
+            "stored_next_action": {
+                "action_type": next_action_content.get("action_type", ""),
+                "target_role": _text(next_action_content.get("target_role")),
+                "task_id": next_action_content.get("task_id", ""),
+                "task_packet": _text(next_action_content.get("task_packet")),
+                "checkpoint_policy": next_action_content.get("checkpoint_policy", ""),
+            },
+            "stored_recommended_next_action": actual,
+        },
+        transition_selected={
+            "derivation": signals.get("state_source", "sidecars"),
+            "state": state,
+            "expected_recommended_next_action": expected,
+        },
+        findings=tuple(inference_findings),
+        next_action=derived_action,
+        reference_docs_used=(),
+        allowed=not any(finding.severity == "error" for finding in inference_findings),
+        current_state=state,
+        event="",
+        next_state=state,
+    )
+    expected_cache = derived_next_action_cache_content(contract, sidecars, precheck_decision)
+    cache_mismatches = next_action_cache_mismatches(next_action_content, expected_cache)
 
     findings: list[TransitionFinding] = list(inference_findings)
-    if not _recommendations_match(contract, expected, actual):
+    if not _recommendations_match(contract, expected, actual) or cache_mismatches:
+        mismatch_evidence = (
+            f"contract_state={state}; expected={expected or 'NONE'}; actual={actual or 'NONE'}; "
+            f"cache_mismatches={json.dumps(cache_mismatches, sort_keys=True)}"
+        )
         findings.append(
             _finding(
                 "RUNTIME_NEXT_ACTION_STALE",
                 "error",
-                "Stored NEXT_ACTION differs from the transition engine derived next action.",
-                f"contract_state={state}; expected={expected or 'NONE'}; actual={actual or 'NONE'}",
+                "Stored NEXT_ACTION cache differs from the transition engine derived next action.",
+                mismatch_evidence,
                 "Regenerate NEXT_ACTION from the runtime contract and current state sidecars.",
+            )
+        )
+    if any(item.get("field") == "task_id" for item in cache_mismatches):
+        findings.append(
+            _finding(
+                "STALE_NEXT_ACTION_TASK_ID",
+                "error",
+                "Stored NEXT_ACTION.task_id differs from the canonical active task.",
+                json.dumps(
+                    {
+                        "expected_task_id": expected_cache.get("task_id"),
+                        "actual_task_id": next_action_content.get("task_id", ""),
+                        "contract_state": state,
+                    },
+                    sort_keys=True,
+                ),
+                "Regenerate NEXT_ACTION from canonical runtime state before routing.",
             )
         )
     if actual in {"CREATE_AGENT", "CREATE_AUDITOR"} and not role_registry.is_dispatchable_role(target_role, contract):
@@ -1785,17 +2059,23 @@ def explain_next_action_from_sidecars(
             "sidecar_state_signals": signals,
             "stored_next_action": {
                 "action_type": next_action_content.get("action_type", ""),
-                "target_role": target_role,
+                "target_role": _text(next_action_content.get("target_role")),
                 "task_id": next_action_content.get("task_id", ""),
-                "task_packet": task_packet,
+                "task_packet": _text(next_action_content.get("task_packet")),
                 "checkpoint_policy": next_action_content.get("checkpoint_policy", ""),
             },
             "stored_recommended_next_action": actual,
+            "canonical_derivation_inputs": _canonical_input_summary(contract, sidecars, signals),
         },
         transition_selected={
             "derivation": signals.get("state_source", "sidecars"),
             "state": state,
             "expected_recommended_next_action": expected,
+            "expected_cache_fields": {
+                field: expected_cache.get(field)
+                for field in DERIVED_NEXT_ACTION_CACHE_FIELDS
+            },
+            "cache_mismatches": cache_mismatches,
         },
         findings=tuple(findings),
         next_action=derived_action,

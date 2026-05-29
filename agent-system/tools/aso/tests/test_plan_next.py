@@ -426,7 +426,8 @@ class PlanNextCommandTests(unittest.TestCase):
             transition = report["evidence"]["transition_engine"]
             self.assertEqual(transition["current_state"], "RESULT_PENDING_ARTIFACT_ACCEPTANCE")
             rule_ids = {finding["rule_id"] for finding in transition["findings"]}
-            self.assertIn("RUNTIME_LIFECYCLE_CURRENT_GATE_STALE", rule_ids)
+            self.assertIn("RUNTIME_NEXT_ACTION_STALE", rule_ids)
+            self.assertIn("RUNTIME_LIFECYCLE_RESULT_REGISTRY_STALE", rule_ids)
 
     def test_exit_contract_distinguishes_block_runtime_error_and_invalid_state(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
@@ -501,15 +502,7 @@ class PlanNextCommandTests(unittest.TestCase):
             self.assertEqual(dispatchability["target_role"], "orchestrator")
             self.assertEqual(dispatchability["role_class"], "control_or_pseudo")
             reason_codes = {reason["reason_code"] for reason in dispatchability["reasons"]}
-            self.assertTrue(
-                {
-                    "action_type_not_dispatch_capable",
-                    "target_role_not_profile_execution",
-                    "target_role_control_or_pseudo",
-                    "task_id_none",
-                    "task_packet_none",
-                }.issubset(reason_codes)
-            )
+            self.assertIn("action_type_not_dispatch_capable", reason_codes)
 
     def test_create_agent_missing_task_packet_is_blocked_by_dispatchability_gate(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
@@ -1341,6 +1334,119 @@ class PlanNextCommandTests(unittest.TestCase):
             self.assertEqual(report["correction_routing"]["route"], "CORRECTION_REQUIRED")
             self.assertFalse(report["evidence"]["transition_engine"]["checkpoint_route"]["eligible"])
 
+    def test_stale_checkpoint_next_action_cache_is_ignored_for_active_running_task(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = copy_valid_workspace(tmp)
+            make_tz_valid(root)
+            active_task_id = "TASK_ACTIVE_LIFECYCLE"
+            old_task_id = "TASK_OLD_CHECKPOINT_DONE"
+            active_packet = f"project-runtime/tasks/active/{active_task_id}.md"
+            old_packet = f"project-runtime/tasks/active/{old_task_id}.md"
+
+            set_project_state(
+                root,
+                current_phase="implementation",
+                project_status="active",
+                active_branches=[],
+                active_blockers=[],
+                checkpoint_blocked_by=[],
+                checkpoint_eligibility="not_applicable",
+                checkpoint_eligibility_status="not_checked",
+                project_checkpoint_status="not_required",
+            )
+            set_current_gate(
+                root,
+                status="open",
+                task_id="NONE",
+                task_packet="NONE",
+                required_next_role="none",
+                checkpoint_eligibility="not_applicable",
+                checkpoint_eligibility_status="not_checked",
+                project_checkpoint_status="not_required",
+            )
+            registry = load_sidecar(root, "TASK_REGISTRY.json")
+            registry_content = content(registry)
+            registry_content["tasks"] = [
+                {
+                    "accepted_files": [],
+                    "audit_refs": ["project-runtime/results/audit/AUDIT_RESULT_OLD_ATTEMPT_001.md"],
+                    "branch": "NONE",
+                    "checkpoint_ref": "project-runtime/checkpoints/old.json",
+                    "commit_hash": "NONE",
+                    "correction_links": [],
+                    "created_at": "2026-05-21T00:00:00Z",
+                    "dependencies": [],
+                    "owner_role": "developer",
+                    "push_status": "not_required",
+                    "requested_by_role": "NONE",
+                    "requested_by_task": "NONE",
+                    "research_question_id": "NONE",
+                    "result_refs": [],
+                    "return_task_after_audit_pass": "NONE",
+                    "return_to_requester_after_audit_pass": False,
+                    "return_to_role_after_audit_pass": "none",
+                    "status": "checkpoint_done",
+                    "task_id": old_task_id,
+                    "task_kind": "normal",
+                    "task_packet": old_packet,
+                    "task_title": "Old checkpoint task",
+                    "task_type": "developer",
+                    "updated_at": "2026-05-21T00:00:00Z",
+                },
+                {
+                    "accepted_files": [],
+                    "audit_refs": [],
+                    "branch": "NONE",
+                    "checkpoint_ref": "NONE",
+                    "commit_hash": "NONE",
+                    "correction_links": [],
+                    "created_at": "2026-05-21T00:00:00Z",
+                    "dependencies": [],
+                    "owner_role": "developer",
+                    "push_status": "not_required",
+                    "requested_by_role": "NONE",
+                    "requested_by_task": "NONE",
+                    "research_question_id": "NONE",
+                    "result_refs": [],
+                    "return_task_after_audit_pass": "NONE",
+                    "return_to_requester_after_audit_pass": False,
+                    "return_to_role_after_audit_pass": "none",
+                    "status": "running",
+                    "task_id": active_task_id,
+                    "task_kind": "normal",
+                    "task_packet": active_packet,
+                    "task_title": "Active lifecycle task",
+                    "task_type": "developer",
+                    "updated_at": "2026-05-21T00:00:00Z",
+                },
+            ]
+            write_sidecar(root, "TASK_REGISTRY.json", registry)
+            accepted = load_sidecar(root, "ACCEPTED_ARTIFACTS.json")
+            content(accepted)["artifacts"] = []
+            write_sidecar(root, "ACCEPTED_ARTIFACTS.json", accepted)
+            set_next_action(
+                root,
+                action_type="update_state",
+                target_role="orchestrator",
+                task_id=old_task_id,
+                task_packet=old_packet,
+                dependency_status="ready",
+                checkpoint_policy="local_only",
+                checkpoint_preflight_required=True,
+                checkpoint_receipt_required=True,
+            )
+            json_out = Path(tmp) / "plan-next.json"
+
+            result = run_plan_next(root, "--strict", "--json-out", str(json_out))
+
+            self.assertEqual(result.returncode, 1, result.stdout + result.stderr)
+            report = json.loads(json_out.read_text(encoding="utf-8"))
+            self.assertEqual(report["recommended_next_action"], "WAIT_FOR_RESULT")
+            self.assertEqual(report["task_id"], active_task_id)
+            self.assertNotEqual(report["recommended_next_action"], "CHECKPOINT_PREFLIGHT")
+            self.assertFalse(report["evidence"]["transition_engine"]["checkpoint_route"]["attempt"])
+            self.assertEqual(report["evidence"]["next_action"]["routing_source"], "transition_engine")
+
     def test_checkpoint_without_audit_pass_evidence_is_blocked(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             root = copy_valid_workspace(tmp)
@@ -1360,14 +1466,13 @@ class PlanNextCommandTests(unittest.TestCase):
             self.assertEqual(result.returncode, 1, result.stdout + result.stderr)
             report = json.loads(json_out.read_text(encoding="utf-8"))
             self.assertEqual(report["status"], "blocked")
-            self.assertEqual(report["recommended_next_action"], "CORRECTION_REQUIRED")
-            self.assertEqual(report["target_role"], "auditor")
+            self.assertEqual(report["recommended_next_action"], "WAIT_FOR_RESULT")
+            self.assertEqual(report["target_role"], "orchestrator")
             self.assertFalse(report["dispatchability"]["dispatchable"])
-            self.assertEqual(report["dispatchability"]["recommended_next_action"], "CORRECTION_REQUIRED")
-            self.assertEqual(report["dispatchability"]["target_role"], "auditor")
+            self.assertEqual(report["dispatchability"]["recommended_next_action"], "WAIT_FOR_RESULT")
+            self.assertEqual(report["dispatchability"]["target_role"], "orchestrator")
             reason_codes = {reason["reason_code"] for reason in report["dispatchability"]["reasons"]}
-            self.assertIn("task_packet_not_dispatch_valid", reason_codes)
-            self.assertIn("task_registry_incompatible", reason_codes)
+            self.assertIn("action_type_not_dispatch_capable", reason_codes)
             rule_ids = {item["rule_id"] for item in report["blocking_rules"]}
             self.assertIn("GOV-CHECKPOINT-AUDIT-GATE", rule_ids)
             self.assertFalse(report["evidence"]["audit_pass_evidence"]["present"])
@@ -1397,12 +1502,13 @@ class PlanNextCommandTests(unittest.TestCase):
             self.assertEqual(result.returncode, 1, result.stdout + result.stderr)
             report = json.loads(json_out.read_text(encoding="utf-8"))
             self.assertEqual(report["status"], "blocked")
-            self.assertEqual(report["recommended_next_action"], "CREATE_AUDITOR")
+            self.assertEqual(report["recommended_next_action"], "WAIT_FOR_AUDIT_RESULT")
             self.assertEqual(report["target_role"], "auditor")
-            self.assertTrue(report["dispatchability"]["dispatchable"])
-            self.assertEqual(report["dispatchability"]["recommended_next_action"], "CREATE_AUDITOR")
+            self.assertFalse(report["dispatchability"]["dispatchable"])
+            self.assertEqual(report["dispatchability"]["recommended_next_action"], "WAIT_FOR_AUDIT_RESULT")
             self.assertEqual(report["dispatchability"]["target_role"], "auditor")
-            self.assertEqual(report["dispatchability"]["reasons"], [])
+            reason_codes = {reason["reason_code"] for reason in report["dispatchability"]["reasons"]}
+            self.assertIn("action_type_not_dispatch_capable", reason_codes)
             rule_ids = {item["rule_id"] for item in report["blocking_rules"]}
             self.assertIn("GOV-CHECKPOINT-AUDIT-GATE", rule_ids)
             self.assertFalse(report["evidence"]["audit_pass_evidence"]["present"])

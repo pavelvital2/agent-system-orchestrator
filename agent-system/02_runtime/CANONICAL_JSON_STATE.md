@@ -171,7 +171,17 @@ evidence_refs
 
 ### NEXT_ACTION
 
-`NEXT_ACTION` records the only governed next routing action.
+`NEXT_ACTION.json` is a rendered compatibility/cache view of the next routing
+action. Dispatch and checkpoint decisions must derive the expected action from
+the canonical inputs: `TASK_REGISTRY`, lifecycle events in
+`project-runtime/agents/instances.jsonl`, artifact receipts and accepted
+artifact records, audit results, `CURRENT_GATE`, correction records, and
+`ORCHESTRATOR_RUNTIME_CONTRACT.json`.
+
+`state verify --strict` must compare the stored `NEXT_ACTION.json` cache with
+the derived action and fail on mismatch. `state render --confirm-write` may
+refresh a structurally valid stale `NEXT_ACTION.json` cache before rendering
+Markdown compatibility views.
 
 Required governed fields include:
 

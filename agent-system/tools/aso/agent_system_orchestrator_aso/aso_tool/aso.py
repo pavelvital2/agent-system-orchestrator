@@ -1417,8 +1417,8 @@ def build_parser() -> argparse.ArgumentParser:
         description=(
             "Render deterministic Markdown or JSON reports from project-runtime/state "
             "JSON sidecars. The command is read-only except for explicit --out report "
-            "writes or --confirm-write materialization of derived project-runtime/*.md "
-            "compatibility views."
+            "writes or --confirm-write refresh of the derived NEXT_ACTION cache plus "
+            "materialization of project-runtime/*.md compatibility views."
         ),
     )
     _add_root_argument(state_render_parser, validate=False)
@@ -1436,7 +1436,7 @@ def build_parser() -> argparse.ArgumentParser:
     state_render_parser.add_argument(
         "--confirm-write",
         action="store_true",
-        help="Materialize derived project-runtime/*.md compatibility views from JSON sidecars.",
+        help="Refresh derived NEXT_ACTION cache when valid, then materialize project-runtime/*.md compatibility views from JSON sidecars.",
     )
     state_render_parser.set_defaults(handler=state_render.run)
 

@@ -64,6 +64,13 @@ def write_sidecar(root: Path, name: str, payload: dict[str, object]) -> None:
     )
 
 
+def write_sidecar_raw(root: Path, name: str, payload: dict[str, object]) -> None:
+    (root / "project-runtime" / "state" / name).write_text(
+        json.dumps(payload, indent=2, sort_keys=True) + "\n",
+        encoding="utf-8",
+    )
+
+
 def normalize_current_p2_fixture(root: Path) -> None:
     state_root = root / "project-runtime" / "state"
     for path in sorted(state_root.glob("*.json")):
@@ -234,6 +241,85 @@ class StateVerifyCommandTests(unittest.TestCase):
             self.assertEqual(report["state"]["optional_sidecars_missing"], [])
             self.assertEqual(report["runtime_schema_contract"]["runtime_schema_version"], "3.1.1")
 
+    def test_strict_verify_flags_stale_checkpoint_cache_for_active_running_task(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = copy_p2_valid_workspace_with_valid_bootstrap_state(tmp)
+            active_task_id = "TASK_ACTIVE_LIFECYCLE"
+            old_task_id = "TASK_OLD_CHECKPOINT_DONE"
+            active_packet = f"project-runtime/tasks/active/{active_task_id}.md"
+            old_packet = f"project-runtime/tasks/active/{old_task_id}.md"
+
+            registry = load_sidecar(root, "TASK_REGISTRY.json")
+            old_task = fixture_task(old_task_id, task_packet=old_packet)
+            old_task["status"] = "checkpoint_done"
+            old_task["audit_refs"] = ["project-runtime/results/audit/AUDIT_RESULT_OLD_ATTEMPT_001.md"]
+            active_task = fixture_task(active_task_id, task_packet=active_packet)
+            active_task["status"] = "running"
+            registry["content"]["tasks"] = [old_task, active_task]
+            write_sidecar_raw(root, "TASK_REGISTRY.json", registry)
+
+            accepted = load_sidecar(root, "ACCEPTED_ARTIFACTS.json")
+            accepted["content"]["artifacts"] = []
+            write_sidecar_raw(root, "ACCEPTED_ARTIFACTS.json", accepted)
+
+            project_state = load_sidecar(root, "PROJECT_STATE.json")
+            project_state["content"].update(
+                {
+                    "current_phase": "implementation",
+                    "project_status": "active",
+                    "active_branches": [],
+                    "active_blockers": [],
+                    "checkpoint_blocked_by": [],
+                    "checkpoint_eligibility": "not_applicable",
+                    "checkpoint_eligibility_status": "not_checked",
+                    "project_checkpoint_status": "not_required",
+                }
+            )
+            write_sidecar_raw(root, "PROJECT_STATE.json", project_state)
+
+            current_gate = load_sidecar(root, "CURRENT_GATE.json")
+            current_gate["content"].update(
+                {
+                    "status": "open",
+                    "task_id": "NONE",
+                    "task_packet": "NONE",
+                    "required_next_role": "none",
+                    "checkpoint_eligibility": "not_applicable",
+                    "checkpoint_eligibility_status": "not_checked",
+                    "project_checkpoint_status": "not_required",
+                }
+            )
+            write_sidecar_raw(root, "CURRENT_GATE.json", current_gate)
+
+            next_action = load_sidecar(root, "NEXT_ACTION.json")
+            next_action["content"].update(
+                {
+                    "action_type": "update_state",
+                    "target_role": "orchestrator",
+                    "task_id": old_task_id,
+                    "task_packet": old_packet,
+                    "dependency_status": "ready",
+                    "blocked_by": [],
+                    "action_semantic": "normal",
+                    "checkpoint_policy": "local_only",
+                    "checkpoint_preflight_required": True,
+                    "checkpoint_receipt_required": True,
+                }
+            )
+            write_sidecar_raw(root, "NEXT_ACTION.json", next_action)
+
+            json_out = Path(tmp) / "state-verify.json"
+
+            result = run_state_verify(root, "--strict", "--json-out", str(json_out))
+
+            self.assertEqual(result.returncode, 1, result.stdout + result.stderr)
+            report = json.loads(json_out.read_text(encoding="utf-8"))
+            rule_ids = {finding["rule_id"] for finding in report["findings"]}
+            self.assertIn("RUNTIME_NEXT_ACTION_STALE", rule_ids)
+            self.assertIn("STALE_NEXT_ACTION_TASK_ID", rule_ids)
+            self.assertEqual(report["reconciliation"]["canonical_recommended_next_action"], "WAIT_FOR_RESULT")
+            self.assertEqual(report["reconciliation"]["derived_next_action_cache"]["task_id"], active_task_id)
+
     def test_existing_negative_fixtures_fail_with_stable_rule_ids(self) -> None:
         cases = {
             "invalid_bad_schema_version": "SIDECAR_SCHEMA_VERSION_MISSING_OR_INVALID",
@@ -319,7 +405,7 @@ class StateVerifyCommandTests(unittest.TestCase):
             next_content["action_semantic"] = "normal"
             next_content["workspace_identity_required"] = True
             next_content["repository_lock_required"] = True
-            write_sidecar(root, "NEXT_ACTION.json", next_action)
+            write_sidecar_raw(root, "NEXT_ACTION.json", next_action)
 
             result = run_state_verify(root, "--strict")
 
@@ -499,7 +585,7 @@ class StateVerifyCommandTests(unittest.TestCase):
             content["checkpoint_preflight_required"] = True
             content["checkpoint_receipt_required"] = True
             content["checkpoint_receipt_ref"] = "project-runtime/checkpoints/CHECKPOINT_ELIGIBILITY_TASK_FIXTURE_STATE_001_1.md"
-            write_sidecar(root, "NEXT_ACTION.json", payload)
+            write_sidecar_raw(root, "NEXT_ACTION.json", payload)
 
             result = run_state_verify(root, "--strict")
 
@@ -517,7 +603,7 @@ class StateVerifyCommandTests(unittest.TestCase):
             content["checkpoint_preflight_required"] = True
             content["checkpoint_receipt_required"] = True
             content["checkpoint_receipt_ref"] = "project-runtime/checkpoints/CHECKPOINT_ELIGIBILITY_TASK_FIXTURE_STATE_001_1.md"
-            write_sidecar(root, "NEXT_ACTION.json", payload)
+            write_sidecar_raw(root, "NEXT_ACTION.json", payload)
 
             task_payload = load_sidecar(root, "TASK_REGISTRY.json")
             task_content = task_payload["content"]
@@ -559,7 +645,7 @@ class StateVerifyCommandTests(unittest.TestCase):
             content["checkpoint_preflight_required"] = True
             content["checkpoint_receipt_required"] = True
             content["checkpoint_receipt_ref"] = "project-runtime/checkpoints/CHECKPOINT_ELIGIBILITY_TASK_FIXTURE_STATE_001_1.md"
-            write_sidecar(root, "NEXT_ACTION.json", payload)
+            write_sidecar_raw(root, "NEXT_ACTION.json", payload)
 
             task_payload = load_sidecar(root, "TASK_REGISTRY.json")
             task_content = task_payload["content"]
@@ -599,7 +685,7 @@ class StateVerifyCommandTests(unittest.TestCase):
             self.assertIsInstance(content, dict)
             content["action_type"] = "stop"
             content["action_semantic"] = "stop_terminal"
-            write_sidecar(root, "NEXT_ACTION.json", payload)
+            write_sidecar_raw(root, "NEXT_ACTION.json", payload)
 
             result = run_state_verify(root, "--strict")
 

@@ -335,10 +335,12 @@ forbidden document checks, and required document existence under `--root`.
 
 Runtime State P2 command surfaces are local and offline.
 `project-runtime/state/*.json` sidecars are canonical for Runtime Schema
-`3.1.1`. Markdown runtime files are generated compatibility views, and report
-outputs are diagnostics generated from JSON, not canonical state sources. The
-active package version is `3.7.9` and the active runtime schema version is
-`3.1.1`.
+`3.1.1`. `NEXT_ACTION.json` is the rendered compatibility/cache view derived
+from task registry, lifecycle, artifact, audit, gate, correction, and
+runtime-contract inputs. Markdown runtime files are generated compatibility
+views, and report outputs are diagnostics generated from JSON, not canonical
+state sources. The active package version is `3.7.9` and the active runtime
+schema version is `3.1.1`.
 
 ```text
 python3 agent-system/tools/aso/aso.py validate-rules --root . --strict
@@ -368,8 +370,9 @@ fails closed on malformed or ambiguous state, and writes migration receipts
 under allowed runtime report paths. Without
 `--confirm-write`, `aso state render` is read-only except for explicit report
 output to `/tmp`, `project-runtime/reports`, or `project-runtime/rendered`.
-With `--confirm-write`, it writes generated Markdown compatibility views for
-every canonical JSON sidecar. `aso state verify`
+With `--confirm-write`, it refreshes the derived `NEXT_ACTION.json` cache when
+structurally valid and writes generated Markdown compatibility views for every
+canonical JSON sidecar. `aso state verify`
 validates Runtime Schema `3.1.1` envelopes, sidecar types, required fields,
 schema alignment, task references, and compatibility diagnostics, then emits
 optional JSON evidence. `aso plan-next` recommends the next orchestrator action

@@ -48,6 +48,12 @@ SCHEMA_MANIFEST.json
 matching governance stage, but validators must report their compatibility or
 readiness status instead of inferring missing state.
 
+`NEXT_ACTION.json` remains a required sidecar for compatibility with existing
+reports and operators, but its route-driving fields are a rendered cache. The
+canonical next action is derived from `TASK_REGISTRY`, lifecycle events,
+artifact receipts and accepted artifact records, audit results, `CURRENT_GATE`,
+correction records, and `ORCHESTRATOR_RUNTIME_CONTRACT.json`.
+
 The machine-readable package contract is:
 
 ```text
@@ -194,7 +200,9 @@ Cross-sidecar validation must check that `NEXT_ACTION.task_id`,
 empty state. When `WORKSPACE_IDENTITY`, `REPOSITORY_LOCK`, and
 `PROJECT_STATE` contain comparable repository identity fields, the values must
 agree. Checkpoint-capable actions must not be considered ready without
-audit-pass evidence.
+audit-pass evidence. Strict verification must compute the derived
+`NEXT_ACTION` cache and fail when the stored cache differs from the derived
+routing fields.
 
 ## Migration Compatibility
 
