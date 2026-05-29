@@ -629,6 +629,75 @@ class StateVerifyCommandTests(unittest.TestCase):
             self.assertEqual(result.returncode, 1, result.stdout + result.stderr)
             self.assertIn("BSR_TZ_PATH_CANONICAL_MISMATCH", result.stdout)
 
+    def test_project_completed_with_unresolved_blockers_fails_transition_authority(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = copy_valid_workspace_with_valid_tz(tmp)
+            project_state = load_sidecar(root, "PROJECT_STATE.json")
+            project_content = project_state["content"]
+            self.assertIsInstance(project_content, dict)
+            project_content.update(
+                {
+                    "current_phase": "completed",
+                    "project_status": "completed",
+                    "audit_status": "passed",
+                    "project_checkpoint_status": "passed",
+                    "active_blockers": ["OWNER-BLOCKER-001"],
+                    "checkpoint_blocked_by": [],
+                }
+            )
+            write_sidecar(root, "PROJECT_STATE.json", project_state)
+
+            current_gate = load_sidecar(root, "CURRENT_GATE.json")
+            gate_content = current_gate["content"]
+            self.assertIsInstance(gate_content, dict)
+            gate_content.update(
+                {
+                    "gate_type": "terminal",
+                    "status": "passed",
+                    "action_semantic": "stop_terminal",
+                    "required_next_role": "none",
+                    "blocking_status": "NONE",
+                }
+            )
+            write_sidecar(root, "CURRENT_GATE.json", current_gate)
+
+            next_action = load_sidecar(root, "NEXT_ACTION.json")
+            next_content = next_action["content"]
+            self.assertIsInstance(next_content, dict)
+            next_content.update(
+                {
+                    "action_type": "stop",
+                    "target_role": "none",
+                    "dependency_status": "completed",
+                    "blocked_by": [],
+                    "action_semantic": "stop_terminal",
+                    "checkpoint_policy": "no_checkpoint",
+                    "checkpoint_preflight_required": False,
+                    "checkpoint_receipt_required": False,
+                }
+            )
+            write_sidecar(root, "NEXT_ACTION.json", next_action)
+
+            task_registry = load_sidecar(root, "TASK_REGISTRY.json")
+            task_content = task_registry["content"]
+            self.assertIsInstance(task_content, dict)
+            tasks = task_content["tasks"]
+            self.assertIsInstance(tasks, list)
+            self.assertIsInstance(tasks[0], dict)
+            tasks[0]["status"] = "blocked"
+            write_sidecar(root, "TASK_REGISTRY.json", task_registry)
+            json_out = Path(tmp) / "state-verify.json"
+
+            result = run_state_verify(root, "--strict", "--json-out", str(json_out))
+
+            self.assertEqual(result.returncode, 1, result.stdout + result.stderr)
+            report = json.loads(json_out.read_text(encoding="utf-8"))
+            rule_ids = {finding["rule_id"] for finding in report["findings"]}
+            self.assertIn("PROJECT_COMPLETED_UNRESOLVED_TASKS", rule_ids)
+            self.assertIn("PROJECT_COMPLETED_STALE_BLOCKERS", rule_ids)
+            self.assertEqual(report["reconciliation"]["current_state"], "PROJECT_COMPLETED")
+            self.assertEqual(report["reconciliation"]["canonical_recommended_next_action"], "NO_NEXT_ACTION")
+
 
 if __name__ == "__main__":
     unittest.main()

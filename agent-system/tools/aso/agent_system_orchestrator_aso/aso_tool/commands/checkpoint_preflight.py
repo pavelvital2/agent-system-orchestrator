@@ -8,7 +8,7 @@ import subprocess
 import sys
 from pathlib import Path
 
-from .. import correction_routing, result_parser
+from .. import correction_routing, transition_engine
 from . import package_checks, plan_next, state_verify
 
 
@@ -221,65 +221,35 @@ def _active_blockers(project_state: dict[str, object], next_action: dict[str, ob
     return sorted(set(item for item in blockers if item))
 
 
-def _truthy_string_list(value: object) -> list[str]:
-    if not isinstance(value, list):
-        return []
-    return [item.strip() for item in value if isinstance(item, str) and not _is_none(item)]
-
-
-def _artifact_audit_refs(sidecars: dict[str, dict[str, object]], task_id: str) -> list[str]:
-    artifacts = _content(sidecars, "ACCEPTED_ARTIFACTS").get("artifacts")
-    refs: list[str] = []
-    if not isinstance(artifacts, list):
-        return refs
-    for artifact in artifacts:
-        if not isinstance(artifact, dict):
-            continue
-        if artifact.get("source_task") != task_id and artifact.get("task_id") != task_id:
-            continue
-        audit_ref = artifact.get("audit_ref")
-        if isinstance(audit_ref, str) and not _is_none(audit_ref):
-            refs.append(audit_ref.strip())
-    return refs
-
-
-def _current_gate_audit_evidence(sidecars: dict[str, dict[str, object]]) -> list[str]:
-    refs: list[str] = []
-    for item in _truthy_string_list(_content(sidecars, "CURRENT_GATE").get("gate_evidence")):
-        if "audit" in item.lower():
-            refs.append(item)
-    return refs
-
-
 def _audit_pass_evidence(
     root: Path,
     sidecars: dict[str, dict[str, object]],
     task: dict[str, object],
     task_id: str,
 ) -> dict[str, object]:
-    task_status = _as_text(task.get("status"))
-    task_audit_refs = _truthy_string_list(task.get("audit_refs"))
-    artifact_audit_refs = _artifact_audit_refs(sidecars, task_id)
-    current_gate_refs = _current_gate_audit_evidence(sidecars)
-    audit_refs = [*task_audit_refs, *artifact_audit_refs, *current_gate_refs]
-    parsed_evidence = result_parser.inspect_audit_references(root, audit_refs, task_id=task_id, strict=True)
-    audit_status_passed = task_status == "audit_passed"
-    invalid_refs = parsed_evidence["invalid_refs"]
-    unparsed_refs = parsed_evidence["unparsed_refs"]
-    passed_refs = parsed_evidence["passed_refs"]
-    present = bool(passed_refs) and not invalid_refs and not unparsed_refs
-    return {
-        "present": present,
-        "task_status": task_status,
-        "task_status_audit_passed": audit_status_passed,
-        "task_audit_refs": task_audit_refs,
-        "accepted_artifact_audit_refs": artifact_audit_refs,
-        "current_gate_audit_evidence_refs": current_gate_refs,
-        "parsed_audit_results": parsed_evidence["parsed_refs"],
-        "passed_audit_refs": passed_refs,
-        "invalid_audit_results": invalid_refs,
-        "unparsed_audit_refs": unparsed_refs,
-    }
+    return transition_engine.audit_pass_evidence_from_sidecars(root, sidecars, task_id=task_id)
+
+
+def _transition_engine_evidence(root: Path, sidecars: dict[str, dict[str, object]]) -> dict[str, object]:
+    try:
+        contract = transition_engine.load_runtime_contract()
+        return transition_engine.routing_authority_report(contract, sidecars, root=root)
+    except (OSError, transition_engine.RuntimeContractError) as exc:
+        return {
+            "allowed": False,
+            "contract_authoritative": True,
+            "canonical_recommended_next_action": "NONE",
+            "findings": [
+                {
+                    "rule_id": "RUNTIME_CONTRACT_LOAD_FAILED",
+                    "severity": "error",
+                    "message": "Runtime contract could not be loaded.",
+                    "evidence": str(exc),
+                    "recommendation": "Restore ORCHESTRATOR_RUNTIME_CONTRACT.json before checkpoint routing.",
+                }
+            ],
+            "reference_docs_used": [transition_engine.CONTRACT_RELATIVE_PATH.as_posix()],
+        }
 
 
 def _state_verify_blockers(verify_report: dict[str, object]) -> list[dict[str, object]]:
@@ -317,7 +287,12 @@ def _workspace_report(root: Path, strict: bool) -> tuple[dict[str, object], int]
     blockers = _active_blockers(project_state, next_action)
     audit_evidence = _audit_pass_evidence(root, sidecars, task, task_id)
     correction_route = correction_routing.from_audit_inspection(root, audit_evidence.get("invalid_audit_results"))
-    is_checkpoint_attempt = plan_next._is_checkpoint_attempt(next_action)
+    transition_evidence = _transition_engine_evidence(root, sidecars)
+    try:
+        contract = transition_engine.load_runtime_contract()
+        is_checkpoint_attempt = transition_engine.is_checkpoint_next_action(contract, next_action)
+    except (OSError, transition_engine.RuntimeContractError):
+        is_checkpoint_attempt = plan_next._is_checkpoint_attempt(next_action)
     checkpoint_eligibility = _as_text(project_state.get("checkpoint_eligibility"))
     checkpoint_eligibility_status = _as_text(project_state.get("checkpoint_eligibility_status"))
 
@@ -473,6 +448,7 @@ def _workspace_report(root: Path, strict: bool) -> tuple[dict[str, object], int]
             },
             "audit_pass_evidence": audit_evidence,
             "correction_routing": correction_route,
+            "transition_engine": transition_evidence,
             "script_integration": {
                 "checkpoint_preflight_sh_invoked": False,
                 "reason": "Workspace mode reads state sidecars directly and does not invoke the shell preflight.",

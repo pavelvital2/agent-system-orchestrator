@@ -57,6 +57,49 @@ REUSE_ALLOWED: false
 AGENT_TERMINATION_REQUIRED: true
 """
 
+AUDIT_FAIL_RESULT = """AUDIT_RESULT:
+STATUS: fail
+TASK_ID: TASK_FIXTURE_STATE_001
+AGENT_INSTANCE_ID: audit_TASK_FIXTURE_STATE_001_attempt_001
+ROLE: auditor
+TASK: TASK_FIXTURE_STATE_001
+SUMMARY:
+Audit failed.
+READ_DOCS:
+- NONE
+READ_INPUTS:
+- NONE
+CHANGED_FILES:
+- NONE
+CREATED_FILES:
+- NONE
+DELETED_FILES:
+- NONE
+COMMANDS_RUN:
+- NONE
+TESTS_RUN:
+- NONE
+EVIDENCE:
+- SOURCE_RESULT_REF: project-runtime/results/worker/RESULT_TASK_FIXTURE_STATE_001_ATTEMPT_001.md
+- CHANGED_FILES_SCOPE_STATUS: failed
+SCOPE_VERIFICATION:
+- NONE
+FORBIDDEN_CHANGES_CHECK:
+- NONE
+RISKS:
+- NONE
+LIMITATIONS:
+- NONE
+BLOCKERS:
+- audit_failed
+GAPS:
+- NONE
+NEXT_RECOMMENDED_ACTION:
+- ROUTE_CORRECTION
+REUSE_ALLOWED: false
+AGENT_TERMINATION_REQUIRED: true
+"""
+
 
 def run_plan_next(root: Path, *extra: str) -> subprocess.CompletedProcess[str]:
     return subprocess.run(
@@ -134,6 +177,7 @@ def set_next_action(root: Path, **updates: object) -> None:
         "checkpoint_policy": "CHECKPOINT_POLICY",
         "checkpoint_preflight_required": "CHECKPOINT_PREFLIGHT_REQUIRED",
         "checkpoint_receipt_required": "CHECKPOINT_RECEIPT_REQUIRED",
+        "checkpoint_receipt_ref": "CHECKPOINT_RECEIPT_REF",
     }
     for key, field in markdown_fields.items():
         if key in updates:
@@ -156,6 +200,12 @@ def set_project_state(root: Path, **updates: object) -> None:
         "repository_lock_status": "REPOSITORY_LOCK_STATUS",
         "baseline_tracking_status": "BASELINE_TRACKING_STATUS",
         "checkpoint_eligibility": "CHECKPOINT_ELIGIBILITY",
+        "checkpoint_eligibility_status": "CHECKPOINT_ELIGIBILITY_STATUS",
+        "checkpoint_preflight_status": "CHECKPOINT_PREFLIGHT_STATUS",
+        "checkpoint_receipt_ref": "CHECKPOINT_RECEIPT_REF",
+        "project_checkpoint_status": "PROJECT_CHECKPOINT_STATUS",
+        "audit_status": "AUDIT_STATUS",
+        "action_semantic": "ACTION_SEMANTIC",
     }
     for key, field in markdown_fields.items():
         if key in updates and isinstance(updates[key], str):
@@ -175,6 +225,10 @@ def set_current_gate(root: Path, **updates: object) -> None:
         "action_semantic": "ACTION_SEMANTIC",
         "baseline_tracking_status": "BASELINE_TRACKING_STATUS",
         "required_next_role": "REQUIRED_NEXT_ROLE",
+        "checkpoint_eligibility": "CHECKPOINT_ELIGIBILITY",
+        "checkpoint_eligibility_status": "CHECKPOINT_ELIGIBILITY_STATUS",
+        "project_checkpoint_status": "PROJECT_CHECKPOINT_STATUS",
+        "blocking_status": "BLOCKING_STATUS",
     }
     for key, field in markdown_fields.items():
         if key in updates and isinstance(updates[key], str):
@@ -334,6 +388,45 @@ class PlanNextCommandTests(unittest.TestCase):
             self.assertEqual(report["route_status"], "ready")
             self.assertFalse(report["fatal"])
             self.assertEqual(report["exit_code"], 0)
+
+    def test_no_repeated_dispatch_after_result_progress(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = copy_valid_workspace(tmp)
+            make_tz_valid(root)
+            result_ref = write_result(root)
+            events = root / "project-runtime" / "agents" / "instances.jsonl"
+            events.parent.mkdir(parents=True)
+            events.write_text(
+                json.dumps(
+                    {
+                        "event": "agent_result_received",
+                        "event_type": "RESULT_RECEIVED",
+                        "task_id": "TASK_FIXTURE_STATE_001",
+                        "agent_role": "developer",
+                        "role": "developer",
+                        "agent_instance_id": "agent_TASK_FIXTURE_STATE_001_attempt_001",
+                        "result_ref": result_ref,
+                        "status": "pass",
+                        "timestamp_utc": "2026-05-25T10:00:00Z",
+                    },
+                    sort_keys=True,
+                )
+                + "\n",
+                encoding="utf-8",
+            )
+            json_out = Path(tmp) / "plan-next.json"
+
+            result = run_plan_next(root, "--strict", "--json-out", str(json_out))
+
+            self.assertEqual(result.returncode, 1, result.stdout + result.stderr)
+            report = json.loads(json_out.read_text(encoding="utf-8"))
+            self.assertEqual(report["recommended_next_action"], "ACCEPT_ARTIFACT")
+            self.assertNotEqual(report["recommended_next_action"], "CREATE_AGENT")
+            self.assertFalse(report["dispatchable"])
+            transition = report["evidence"]["transition_engine"]
+            self.assertEqual(transition["current_state"], "RESULT_PENDING_ARTIFACT_ACCEPTANCE")
+            rule_ids = {finding["rule_id"] for finding in transition["findings"]}
+            self.assertIn("RUNTIME_LIFECYCLE_CURRENT_GATE_STALE", rule_ids)
 
     def test_exit_contract_distinguishes_block_runtime_error_and_invalid_state(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
@@ -978,6 +1071,178 @@ class PlanNextCommandTests(unittest.TestCase):
             self.assertEqual(report["evidence"]["audit_pass_evidence"]["passed_audit_refs"], [audit_ref])
             self.assertEqual(report["evidence"]["audit_pass_evidence"]["unparsed_audit_refs"], [])
 
+    def test_checkpoint_state_commands_share_transition_engine_route(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = copy_valid_workspace(tmp)
+            make_tz_valid(root)
+            audit_ref = "project-runtime/results/audit/AUDIT_RESULT_TASK_FIXTURE_STATE_001_ATTEMPT_001.md"
+            audit_path = root / audit_ref
+            audit_path.parent.mkdir(parents=True)
+            audit_path.write_text(AUDIT_PASS_RESULT, encoding="utf-8")
+            set_next_action(
+                root,
+                action_type="update_state",
+                action_semantic="normal",
+                checkpoint_policy="local_only",
+                checkpoint_preflight_required=True,
+                checkpoint_receipt_required=True,
+            )
+            set_project_state(
+                root,
+                checkpoint_eligibility="local_only",
+                checkpoint_eligibility_status="eligible",
+            )
+            set_current_gate(
+                root,
+                action_semantic="normal",
+                checkpoint_eligibility="local_only",
+                checkpoint_eligibility_status="eligible",
+            )
+            set_task(root, status="audit_passed", audit_refs=[audit_ref])
+            plan_json = Path(tmp) / "plan-next.json"
+            verify_json = Path(tmp) / "state-verify.json"
+            status_json = Path(tmp) / "status.json"
+            checkpoint_json = Path(tmp) / "checkpoint-preflight.json"
+
+            plan = run_plan_next(root, "--strict", "--json-out", str(plan_json))
+            verify = run_aso(root, "state", "verify", "--strict", "--json-out", str(verify_json))
+            status = run_aso(root, "status", "--mode", "workspace", "--json-out", str(status_json))
+            checkpoint = run_aso(
+                root,
+                "checkpoint-preflight",
+                "--mode",
+                "workspace",
+                "--strict",
+                "--json-out",
+                str(checkpoint_json),
+            )
+
+            self.assertEqual(plan.returncode, 0, plan.stdout + plan.stderr)
+            self.assertEqual(verify.returncode, 0, verify.stdout + verify.stderr)
+            self.assertEqual(status.returncode, 0, status.stdout + status.stderr)
+            self.assertEqual(checkpoint.returncode, 0, checkpoint.stdout + checkpoint.stderr)
+            plan_report = json.loads(plan_json.read_text(encoding="utf-8"))
+            verify_report = json.loads(verify_json.read_text(encoding="utf-8"))
+            status_report = json.loads(status_json.read_text(encoding="utf-8"))
+            checkpoint_report = json.loads(checkpoint_json.read_text(encoding="utf-8"))
+            route_pairs = {
+                (
+                    plan_report["evidence"]["transition_engine"]["current_state"],
+                    plan_report["evidence"]["transition_engine"]["canonical_recommended_next_action"],
+                ),
+                (
+                    verify_report["reconciliation"]["current_state"],
+                    verify_report["reconciliation"]["canonical_recommended_next_action"],
+                ),
+                (
+                    status_report["summary"]["transition_state"],
+                    status_report["summary"]["transition_recommended_next_action"],
+                ),
+                (
+                    checkpoint_report["evidence"]["transition_engine"]["current_state"],
+                    checkpoint_report["evidence"]["transition_engine"]["canonical_recommended_next_action"],
+                ),
+            }
+            self.assertEqual(route_pairs, {("CHECKPOINT_ELIGIBLE", "CHECKPOINT_PREFLIGHT")})
+            self.assertTrue(checkpoint_report["evidence"]["transition_engine"]["checkpoint_route"]["eligible"])
+            self.assertFalse(
+                plan_report["evidence"]["transition_engine"]["routing_layers"]["apply_transition"]["mutations_performed"]
+            )
+
+    def test_lifecycle_finalize_dry_run_shares_transition_engine_route(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = copy_valid_workspace(tmp)
+            make_tz_valid(root)
+            audit_ref = "project-runtime/results/audit/AUDIT_RESULT_TASK_FIXTURE_STATE_001_ATTEMPT_001.md"
+            audit_path = root / audit_ref
+            audit_path.parent.mkdir(parents=True)
+            audit_path.write_text(AUDIT_PASS_RESULT, encoding="utf-8")
+            checkpoint_ref = "project-runtime/receipts/checkpoints/CHECKPOINT_TASK_FIXTURE_STATE_001.json"
+            set_project_state(
+                root,
+                audit_status="passed",
+                checkpoint_eligibility="local_only",
+                checkpoint_eligibility_status="eligible",
+                checkpoint_preflight_status="passed",
+                checkpoint_receipt_ref=checkpoint_ref,
+                project_checkpoint_status="passed",
+                checkpoint_blocked_by=[],
+                current_phase="finalization",
+                project_status="active",
+                action_semantic="normal",
+                active_blockers=[],
+                active_gaps=[],
+            )
+            set_current_gate(
+                root,
+                gate_type="finalization",
+                status="passed",
+                task_id="TASK_FIXTURE_STATE_001",
+                task_packet="project-runtime/tasks/active/TASK_FIXTURE_STATE_001.md",
+                action_semantic="normal",
+                checkpoint_eligibility="local_only",
+                checkpoint_eligibility_status="eligible",
+                project_checkpoint_status="passed",
+                required_next_role="orchestrator",
+                blocking_status="NONE",
+            )
+            set_next_action(
+                root,
+                action_type="finalize",
+                target_role="orchestrator",
+                task_id="TASK_FIXTURE_STATE_001",
+                task_packet="project-runtime/tasks/active/TASK_FIXTURE_STATE_001.md",
+                dependency_status="ready",
+                blocked_by=[],
+                action_semantic="normal",
+                workspace_identity_required=False,
+                repository_lock_required=False,
+                checkpoint_policy="no_checkpoint",
+                checkpoint_preflight_required=False,
+                checkpoint_receipt_required=False,
+                checkpoint_receipt_ref=checkpoint_ref,
+            )
+            set_task(root, status="checkpoint_done", audit_refs=[audit_ref])
+            plan_json = Path(tmp) / "plan-next.json"
+            verify_json = Path(tmp) / "state-verify.json"
+            status_json = Path(tmp) / "status.json"
+            finalize_json = Path(tmp) / "finalize.json"
+
+            plan = run_plan_next(root, "--strict", "--json-out", str(plan_json))
+            verify = run_aso(root, "state", "verify", "--strict", "--json-out", str(verify_json))
+            status = run_aso(root, "status", "--mode", "workspace", "--json-out", str(status_json))
+            finalize = run_aso(root, "lifecycle", "finalize", "--dry-run", "--json-out", str(finalize_json))
+
+            self.assertEqual(plan.returncode, 0, plan.stdout + plan.stderr)
+            self.assertEqual(verify.returncode, 0, verify.stdout + verify.stderr)
+            self.assertEqual(status.returncode, 0, status.stdout + status.stderr)
+            self.assertEqual(finalize.returncode, 0, finalize.stdout + finalize.stderr)
+            plan_report = json.loads(plan_json.read_text(encoding="utf-8"))
+            verify_report = json.loads(verify_json.read_text(encoding="utf-8"))
+            status_report = json.loads(status_json.read_text(encoding="utf-8"))
+            finalize_report = json.loads(finalize_json.read_text(encoding="utf-8"))
+            route_pairs = {
+                (
+                    plan_report["evidence"]["transition_engine"]["current_state"],
+                    plan_report["evidence"]["transition_engine"]["canonical_recommended_next_action"],
+                ),
+                (
+                    verify_report["reconciliation"]["current_state"],
+                    verify_report["reconciliation"]["canonical_recommended_next_action"],
+                ),
+                (
+                    status_report["summary"]["transition_state"],
+                    status_report["summary"]["transition_recommended_next_action"],
+                ),
+                (
+                    finalize_report["transition_engine"]["current_state"],
+                    finalize_report["transition_engine"]["canonical_recommended_next_action"],
+                ),
+            }
+            self.assertEqual(route_pairs, {("FINAL_CHECKPOINT_COMPLETE", "FINALIZE")})
+            self.assertFalse(finalize_report["mutations_performed"])
+            self.assertFalse(finalize_report["transition_engine"]["routing_layers"]["apply_transition"]["mutations_performed"])
+
     def test_checkpoint_with_missing_audit_result_ref_is_blocked(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             root = copy_valid_workspace(tmp)
@@ -1046,6 +1311,35 @@ class PlanNextCommandTests(unittest.TestCase):
             self.assertTrue(
                 any("audit_result_unreadable" in item["evidence"] for item in report["blocking_rules"])
             )
+
+    def test_audit_fail_never_routes_checkpoint_preflight(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = copy_valid_workspace(tmp)
+            make_tz_valid(root)
+            audit_ref = "project-runtime/results/audit/AUDIT_RESULT_TASK_FIXTURE_STATE_001_ATTEMPT_001.md"
+            audit_path = root / audit_ref
+            audit_path.parent.mkdir(parents=True)
+            audit_path.write_text(AUDIT_FAIL_RESULT, encoding="utf-8")
+            set_next_action(
+                root,
+                action_type="update_state",
+                action_semantic="normal",
+                checkpoint_policy="local_only",
+                checkpoint_preflight_required=True,
+                checkpoint_receipt_required=True,
+            )
+            set_task(root, status="audit_passed", audit_refs=[audit_ref])
+            json_out = Path(tmp) / "plan-next.json"
+
+            result = run_plan_next(root, "--strict", "--json-out", str(json_out))
+
+            self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+            report = json.loads(json_out.read_text(encoding="utf-8"))
+            self.assertEqual(report["recommended_next_action"], "CORRECTION_REQUIRED")
+            self.assertNotEqual(report["recommended_next_action"], "CHECKPOINT_PREFLIGHT")
+            self.assertEqual(report["route_status"], "ready")
+            self.assertEqual(report["correction_routing"]["route"], "CORRECTION_REQUIRED")
+            self.assertFalse(report["evidence"]["transition_engine"]["checkpoint_route"]["eligible"])
 
     def test_checkpoint_without_audit_pass_evidence_is_blocked(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:

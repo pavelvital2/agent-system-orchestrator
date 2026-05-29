@@ -12,7 +12,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
-from .. import artifact_storage, runtime_schema_contracts, state_materialization
+from .. import artifact_storage, runtime_schema_contracts, state_materialization, transition_engine
 from . import output_policy
 
 
@@ -64,6 +64,35 @@ ALLOWED_ROLES = (
     "owner",
 )
 ALLOWED_STATUSES = ("pass", "fail", "blocked", "gap", "pending")
+
+
+def _allowed_roles_from_contract() -> tuple[str, ...]:
+    try:
+        contract = transition_engine.load_runtime_contract()
+    except (OSError, transition_engine.RuntimeContractError):
+        return ALLOWED_ROLES
+    roles = transition_engine.contract_roles(contract)
+    values = [
+        *[str(role) for role in roles.get("allowed_roles", [])],
+        *[str(role) for role in roles.get("forbidden_dispatch_roles", [])],
+    ]
+    return tuple(dict.fromkeys(role for role in values if role))
+
+
+def _allowed_statuses_from_contract() -> tuple[str, ...]:
+    try:
+        contract = transition_engine.load_runtime_contract()
+    except (OSError, transition_engine.RuntimeContractError):
+        return ALLOWED_STATUSES
+    lifecycle = transition_engine.lifecycle_status_contract(contract)
+    values = [
+        *[str(status) for status in lifecycle.get("profile_result_statuses", [])],
+        *[str(status) for status in lifecycle.get("audit_result_statuses", [])],
+        "blocked",
+        "gap",
+        "pending",
+    ]
+    return tuple(dict.fromkeys(status for status in values if status))
 
 
 def _now_utc() -> str:
@@ -273,6 +302,8 @@ def _validate_manifest_payload(payload: dict[str, Any], root: Path, package_root
         else None
     )
     allowed_types = tuple(schema_types) if isinstance(schema_types, list) else ALLOWED_ARTIFACT_TYPES
+    allowed_roles = _allowed_roles_from_contract()
+    allowed_statuses = _allowed_statuses_from_contract()
 
     missing = [field for field in REQUIRED_MANIFEST_FIELDS if field not in payload]
     extra = sorted(set(payload) - set(REQUIRED_MANIFEST_FIELDS))
@@ -290,12 +321,12 @@ def _validate_manifest_payload(payload: dict[str, Any], root: Path, package_root
         findings.append(_finding("ARTIFACT_VALIDATE_SCHEMA_005", "Artifact id is invalid", "artifact_id must match ^[A-Z][A-Z0-9_:-]+$.", "artifact_id"))
     if not isinstance(payload.get("task_id"), str) or not str(payload.get("task_id", "")).strip():
         findings.append(_finding("ARTIFACT_VALIDATE_SCHEMA_006", "Task id is invalid", "task_id must be a non-empty string.", "task_id"))
-    if payload.get("role") not in ALLOWED_ROLES:
-        findings.append(_finding("ARTIFACT_VALIDATE_SCHEMA_007", "Role is unsupported", f"role must be one of: {', '.join(ALLOWED_ROLES)}.", "role"))
+    if payload.get("role") not in allowed_roles:
+        findings.append(_finding("ARTIFACT_VALIDATE_SCHEMA_007", "Role is unsupported", f"role must be one of: {', '.join(allowed_roles)}.", "role"))
     if not isinstance(payload.get("attempt_no"), int) or isinstance(payload.get("attempt_no"), bool) or payload.get("attempt_no", 0) < 1:
         findings.append(_finding("ARTIFACT_VALIDATE_SCHEMA_008", "Attempt number is invalid", "attempt_no must be an integer >= 1.", "attempt_no"))
-    if payload.get("status") not in ALLOWED_STATUSES:
-        findings.append(_finding("ARTIFACT_VALIDATE_SCHEMA_009", "Status is unsupported", f"status must be one of: {', '.join(ALLOWED_STATUSES)}.", "status"))
+    if payload.get("status") not in allowed_statuses:
+        findings.append(_finding("ARTIFACT_VALIDATE_SCHEMA_009", "Status is unsupported", f"status must be one of: {', '.join(allowed_statuses)}.", "status"))
     for error in _existing_package_path_errors(package_root, payload.get("main_document"), "main_document"):
         findings.append(_finding("ARTIFACT_VALIDATE_PATH_001", "Main document path is invalid", error, "main_document"))
     for field in ("structured_artifacts", "evidence_refs"):
@@ -314,8 +345,8 @@ def _validate_manifest_payload(payload: dict[str, Any], root: Path, package_root
             findings.append(_finding("ARTIFACT_VALIDATE_SCHEMA_012", "Producer fields are invalid", "producer must contain only agent_instance_id and role.", "producer"))
         if not isinstance(producer.get("agent_instance_id"), str) or not str(producer.get("agent_instance_id", "")).strip():
             findings.append(_finding("ARTIFACT_VALIDATE_SCHEMA_013", "Producer agent id is invalid", "producer.agent_instance_id must be non-empty.", "producer.agent_instance_id"))
-        if producer.get("role") not in ALLOWED_ROLES:
-            findings.append(_finding("ARTIFACT_VALIDATE_SCHEMA_014", "Producer role is unsupported", f"producer.role must be one of: {', '.join(ALLOWED_ROLES)}.", "producer.role"))
+        if producer.get("role") not in allowed_roles:
+            findings.append(_finding("ARTIFACT_VALIDATE_SCHEMA_014", "Producer role is unsupported", f"producer.role must be one of: {', '.join(allowed_roles)}.", "producer.role"))
     return findings
 
 

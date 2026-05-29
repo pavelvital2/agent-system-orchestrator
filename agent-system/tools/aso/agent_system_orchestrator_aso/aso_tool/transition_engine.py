@@ -8,6 +8,7 @@ from pathlib import Path
 from typing import Any, Iterable, Mapping
 
 from . import dispatch_receipts
+from . import result_parser
 from . import role_registry
 from . import resources
 from . import runtime_contract_fallback
@@ -54,6 +55,11 @@ LIFECYCLE_PROGRESS_STATES = {
     "CHECKPOINT_ELIGIBLE",
     "FINAL_AUDIT_PASS",
     "FINAL_CHECKPOINT_COMPLETE",
+}
+LIFECYCLE_STATUS_CONTRACT = {
+    "profile_result_statuses": ("pass", "fail"),
+    "audit_result_statuses": ("pass", "fail"),
+    "terminal_states": ("PROJECT_COMPLETED", "NO_NEXT_ACTION"),
 }
 
 
@@ -136,6 +142,12 @@ def _string_list(value: object) -> list[str]:
     if not isinstance(value, list):
         return []
     return [item.strip() for item in value if isinstance(item, str) and item.strip()]
+
+
+def _truthy_refs(value: object) -> list[str]:
+    if not isinstance(value, list):
+        return []
+    return [item.strip() for item in value if isinstance(item, str) and not _is_none(item)]
 
 
 def _mapping(value: object) -> dict[str, Any]:
@@ -908,15 +920,223 @@ def _active_task_id(
     return ""
 
 
-def _truthy_refs(value: object) -> list[str]:
-    if not isinstance(value, list):
-        return []
-    return [item.strip() for item in value if isinstance(item, str) and not _is_none(item)]
-
-
 def _truthy_text(value: object) -> str:
     text = _text(value)
     return "" if _is_none(text) else text
+
+
+def contract_roles(contract: Mapping[str, Any]) -> dict[str, object]:
+    """Return canonical runtime roles used by routing and validation callers."""
+
+    allowed_roles = _string_list(contract.get("allowed_roles"))
+    forbidden_dispatch_roles = _string_list(contract.get("forbidden_dispatch_roles"))
+    return {
+        "allowed_roles": allowed_roles,
+        "forbidden_dispatch_roles": forbidden_dispatch_roles,
+        "dispatchable_roles": list(role_registry.dispatchable_roles(contract)),
+        "control_or_pseudo_roles": list(role_registry.control_or_pseudo_roles(contract)),
+    }
+
+
+def lifecycle_status_contract(contract: Mapping[str, Any]) -> dict[str, object]:
+    """Return lifecycle and terminal statuses derived from the runtime contract."""
+
+    return {
+        "profile_result_statuses": list(LIFECYCLE_STATUS_CONTRACT["profile_result_statuses"]),
+        "audit_result_statuses": list(LIFECYCLE_STATUS_CONTRACT["audit_result_statuses"]),
+        "terminal_states": _string_list(contract.get("terminal_states")),
+        "progress_states": sorted(LIFECYCLE_PROGRESS_STATES),
+    }
+
+
+def checkpoint_policies(contract: Mapping[str, Any]) -> list[str]:
+    """Return checkpoint policies declared by checkpoint next-action routes."""
+
+    policies: list[str] = []
+    actions = _mapping(contract.get("next_actions_by_state"))
+    for action in actions.values():
+        action_map = _mapping(action)
+        if action_map.get("recommended_next_action") != "CHECKPOINT_PREFLIGHT":
+            continue
+        policy = _text(action_map.get("checkpoint_policy"))
+        if policy:
+            policies.append(policy)
+    return sorted(dict.fromkeys(policies))
+
+
+def is_checkpoint_next_action(contract: Mapping[str, Any], next_action: Mapping[str, object]) -> bool:
+    """Return whether NEXT_ACTION is checkpoint preflight by contract-derived rules."""
+
+    recommended = recommendation_from_next_action_content(next_action)
+    if recommended == "CHECKPOINT_PREFLIGHT":
+        return True
+    if next_action.get("checkpoint_preflight_required") is True:
+        return True
+    policy = _text(next_action.get("checkpoint_policy"))
+    return bool(policy and policy in set(checkpoint_policies(contract)))
+
+
+def _accepted_artifact_audit_refs(
+    sidecars: Mapping[str, Mapping[str, object]],
+    task_id: str,
+) -> list[str]:
+    accepted = _content(sidecars, "ACCEPTED_ARTIFACTS").get("artifacts")
+    refs: list[str] = []
+    if not isinstance(accepted, list):
+        return refs
+    for artifact in accepted:
+        if not isinstance(artifact, Mapping):
+            continue
+        if artifact.get("source_task") != task_id and artifact.get("task_id") != task_id:
+            continue
+        audit_ref = artifact.get("audit_ref")
+        if isinstance(audit_ref, str) and not _is_none(audit_ref):
+            refs.append(audit_ref.strip())
+    return refs
+
+
+def _current_gate_audit_refs(sidecars: Mapping[str, Mapping[str, object]]) -> list[str]:
+    refs: list[str] = []
+    for item in _truthy_refs(_content(sidecars, "CURRENT_GATE").get("gate_evidence")):
+        if "audit" in item.lower():
+            refs.append(item)
+    return refs
+
+
+def audit_pass_evidence_from_sidecars(
+    root: str | Path,
+    sidecars: Mapping[str, Mapping[str, object]],
+    *,
+    task_id: str = "",
+) -> dict[str, object]:
+    """Inspect audit-pass evidence from TASK_REGISTRY, artifacts, and CURRENT_GATE."""
+
+    workspace_root = Path(root)
+    project_state = _content(sidecars, "PROJECT_STATE")
+    current_gate = _content(sidecars, "CURRENT_GATE")
+    next_action = _content(sidecars, "NEXT_ACTION")
+    resolved_task_id = task_id or _active_task_id(project_state, current_gate, next_action)
+    task = _tasks_by_id(sidecars).get(resolved_task_id, {})
+    task_status = _text(task.get("status"))
+    task_audit_refs = _truthy_refs(task.get("audit_refs"))
+    artifact_audit_refs = _accepted_artifact_audit_refs(sidecars, resolved_task_id)
+    gate_audit_refs = _current_gate_audit_refs(sidecars)
+    audit_refs = list(dict.fromkeys([*task_audit_refs, *artifact_audit_refs, *gate_audit_refs]))
+    parsed = result_parser.inspect_audit_references(
+        workspace_root,
+        audit_refs,
+        task_id=resolved_task_id,
+        strict=True,
+    )
+    invalid_refs = parsed["invalid_refs"]
+    unparsed_refs = parsed["unparsed_refs"]
+    passed_refs = parsed["passed_refs"]
+    present = bool(passed_refs) and not invalid_refs and not unparsed_refs
+    return {
+        "present": present,
+        "task_id": resolved_task_id,
+        "task_status": task_status,
+        "task_status_audit_passed": task_status == "audit_passed",
+        "task_audit_refs": task_audit_refs,
+        "accepted_artifact_audit_refs": artifact_audit_refs,
+        "current_gate_audit_evidence_refs": gate_audit_refs,
+        "parsed_audit_results": parsed["parsed_refs"],
+        "passed_audit_refs": passed_refs,
+        "invalid_audit_results": invalid_refs,
+        "unparsed_audit_refs": unparsed_refs,
+    }
+
+
+def active_blockers_from_sidecars(sidecars: Mapping[str, Mapping[str, object]]) -> list[str]:
+    """Return active blockers that block routing or checkpoint by contract policy."""
+
+    project_state = _content(sidecars, "PROJECT_STATE")
+    next_action = _content(sidecars, "NEXT_ACTION")
+    blockers: list[str] = []
+    for key in ("active_blockers", "checkpoint_blocked_by"):
+        value = project_state.get(key)
+        if isinstance(value, list):
+            for item in value:
+                if isinstance(item, str) and not _is_none(item):
+                    blockers.append(item.strip())
+                elif isinstance(item, Mapping) and item:
+                    blocker_id = _text(item.get("blocker_id"))
+                    blockers.append(blocker_id or json.dumps(dict(item), sort_keys=True))
+        elif isinstance(value, str) and not _is_none(value):
+            blockers.append(value.strip())
+    value = next_action.get("blocked_by")
+    if isinstance(value, list):
+        blockers.extend(item.strip() for item in value if isinstance(item, str) and not _is_none(item))
+    return sorted(dict.fromkeys(blocker for blocker in blockers if blocker))
+
+
+def routing_authority_report(
+    contract: Mapping[str, Any],
+    sidecars: Mapping[str, Mapping[str, object]],
+    *,
+    root: str | Path | None = None,
+) -> dict[str, object]:
+    """Return the canonical read-only validate -> route-next -> apply-transition report."""
+
+    decision = explain_next_action_from_sidecars(contract, sidecars)
+    payload = decision.to_json()
+    recommended = _text(decision.next_action.get("recommended_next_action"))
+    blockers = active_blockers_from_sidecars(sidecars)
+    audit_evidence: dict[str, object] = {}
+    if root is not None:
+        signals = decision.inputs.get("sidecar_state_signals")
+        audit_task_id = _text(signals.get("task_id")) if isinstance(signals, Mapping) else ""
+        audit_evidence = audit_pass_evidence_from_sidecars(root, sidecars, task_id=audit_task_id)
+    checkpoint_rules = _mapping(contract.get("checkpoint_rules"))
+    checkpoint_route = {
+        "attempt": recommended == "CHECKPOINT_PREFLIGHT",
+        "eligible": (
+            recommended == "CHECKPOINT_PREFLIGHT"
+            and (not checkpoint_rules.get("requires_audit_pass", True) or bool(audit_evidence.get("present")))
+            and (not checkpoint_rules.get("requires_no_open_lifecycle_blockers", True) or not blockers)
+        ),
+        "requires_audit_pass": checkpoint_rules.get("requires_audit_pass", True),
+        "requires_no_open_lifecycle_blockers": checkpoint_rules.get("requires_no_open_lifecycle_blockers", True),
+        "active_blockers": blockers,
+    }
+    payload.update(
+        {
+            "contract_authoritative": True,
+            "canonical_recommended_next_action": recommended or "NONE",
+            "audit_gate_rules": _mapping(contract.get("audit_gate_rules")),
+            "checkpoint_rules": checkpoint_rules,
+            "checkpoint_route": checkpoint_route,
+            "allowed_events": _string_list(contract.get("allowed_events")),
+            "roles": contract_roles(contract),
+            "lifecycle_statuses": lifecycle_status_contract(contract),
+            "routing_layers": {
+                "validate": {
+                    "status": "passed" if decision.allowed else "failed",
+                    "read_only": True,
+                    "mutations_performed": False,
+                    "findings": [finding.to_json() for finding in decision.findings],
+                },
+                "route_next": {
+                    "status": "routed",
+                    "read_only": True,
+                    "mutations_performed": False,
+                    "current_state": decision.current_state,
+                    "recommended_next_action": recommended or "NONE",
+                    "next_action": decision.next_action,
+                },
+                "apply_transition": {
+                    "status": "not_requested",
+                    "mutating_authority": True,
+                    "read_only": True,
+                    "mutations_performed": False,
+                    "requires_explicit_confirm_write": True,
+                },
+            },
+        }
+    )
+    if audit_evidence:
+        payload["audit_pass_evidence"] = audit_evidence
+    return payload
 
 
 def _has_audit_evidence(task: Mapping[str, object], sidecars: Mapping[str, Mapping[str, object]], task_id: str) -> bool:

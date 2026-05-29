@@ -1683,25 +1683,21 @@ def _transition_engine_findings(sidecars: dict[str, dict[str, object]]) -> list[
     return findings
 
 
-def _reconciliation_report(sidecars: dict[str, dict[str, object]], enabled: bool) -> dict[str, object]:
-    if not enabled:
-        return {
-            "enabled": False,
-            "reason": "no current runtime schema or lifecycle log evidence",
-        }
+def _reconciliation_report(root: Path, sidecars: dict[str, dict[str, object]], enabled: bool) -> dict[str, object]:
     try:
         contract = transition_engine.load_runtime_contract()
-        decision = transition_engine.explain_next_action_from_sidecars(contract, sidecars)
+        payload = transition_engine.routing_authority_report(contract, sidecars, root=root)
     except (OSError, transition_engine.RuntimeContractError) as exc:
         return {
-            "enabled": True,
+            "enabled": enabled,
             "status": "failed",
             "error": str(exc),
             "reference_docs_used": [transition_engine.CONTRACT_RELATIVE_PATH.as_posix()],
         }
-    payload = decision.to_json()
-    payload["enabled"] = True
-    payload["status"] = "passed" if decision.allowed else "failed"
+    payload["enabled"] = enabled
+    if not enabled:
+        payload["reason"] = "transition authority reported in dry-run mode; reconciliation findings require current runtime schema or lifecycle log evidence"
+    payload["status"] = "passed" if payload.get("allowed") else "failed"
     payload["read_only"] = True
     payload["mutations_performed"] = False
     return payload
@@ -1821,7 +1817,7 @@ def _report(root: Path, strict: bool) -> tuple[dict[str, object], int]:
         current_p2_state,
         optional_present,
         optional_missing,
-        _reconciliation_report(loaded_sidecars, reconciliation_enabled),
+        _reconciliation_report(root, loaded_sidecars, reconciliation_enabled),
     ), exit_code
 
 

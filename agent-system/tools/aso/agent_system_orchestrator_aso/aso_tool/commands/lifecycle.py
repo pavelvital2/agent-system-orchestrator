@@ -12,6 +12,7 @@ from typing import Any, Mapping
 from .. import correction_routing
 from .. import result_parser
 from .. import state_materialization
+from .. import transition_engine
 from ..timestamps import utc_timestamp
 from . import state_verify
 
@@ -64,10 +65,19 @@ def _legacy_event_name(role: str) -> str:
     return "auditor_agent_terminated" if role == "auditor" else "agent_instance_terminated"
 
 
-def _next_allowed_action(role: str, status: str = "") -> str:
-    if role == "auditor":
-        return "correction_required" if status in {"fail", "blocked", "gap"} else "checkpoint_preflight"
-    return "audit_route"
+def _next_allowed_action(decision: Mapping[str, object]) -> str:
+    if decision.get("allowed") is not True:
+        return "NONE"
+    next_action = decision.get("next_action")
+    if not isinstance(next_action, Mapping):
+        return "NONE"
+    recommended = str(next_action.get("recommended_next_action", "")).strip()
+    aliases = {
+        "CREATE_AUDITOR": "audit_route",
+        "CHECKPOINT_PREFLIGHT": "checkpoint_preflight",
+        "CORRECTION_REQUIRED": "correction_required",
+    }
+    return aliases.get(recommended, "NONE")
 
 
 def _result_received_event_name(role: str) -> str:
@@ -96,6 +106,102 @@ def _result_receipt(root: Path, result_path: Path, parsed: result_parser.ParsedR
     if parsed.result_type == "audit_result":
         receipt["audit_result"] = parsed.audit.to_json()
     return receipt
+
+
+def _transition_not_run(reason: str) -> dict[str, object]:
+    return {
+        "allowed": False,
+        "findings": [],
+        "reference_docs_used": [transition_engine.CONTRACT_RELATIVE_PATH.as_posix()],
+        "candidate_recommended_next_action": "NONE",
+        "canonical_recommended_next_action": "NONE",
+        "contract_authoritative": True,
+        "route_suppressed_by": reason,
+    }
+
+
+def _transition_load_failure(exc: BaseException) -> dict[str, object]:
+    return {
+        "allowed": False,
+        "findings": [
+            {
+                "rule_id": "RUNTIME_CONTRACT_LOAD_FAILED",
+                "severity": "error",
+                "message": "Runtime contract could not be loaded.",
+                "evidence": str(exc),
+                "recommendation": "Restore ORCHESTRATOR_RUNTIME_CONTRACT.json before lifecycle routing.",
+            }
+        ],
+        "reference_docs_used": [transition_engine.CONTRACT_RELATIVE_PATH.as_posix()],
+        "candidate_recommended_next_action": "NONE",
+        "canonical_recommended_next_action": "NONE",
+        "contract_authoritative": True,
+    }
+
+
+def _transition_finding_as_lifecycle_error(finding: transition_engine.TransitionFinding) -> dict[str, str]:
+    return {
+        "rule_id": finding.rule_id,
+        "severity": finding.severity,
+        "message": finding.message,
+        "path": transition_engine.CONTRACT_RELATIVE_PATH.as_posix(),
+        "evidence": finding.evidence,
+        "recommendation": finding.recommendation,
+    }
+
+
+def _result_transition_decision(
+    parsed: result_parser.ParsedResult,
+    result_ref: str,
+) -> tuple[dict[str, object], list[dict[str, str]]]:
+    try:
+        contract = transition_engine.load_runtime_contract()
+    except (OSError, transition_engine.RuntimeContractError) as exc:
+        report = _transition_load_failure(exc)
+        return report, [
+            {
+                "rule_id": "RUNTIME_CONTRACT_LOAD_FAILED",
+                "severity": "error",
+                "message": "Runtime contract could not be loaded.",
+                "path": transition_engine.CONTRACT_RELATIVE_PATH.as_posix(),
+                "evidence": str(exc),
+                "recommendation": "Restore ORCHESTRATOR_RUNTIME_CONTRACT.json before lifecycle routing.",
+            }
+        ]
+
+    decision = transition_engine.derive_result_route(
+        contract,
+        parsed.result_type,
+        parsed.status,
+        task_id=parsed.task_id,
+    )
+    report = decision.to_json()
+    candidate = str(decision.next_action.get("recommended_next_action") or "NONE").strip() or "NONE"
+    lifecycle_findings: list[dict[str, str]] = []
+    if parsed.result_type == "audit_result":
+        supported = set(transition_engine.lifecycle_status_contract(contract)["audit_result_statuses"])
+        if parsed.status not in supported:
+            lifecycle_findings.append(
+                _error(
+                    "LIFECYCLE_AUDIT_RESULT_STATUS_UNSUPPORTED",
+                    f"AUDIT_RESULT STATUS={parsed.status or 'MISSING'} is not supported for lifecycle routing.",
+                    result_ref,
+                    "Use a canonical AUDIT_RESULT STATUS of pass or fail; route blocked/gap through explicit correction or owner handling.",
+                    reason_code="unsupported_audit_result_status",
+                )
+            )
+    if not decision.allowed:
+        lifecycle_findings.extend(
+            _transition_finding_as_lifecycle_error(finding)
+            for finding in decision.findings
+            if finding.severity == "error"
+        )
+    allowed = decision.allowed and not lifecycle_findings
+    report["allowed"] = allowed
+    report["candidate_recommended_next_action"] = candidate
+    report["canonical_recommended_next_action"] = candidate if allowed else "NONE"
+    report["contract_authoritative"] = True
+    return report, lifecycle_findings
 
 
 def _error(
@@ -153,12 +259,12 @@ def _parse_timestamp(value: object) -> datetime | None:
         return None
 
 
-def _validate_request(root: Path, result_path: Path) -> tuple[dict[str, Any], list[dict[str, str]]]:
+def _validate_request(root: Path, result_path: Path) -> tuple[dict[str, Any], list[dict[str, str]], dict[str, object]]:
     findings: list[dict[str, str]] = []
     text, error = _read_text(result_path)
     if error:
         findings.append(_error("LIFECYCLE_RESULT_IO_001", f"RESULT is unreadable: {error}", str(result_path), "Pass --from-result pointing at an existing RESULT Markdown file."))
-        return {}, findings
+        return {}, findings, _transition_not_run("result_unreadable")
     parsed = result_parser.parse_result(text, path=result_path)
     fields = parsed.fields
     task_id = parsed.task_id
@@ -167,6 +273,7 @@ def _validate_request(root: Path, result_path: Path) -> tuple[dict[str, Any], li
     status = parsed.status
     result_ref = _rel(root, result_path)
     receipt = _result_receipt(root, result_path, parsed)
+    transition_report, transition_findings = _result_transition_decision(parsed, result_ref)
 
     identity_fields = (
         ("TASK_ID", task_id, result_parser.REASON_MISSING_TASK_ID),
@@ -193,6 +300,9 @@ def _validate_request(root: Path, result_path: Path) -> tuple[dict[str, Any], li
         findings.append(_error("LIFECYCLE_RESULT_FORMAT_004", "RESULT must declare AGENT_TERMINATION_REQUIRED: true.", result_ref, "Set AGENT_TERMINATION_REQUIRED: true before recording termination."))
     if not result_path.exists():
         findings.append(_error("LIFECYCLE_RESULT_IO_002", "RESULT path does not exist.", result_ref, "Write the RESULT artifact before recording termination."))
+    findings.extend(transition_findings)
+    if transition_report.get("allowed") is not True:
+        return {}, findings, transition_report
 
     terminated_at = _now_utc()
     event = {
@@ -213,16 +323,16 @@ def _validate_request(root: Path, result_path: Path) -> tuple[dict[str, Any], li
         "terminated_at": terminated_at,
         "timestamp_utc": terminated_at,
         "created_by": "orchestrator",
-        "next_allowed_action": _next_allowed_action(role, status),
+        "next_allowed_action": _next_allowed_action(transition_report),
         "reuse_allowed": False,
     }
-    return event, findings
+    return event, findings, transition_report
 
 
-def _validate_result_received_request(root: Path, result_path: Path) -> tuple[dict[str, Any], list[dict[str, str]]]:
-    termination_event, findings = _validate_request(root, result_path)
+def _validate_result_received_request(root: Path, result_path: Path) -> tuple[dict[str, Any], list[dict[str, str]], dict[str, object]]:
+    termination_event, findings, transition_report = _validate_request(root, result_path)
     if not termination_event:
-        return {}, findings
+        return {}, findings, transition_report
     received_at = _now_utc()
     receipt = dict(termination_event.get("result_receipt", {}))
     event = {
@@ -244,7 +354,7 @@ def _validate_result_received_request(root: Path, result_path: Path) -> tuple[di
         "created_by": "orchestrator",
         "reuse_allowed": False,
     }
-    return event, findings
+    return event, findings, transition_report
 
 
 def _duplicate_termination(events: list[dict[str, Any]], event: dict[str, Any]) -> bool:
@@ -383,6 +493,28 @@ def _load_state_sidecars(root: Path) -> dict[str, dict[str, Any]]:
         if payload is not None:
             sidecars[sidecar_type] = payload
     return sidecars
+
+
+def _transition_authority(root: Path, sidecars: dict[str, dict[str, Any]]) -> dict[str, object]:
+    try:
+        contract = transition_engine.load_runtime_contract()
+        return transition_engine.routing_authority_report(contract, sidecars, root=root)
+    except (OSError, transition_engine.RuntimeContractError) as exc:
+        return {
+            "allowed": False,
+            "contract_authoritative": True,
+            "canonical_recommended_next_action": "NONE",
+            "findings": [
+                {
+                    "rule_id": "RUNTIME_CONTRACT_LOAD_FAILED",
+                    "severity": "error",
+                    "message": "Runtime contract could not be loaded.",
+                    "evidence": str(exc),
+                    "recommendation": "Restore ORCHESTRATOR_RUNTIME_CONTRACT.json before lifecycle routing.",
+                }
+            ],
+            "reference_docs_used": [transition_engine.CONTRACT_RELATIVE_PATH.as_posix()],
+        }
 
 
 def _object_is_none(value: object) -> bool:
@@ -745,7 +877,7 @@ def run_receive_result(args: argparse.Namespace) -> int:
     result_path = Path(args.from_result).expanduser()
     if not result_path.is_absolute():
         result_path = root / result_path
-    event, findings = _validate_result_received_request(root, result_path)
+    event, findings, transition_report = _validate_result_received_request(root, result_path)
     events_path = root / "project-runtime" / "agents" / "instances.jsonl"
     existing_events = _load_existing_events(events_path)
     if event and _duplicate_event(existing_events, event, {"RESULT_RECEIVED", "AUDIT_RESULT_RECEIVED", "agent_result_received"}):
@@ -768,6 +900,7 @@ def run_receive_result(args: argparse.Namespace) -> int:
         "root": str(root),
         "status": "blocked" if findings else "written",
         "event": event,
+        "transition_engine": transition_report,
         "correction_routing": correction_route,
         "event_log": "project-runtime/agents/instances.jsonl",
         "findings": findings,
@@ -799,7 +932,7 @@ def run_terminate_agent(args: argparse.Namespace) -> int:
     result_path = Path(args.from_result).expanduser()
     if not result_path.is_absolute():
         result_path = root / result_path
-    event, findings = _validate_request(root, result_path)
+    event, findings, transition_report = _validate_request(root, result_path)
     events_path = root / "project-runtime" / "agents" / "instances.jsonl"
     existing_events = _load_existing_events(events_path)
     if event and _duplicate_termination(existing_events, event):
@@ -847,7 +980,7 @@ def run_terminate_agent(args: argparse.Namespace) -> int:
                 "timestamp_utc": ready_at,
                 "created_by": "orchestrator",
                 "previous_event_type": event["event_type"],
-                "next_allowed_action": _next_allowed_action(str(event.get("role", "")), str(event.get("status", ""))),
+                "next_allowed_action": _next_allowed_action(transition_report),
             }
     else:
         audit_ready_event = {}
@@ -859,6 +992,7 @@ def run_terminate_agent(args: argparse.Namespace) -> int:
         "status": "blocked" if findings else "written",
         "event": event,
         "audit_route_ready_event": audit_ready_event,
+        "transition_engine": transition_report,
         "correction_routing": correction_route,
         "event_log": "project-runtime/agents/instances.jsonl",
         "findings": findings,
@@ -891,6 +1025,7 @@ def run_finalize(args: argparse.Namespace) -> int:
     root = Path(args.root).expanduser()
     dry_run = bool(getattr(args, "dry_run", False)) or not bool(getattr(args, "confirm_write", False))
     sidecars = _load_state_sidecars(root)
+    transition_authority = _transition_authority(root, sidecars)
     pre_verify, pre_exit_code = state_verify._report(root, True)
     receipt_ref = FINALIZATION_RECEIPT_RELATIVE_PATH.as_posix()
     timestamp = utc_timestamp()
@@ -924,6 +1059,7 @@ def run_finalize(args: argparse.Namespace) -> int:
             "receipt": receipt if not (root / FINALIZATION_RECEIPT_RELATIVE_PATH).is_file() else _read_json(root / FINALIZATION_RECEIPT_RELATIVE_PATH),
             "state_verify_before": pre_verify,
             "state_verify_after": pre_verify,
+            "transition_engine": transition_authority,
             "findings": [],
             "files_written": [],
             "mutations_performed": False,
@@ -934,6 +1070,22 @@ def run_finalize(args: argparse.Namespace) -> int:
 
     if not findings:
         findings.extend(_finalization_findings(sidecars))
+    if (
+        not findings
+        and not already_completed
+        and transition_authority.get("canonical_recommended_next_action") != "FINALIZE"
+    ):
+        findings.append(
+            _finalization_error(
+                "LIFECYCLE_FINALIZE_TRANSITION_NOT_ALLOWED",
+                (
+                    "Transition engine does not route this workspace to FINALIZE; "
+                    f"recommended={transition_authority.get('canonical_recommended_next_action', 'NONE')}."
+                ),
+                "project-runtime/state/NEXT_ACTION.json",
+                "Route FINAL_CHECKPOINT_COMPLETE to FINALIZE before confirming project completion.",
+            )
+        )
 
     base_report = {
         "tool": "aso",
@@ -943,6 +1095,7 @@ def run_finalize(args: argparse.Namespace) -> int:
         "receipt_ref": receipt_ref,
         "receipt": receipt,
         "state_verify_before": pre_verify,
+        "transition_engine": transition_authority,
         "findings": findings,
         "files_written": [],
         "mutations_performed": False,

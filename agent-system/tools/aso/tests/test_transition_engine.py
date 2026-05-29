@@ -221,6 +221,23 @@ class TransitionEngineTests(unittest.TestCase):
         self.assertEqual(decision.next_action["recommended_next_action"], "CREATE_AGENT")
         self.assertEqual(decision.inputs["stored_recommended_next_action"], "CREATE_AGENT")
 
+    def test_routing_authority_report_exposes_validate_route_apply_layers(self) -> None:
+        report = transition_engine.routing_authority_report(self.contract, _sidecars())
+
+        self.assertTrue(report["contract_authoritative"])
+        self.assertEqual(report["current_state"], "TASK_READY")
+        self.assertEqual(report["canonical_recommended_next_action"], "CREATE_AGENT")
+        self.assertEqual(
+            set(report["routing_layers"]),
+            {"validate", "route_next", "apply_transition"},
+        )
+        self.assertEqual(report["routing_layers"]["validate"]["status"], "passed")
+        self.assertEqual(report["routing_layers"]["route_next"]["recommended_next_action"], "CREATE_AGENT")
+        self.assertTrue(report["routing_layers"]["apply_transition"]["mutating_authority"])
+        self.assertFalse(report["routing_layers"]["apply_transition"]["mutations_performed"])
+        self.assertIn("developer", report["roles"]["dispatchable_roles"])
+        self.assertIn("PROJECT_COMPLETED", report["lifecycle_statuses"]["terminal_states"])
+
     def test_sidecar_next_action_consistency_detects_stale_stop(self) -> None:
         decision = transition_engine.explain_next_action_from_sidecars(
             self.contract,

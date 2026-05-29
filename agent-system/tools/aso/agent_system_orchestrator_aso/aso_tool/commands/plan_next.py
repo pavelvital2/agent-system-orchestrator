@@ -14,7 +14,6 @@ from .. import correction_routing
 from .. import dispatch_receipts
 from .. import handoff_artifacts
 from .. import role_registry
-from .. import result_parser
 from .. import resources
 from .. import transition_engine
 
@@ -159,16 +158,6 @@ def _tasks_by_id(sidecars: dict[str, dict[str, object]]) -> dict[str, dict[str, 
     return result
 
 
-def _truthy_string_list(value: object) -> list[str]:
-    if not isinstance(value, list):
-        return []
-    refs: list[str] = []
-    for item in value:
-        if isinstance(item, str) and not _is_none(item):
-            refs.append(item.strip())
-    return refs
-
-
 def _active_blockers(project_state: dict[str, object], next_action: dict[str, object]) -> list[str]:
     blockers: list[str] = []
     for key in ("active_blockers", "checkpoint_blocked_by"):
@@ -196,58 +185,13 @@ def _has_owner_or_gap_blocker(blockers: list[str]) -> bool:
     return any(token in joined for token in ("gap", "owner", "decision", "question"))
 
 
-def _accepted_artifact_audit_refs(sidecars: dict[str, dict[str, object]], task_id: str) -> list[str]:
-    accepted = _content(sidecars, "ACCEPTED_ARTIFACTS")
-    artifacts = accepted.get("artifacts")
-    refs: list[str] = []
-    if not isinstance(artifacts, list):
-        return refs
-    for artifact in artifacts:
-        if not isinstance(artifact, dict):
-            continue
-        if artifact.get("source_task") != task_id and artifact.get("task_id") != task_id:
-            continue
-        audit_ref = artifact.get("audit_ref")
-        if isinstance(audit_ref, str) and not _is_none(audit_ref):
-            refs.append(audit_ref.strip())
-    return refs
-
-
-def _current_gate_audit_evidence(sidecars: dict[str, dict[str, object]]) -> list[str]:
-    refs: list[str] = []
-    for item in _truthy_string_list(_content(sidecars, "CURRENT_GATE").get("gate_evidence")):
-        if "audit" in item.lower():
-            refs.append(item)
-    return refs
-
-
 def _audit_pass_evidence(
     root: Path,
     sidecars: dict[str, dict[str, object]],
     task: dict[str, object],
     task_id: str,
 ) -> dict[str, object]:
-    task_status = _as_text(task.get("status"))
-    task_audit_refs = _truthy_string_list(task.get("audit_refs"))
-    artifact_audit_refs = _accepted_artifact_audit_refs(sidecars, task_id)
-    current_gate_refs = _current_gate_audit_evidence(sidecars)
-    audit_refs = [*task_audit_refs, *artifact_audit_refs, *current_gate_refs]
-    parsed_evidence = result_parser.inspect_audit_references(root, audit_refs, task_id=task_id, strict=True)
-    invalid_refs = parsed_evidence["invalid_refs"]
-    unparsed_refs = parsed_evidence["unparsed_refs"]
-    passed_refs = parsed_evidence["passed_refs"]
-    present = bool(passed_refs) and not invalid_refs and not unparsed_refs
-    return {
-        "present": present,
-        "task_status": task_status,
-        "task_audit_refs": task_audit_refs,
-        "accepted_artifact_audit_refs": artifact_audit_refs,
-        "current_gate_audit_evidence_refs": current_gate_refs,
-        "parsed_audit_results": parsed_evidence["parsed_refs"],
-        "passed_audit_refs": passed_refs,
-        "invalid_audit_results": invalid_refs,
-        "unparsed_audit_refs": unparsed_refs,
-    }
+    return transition_engine.audit_pass_evidence_from_sidecars(root, sidecars, task_id=task_id)
 
 
 def _audit_fail_correction_route(
@@ -371,10 +315,10 @@ def _dedupe_rules(blockers: list[dict[str, object]]) -> list[dict[str, object]]:
     return deduped
 
 
-def _transition_engine_evidence(sidecars: dict[str, dict[str, object]]) -> dict[str, object]:
+def _transition_engine_evidence(root: Path, sidecars: dict[str, dict[str, object]]) -> dict[str, object]:
     try:
         contract = transition_engine.load_runtime_contract()
-        return transition_engine.explain_next_action_from_sidecars(contract, sidecars).to_json()
+        return transition_engine.routing_authority_report(contract, sidecars, root=root)
     except (OSError, transition_engine.RuntimeContractError) as exc:
         return {
             "allowed": False,
@@ -392,7 +336,11 @@ def _transition_engine_evidence(sidecars: dict[str, dict[str, object]]) -> dict[
 
 
 def _is_checkpoint_attempt(next_action: dict[str, object]) -> bool:
-    return next_action.get("checkpoint_policy") in CHECKPOINT_PREFLIGHT_POLICIES
+    try:
+        contract = transition_engine.load_runtime_contract()
+        return transition_engine.is_checkpoint_next_action(contract, next_action)
+    except (OSError, transition_engine.RuntimeContractError):
+        return next_action.get("checkpoint_policy") in CHECKPOINT_PREFLIGHT_POLICIES
 
 
 def _reason(reason_code: str, message: str, input_ref: str) -> dict[str, object]:
@@ -1063,7 +1011,7 @@ def _plan(
         "NONE",
         "blocked",
     )
-    transition_evidence = _transition_engine_evidence(sidecars)
+    transition_evidence = _transition_engine_evidence(root, sidecars)
     transition_selected = transition_evidence.get("transition_selected")
     derived_next_action = transition_evidence.get("next_action")
     correction_route: dict[str, object] = {}
