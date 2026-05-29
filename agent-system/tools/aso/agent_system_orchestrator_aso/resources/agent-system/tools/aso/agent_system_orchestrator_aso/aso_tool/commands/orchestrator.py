@@ -11,6 +11,7 @@ from typing import Any
 from . import output_policy
 from . import plan_next
 from . import state_verify
+from .. import source_boundary
 from .. import transition_engine
 
 
@@ -321,6 +322,16 @@ def _context_report(root: Path, args: argparse.Namespace) -> tuple[dict[str, obj
         if ref is not None:
             ref["authorization"] = "validator_required" if args.validator_required else "explicit_reference_reason"
             reference_doc_refs.append(ref)
+    allowed_sources = source_boundary.build_allowed_sources(
+        contract=contract,
+        task_id=task_id,
+        role=target_role,
+        task_packet=task_packet,
+        required_docs=required_docs,
+        reference_docs=reference_doc_refs,
+        current_result=current_result,
+        current_artifact=current_artifact,
+    )
 
     summary = {
         "errors": len(findings),
@@ -355,6 +366,7 @@ def _context_report(root: Path, args: argparse.Namespace) -> tuple[dict[str, obj
             "result_or_audit_result": current_result,
             "artifact_manifest_or_receipt": current_artifact,
         },
+        "allowed_sources": allowed_sources,
         "handoff_context": {
             "required_docs": required_docs,
             "reference_docs": reference_doc_refs,

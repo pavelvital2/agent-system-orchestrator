@@ -14,6 +14,8 @@
     "context_mode",
     "handoff_ref",
     "prompt_ref",
+    "allowed_sources_ref",
+    "allowed_sources",
     "required_docs",
     "required_doc_tokens",
     "forbidden_docs",
@@ -25,6 +27,7 @@
     "expected_receipt_ref_template",
     "external_runner_contract",
     "result_contract_ref",
+    "allowed_sources_schema_ref",
     "lifecycle_policy_enforcement"
   ],
   "properties": {
@@ -60,6 +63,56 @@
     "prompt_ref": {
       "type": "string",
       "pattern": "^project-runtime/handoffs/[A-Za-z0-9_:-]+\\.prompt\\.md$"
+    },
+    "allowed_sources_ref": {
+      "type": "string",
+      "pattern": "^project-runtime/handoffs/[A-Za-z0-9_:-]+\\.allowed_sources\\.json$"
+    },
+    "allowed_sources": {
+      "type": "object",
+      "required": [
+        "allowed_sources_type",
+        "schema_version",
+        "task_id",
+        "role",
+        "allowed_sources_ref",
+        "own_handoff_ref",
+        "own_prompt_ref",
+        "own_dispatch_receipt_ref_template",
+        "task_packet_ref",
+        "allowed_refs",
+        "forbidden_refs",
+        "severity_tiers",
+        "severity_interpretation"
+      ],
+      "properties": {
+        "allowed_sources_type": { "const": "ALLOWED_SOURCES" },
+        "schema_version": { "const": "1.0.0" },
+        "allowed_sources_ref": {
+          "type": "string",
+          "pattern": "^project-runtime/handoffs/[A-Za-z0-9_:-]+\\.allowed_sources\\.json$"
+        },
+        "allowed_refs": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/sourceRef" },
+          "minItems": 1
+        },
+        "forbidden_refs": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/sourceRef" }
+        },
+        "severity_tiers": {
+          "type": "object",
+          "required": [
+            "SB0_ALLOWED",
+            "SB1_REPORTING_ONLY",
+            "SB2_GOVERNANCE_WARNING",
+            "SB3_BLOCKING",
+            "SB4_INVALIDATING"
+          ]
+        }
+      },
+      "additionalProperties": true
     },
     "required_docs": {
       "type": "array",
@@ -148,6 +201,9 @@
     "result_contract_ref": {
       "const": "agent-system/03_templates/AGENT_RESULT_TEMPLATE.md"
     },
+    "allowed_sources_schema_ref": {
+      "const": "agent-system/09_validators/schemas/allowed_sources.schema.json"
+    },
     "artifact_package_manifest": {
       "const": "manifest.json"
     },
@@ -188,6 +244,25 @@
           "type": "string",
           "minLength": 1
         }
+      }
+    },
+    "sourceRef": {
+      "type": "object",
+      "additionalProperties": true,
+      "required": ["ref", "source_class", "severity", "rationale"],
+      "properties": {
+        "ref": { "type": "string", "minLength": 1 },
+        "source_class": { "type": "string", "minLength": 1 },
+        "severity": {
+          "enum": [
+            "SB0_ALLOWED",
+            "SB1_REPORTING_ONLY",
+            "SB2_GOVERNANCE_WARNING",
+            "SB3_BLOCKING",
+            "SB4_INVALIDATING"
+          ]
+        },
+        "rationale": { "type": "string", "minLength": 1 }
       }
     }
   }

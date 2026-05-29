@@ -1,0 +1,173 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://agent-system.local/schemas/allowed_sources.schema.json",
+  "title": "ALLOWED_SOURCES",
+  "description": "Per-agent source-boundary contract for explicit delivery context and severity interpretation.",
+  "type": "object",
+  "additionalProperties": true,
+  "required": [
+    "allowed_sources_type",
+    "schema_version",
+    "task_id",
+    "role",
+    "allowed_sources_ref",
+    "own_handoff_ref",
+    "own_prompt_ref",
+    "own_dispatch_receipt_ref_template",
+    "task_packet_ref",
+    "validator_error_refs",
+    "accepted_artifact_refs",
+    "allowed_project_refs",
+    "allowed_refs",
+    "forbidden_refs",
+    "severity_tiers",
+    "severity_interpretation"
+  ],
+  "properties": {
+    "allowed_sources_type": { "const": "ALLOWED_SOURCES" },
+    "schema_version": { "const": "1.0.0" },
+    "task_id": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9_:-]+$"
+    },
+    "role": { "type": "string", "minLength": 1 },
+    "allowed_sources_ref": {
+      "type": "string",
+      "pattern": "^project-runtime/handoffs/[A-Za-z0-9_:-]+\\.allowed_sources\\.json$"
+    },
+    "own_handoff_ref": {
+      "type": "string",
+      "pattern": "^project-runtime/handoffs/[A-Za-z0-9_:-]+\\.json$"
+    },
+    "own_prompt_ref": {
+      "type": "string",
+      "pattern": "^project-runtime/handoffs/[A-Za-z0-9_:-]+\\.prompt\\.md$"
+    },
+    "own_dispatch_receipt_ref_template": {
+      "const": "project-runtime/agents/dispatches/<AGENT_INSTANCE_ID>.json"
+    },
+    "task_packet_ref": { "type": "string", "minLength": 1 },
+    "validator_error_refs": {
+      "type": "array",
+      "items": { "type": "string", "minLength": 1 }
+    },
+    "accepted_artifact_refs": {
+      "type": "array",
+      "items": { "type": "string", "minLength": 1 }
+    },
+    "allowed_project_refs": {
+      "type": "array",
+      "items": { "type": "string", "minLength": 1 }
+    },
+    "allowed_refs": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/sourceRef" },
+      "minItems": 1
+    },
+    "forbidden_refs": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/sourceRef" }
+    },
+    "severity_tiers": {
+      "type": "object",
+      "required": [
+        "SB0_ALLOWED",
+        "SB1_REPORTING_ONLY",
+        "SB2_GOVERNANCE_WARNING",
+        "SB3_BLOCKING",
+        "SB4_INVALIDATING"
+      ],
+      "properties": {
+        "SB0_ALLOWED": { "$ref": "#/$defs/severityTier" },
+        "SB1_REPORTING_ONLY": { "$ref": "#/$defs/severityTier" },
+        "SB2_GOVERNANCE_WARNING": { "$ref": "#/$defs/severityTier" },
+        "SB3_BLOCKING": { "$ref": "#/$defs/severityTier" },
+        "SB4_INVALIDATING": { "$ref": "#/$defs/severityTier" }
+      },
+      "additionalProperties": false
+    },
+    "severity_interpretation": {
+      "type": "object",
+      "required": [
+        "order",
+        "correction_task_created_only_for",
+        "no_correction_task_for",
+        "fresh_agent_required_for",
+        "default_for_unclassified_source_boundary_fail"
+      ],
+      "properties": {
+        "order": {
+          "type": "array",
+          "prefixItems": [
+            { "const": "SB0_ALLOWED" },
+            { "const": "SB1_REPORTING_ONLY" },
+            { "const": "SB2_GOVERNANCE_WARNING" },
+            { "const": "SB3_BLOCKING" },
+            { "const": "SB4_INVALIDATING" }
+          ],
+          "minItems": 5,
+          "maxItems": 5
+        },
+        "correction_task_created_only_for": {
+          "type": "array",
+          "items": { "enum": ["SB3_BLOCKING", "SB4_INVALIDATING"] },
+          "minItems": 2,
+          "maxItems": 2,
+          "uniqueItems": true
+        },
+        "no_correction_task_for": {
+          "type": "array",
+          "items": { "enum": ["SB0_ALLOWED", "SB1_REPORTING_ONLY", "SB2_GOVERNANCE_WARNING"] },
+          "minItems": 3,
+          "maxItems": 3,
+          "uniqueItems": true
+        },
+        "fresh_agent_required_for": {
+          "type": "array",
+          "items": { "const": "SB4_INVALIDATING" },
+          "minItems": 1,
+          "maxItems": 1
+        },
+        "default_for_unclassified_source_boundary_fail": { "const": "SB3_BLOCKING" }
+      },
+      "additionalProperties": true
+    }
+  },
+  "$defs": {
+    "sourceRef": {
+      "type": "object",
+      "additionalProperties": true,
+      "required": ["ref", "source_class", "severity", "rationale"],
+      "properties": {
+        "ref": { "type": "string", "minLength": 1 },
+        "source_class": { "type": "string", "minLength": 1 },
+        "severity": {
+          "enum": [
+            "SB0_ALLOWED",
+            "SB1_REPORTING_ONLY",
+            "SB2_GOVERNANCE_WARNING",
+            "SB3_BLOCKING",
+            "SB4_INVALIDATING"
+          ]
+        },
+        "rationale": { "type": "string", "minLength": 1 }
+      }
+    },
+    "severityTier": {
+      "type": "object",
+      "required": ["label", "meaning", "recommended_action", "correction_required"],
+      "properties": {
+        "label": { "type": "string", "minLength": 1 },
+        "meaning": { "type": "string", "minLength": 1 },
+        "recommended_action": { "type": "string", "minLength": 1 },
+        "correction_required": {
+          "oneOf": [
+            { "type": "boolean" },
+            { "type": "string", "enum": ["true", "false"] }
+          ]
+        }
+      },
+      "additionalProperties": true
+    }
+  }
+}

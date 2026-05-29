@@ -88,6 +88,8 @@ class OrchestratorRuntimeContractTests(unittest.TestCase):
         self.assertEqual(handoff_context["normal_context_mode"], "routine")
         self.assertIn("debug", handoff_context["allowed_context_modes"])
         self.assertIn("explain", handoff_context["allowed_context_modes"])
+        self.assertIn("source_boundary_contract", handoff_context["runtime_contract_required_sections"])
+        self.assertIn("allowed_sources", handoff_context["routine_handoff_includes"])
         self.assertIn("agent-system/03_templates/", handoff_context["routine_handoff_excludes"])
         self.assertIn("developer", handoff_context["target_role_doc_map"])
         self.assertEqual(
@@ -176,12 +178,40 @@ class OrchestratorRuntimeContractTests(unittest.TestCase):
                 "resolved_reasoning_level",
                 "required_docs",
                 "forbidden_docs",
+                "allowed_sources_ref",
+                "allowed_sources",
                 "prompt_ref",
                 "expected_result_path",
                 "expected_artifact_package_path",
                 "lifecycle_policy",
             }.issubset(set(handoff_contract["required_fields"]))
         )
+
+    def test_contract_defines_source_boundary_severity_contract(self) -> None:
+        contract = transition_engine.load_runtime_contract()
+        source_boundary_contract = contract["source_boundary_contract"]
+
+        self.assertEqual(
+            source_boundary_contract["schema_ref"],
+            "agent-system/09_validators/schemas/allowed_sources.schema.json",
+        )
+        self.assertEqual(
+            source_boundary_contract["allowed_sources_ref_template"],
+            "project-runtime/handoffs/<TASK_ID>.allowed_sources.json",
+        )
+        self.assertEqual(
+            source_boundary_contract["severity_order"],
+            [
+                "SB0_ALLOWED",
+                "SB1_REPORTING_ONLY",
+                "SB2_GOVERNANCE_WARNING",
+                "SB3_BLOCKING",
+                "SB4_INVALIDATING",
+            ],
+        )
+        self.assertEqual(set(source_boundary_contract["correction_required_for"]), {"SB3_BLOCKING", "SB4_INVALIDATING"})
+        self.assertIn("own_prompt", source_boundary_contract["allowed_delivery_context_classes"])
+        self.assertIn("agent-system/09_validators/", source_boundary_contract["default_forbidden_refs"])
 
 
 if __name__ == "__main__":

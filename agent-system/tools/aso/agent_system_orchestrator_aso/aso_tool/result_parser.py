@@ -8,6 +8,7 @@ from pathlib import Path
 from typing import Any, Iterable, Mapping
 
 from . import role_registry
+from . import source_boundary
 
 
 RESULT_STATUSES = {"pass", "fail", "blocked", "gap"}
@@ -107,9 +108,14 @@ FINAL_RUN_RECEIPT_LABELS = {
 }
 DISPATCH_RECEIPT_LABELS = {"DISPATCH_RECEIPT_REF"}
 SOURCE_BOUNDARY_LABELS = {
+    "ALLOWED_SOURCES_REF",
+    "FORBIDDEN_SOURCE_REF",
+    "FORBIDDEN_READ_REF",
     "SOURCE_BOUNDARY_STATUS",
     "SOURCE_BOUNDARY_EVIDENCE",
     "SOURCE_BOUNDARY_REF",
+    "SOURCE_BOUNDARY_SEVERITY",
+    "SOURCE_BOUNDARY_RECOMMENDED_ACTION",
     "SOURCE_HYGIENE_STATUS",
     "PROJECT_INPUT_TRACKING_STATUS",
 }
@@ -472,6 +478,12 @@ def inspect_audit_references(
             "failed_checks": list(parsed.audit.failed_checks),
             "findings": list(parsed.audit.findings),
             "correction_refs": list(parsed.audit.correction_refs),
+            "source_boundary_evidence": list(parsed.audit.source_boundary_evidence),
+            "source_boundary_classification": source_boundary.classify_audit_result(
+                failed_checks=parsed.audit.failed_checks,
+                findings=parsed.audit.findings,
+                source_boundary_evidence=parsed.audit.source_boundary_evidence,
+            ),
             "issues": issue_payloads,
             "task_matches": task_matches,
         }

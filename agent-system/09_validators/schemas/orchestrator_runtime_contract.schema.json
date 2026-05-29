@@ -24,7 +24,8 @@
     "audit_gate_rules",
     "checkpoint_rules",
     "routine_context_policy",
-    "handoff_context_builder_contract"
+    "handoff_context_builder_contract",
+    "source_boundary_contract"
   ],
   "properties": {
     "contract_version": {
@@ -422,6 +423,90 @@
             "minLength": 1
           }
         }
+      },
+      "additionalProperties": true
+    },
+    "source_boundary_contract": {
+      "type": "object",
+      "required": [
+        "schema_ref",
+        "template_ref",
+        "allowed_sources_ref_template",
+        "severity_order",
+        "severity_tiers",
+        "correction_required_for",
+        "fresh_agent_required_for",
+        "allowed_delivery_context_classes",
+        "correction_routing_rule"
+      ],
+      "properties": {
+        "schema_ref": {
+          "const": "agent-system/09_validators/schemas/allowed_sources.schema.json"
+        },
+        "template_ref": {
+          "const": "agent-system/03_templates/allowed_sources.template.json"
+        },
+        "allowed_sources_ref_template": {
+          "const": "project-runtime/handoffs/<TASK_ID>.allowed_sources.json"
+        },
+        "severity_order": {
+          "type": "array",
+          "prefixItems": [
+            { "const": "SB0_ALLOWED" },
+            { "const": "SB1_REPORTING_ONLY" },
+            { "const": "SB2_GOVERNANCE_WARNING" },
+            { "const": "SB3_BLOCKING" },
+            { "const": "SB4_INVALIDATING" }
+          ],
+          "minItems": 5,
+          "maxItems": 5
+        },
+        "severity_tiers": {
+          "type": "object",
+          "required": [
+            "SB0_ALLOWED",
+            "SB1_REPORTING_ONLY",
+            "SB2_GOVERNANCE_WARNING",
+            "SB3_BLOCKING",
+            "SB4_INVALIDATING"
+          ],
+          "additionalProperties": {
+            "type": "object",
+            "required": ["label", "meaning", "recommended_action", "correction_required"],
+            "properties": {
+              "label": { "type": "string", "minLength": 1 },
+              "meaning": { "type": "string", "minLength": 1 },
+              "recommended_action": { "type": "string", "minLength": 1 },
+              "correction_required": { "type": "boolean" }
+            },
+            "additionalProperties": true
+          }
+        },
+        "correction_required_for": {
+          "type": "array",
+          "items": { "enum": ["SB3_BLOCKING", "SB4_INVALIDATING"] },
+          "minItems": 2,
+          "maxItems": 2,
+          "uniqueItems": true
+        },
+        "fresh_agent_required_for": {
+          "type": "array",
+          "items": { "const": "SB4_INVALIDATING" },
+          "minItems": 1,
+          "maxItems": 1
+        },
+        "allowed_delivery_context_classes": {
+          "type": "array",
+          "items": { "type": "string", "minLength": 1 },
+          "minItems": 1,
+          "uniqueItems": true
+        },
+        "default_forbidden_refs": {
+          "type": "array",
+          "items": { "type": "string", "minLength": 1 },
+          "uniqueItems": true
+        },
+        "correction_routing_rule": { "type": "string", "minLength": 1 }
       },
       "additionalProperties": true
     }

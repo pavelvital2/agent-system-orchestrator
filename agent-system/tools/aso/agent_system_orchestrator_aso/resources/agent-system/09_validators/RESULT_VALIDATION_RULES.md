@@ -143,6 +143,31 @@ Evidence is invalid when it:
 - claims tests or commands were run without listing them when the task packet
   requires command evidence.
 
+## Source-boundary severity validation
+
+Source-boundary findings must use the machine-readable severity tiers defined
+by `ORCHESTRATOR_RUNTIME_CONTRACT.json` and `allowed_sources.schema.json`:
+
+```text
+SB0_ALLOWED
+SB1_REPORTING_ONLY
+SB2_GOVERNANCE_WARNING
+SB3_BLOCKING
+SB4_INVALIDATING
+```
+
+The assigned agent's own handoff, own prompt, own dispatch receipt, task
+packet, validator error refs, accepted artifacts, and explicitly listed project
+sources are allowed delivery context. They must be reported as `SB0_ALLOWED`
+when read intentionally, or at most `SB1_REPORTING_ONLY` for harmless reporting
+drift.
+
+Validators must create or route correction tasks only for `SB3_BLOCKING` or
+`SB4_INVALIDATING`. `SB4_INVALIDATING` also requires a fresh agent because the
+read invalidates independence. `SB0_ALLOWED`, `SB1_REPORTING_ONLY`, and
+`SB2_GOVERNANCE_WARNING` may be recorded in audit evidence, but must not create
+full correction tasks by themselves.
+
 ## File change validation
 
 `CHANGED_FILES` must be compared to the task packet:

@@ -69,6 +69,10 @@ class OrchestratorHandoffContractTests(unittest.TestCase):
         self.assertEqual(payload["prompt_ref"], "project-runtime/handoffs/TASK_FIXTURE_STATE_001.prompt.md")
         self.assertEqual(payload["handoff_ref"], "project-runtime/handoffs/TASK_FIXTURE_STATE_001.json")
         self.assertEqual(
+            payload["allowed_sources_ref"],
+            "project-runtime/handoffs/TASK_FIXTURE_STATE_001.allowed_sources.json",
+        )
+        self.assertEqual(
             payload["expected_result_path"],
             "project-runtime/results/worker/RESULT_TASK_FIXTURE_STATE_001_ATTEMPT_001.md",
         )
@@ -83,10 +87,17 @@ class OrchestratorHandoffContractTests(unittest.TestCase):
         self.assertIn("codex exec", payload["external_runner_contract"]["external_runner_command_template"])
 
         required_paths = {doc["path"] for doc in payload["required_docs"]}
+        allowed_source_refs = {entry["ref"] for entry in payload["allowed_sources"]["allowed_refs"]}
         self.assertIn("agent-system/02_runtime/ORCHESTRATOR_RUNTIME_CONTRACT.json", required_paths)
         self.assertIn("project-runtime/tasks/active/TASK_FIXTURE_STATE_001.md", required_paths)
         self.assertIn("agent-system/01_roles/DEVELOPER.md", required_paths)
         self.assertIn("agent-system/03_templates/AGENT_RESULT_TEMPLATE.md", required_paths)
+        self.assertIn("project-runtime/handoffs/TASK_FIXTURE_STATE_001.json", allowed_source_refs)
+        self.assertIn("project-runtime/handoffs/TASK_FIXTURE_STATE_001.prompt.md", allowed_source_refs)
+        self.assertEqual(
+            payload["allowed_sources"]["severity_interpretation"]["correction_task_created_only_for"],
+            ["SB3_BLOCKING", "SB4_INVALIDATING"],
+        )
         self.assertIn("agent-system/09_validators/", payload["forbidden_docs"])
         self.assertTrue(handoff_artifacts.validate_handoff_artifact(payload).passed)
 

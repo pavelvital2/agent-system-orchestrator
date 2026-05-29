@@ -7,6 +7,7 @@ from dataclasses import dataclass
 from typing import Any, Mapping
 
 from . import dispatch_receipts
+from . import source_boundary
 from . import transition_engine
 
 
@@ -247,6 +248,16 @@ def build_handoff_artifact(
     lifecycle_policy = _packet_field(packet_fields, "AGENT_LIFECYCLE_POLICY", DEFAULT_LIFECYCLE_POLICY)
     handoff_path = handoff_ref(task_id)
     prompt_path = prompt_ref(task_id)
+    allowed_sources = source_boundary.build_allowed_sources(
+        contract=contract,
+        task_id=task_id,
+        role=role,
+        task_packet=task_packet,
+        required_docs=required_docs,
+        reference_docs=reference_doc_refs,
+        current_result=current_result,
+        current_artifact=current_artifact,
+    )
 
     return {
         "handoff_type": HANDOFF_TYPE,
@@ -257,6 +268,8 @@ def build_handoff_artifact(
         "context_mode": context_mode,
         "handoff_ref": handoff_path,
         "prompt_ref": prompt_path,
+        "allowed_sources_ref": allowed_sources["allowed_sources_ref"],
+        "allowed_sources": allowed_sources,
         "required_docs": required_docs,
         "required_doc_tokens": required_doc_tokens,
         "forbidden_docs": forbidden_docs,
@@ -286,6 +299,7 @@ def build_handoff_artifact(
             "live_dispatch_performed_by_aso": False,
         },
         "result_contract_ref": "agent-system/03_templates/AGENT_RESULT_TEMPLATE.md",
+        "allowed_sources_schema_ref": source_boundary.SCHEMA_RELATIVE_PATH,
         "artifact_package_manifest": "manifest.json",
         "lifecycle_policy_enforcement": {
             "reuse_allowed": False,
@@ -310,6 +324,8 @@ def validate_handoff_artifact(payload: Mapping[str, Any]) -> HandoffValidationRe
         "required_docs",
         "forbidden_docs",
         "reference_docs",
+        "allowed_sources_ref",
+        "allowed_sources",
         "expected_result_path",
         "expected_artifact_package_path",
         "lifecycle_policy",
@@ -343,6 +359,13 @@ def validate_handoff_artifact(payload: Mapping[str, Any]) -> HandoffValidationRe
         errors.append(f"handoff_ref must be {handoff_ref(task_id)}")
     if task_id and prompt != prompt_ref(task_id):
         errors.append(f"prompt_ref must be {prompt_ref(task_id)}")
+    expected_allowed_sources_ref = source_boundary.allowed_sources_ref(task_id)
+    if task_id and _text(payload.get("allowed_sources_ref")) != expected_allowed_sources_ref:
+        errors.append(f"allowed_sources_ref must be {expected_allowed_sources_ref}")
+    allowed_sources_payload = _mapping(payload.get("allowed_sources"))
+    allowed_sources_validation = source_boundary.validate_allowed_sources(allowed_sources_payload)
+    if not allowed_sources_validation.passed:
+        errors.extend(f"allowed_sources.{error}" for error in allowed_sources_validation.errors)
 
     required_docs = payload.get("required_docs")
     if not isinstance(required_docs, list) or not required_docs:
@@ -436,6 +459,7 @@ def handoff_plan(
         "prompt_ref_template": PROMPT_REF_TEMPLATE,
         "handoff_ref": payload["handoff_ref"],
         "prompt_ref": payload["prompt_ref"],
+        "allowed_sources_ref": payload["allowed_sources_ref"],
         "expected_result_path": payload["expected_result_path"],
         "expected_artifact_package_path": payload["expected_artifact_package_path"],
         "lifecycle_policy": payload["lifecycle_policy"],

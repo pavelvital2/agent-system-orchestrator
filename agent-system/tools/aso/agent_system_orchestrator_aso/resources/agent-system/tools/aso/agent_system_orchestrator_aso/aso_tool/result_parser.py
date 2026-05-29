@@ -8,9 +8,11 @@ from pathlib import Path
 from typing import Any, Iterable, Mapping
 
 from . import role_registry
+from . import source_boundary
 
 
 RESULT_STATUSES = {"pass", "fail", "blocked", "gap"}
+RESULT_ACCEPTANCE_MODES = {"result_only", "artifact_package"}
 PROFILE_ROLES = set(role_registry.dispatchable_roles()) - {"auditor"}
 LEGACY_LIFECYCLE_SYSTEM_ROLES = set(role_registry.legacy_lifecycle_system_roles())
 LEGACY_PROFILE_RESULT_ROLES = {
@@ -56,11 +58,14 @@ SCALAR_FIELDS = {
     "AGENT_INSTANCE_ID",
     "ROLE",
     "TASK",
+    "RESULT_ACCEPTANCE_MODE",
+    "ARTIFACT_PACKAGE_REQUIRED",
     "REUSE_ALLOWED",
     "AGENT_TERMINATION_REQUIRED",
 }
 SOURCE_RESULT_LABELS = {
     "SOURCE_RESULT_REF",
+    "SOURCE_RESULT",
     "AUDITED_RESULT_REF",
     "RESULT_REF",
     "ACCEPTED_RESULT_REF",
@@ -72,8 +77,56 @@ SOURCE_TASK_LABELS = {
     "AUDITED_TASK",
     "TASK_REF",
 }
+ARTIFACT_PACKAGE_LABELS = {
+    "CANDIDATE_ARTIFACT_PACKAGE",
+    "ARTIFACT_PACKAGE_REF",
+    "ACCEPTED_ARTIFACT_PACKAGE_REF",
+    "RESULT_PACKAGE_REF",
+    "ACCEPTED_RESULT_PACKAGE_REF",
+    "AUDIT_RESULT_PACKAGE_REF",
+    "ACCEPTED_AUDIT_RESULT_PACKAGE_REF",
+}
+CORRECTION_REF_LABELS = {
+    "CORRECTION_OF",
+    "CORRECTION_REF",
+    "CORRECTION_TASK_REF",
+    "CORRECTION_TASK_PACKET_REF",
+    "CORRECTION_PROPOSAL_REF",
+    "CORRECTION_RESULT_REF",
+    "RESOLVES_AUDIT_REF",
+    "RESOLVES_AUDIT_REFS",
+    "RESOLVED_AUDIT_REF",
+    "RESOLVED_AUDIT_REFS",
+    "SUPERSEDES",
+    "SUPERSEDED_BY",
+}
+FINAL_RUN_RECEIPT_LABELS = {
+    "FINAL_RUN_RECEIPT_REF",
+    "FINALIZATION_RECEIPT_REF",
+    "PROJECT_FINALIZATION_RECEIPT_REF",
+    "RUN_RECEIPT_REF",
+}
+DISPATCH_RECEIPT_LABELS = {"DISPATCH_RECEIPT_REF"}
+SOURCE_BOUNDARY_LABELS = {
+    "ALLOWED_SOURCES_REF",
+    "FORBIDDEN_SOURCE_REF",
+    "FORBIDDEN_READ_REF",
+    "SOURCE_BOUNDARY_STATUS",
+    "SOURCE_BOUNDARY_EVIDENCE",
+    "SOURCE_BOUNDARY_REF",
+    "SOURCE_BOUNDARY_SEVERITY",
+    "SOURCE_BOUNDARY_RECOMMENDED_ACTION",
+    "SOURCE_HYGIENE_STATUS",
+    "PROJECT_INPUT_TRACKING_STATUS",
+}
 AUDIT_FINDING_FIELDS = ("FINDINGS", "AUDIT_FINDINGS", "EVIDENCE", "SCOPE_VERIFICATION")
 FAILED_CHECK_FIELDS = ("FAILED_CHECKS", "FAILED_CHECK", "FAILURES")
+FIELD_ALIASES = {
+    "RESULT_STATUS": "STATUS",
+    "NEXT_REQUIRED_ACTION": "NEXT_RECOMMENDED_ACTION",
+}
+LOWERCASE_SCALAR_FIELDS = {"STATUS", "ROLE", "RESULT_ACCEPTANCE_MODE"}
+BOOLEAN_TEXT_FIELDS = {"ARTIFACT_PACKAGE_REQUIRED", "REUSE_ALLOWED", "AGENT_TERMINATION_REQUIRED"}
 
 REASON_MISSING_ROLE = "missing_role"
 REASON_MISSING_TASK_ID = "missing_task_id"
@@ -125,6 +178,11 @@ class AuditResultDetails:
     failed_checks: tuple[str, ...]
     source_result_refs: tuple[str, ...]
     source_task_refs: tuple[str, ...]
+    artifact_package_refs: tuple[str, ...] = ()
+    correction_refs: tuple[str, ...] = ()
+    final_run_receipt_refs: tuple[str, ...] = ()
+    dispatch_receipt_refs: tuple[str, ...] = ()
+    source_boundary_evidence: tuple[str, ...] = ()
 
     def to_json(self) -> dict[str, object]:
         return {
@@ -133,6 +191,33 @@ class AuditResultDetails:
             "failed_checks": list(self.failed_checks),
             "source_result_refs": list(self.source_result_refs),
             "source_task_refs": list(self.source_task_refs),
+            "artifact_package_refs": list(self.artifact_package_refs),
+            "correction_refs": list(self.correction_refs),
+            "final_run_receipt_refs": list(self.final_run_receipt_refs),
+            "dispatch_receipt_refs": list(self.dispatch_receipt_refs),
+            "source_boundary_evidence": list(self.source_boundary_evidence),
+        }
+
+
+@dataclass(frozen=True)
+class ResultReferences:
+    source_result_refs: tuple[str, ...]
+    source_task_refs: tuple[str, ...]
+    artifact_package_refs: tuple[str, ...]
+    correction_refs: tuple[str, ...]
+    final_run_receipt_refs: tuple[str, ...]
+    dispatch_receipt_refs: tuple[str, ...]
+    source_boundary_evidence: tuple[str, ...]
+
+    def to_json(self) -> dict[str, object]:
+        return {
+            "source_result_refs": list(self.source_result_refs),
+            "source_task_refs": list(self.source_task_refs),
+            "artifact_package_refs": list(self.artifact_package_refs),
+            "correction_refs": list(self.correction_refs),
+            "final_run_receipt_refs": list(self.final_run_receipt_refs),
+            "dispatch_receipt_refs": list(self.dispatch_receipt_refs),
+            "source_boundary_evidence": list(self.source_boundary_evidence),
         }
 
 
@@ -144,6 +229,7 @@ class ParsedResult:
     fields: Mapping[str, Any]
     issues: tuple[ResultParseIssue, ...]
     audit: AuditResultDetails
+    references: ResultReferences
 
     @property
     def status(self) -> str:
@@ -204,6 +290,109 @@ def bool_field(fields: Mapping[str, Any], key: str) -> bool | None:
     return None
 
 
+def flexible_bool_field(fields: Mapping[str, Any], key: str) -> bool | None:
+    value = as_string(fields, key).lower()
+    if value in {"true", "yes", "required"}:
+        return True
+    if value in {"false", "no", "not_required"}:
+        return False
+    return None
+
+
+def result_acceptance_metadata(fields: Mapping[str, Any], result_type: str) -> dict[str, object]:
+    mode = as_string(fields, "RESULT_ACCEPTANCE_MODE").lower()
+    required = flexible_bool_field(fields, "ARTIFACT_PACKAGE_REQUIRED")
+    default_required = result_type != "audit_result"
+    if mode == "result_only":
+        resolved_required = False if required is None else required
+        return {
+            "result_acceptance_mode": mode,
+            "artifact_package_required": resolved_required,
+            "metadata_explicit": True,
+        }
+    if mode == "artifact_package":
+        resolved_required = True if required is None else required
+        return {
+            "result_acceptance_mode": mode,
+            "artifact_package_required": resolved_required,
+            "metadata_explicit": True,
+        }
+    if required is not None:
+        return {
+            "result_acceptance_mode": "artifact_package" if required else "result_only",
+            "artifact_package_required": required,
+            "metadata_explicit": True,
+        }
+    return {
+        "result_acceptance_mode": "artifact_package" if default_required else "result_only",
+        "artifact_package_required": default_required,
+        "metadata_explicit": False,
+    }
+
+
+def result_acceptance_issues(fields: Mapping[str, Any], result_type: str) -> tuple[ResultParseIssue, ...]:
+    issues: list[ResultParseIssue] = []
+    mode = as_string(fields, "RESULT_ACCEPTANCE_MODE").lower()
+    required_text = as_string(fields, "ARTIFACT_PACKAGE_REQUIRED")
+    required = flexible_bool_field(fields, "ARTIFACT_PACKAGE_REQUIRED")
+    if mode and mode not in RESULT_ACCEPTANCE_MODES:
+        issues.append(
+            ResultParseIssue(
+                "invalid_result_acceptance_mode",
+                "RESULT_FORMAT_ACCEPTANCE_MODE",
+                "error",
+                "RESULT_ACCEPTANCE_MODE must be result_only or artifact_package.",
+                f"RESULT_ACCEPTANCE_MODE={mode}",
+                "RESULT_ACCEPTANCE_MODE",
+            )
+        )
+    if required_text and required is None:
+        issues.append(
+            ResultParseIssue(
+                "invalid_artifact_package_required",
+                "RESULT_FORMAT_ARTIFACT_PACKAGE_REQUIRED",
+                "error",
+                "ARTIFACT_PACKAGE_REQUIRED must be true or false.",
+                f"ARTIFACT_PACKAGE_REQUIRED={required_text}",
+                "ARTIFACT_PACKAGE_REQUIRED",
+            )
+        )
+    if mode == "result_only" and required is True:
+        issues.append(
+            ResultParseIssue(
+                "conflicting_result_acceptance_metadata",
+                "RESULT_FORMAT_ACCEPTANCE_METADATA_CONFLICT",
+                "error",
+                "RESULT_ACCEPTANCE_MODE=result_only conflicts with ARTIFACT_PACKAGE_REQUIRED=true.",
+                "RESULT_ACCEPTANCE_MODE=result_only; ARTIFACT_PACKAGE_REQUIRED=true",
+                "RESULT_ACCEPTANCE_MODE",
+            )
+        )
+    if mode == "artifact_package" and required is False:
+        issues.append(
+            ResultParseIssue(
+                "conflicting_result_acceptance_metadata",
+                "RESULT_FORMAT_ACCEPTANCE_METADATA_CONFLICT",
+                "error",
+                "RESULT_ACCEPTANCE_MODE=artifact_package conflicts with ARTIFACT_PACKAGE_REQUIRED=false.",
+                "RESULT_ACCEPTANCE_MODE=artifact_package; ARTIFACT_PACKAGE_REQUIRED=false",
+                "RESULT_ACCEPTANCE_MODE",
+            )
+        )
+    if result_type == "audit_result" and mode == "artifact_package" and required is not True:
+        issues.append(
+            ResultParseIssue(
+                "audit_artifact_package_required_missing",
+                "RESULT_FORMAT_ACCEPTANCE_METADATA_CONFLICT",
+                "error",
+                "AUDIT_RESULT artifact-package mode must explicitly set ARTIFACT_PACKAGE_REQUIRED=true.",
+                "RESULT_ACCEPTANCE_MODE=artifact_package",
+                "ARTIFACT_PACKAGE_REQUIRED",
+            )
+        )
+    return tuple(issues)
+
+
 def file_suggests_audit(path: Path, text: str) -> bool:
     first_heading = ""
     for line in text.splitlines():
@@ -230,7 +419,9 @@ def parse_result(text: str, *, path: Path | str | None = None, strict: bool = Fa
     issues = list(structural_issues)
     if strict:
         issues.extend(_strict_identity_issues(fields))
-    audit = _audit_details(fields, result_type)
+        issues.extend(result_acceptance_issues(fields, result_type))
+    references = _references(fields)
+    audit = _audit_details(fields, result_type, references)
     return ParsedResult(
         path=path_text,
         marker=marker,
@@ -238,11 +429,12 @@ def parse_result(text: str, *, path: Path | str | None = None, strict: bool = Fa
         fields=fields,
         issues=tuple(issues),
         audit=audit,
+        references=references,
     )
 
 
 def audit_details_from_fields(fields: Mapping[str, Any]) -> AuditResultDetails:
-    return _audit_details(fields, "audit_result")
+    return _audit_details(fields, "audit_result", _references(fields))
 
 
 def inspect_audit_references(
@@ -285,6 +477,13 @@ def inspect_audit_references(
             "source_result_refs": list(parsed.audit.source_result_refs),
             "failed_checks": list(parsed.audit.failed_checks),
             "findings": list(parsed.audit.findings),
+            "correction_refs": list(parsed.audit.correction_refs),
+            "source_boundary_evidence": list(parsed.audit.source_boundary_evidence),
+            "source_boundary_classification": source_boundary.classify_audit_result(
+                failed_checks=parsed.audit.failed_checks,
+                findings=parsed.audit.findings,
+                source_boundary_evidence=parsed.audit.source_boundary_evidence,
+            ),
             "issues": issue_payloads,
             "task_matches": task_matches,
         }
@@ -366,7 +565,7 @@ def _parse_fields(text: str, *, strict: bool, path_text: str) -> tuple[dict[str,
         match = _FIELD_RE.match(line)
         if match:
             flush()
-            key = match.group(1)
+            key = FIELD_ALIASES.get(match.group(1), match.group(1))
             value = match.group(2).strip()
             if key in fields and strict:
                 issues.append(
@@ -381,7 +580,7 @@ def _parse_fields(text: str, *, strict: bool, path_text: str) -> tuple[dict[str,
                 )
             saw_field = True
             if value:
-                fields[key] = value
+                fields[key] = _normalize_field_value(key, value)
                 current_key = None
                 current_lines = []
             else:
@@ -432,10 +631,23 @@ def _field_value(key: str, lines: list[str]) -> Any:
     values = [_normalize_section_line(line) for line in lines]
     values = [value for value in values if value]
     if not values:
-        return "NONE"
+        return _normalize_field_value(key, "NONE")
     if key in SCALAR_FIELDS:
-        return values[0]
+        return _normalize_field_value(key, values[0])
     return values
+
+
+def _normalize_field_value(key: str, value: str) -> str:
+    normalized = value.strip()
+    if key in LOWERCASE_SCALAR_FIELDS:
+        return normalized.lower()
+    if key in BOOLEAN_TEXT_FIELDS:
+        lowered = normalized.lower()
+        if lowered in {"true", "yes", "required"}:
+            return "true"
+        if lowered in {"false", "no", "not_required"}:
+            return "false"
+    return normalized
 
 
 def _normalize_section_line(line: str) -> str:
@@ -492,19 +704,36 @@ def _strict_identity_issues(fields: Mapping[str, Any]) -> list[ResultParseIssue]
     return issues
 
 
-def _audit_details(fields: Mapping[str, Any], result_type: str) -> AuditResultDetails:
+def _references(fields: Mapping[str, Any]) -> ResultReferences:
+    source_result_refs = _source_result_refs(fields)
+    source_task_refs = _source_task_refs(fields, source_result_refs)
+    return ResultReferences(
+        source_result_refs=tuple(source_result_refs),
+        source_task_refs=tuple(source_task_refs),
+        artifact_package_refs=tuple(_refs_for_labels(fields, ARTIFACT_PACKAGE_LABELS)),
+        correction_refs=tuple(_refs_for_labels(fields, CORRECTION_REF_LABELS)),
+        final_run_receipt_refs=tuple(_refs_for_labels(fields, FINAL_RUN_RECEIPT_LABELS)),
+        dispatch_receipt_refs=tuple(_refs_for_labels(fields, DISPATCH_RECEIPT_LABELS)),
+        source_boundary_evidence=tuple(_evidence_for_labels(fields, SOURCE_BOUNDARY_LABELS)),
+    )
+
+
+def _audit_details(fields: Mapping[str, Any], result_type: str, references: ResultReferences) -> AuditResultDetails:
     if result_type != "audit_result":
         return AuditResultDetails("", (), (), (), ())
     findings = _audit_findings(fields)
     failed_checks = _failed_checks(fields)
-    source_result_refs = _source_result_refs(fields)
-    source_task_refs = _source_task_refs(fields, source_result_refs)
     return AuditResultDetails(
         status=as_string(fields, "STATUS").lower(),
         findings=tuple(findings),
         failed_checks=tuple(failed_checks),
-        source_result_refs=tuple(source_result_refs),
-        source_task_refs=tuple(source_task_refs),
+        source_result_refs=references.source_result_refs,
+        source_task_refs=references.source_task_refs,
+        artifact_package_refs=references.artifact_package_refs,
+        correction_refs=references.correction_refs,
+        final_run_receipt_refs=references.final_run_receipt_refs,
+        dispatch_receipt_refs=references.dispatch_receipt_refs,
+        source_boundary_evidence=references.source_boundary_evidence,
     )
 
 
@@ -533,20 +762,12 @@ def _failed_checks(fields: Mapping[str, Any]) -> list[str]:
 
 
 def _source_result_refs(fields: Mapping[str, Any]) -> list[str]:
-    refs: list[str] = []
-    for item in _iter_field_items(fields):
-        label, value = _label_value(item)
-        if label in SOURCE_RESULT_LABELS and value:
-            refs.append(value)
-    return _dedupe(refs)
+    return _refs_for_labels(fields, SOURCE_RESULT_LABELS)
 
 
 def _source_task_refs(fields: Mapping[str, Any], source_result_refs: Iterable[str]) -> list[str]:
     refs: list[str] = []
-    for item in _iter_field_items(fields):
-        label, value = _label_value(item)
-        if label in SOURCE_TASK_LABELS and value:
-            refs.append(value)
+    refs.extend(_refs_for_labels(fields, SOURCE_TASK_LABELS))
     for result_ref in source_result_refs:
         match = _RESULT_TASK_RE.search(result_ref.strip())
         if match:
@@ -571,7 +792,39 @@ def _label_value(item: str) -> tuple[str, str]:
     match = _LABEL_RE.search(item)
     if not match:
         return "", ""
-    return match.group(1), match.group(2).strip()
+    return match.group(1), _clean_ref(match.group(2))
+
+
+def _refs_for_labels(fields: Mapping[str, Any], labels: set[str]) -> list[str]:
+    refs: list[str] = []
+    for label in fields:
+        if label in labels:
+            refs.extend(_clean_ref(item) for item in as_list(fields, label))
+    for item in _iter_field_items(fields):
+        label, value = _label_value(item)
+        if label in labels and value:
+            refs.append(value)
+    return _dedupe(refs)
+
+
+def _evidence_for_labels(fields: Mapping[str, Any], labels: set[str]) -> list[str]:
+    evidence: list[str] = []
+    for label in fields:
+        if label not in labels:
+            continue
+        for item in as_list(fields, label):
+            clean = item.strip()
+            if clean and clean.upper() != "NONE":
+                evidence.append(f"{label}: {clean}")
+    for item in _iter_field_items(fields):
+        label, value = _label_value(item)
+        if label in labels and value:
+            evidence.append(f"{label}: {value}")
+    return _dedupe(evidence)
+
+
+def _clean_ref(value: str) -> str:
+    return value.strip().strip("`").rstrip(".,;")
 
 
 def _dedupe(items: Iterable[str]) -> list[str]:

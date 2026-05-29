@@ -7,6 +7,94 @@
   "context_mode": "routine",
   "handoff_ref": "project-runtime/handoffs/<TASK_ID>.json",
   "prompt_ref": "project-runtime/handoffs/<TASK_ID>.prompt.md",
+  "allowed_sources_ref": "project-runtime/handoffs/<TASK_ID>.allowed_sources.json",
+  "allowed_sources": {
+    "allowed_sources_type": "ALLOWED_SOURCES",
+    "schema_version": "1.0.0",
+    "task_id": "<TASK_ID>",
+    "role": "<PROFILE_ROLE>",
+    "allowed_sources_ref": "project-runtime/handoffs/<TASK_ID>.allowed_sources.json",
+    "own_handoff_ref": "project-runtime/handoffs/<TASK_ID>.json",
+    "own_prompt_ref": "project-runtime/handoffs/<TASK_ID>.prompt.md",
+    "own_dispatch_receipt_ref_template": "project-runtime/agents/dispatches/<AGENT_INSTANCE_ID>.json",
+    "task_packet_ref": "<TASK_PACKET_REF>",
+    "validator_error_refs": [],
+    "accepted_artifact_refs": [],
+    "allowed_project_refs": ["<TASK_PACKET_REF>"],
+    "allowed_refs": [
+      {
+        "ref": "project-runtime/handoffs/<TASK_ID>.json",
+        "source_class": "own_handoff",
+        "severity": "SB0_ALLOWED",
+        "rationale": "Own machine-readable handoff issued for this task."
+      },
+      {
+        "ref": "project-runtime/handoffs/<TASK_ID>.prompt.md",
+        "source_class": "own_prompt",
+        "severity": "SB0_ALLOWED",
+        "rationale": "Own external runner prompt issued for this task."
+      },
+      {
+        "ref": "<TASK_PACKET_REF>",
+        "source_class": "assigned_task_packet",
+        "severity": "SB0_ALLOWED",
+        "rationale": "Assigned task packet for this bounded run."
+      }
+    ],
+    "forbidden_refs": [
+      {
+        "ref": "agent-system/09_validators/",
+        "source_class": "forbidden_governance_corpus",
+        "severity": "SB3_BLOCKING",
+        "rationale": "Validator source is not delivery context; pass validator error refs instead."
+      }
+    ],
+    "severity_tiers": {
+      "SB0_ALLOWED": {
+        "label": "allowed",
+        "meaning": "Source is part of the assigned agent's explicit delivery context.",
+        "recommended_action": "ALLOW",
+        "correction_required": false
+      },
+      "SB1_REPORTING_ONLY": {
+        "label": "reporting_only",
+        "meaning": "Harmless reporting or incidental delivery-context drift; record it, do not create correction.",
+        "recommended_action": "REPORT_ONLY",
+        "correction_required": false
+      },
+      "SB2_GOVERNANCE_WARNING": {
+        "label": "governance_warning",
+        "meaning": "Non-critical unlisted read requiring governance note or future handoff cleanup.",
+        "recommended_action": "WARN",
+        "correction_required": false
+      },
+      "SB3_BLOCKING": {
+        "label": "blocking",
+        "meaning": "Forbidden source could influence output; route bounded correction.",
+        "recommended_action": "ROUTE_CORRECTION",
+        "correction_required": true
+      },
+      "SB4_INVALIDATING": {
+        "label": "invalidating",
+        "meaning": "Forbidden source invalidates independence; discard affected result and use a fresh agent.",
+        "recommended_action": "INVALIDATE_AND_REDISPATCH_FRESH_AGENT",
+        "correction_required": true
+      }
+    },
+    "severity_interpretation": {
+      "order": [
+        "SB0_ALLOWED",
+        "SB1_REPORTING_ONLY",
+        "SB2_GOVERNANCE_WARNING",
+        "SB3_BLOCKING",
+        "SB4_INVALIDATING"
+      ],
+      "correction_task_created_only_for": ["SB3_BLOCKING", "SB4_INVALIDATING"],
+      "no_correction_task_for": ["SB0_ALLOWED", "SB1_REPORTING_ONLY", "SB2_GOVERNANCE_WARNING"],
+      "fresh_agent_required_for": ["SB4_INVALIDATING"],
+      "default_for_unclassified_source_boundary_fail": "SB3_BLOCKING"
+    }
+  },
   "required_docs": [
     {
       "path": "agent-system/02_runtime/ORCHESTRATOR_RUNTIME_CONTRACT.json",
@@ -78,6 +166,7 @@
     "live_dispatch_performed_by_aso": false
   },
   "result_contract_ref": "agent-system/03_templates/AGENT_RESULT_TEMPLATE.md",
+  "allowed_sources_schema_ref": "agent-system/09_validators/schemas/allowed_sources.schema.json",
   "artifact_package_manifest": "manifest.json",
   "lifecycle_policy_enforcement": {
     "reuse_allowed": false,

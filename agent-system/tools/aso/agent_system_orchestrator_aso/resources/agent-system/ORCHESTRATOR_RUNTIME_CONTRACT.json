@@ -22,6 +22,10 @@
     "CREATE_AGENT_RECOMMENDED",
     "CREATE_AGENT_DISPATCHED",
     "RESULT_RECEIVED",
+    "RESULT_VALIDATED",
+    "RESULT_ACCEPTED",
+    "ARTIFACT_PACKAGE_RECEIVED",
+    "ARTIFACT_VALIDATED",
     "ARTIFACT_ACCEPTED",
     "AGENT_TERMINATED",
     "AUDIT_ROUTE_READY",
@@ -38,6 +42,10 @@
   "event_aliases": {
     "agent_task_dispatched": "CREATE_AGENT_DISPATCHED",
     "agent_result_received": "RESULT_RECEIVED",
+    "result_validated": "RESULT_VALIDATED",
+    "result_accepted": "RESULT_ACCEPTED",
+    "artifact_package_received": "ARTIFACT_PACKAGE_RECEIVED",
+    "artifact_validated": "ARTIFACT_VALIDATED",
     "artifact_accepted": "ARTIFACT_ACCEPTED",
     "agent_instance_terminated": "AGENT_TERMINATED",
     "AGENT_TERMINATED": "AGENT_TERMINATED",
@@ -62,10 +70,24 @@
       "RESULT_RECEIVED": "RESULT_PENDING_ARTIFACT_ACCEPTANCE"
     },
     "RESULT_PENDING_ARTIFACT_ACCEPTANCE": {
+      "RESULT_VALIDATED": "RESULT_VALIDATED",
+      "ARTIFACT_PACKAGE_RECEIVED": "ARTIFACT_PACKAGE_RECEIVED",
+      "ARTIFACT_ACCEPTED": "RESULT_ACCEPTED"
+    },
+    "RESULT_VALIDATED": {
+      "RESULT_ACCEPTED": "RESULT_ACCEPTED",
+      "ARTIFACT_PACKAGE_RECEIVED": "ARTIFACT_PACKAGE_RECEIVED"
+    },
+    "ARTIFACT_PACKAGE_RECEIVED": {
+      "ARTIFACT_VALIDATED": "ARTIFACT_VALIDATED",
+      "ARTIFACT_ACCEPTED": "RESULT_ACCEPTED"
+    },
+    "ARTIFACT_VALIDATED": {
       "ARTIFACT_ACCEPTED": "RESULT_ACCEPTED"
     },
     "RESULT_ACCEPTED": {
-      "AGENT_TERMINATED": "AGENT_TERMINATED"
+      "AGENT_TERMINATED": "AGENT_TERMINATED",
+      "AUDIT_ROUTE_READY": "AUDIT_PENDING"
     },
     "AGENT_TERMINATED": {
       "AUDIT_ROUTE_READY": "AUDIT_PENDING"
@@ -99,6 +121,9 @@
       "from_states": [
         "AGENT_RUNNING",
         "RESULT_PENDING_ARTIFACT_ACCEPTANCE",
+        "RESULT_VALIDATED",
+        "ARTIFACT_PACKAGE_RECEIVED",
+        "ARTIFACT_VALIDATED",
         "RESULT_ACCEPTED",
         "AGENT_TERMINATED",
         "AUDIT_PENDING",
@@ -135,6 +160,24 @@
       "dispatchable": false
     },
     "RESULT_PENDING_ARTIFACT_ACCEPTANCE": {
+      "recommended_next_action": "ACCEPT_ARTIFACT",
+      "action_type": "update_state",
+      "target_role": "orchestrator",
+      "dispatchable": false
+    },
+    "RESULT_VALIDATED": {
+      "recommended_next_action": "ACCEPT_RESULT",
+      "action_type": "update_state",
+      "target_role": "orchestrator",
+      "dispatchable": false
+    },
+    "ARTIFACT_PACKAGE_RECEIVED": {
+      "recommended_next_action": "VALIDATE_ARTIFACT",
+      "action_type": "update_state",
+      "target_role": "orchestrator",
+      "dispatchable": false
+    },
+    "ARTIFACT_VALIDATED": {
       "recommended_next_action": "ACCEPT_ARTIFACT",
       "action_type": "update_state",
       "target_role": "orchestrator",
@@ -307,6 +350,8 @@
       "resolved_reasoning_level",
       "required_docs",
       "forbidden_docs",
+      "allowed_sources_ref",
+      "allowed_sources",
       "prompt_ref",
       "expected_result_path",
       "expected_artifact_package_path",
@@ -317,6 +362,83 @@
     "runner_semantics": "ASO emits reproducible handoff JSON and dispatch receipts for externally invoked Codex CLI runs; ASO does not execute the runner, daemonize work, or mutate task outputs.",
     "external_runner_command_template": "codex exec -C <WORKSPACE_ROOT> -m <MODEL> -c model_reasoning_effort=\"<REASONING_EFFORT>\" - < <PROMPT_REF>",
     "live_dispatch_performed_by_aso": false
+  },
+  "source_boundary_contract": {
+    "schema_ref": "agent-system/09_validators/schemas/allowed_sources.schema.json",
+    "template_ref": "agent-system/03_templates/allowed_sources.template.json",
+    "allowed_sources_ref_template": "project-runtime/handoffs/<TASK_ID>.allowed_sources.json",
+    "severity_order": [
+      "SB0_ALLOWED",
+      "SB1_REPORTING_ONLY",
+      "SB2_GOVERNANCE_WARNING",
+      "SB3_BLOCKING",
+      "SB4_INVALIDATING"
+    ],
+    "severity_tiers": {
+      "SB0_ALLOWED": {
+        "label": "allowed",
+        "meaning": "Source is part of the assigned agent's explicit delivery context.",
+        "recommended_action": "ALLOW",
+        "correction_required": false
+      },
+      "SB1_REPORTING_ONLY": {
+        "label": "reporting_only",
+        "meaning": "Harmless reporting or incidental delivery-context drift; record it, do not create correction.",
+        "recommended_action": "REPORT_ONLY",
+        "correction_required": false
+      },
+      "SB2_GOVERNANCE_WARNING": {
+        "label": "governance_warning",
+        "meaning": "Non-critical unlisted read requiring governance note or future handoff cleanup.",
+        "recommended_action": "WARN",
+        "correction_required": false
+      },
+      "SB3_BLOCKING": {
+        "label": "blocking",
+        "meaning": "Forbidden source could influence output; route bounded correction.",
+        "recommended_action": "ROUTE_CORRECTION",
+        "correction_required": true
+      },
+      "SB4_INVALIDATING": {
+        "label": "invalidating",
+        "meaning": "Forbidden source invalidates independence; discard affected result and use a fresh agent.",
+        "recommended_action": "INVALIDATE_AND_REDISPATCH_FRESH_AGENT",
+        "correction_required": true
+      }
+    },
+    "correction_required_for": [
+      "SB3_BLOCKING",
+      "SB4_INVALIDATING"
+    ],
+    "fresh_agent_required_for": [
+      "SB4_INVALIDATING"
+    ],
+    "allowed_delivery_context_classes": [
+      "own_handoff",
+      "own_prompt",
+      "own_dispatch_receipt",
+      "assigned_task_packet",
+      "validator_error_ref",
+      "accepted_artifact",
+      "explicit_project_source",
+      "specific_required_doc"
+    ],
+    "reporting_only_classes": [
+      "incidental_delivery_artifact"
+    ],
+    "blocking_classes": [
+      "forbidden_governance_corpus",
+      "unlisted_validator_source",
+      "critical_unlisted_project_source"
+    ],
+    "default_forbidden_refs": [
+      "agent-system/01_roles/",
+      "agent-system/03_templates/",
+      "agent-system/GOVERNANCE_CHANGELOG.md",
+      "agent-system/11_release/",
+      "agent-system/09_validators/"
+    ],
+    "correction_routing_rule": "Create correction tasks only for SB3_BLOCKING or SB4_INVALIDATING source-boundary findings. SB0_ALLOWED, SB1_REPORTING_ONLY, and SB2_GOVERNANCE_WARNING are reported without correction task creation."
   },
   "artifact_contracts": {
     "candidate_manifest_canonical": "manifest.json",
@@ -380,6 +502,7 @@
       "reasoning_floor_by_role",
       "dispatch_receipt_contract",
       "handoff_artifact_contract",
+      "source_boundary_contract",
       "artifact_contracts",
       "audit_gate_rules",
       "checkpoint_rules",
@@ -394,6 +517,7 @@
       "current_event_reference",
       "current_result_or_audit_result_reference",
       "current_artifact_manifest_or_receipt_reference",
+      "allowed_sources",
       "specific_target_role_doc",
       "target_role_required_doc_tokens"
     ],

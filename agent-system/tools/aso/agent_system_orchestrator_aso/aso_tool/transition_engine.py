@@ -12,6 +12,7 @@ from . import result_parser
 from . import role_registry
 from . import resources
 from . import runtime_contract_fallback
+from . import source_boundary
 
 
 CONTRACT_RELATIVE_PATH = Path("agent-system/02_runtime/ORCHESTRATOR_RUNTIME_CONTRACT.json")
@@ -346,6 +347,7 @@ def validate_runtime_contract(contract: Mapping[str, Any]) -> ContractValidation
         "checkpoint_rules",
         "routine_context_policy",
         "handoff_context_builder_contract",
+        "source_boundary_contract",
     )
     for field in required:
         if field not in contract:
@@ -459,6 +461,8 @@ def validate_runtime_contract(contract: Mapping[str, Any]) -> ContractValidation
             "resolved_reasoning_level",
             "required_docs",
             "forbidden_docs",
+            "allowed_sources_ref",
+            "allowed_sources",
             "prompt_ref",
             "expected_result_path",
             "expected_artifact_package_path",
@@ -502,6 +506,29 @@ def validate_runtime_contract(contract: Mapping[str, Any]) -> ContractValidation
     for role in allowed_roles:
         if role not in target_role_doc_map:
             errors.append(f"handoff_context_builder_contract.target_role_doc_map missing role {role}")
+
+    source_boundary_contract = _mapping(contract.get("source_boundary_contract"))
+    if not source_boundary_contract:
+        errors.append("source_boundary_contract must be an object")
+    else:
+        expected_values = {
+            "schema_ref": source_boundary.SCHEMA_RELATIVE_PATH,
+            "template_ref": source_boundary.TEMPLATE_RELATIVE_PATH,
+            "allowed_sources_ref_template": source_boundary.ALLOWED_SOURCES_REF_TEMPLATE,
+        }
+        for field, expected in expected_values.items():
+            if source_boundary_contract.get(field) != expected:
+                errors.append(f"source_boundary_contract.{field} must be {expected}")
+        severity_order = _string_list(source_boundary_contract.get("severity_order"))
+        if severity_order != list(source_boundary.SEVERITIES):
+            errors.append("source_boundary_contract.severity_order must define SB0_ALLOWED through SB4_INVALIDATING")
+        severity_tiers = _mapping(source_boundary_contract.get("severity_tiers"))
+        for severity in source_boundary.SEVERITIES:
+            if severity not in severity_tiers:
+                errors.append(f"source_boundary_contract.severity_tiers missing {severity}")
+        correction_required_for = set(_string_list(source_boundary_contract.get("correction_required_for")))
+        if correction_required_for != set(source_boundary.CORRECTION_REQUIRED_SEVERITIES):
+            errors.append("source_boundary_contract.correction_required_for must be SB3_BLOCKING and SB4_INVALIDATING")
 
     return ContractValidationResult(tuple(errors))
 
@@ -1401,7 +1428,10 @@ def _resolved_audit_failure_partition(
     failed_audit_refs = {
         _text(item.get("ref"))
         for item in invalid_refs
-        if isinstance(item, Mapping) and _is_status_fail_audit_invalid(item) and _text(item.get("ref"))
+        if isinstance(item, Mapping)
+        and _is_status_fail_audit_invalid(item)
+        and source_boundary.audit_failure_requires_correction(item)
+        and _text(item.get("ref"))
     }
     if resolution_context is not None and isinstance(resolution_context.get("failed_audit_refs"), set):
         failed_audit_refs.update(resolution_context["failed_audit_refs"])
@@ -1413,6 +1443,18 @@ def _resolved_audit_failure_partition(
         item = dict(raw_item)
         if not _is_status_fail_audit_invalid(item):
             remaining_invalid.append(item)
+            continue
+        classification = source_boundary.classify_inspection_item(item)
+        if source_boundary.nonblocking_source_boundary_failure(item):
+            remaining_invalid.append(
+                {
+                    **item,
+                    "resolved": True,
+                    "resolution_status": "not_required",
+                    "nonblocking_source_boundary_finding": True,
+                    "source_boundary_classification": classification,
+                }
+            )
             continue
         resolution = ""
         resolved_by = ""

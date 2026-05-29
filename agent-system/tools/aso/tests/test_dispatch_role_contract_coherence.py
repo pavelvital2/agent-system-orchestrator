@@ -36,6 +36,7 @@ from agent_system_orchestrator_aso.aso_tool import aso  # noqa: E402
 from agent_system_orchestrator_aso.aso_tool import dispatch_receipts  # noqa: E402
 from agent_system_orchestrator_aso.aso_tool import result_parser  # noqa: E402
 from agent_system_orchestrator_aso.aso_tool import role_registry  # noqa: E402
+from agent_system_orchestrator_aso.aso_tool import source_boundary  # noqa: E402
 from agent_system_orchestrator_aso.aso_tool.commands import record_result  # noqa: E402
 
 
@@ -91,6 +92,22 @@ def _dispatch_receipt(role: str) -> dict[str, object]:
 
 
 def _handoff_payload(role: str) -> dict[str, object]:
+    required_docs = [
+        {
+            "path": "agent-system/02_runtime/ORCHESTRATOR_RUNTIME_CONTRACT.json",
+            "sections": ["Runtime contract"],
+            "why_needed": "Required for role contract validation.",
+            "source": "runtime_contract",
+        }
+    ]
+    allowed_sources = source_boundary.build_allowed_sources(
+        contract=None,
+        task_id="TASK_DEMO_001",
+        role=role,
+        task_packet="project-runtime/tasks/active/TASK_DEMO_001.md",
+        required_docs=required_docs,
+        forbidden_refs=["agent-system/09_validators/"],
+    )
     return {
         "handoff_type": "ORCHESTRATOR_HANDOFF",
         "schema_version": "1.0.0",
@@ -100,14 +117,9 @@ def _handoff_payload(role: str) -> dict[str, object]:
         "context_mode": "routine",
         "handoff_ref": "project-runtime/handoffs/TASK_DEMO_001.json",
         "prompt_ref": "project-runtime/handoffs/TASK_DEMO_001.prompt.md",
-        "required_docs": [
-            {
-                "path": "agent-system/02_runtime/ORCHESTRATOR_RUNTIME_CONTRACT.json",
-                "sections": ["Runtime contract"],
-                "why_needed": "Required for role contract validation.",
-                "source": "runtime_contract",
-            }
-        ],
+        "allowed_sources_ref": allowed_sources["allowed_sources_ref"],
+        "allowed_sources": allowed_sources,
+        "required_docs": required_docs,
         "required_doc_tokens": ["runtime_contract"],
         "forbidden_docs": ["agent-system/09_validators/"],
         "reference_docs": [],
@@ -127,6 +139,7 @@ def _handoff_payload(role: str) -> dict[str, object]:
             "live_dispatch_performed_by_aso": False,
         },
         "result_contract_ref": "agent-system/03_templates/AGENT_RESULT_TEMPLATE.md",
+        "allowed_sources_schema_ref": "agent-system/09_validators/schemas/allowed_sources.schema.json",
         "lifecycle_policy_enforcement": {
             "reuse_allowed": False,
             "agent_termination_required": True,

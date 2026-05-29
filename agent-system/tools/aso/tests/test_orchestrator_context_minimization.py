@@ -88,12 +88,21 @@ class OrchestratorContextMinimizationTests(unittest.TestCase):
         self.assertEqual(report["target_role"], "developer")
         self.assertEqual(report["task_packet"], "project-runtime/tasks/active/TASK_020.md")
         self.assertEqual(report["handoff_context"]["reference_docs"], [])
+        allowed_sources = report["allowed_sources"]
+        self.assertEqual(allowed_sources["allowed_sources_ref"], "project-runtime/handoffs/TASK_020.allowed_sources.json")
+        self.assertEqual(allowed_sources["own_handoff_ref"], "project-runtime/handoffs/TASK_020.json")
+        self.assertEqual(allowed_sources["own_prompt_ref"], "project-runtime/handoffs/TASK_020.prompt.md")
+        self.assertIn("SB3_BLOCKING", allowed_sources["severity_interpretation"]["correction_task_created_only_for"])
+        allowed_refs = {entry["ref"] for entry in allowed_sources["allowed_refs"]}
+        self.assertIn("project-runtime/tasks/active/TASK_020.md", allowed_refs)
+        self.assertIn("project-runtime/handoffs/TASK_020.json", allowed_refs)
 
         runtime_contract = report["runtime_contract"]
         self.assertIsInstance(runtime_contract, dict)
         self.assertEqual(runtime_contract["path"], "agent-system/02_runtime/ORCHESTRATOR_RUNTIME_CONTRACT.json")
         self.assertIn("routine_context_policy", runtime_contract["required_sections"])
         self.assertIn("handoff_context_builder_contract", runtime_contract["required_sections"])
+        self.assertIn("source_boundary_contract", runtime_contract["required_sections"])
 
         state_refs = report["current_state"]["state_refs"]
         state_paths = {ref["path"] for ref in state_refs}

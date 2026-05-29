@@ -246,8 +246,27 @@ EVIDENCE_STATUS
 SECRET_EXPOSURE_STATUS
 REASONING_LEVEL_COMPLIANCE
 DISPATCH_RECEIPT_REF
+ALLOWED_SOURCES_REF
+SOURCE_BOUNDARY_STATUS
+SOURCE_BOUNDARY_SEVERITY
+SOURCE_BOUNDARY_RECOMMENDED_ACTION
 VALIDATED_TASK_PACKETS
 ```
+
+Source-boundary severity values are:
+
+```text
+SB0_ALLOWED
+SB1_REPORTING_ONLY
+SB2_GOVERNANCE_WARNING
+SB3_BLOCKING
+SB4_INVALIDATING
+```
+
+Only `SB3_BLOCKING` and `SB4_INVALIDATING` create correction tasks. Own
+handoff, own prompt, own dispatch receipt, assigned task packet, validator
+error refs, accepted artifacts, and explicitly listed project sources are
+allowed delivery context.
 
 Auditor RESULT records should also include the audited worker result reference
 inside `EVIDENCE` or `SCOPE_VERIFICATION` with one of these labels:

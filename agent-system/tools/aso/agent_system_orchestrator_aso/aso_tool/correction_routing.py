@@ -7,6 +7,7 @@ from pathlib import Path
 from typing import Any, Iterable, Mapping
 
 from . import result_parser
+from . import source_boundary
 
 
 NONE_VALUES = {"", "NONE", "none", "null", "UNKNOWN"}
@@ -97,6 +98,7 @@ def build_audit_fail_route(
     route_source: str = "audit_result_fail",
     diagnostic_rule_id: str = "",
     routing_issue: str = "",
+    source_boundary_classification: Mapping[str, object] | None = None,
 ) -> dict[str, object]:
     source_result_list = _dedupe(source_result_refs)
     source_task_list = _dedupe(source_task_refs)
@@ -114,7 +116,7 @@ def build_audit_fail_route(
             "agent-system/02_runtime/ORCHESTRATOR_RUNTIME_CONTRACT.json",
         ]
     )
-    return {
+    route = {
         "route": "CORRECTION_REQUIRED",
         "route_source": route_source or "audit_result_fail",
         "severity": severity or "error",
@@ -140,6 +142,11 @@ def build_audit_fail_route(
         "routing_issue": routing_issue or "NONE",
         "checkpoint_preflight_blocked": True,
     }
+    if source_boundary_classification:
+        route["source_boundary_classification"] = dict(source_boundary_classification)
+        route["source_boundary_severity"] = source_boundary_classification.get("severity", "NONE")
+        route["fresh_agent_required"] = bool(source_boundary_classification.get("fresh_agent_required"))
+    return route
 
 
 def from_parsed_audit_result(
@@ -151,6 +158,14 @@ def from_parsed_audit_result(
     if parsed.result_type != "audit_result" or parsed.status != "fail":
         return {}
     audit = parsed.audit
+    classification = source_boundary.classify_audit_result(
+        failed_checks=audit.failed_checks,
+        findings=audit.findings,
+        source_boundary_evidence=audit.source_boundary_evidence,
+    )
+    if classification.get("applies") and not classification.get("correction_required"):
+        if not source_boundary.non_source_boundary_failed_checks(audit.failed_checks):
+            return {}
     return build_audit_fail_route(
         root=root,
         source_audit_result_ref=workspace_result_ref(root, result_path),
@@ -159,6 +174,7 @@ def from_parsed_audit_result(
         source_task_refs=audit.source_task_refs,
         failed_checks=audit.failed_checks,
         audit_findings=audit.findings,
+        source_boundary_classification=classification if classification.get("applies") else None,
     )
 
 
@@ -176,6 +192,9 @@ def from_audit_inspection(
         if not isinstance(item, Mapping):
             continue
         if _text(item.get("status")).lower() != "fail":
+            continue
+        classification = source_boundary.classify_inspection_item(item)
+        if classification.get("applies") and not source_boundary.audit_failure_requires_correction(item):
             continue
         routing_task_id = _text(item.get("routing_task_id"))
         if _is_none(routing_task_id):
@@ -218,6 +237,7 @@ def from_audit_inspection(
             route_source=route_source,
             diagnostic_rule_id=diagnostic_rule_id,
             routing_issue=routing_issue,
+            source_boundary_classification=classification if classification.get("applies") else None,
         )
     return {}
 
