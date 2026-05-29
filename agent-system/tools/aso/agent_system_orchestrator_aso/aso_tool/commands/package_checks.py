@@ -163,6 +163,16 @@ AUTHORITY_SURFACE_CONTRACT: tuple[dict[str, object], ...] = (
         "tests": ("agent-system/tools/aso/tests/test_state_render.py",),
     },
     {
+        "command": ("state", "reconcile"),
+        "confirmation_options": ("--confirm-write",),
+        "allowed_write_roots": (
+            "project-runtime/state",
+            "project-runtime/*.md",
+            "project-runtime/receipts/state-reconciliation",
+        ),
+        "tests": ("agent-system/tools/aso/tests/test_state_reconcile.py",),
+    },
+    {
         "command": ("project", "create"),
         "confirmation_options": ("--local", "--confirm-publish"),
         "allowed_write_roots": (

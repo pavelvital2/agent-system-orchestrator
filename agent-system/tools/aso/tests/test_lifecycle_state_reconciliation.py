@@ -331,6 +331,11 @@ class LifecycleStateReconciliationTests(unittest.TestCase):
             self.assertEqual(receive.returncode, 0, receive.stdout + receive.stderr)
             receive_report = json.loads(receive.stdout)
             self.assertEqual(receive_report["state_materialization"]["status"], "written")
+            receipt_ref = receive_report["state_materialization"]["receipt_ref"]
+            self.assertTrue((root / receipt_ref).is_file())
+            receipt = json.loads((root / receipt_ref).read_text(encoding="utf-8"))
+            self.assertEqual(receipt["receipt_type"], "STATE_RECONCILIATION_RECEIPT")
+            self.assertEqual(receipt["state_verify_after"]["status"], "passed")
             self.assertEqual(verify.returncode, 0, verify.stdout + verify.stderr)
             verify_report = json.loads(verify_json.read_text(encoding="utf-8"))
             self.assertEqual(verify_report["status"], "passed")

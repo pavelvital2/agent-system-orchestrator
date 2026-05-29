@@ -36,6 +36,7 @@ from .commands import (
     record_result,
     state_init,
     state_migrate,
+    state_reconcile,
     state_render,
     state_verify,
     status,
@@ -1460,6 +1461,41 @@ def build_parser() -> argparse.ArgumentParser:
         help="Write the state verification report JSON to this explicit path.",
     )
     state_verify_parser.set_defaults(handler=state_verify.run)
+
+    state_reconcile_parser = state_subparsers.add_parser(
+        "reconcile",
+        help="Reconcile governed runtime state from structured evidence.",
+        description=(
+            "Derive canonical registry, gate, and next-action state from sidecars, "
+            "lifecycle logs, RESULT/AUDIT_RESULT files, receipts, and correction/checkpoint records. "
+            "Dry runs are read-only. Confirmed writes are bounded to project-runtime/state, "
+            "project-runtime/*.md compatibility views, and project-runtime/receipts/state-reconciliation."
+        ),
+    )
+    _add_root_argument(state_reconcile_parser, validate=False)
+    reconcile_mode = state_reconcile_parser.add_mutually_exclusive_group()
+    reconcile_mode.add_argument(
+        "--dry-run",
+        action="store_true",
+        help="Preview the deterministic reconciliation diff without writing. This is the default.",
+    )
+    reconcile_mode.add_argument(
+        "--confirm-write",
+        action="store_true",
+        help="Apply the reconciliation diff and write a state mutation receipt.",
+    )
+    state_reconcile_parser.add_argument(
+        "--format",
+        choices=("text", "json"),
+        default="text",
+        help="Output format (default: text).",
+    )
+    state_reconcile_parser.add_argument(
+        "--json-out",
+        metavar="PATH",
+        help="Write the reconciliation report JSON to this explicit path.",
+    )
+    state_reconcile_parser.set_defaults(handler=state_reconcile.run)
 
     project_parser = subparsers.add_parser(
         "project",
