@@ -79,6 +79,10 @@ def correction_proposal_path(source_task_id: str) -> str:
     return f"project-runtime/proposals/correction-{_safe_id(source_task_id)}.json"
 
 
+def correction_task_packet_ref(source_task_id: str) -> str:
+    return f"project-runtime/tasks/active/TASK_CORRECTION_{_safe_id(source_task_id)}.md"
+
+
 def build_audit_fail_route(
     *,
     root: Path | None = None,
@@ -89,28 +93,51 @@ def build_audit_fail_route(
     failed_checks: Iterable[str] = (),
     audit_findings: Iterable[str] = (),
     target_correction_role: str = "",
+    severity: str = "error",
+    route_source: str = "audit_result_fail",
+    diagnostic_rule_id: str = "",
+    routing_issue: str = "",
 ) -> dict[str, object]:
     source_result_list = _dedupe(source_result_refs)
     source_task_list = _dedupe(source_task_refs)
-    resolved_task_id = source_task_id or (source_task_list[0] if source_task_list else "UNKNOWN")
+    requested_task_id = "" if _is_none(source_task_id) else source_task_id
+    resolved_task_id = requested_task_id or (source_task_list[0] if source_task_list else "UNKNOWN")
     resolved_failed_checks = _dedupe(failed_checks) or ["AUDIT_RESULT_STATUS_FAIL"]
     resolved_target_role = target_correction_role or _target_role_from_source_result(root, source_result_list)
     proposal_path = correction_proposal_path(resolved_task_id)
+    packet_ref = correction_task_packet_ref(resolved_task_id)
+    context_refs = _dedupe(
+        [
+            source_audit_result_ref,
+            *source_result_list,
+            *source_task_list,
+            "agent-system/02_runtime/ORCHESTRATOR_RUNTIME_CONTRACT.json",
+        ]
+    )
     return {
         "route": "CORRECTION_REQUIRED",
-        "route_source": "audit_result_fail",
+        "route_source": route_source or "audit_result_fail",
+        "severity": severity or "error",
+        "task_id": resolved_task_id,
         "source_audit_result": source_audit_result_ref or "NONE",
         "source_audit_result_ref": source_audit_result_ref or "NONE",
+        "source_audit_result_status": "fail",
         "source_result_refs": source_result_list,
         "source_task_id": resolved_task_id,
         "source_task_refs": source_task_list,
         "failed_checks": resolved_failed_checks,
         "audit_findings": _dedupe(audit_findings),
+        "target_role": resolved_target_role,
         "target_correction_role": resolved_target_role,
         "routing_owner_role": "orchestrator",
-        "correction_task_packet_path": "NONE",
+        "correction_task_packet_ref": packet_ref,
+        "correction_task_packet_path": packet_ref,
         "correction_task_proposal_path": proposal_path,
-        "correction_task_packet_or_proposal_path": proposal_path,
+        "correction_task_packet_or_proposal_path": packet_ref,
+        "required_context_refs": context_refs,
+        "required_context_references": context_refs,
+        "diagnostic_rule_id": diagnostic_rule_id or "NONE",
+        "routing_issue": routing_issue or "NONE",
         "checkpoint_preflight_blocked": True,
     }
 
@@ -139,6 +166,10 @@ def from_audit_inspection(
     root: Path,
     invalid_audit_results: object,
 ) -> dict[str, object]:
+    if isinstance(invalid_audit_results, Mapping):
+        unresolved = invalid_audit_results.get("unresolved_audit_failures")
+        if isinstance(unresolved, list):
+            invalid_audit_results = unresolved
     if not isinstance(invalid_audit_results, list):
         return {}
     for item in invalid_audit_results:
@@ -146,19 +177,55 @@ def from_audit_inspection(
             continue
         if _text(item.get("status")).lower() != "fail":
             continue
+        routing_task_id = _text(item.get("routing_task_id"))
+        if _is_none(routing_task_id):
+            routing_task_id = ""
+        source_task_id = ""
+        for candidate in (routing_task_id, _text(item.get("source_task_id")), _text(item.get("task_id"))):
+            if not _is_none(candidate):
+                source_task_id = candidate
+                break
+        diagnostic_rule_id = _text(item.get("diagnostic_rule_id"))
+        if _is_none(diagnostic_rule_id):
+            diagnostic_rule_id = ""
+        routing_issue = _text(item.get("routing_issue"))
+        if _is_none(routing_issue):
+            routing_issue = ""
+        if not source_task_id and not diagnostic_rule_id:
+            diagnostic_rule_id = "UNROUTABLE_UNRESOLVED_AUDIT_FAIL"
+            routing_issue = "CORRECTION_REQUIRED_TARGET_UNRESOLVED"
+        route_source = "unroutable_unresolved_audit_fail" if diagnostic_rule_id else "audit_result_fail"
+        failed_checks = item.get("failed_checks") if isinstance(item.get("failed_checks"), list) else []
+        if not failed_checks and isinstance(item.get("issues"), list):
+            failed_checks = [
+                _text(issue.get("rule_id"))
+                for issue in item["issues"]
+                if isinstance(issue, Mapping) and _text(issue.get("rule_id"))
+            ]
         return build_audit_fail_route(
             root=root,
             source_audit_result_ref=_text(item.get("ref")),
-            source_task_id=_text(item.get("task_id")),
+            source_task_id=source_task_id,
             source_result_refs=item.get("source_result_refs") if isinstance(item.get("source_result_refs"), list) else (),
             source_task_refs=item.get("source_task_refs") if isinstance(item.get("source_task_refs"), list) else (),
-            failed_checks=item.get("failed_checks") if isinstance(item.get("failed_checks"), list) else (),
+            failed_checks=failed_checks,
             audit_findings=item.get("findings") if isinstance(item.get("findings"), list) else (),
+            target_correction_role=(
+                _text(item.get("target_correction_role"))
+                or _text(item.get("target_role"))
+                or _text(item.get("owner_role"))
+            ),
+            route_source=route_source,
+            diagnostic_rule_id=diagnostic_rule_id,
+            routing_issue=routing_issue,
         )
     return {}
 
 
 def from_transition_evidence(root: Path, transition_evidence: Mapping[str, object]) -> dict[str, object]:
+    route = from_audit_inspection(root, transition_evidence.get("audit_failure_evidence"))
+    if route:
+        return route
     inputs = transition_evidence.get("inputs")
     if not isinstance(inputs, Mapping):
         return {}

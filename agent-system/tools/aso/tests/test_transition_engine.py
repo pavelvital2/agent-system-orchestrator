@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import sys
+import tempfile
 import unittest
 from pathlib import Path
 
@@ -11,6 +12,182 @@ ASO_TOOL_ROOT = REPO_ROOT / "agent-system" / "tools" / "aso"
 sys.path.insert(0, str(ASO_TOOL_ROOT))
 
 from agent_system_orchestrator_aso.aso_tool import transition_engine  # noqa: E402
+
+
+AUDIT_FAIL_RESULT = """AUDIT_RESULT:
+STATUS: fail
+TASK_ID: TASK_001
+AGENT_INSTANCE_ID: audit_TASK_001_attempt_001
+ROLE: auditor
+TASK: TASK_001
+SUMMARY:
+Audit failed.
+READ_DOCS:
+- NONE
+READ_INPUTS:
+- NONE
+CHANGED_FILES:
+- NONE
+CREATED_FILES:
+- NONE
+DELETED_FILES:
+- NONE
+COMMANDS_RUN:
+- NONE
+TESTS_RUN:
+- NONE
+EVIDENCE:
+- CHANGED_FILES_SCOPE_STATUS: failed
+SCOPE_VERIFICATION:
+- TASK_PACKET_SCHEMA_STATUS: passed
+FORBIDDEN_CHANGES_CHECK:
+- FORBIDDEN_PATH_STATUS: passed
+RISKS:
+- NONE
+LIMITATIONS:
+- NONE
+BLOCKERS:
+- audit_failed
+GAPS:
+- NONE
+NEXT_RECOMMENDED_ACTION:
+- ROUTE_CORRECTION
+REUSE_ALLOWED: false
+AGENT_TERMINATION_REQUIRED: true
+"""
+
+
+AUDIT_PASS_RESULT = """AUDIT_RESULT:
+STATUS: pass
+TASK_ID: TASK_002
+AGENT_INSTANCE_ID: audit_TASK_002_attempt_001
+ROLE: auditor
+TASK: TASK_002
+SUMMARY:
+Audit passed.
+READ_DOCS:
+- NONE
+READ_INPUTS:
+- NONE
+CHANGED_FILES:
+- NONE
+CREATED_FILES:
+- NONE
+DELETED_FILES:
+- NONE
+COMMANDS_RUN:
+- NONE
+TESTS_RUN:
+- NONE
+EVIDENCE:
+- CHANGED_FILES_SCOPE_STATUS: passed
+SCOPE_VERIFICATION:
+- TASK_PACKET_SCHEMA_STATUS: passed
+FORBIDDEN_CHANGES_CHECK:
+- FORBIDDEN_PATH_STATUS: passed
+RISKS:
+- NONE
+LIMITATIONS:
+- NONE
+BLOCKERS:
+- NONE
+GAPS:
+- NONE
+NEXT_RECOMMENDED_ACTION:
+- CHECKPOINT_PREFLIGHT
+REUSE_ALLOWED: false
+AGENT_TERMINATION_REQUIRED: true
+"""
+
+
+def _audit_fail_result(task_id: str, agent_suffix: str, failed_check: str) -> str:
+    return f"""AUDIT_RESULT:
+STATUS: fail
+TASK_ID: {task_id}
+AGENT_INSTANCE_ID: audit_{task_id}_{agent_suffix}
+ROLE: auditor
+TASK: {task_id}
+SUMMARY:
+Audit failed.
+READ_DOCS:
+- NONE
+READ_INPUTS:
+- NONE
+CHANGED_FILES:
+- NONE
+CREATED_FILES:
+- NONE
+DELETED_FILES:
+- NONE
+COMMANDS_RUN:
+- NONE
+TESTS_RUN:
+- NONE
+EVIDENCE:
+- {failed_check}: failed
+SCOPE_VERIFICATION:
+- TASK_PACKET_SCHEMA_STATUS: passed
+FORBIDDEN_CHANGES_CHECK:
+- FORBIDDEN_PATH_STATUS: passed
+RISKS:
+- NONE
+LIMITATIONS:
+- NONE
+BLOCKERS:
+- audit_failed
+GAPS:
+- NONE
+NEXT_RECOMMENDED_ACTION:
+- ROUTE_CORRECTION
+REUSE_ALLOWED: false
+AGENT_TERMINATION_REQUIRED: true
+"""
+
+
+def _audit_pass_result(task_id: str, agent_suffix: str, correction_refs: list[str]) -> str:
+    correction_lines = "\n".join(f"- CORRECTION_REF: {ref}" for ref in correction_refs)
+    evidence_lines = correction_lines + "\n" if correction_lines else ""
+    return f"""AUDIT_RESULT:
+STATUS: pass
+TASK_ID: {task_id}
+AGENT_INSTANCE_ID: audit_{task_id}_{agent_suffix}
+ROLE: auditor
+TASK: {task_id}
+SUMMARY:
+Audit passed.
+READ_DOCS:
+- NONE
+READ_INPUTS:
+- NONE
+CHANGED_FILES:
+- NONE
+CREATED_FILES:
+- NONE
+DELETED_FILES:
+- NONE
+COMMANDS_RUN:
+- NONE
+TESTS_RUN:
+- NONE
+EVIDENCE:
+{evidence_lines}- CHANGED_FILES_SCOPE_STATUS: passed
+SCOPE_VERIFICATION:
+- TASK_PACKET_SCHEMA_STATUS: passed
+FORBIDDEN_CHANGES_CHECK:
+- FORBIDDEN_PATH_STATUS: passed
+RISKS:
+- NONE
+LIMITATIONS:
+- NONE
+BLOCKERS:
+- NONE
+GAPS:
+- NONE
+NEXT_RECOMMENDED_ACTION:
+- CHECKPOINT_PREFLIGHT
+REUSE_ALLOWED: false
+AGENT_TERMINATION_REQUIRED: true
+"""
 
 
 def _sidecars(next_action_updates: dict[str, object] | None = None) -> dict[str, dict[str, object]]:
@@ -237,6 +414,169 @@ class TransitionEngineTests(unittest.TestCase):
         self.assertFalse(report["routing_layers"]["apply_transition"]["mutations_performed"])
         self.assertIn("developer", report["roles"]["dispatchable_roles"])
         self.assertIn("PROJECT_COMPLETED", report["lifecycle_statuses"]["terminal_states"])
+
+    def test_routing_authority_all_task_audit_fail_overrides_terminal_noop(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            audit_fail_ref = "project-runtime/results/audit/AUDIT_RESULT_TASK_001_ATTEMPT_001.md"
+            audit_pass_ref = "project-runtime/results/audit/AUDIT_RESULT_TASK_002_ATTEMPT_001.md"
+            (root / audit_fail_ref).parent.mkdir(parents=True, exist_ok=True)
+            (root / audit_fail_ref).write_text(AUDIT_FAIL_RESULT, encoding="utf-8")
+            (root / audit_pass_ref).write_text(AUDIT_PASS_RESULT, encoding="utf-8")
+            sidecars = _sidecars(
+                {
+                    "action_type": "stop",
+                    "target_role": "none",
+                    "task_id": "NONE",
+                    "task_packet": "NONE",
+                    "checkpoint_policy": "no_checkpoint",
+                    "checkpoint_preflight_required": False,
+                }
+            )
+            sidecars["PROJECT_STATE"]["content"].update(
+                {
+                    "current_phase": "completed",
+                    "project_status": "completed",
+                    "active_branches": [],
+                }
+            )
+            sidecars["CURRENT_GATE"]["content"].update(
+                {
+                    "gate_type": "terminal",
+                    "status": "passed",
+                    "task_id": "NONE",
+                    "task_packet": "NONE",
+                    "required_next_role": "none",
+                }
+            )
+            sidecars["TASK_REGISTRY"]["content"]["tasks"] = [
+                {
+                    "task_id": "TASK_001",
+                    "status": "audit_passed",
+                    "task_type": "developer",
+                    "owner_role": "developer",
+                    "task_packet": "project-runtime/tasks/active/TASK_001.md",
+                    "audit_refs": [audit_fail_ref],
+                    "result_refs": [],
+                    "correction_links": [],
+                },
+                {
+                    "task_id": "TASK_002",
+                    "status": "audit_passed",
+                    "task_type": "developer",
+                    "owner_role": "developer",
+                    "task_packet": "project-runtime/tasks/active/TASK_002.md",
+                    "audit_refs": [audit_pass_ref],
+                    "result_refs": [],
+                    "correction_links": [],
+                },
+            ]
+
+            report = transition_engine.routing_authority_report(self.contract, sidecars, root=root)
+
+            self.assertEqual(report["current_state"], "CORRECTION_REQUIRED")
+            self.assertEqual(report["canonical_recommended_next_action"], "CORRECTION_REQUIRED")
+            self.assertEqual(report["next_action"]["recommended_next_action"], "CORRECTION_REQUIRED")
+            self.assertFalse(report["checkpoint_route"]["eligible"])
+            self.assertTrue(report["audit_failure_evidence"]["present"])
+            self.assertEqual(
+                report["audit_failure_evidence"]["unresolved_audit_failures"][0]["routing_task_id"],
+                "TASK_001",
+            )
+
+    def test_passing_audit_resolves_only_explicit_failed_audit_refs(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            fail_001 = "project-runtime/results/audit/AUDIT_RESULT_TASK_001_FAIL_001.md"
+            fail_002 = "project-runtime/results/audit/AUDIT_RESULT_TASK_001_FAIL_002.md"
+            pass_003 = "project-runtime/results/audit/AUDIT_RESULT_TASK_001_PASS_003.md"
+            (root / fail_001).parent.mkdir(parents=True, exist_ok=True)
+            (root / fail_001).write_text(_audit_fail_result("TASK_001", "fail_001", "SCOPE_A"), encoding="utf-8")
+            (root / fail_002).write_text(_audit_fail_result("TASK_001", "fail_002", "SCOPE_B"), encoding="utf-8")
+            (root / pass_003).write_text(_audit_pass_result("TASK_001", "pass_003", [fail_001]), encoding="utf-8")
+            sidecars = _sidecars(
+                {
+                    "action_type": "stop",
+                    "target_role": "none",
+                    "task_id": "NONE",
+                    "task_packet": "NONE",
+                    "checkpoint_policy": "no_checkpoint",
+                    "checkpoint_preflight_required": False,
+                }
+            )
+            sidecars["PROJECT_STATE"]["content"].update(
+                {
+                    "current_phase": "completed",
+                    "project_status": "completed",
+                    "active_branches": [],
+                }
+            )
+            sidecars["CURRENT_GATE"]["content"].update(
+                {
+                    "gate_type": "terminal",
+                    "status": "passed",
+                    "task_id": "NONE",
+                    "task_packet": "NONE",
+                    "required_next_role": "none",
+                }
+            )
+            sidecars["TASK_REGISTRY"]["content"]["tasks"] = [
+                {
+                    "task_id": "TASK_001",
+                    "status": "audit_passed",
+                    "task_type": "developer",
+                    "owner_role": "developer",
+                    "task_packet": "project-runtime/tasks/active/TASK_001.md",
+                    "audit_refs": [fail_001, fail_002, pass_003],
+                    "result_refs": [],
+                    "correction_links": [fail_001],
+                }
+            ]
+
+            report = transition_engine.routing_authority_report(self.contract, sidecars, root=root)
+
+            failure_evidence = report["audit_failure_evidence"]
+            self.assertEqual(report["current_state"], "CORRECTION_REQUIRED")
+            self.assertEqual(report["canonical_recommended_next_action"], "CORRECTION_REQUIRED")
+            self.assertEqual(
+                [item["ref"] for item in failure_evidence["resolved_audit_failures"]],
+                [fail_001],
+            )
+            self.assertEqual(
+                [item["ref"] for item in failure_evidence["unresolved_audit_failures"]],
+                [fail_002],
+            )
+
+    def test_passing_audit_can_resolve_multiple_explicit_failed_refs(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            fail_001 = "project-runtime/results/audit/AUDIT_RESULT_TASK_001_FAIL_001.md"
+            fail_002 = "project-runtime/results/audit/AUDIT_RESULT_TASK_001_FAIL_002.md"
+            pass_003 = "project-runtime/results/audit/AUDIT_RESULT_TASK_001_PASS_003.md"
+            (root / fail_001).parent.mkdir(parents=True, exist_ok=True)
+            (root / fail_001).write_text(_audit_fail_result("TASK_001", "fail_001", "SCOPE_A"), encoding="utf-8")
+            (root / fail_002).write_text(_audit_fail_result("TASK_001", "fail_002", "SCOPE_B"), encoding="utf-8")
+            (root / pass_003).write_text(
+                _audit_pass_result("TASK_001", "pass_003", [fail_001, fail_002]),
+                encoding="utf-8",
+            )
+            sidecars = _sidecars()
+            sidecars["TASK_REGISTRY"]["content"]["tasks"][0].update(
+                {
+                    "status": "audit_passed",
+                    "audit_refs": [fail_001, fail_002, pass_003],
+                    "correction_links": [fail_001],
+                }
+            )
+
+            evidence = transition_engine.audit_failure_evidence_from_sidecars(root, sidecars)
+
+            self.assertFalse(evidence["present"])
+            self.assertEqual(evidence["unresolved_audit_failures"], [])
+            self.assertEqual(
+                [item["ref"] for item in evidence["resolved_audit_failures"]],
+                [fail_001, fail_002],
+            )
 
     def test_sidecar_next_action_consistency_detects_stale_stop(self) -> None:
         decision = transition_engine.explain_next_action_from_sidecars(

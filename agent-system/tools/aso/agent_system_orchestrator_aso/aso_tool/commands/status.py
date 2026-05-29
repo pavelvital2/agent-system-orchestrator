@@ -300,7 +300,11 @@ def _state_reconciliation_findings(root: Path) -> list[Finding]:
         if not isinstance(item, dict):
             continue
         rule_id = str(item.get("rule_id", ""))
-        if not rule_id.startswith("RUNTIME_"):
+        if not rule_id.startswith("RUNTIME_") and rule_id not in {
+            "SIDECAR_AUDIT_FAIL_UNRESOLVED",
+            "UNROUTABLE_UNRESOLVED_AUDIT_FAIL",
+            "CORRECTION_REQUIRED_TARGET_UNRESOLVED",
+        }:
             continue
         severity = str(item.get("severity", "error")) or "error"
         path = str(item.get("path", "")) or "project-runtime/state/NEXT_ACTION.json"

@@ -290,10 +290,15 @@ def _workspace_report(root: Path, strict: bool) -> tuple[dict[str, object], int]
         routing_next_action = dict(transition_evidence["next_action"])
     tasks = _tasks_by_id(sidecars)
     task_id = _as_text(routing_next_action.get("task_id"))
-    task = tasks.get(task_id, {})
+    audit_task_id = "" if _is_none(task_id) else task_id
+    task = tasks.get(audit_task_id, {})
     blockers = _active_blockers(project_state, routing_next_action)
-    audit_evidence = _audit_pass_evidence(root, sidecars, task, task_id)
-    correction_route = correction_routing.from_audit_inspection(root, audit_evidence.get("invalid_audit_results"))
+    audit_evidence = _audit_pass_evidence(root, sidecars, task, audit_task_id)
+    correction_route = correction_routing.from_audit_inspection(root, audit_evidence.get("unresolved_audit_failures"))
+    if not correction_route:
+        correction_route = correction_routing.from_audit_inspection(root, transition_evidence.get("audit_failure_evidence"))
+    if not correction_route:
+        correction_route = correction_routing.from_audit_inspection(root, audit_evidence.get("invalid_audit_results"))
     is_checkpoint_attempt = transition_evidence.get("canonical_recommended_next_action") == "CHECKPOINT_PREFLIGHT"
     checkpoint_eligibility = _as_text(project_state.get("checkpoint_eligibility"))
     checkpoint_eligibility_status = _as_text(project_state.get("checkpoint_eligibility_status"))
@@ -333,6 +338,26 @@ def _workspace_report(root: Path, strict: bool) -> tuple[dict[str, object], int]
             )
         )
 
+    if correction_route:
+        blocking_rules.append(
+            _blocking_rule(
+                "GOV-AUDIT-FAIL-NO-CHECKPOINT",
+                "Checkpoint preflight is blocked because AUDIT_RESULT STATUS fail routes correction.",
+                str(correction_route.get("source_audit_result_ref", "NONE")),
+                recommendation="Route correction from the failed audit before checkpointing.",
+            )
+        )
+        diagnostic_rule_id = _as_text(correction_route.get("diagnostic_rule_id"))
+        if not _is_none(diagnostic_rule_id):
+            blocking_rules.append(
+                _blocking_rule(
+                    diagnostic_rule_id,
+                    "Unresolved AUDIT_RESULT fail could not be mapped to a canonical correction target.",
+                    json.dumps(correction_route, sort_keys=True),
+                    recommendation="Repair audit evidence or create explicit correction target metadata before checkpointing.",
+                )
+            )
+
     if audit_evidence["invalid_audit_results"]:
         blocking_rules.append(
             _blocking_rule(
@@ -342,15 +367,6 @@ def _workspace_report(root: Path, strict: bool) -> tuple[dict[str, object], int]
                 recommendation="Record an auditor AUDIT_RESULT with STATUS: pass for the task before checkpointing.",
             )
         )
-        if correction_route:
-            blocking_rules.append(
-                _blocking_rule(
-                    "GOV-AUDIT-FAIL-NO-CHECKPOINT",
-                    "Checkpoint preflight is blocked because AUDIT_RESULT STATUS fail routes correction.",
-                    str(correction_route.get("source_audit_result_ref", "NONE")),
-                    recommendation="Route correction from the failed audit before checkpointing.",
-                )
-            )
 
     if audit_evidence["unparsed_audit_refs"]:
         blocking_rules.append(

@@ -1374,6 +1374,110 @@ def _checkpoint_findings(root: Path, sidecars: dict[str, dict[str, object]]) -> 
     ]
 
 
+def _audit_failure_route_findings(root: Path, sidecars: dict[str, dict[str, object]]) -> list[Finding]:
+    project_state = _content(sidecars, "PROJECT_STATE")
+    current_gate = _content(sidecars, "CURRENT_GATE")
+    next_action = _content(sidecars, "NEXT_ACTION")
+    current_phase = str(project_state.get("current_phase", "")).strip()
+    audit_status = str(project_state.get("audit_status", "")).strip()
+    project_status = str(project_state.get("project_status", "")).strip()
+    checkpoint_eligibility = str(project_state.get("checkpoint_eligibility", "")).strip()
+    checkpoint_eligibility_status = str(project_state.get("checkpoint_eligibility_status", "")).strip()
+    checkpoint_preflight_status = str(project_state.get("checkpoint_preflight_status", "")).strip()
+    project_checkpoint_status = str(project_state.get("project_checkpoint_status", "")).strip()
+    next_action_type = str(next_action.get("action_type", "")).strip()
+    next_checkpoint_policy = str(next_action.get("checkpoint_policy", "")).strip()
+    gate_type = str(current_gate.get("gate_type", "")).strip()
+    gate_status = str(current_gate.get("status", "")).strip()
+
+    checkpoint_or_terminal_claim = (
+        next_checkpoint_policy in {"local_only", "commit_and_push"}
+        or next_action.get("checkpoint_preflight_required") is True
+        or next_action.get("checkpoint_receipt_required") is True
+        or checkpoint_eligibility in {"local_only", "push_allowed"}
+        or checkpoint_eligibility_status == "eligible"
+        or checkpoint_preflight_status == "passed"
+        or project_checkpoint_status == "passed"
+        or next_action_type in {"finalize", "stop"}
+        or project_status == "completed"
+        or current_phase in {"finalization", "final_acceptance", "completed"}
+        or gate_type == "terminal"
+    )
+    pass_claim = audit_status == "passed"
+
+    findings: list[Finding] = []
+    audit_failure_evidence = transition_engine.audit_failure_evidence_from_sidecars(root, sidecars)
+    unresolved_items = audit_failure_evidence.get("unresolved_audit_failures")
+    if not isinstance(unresolved_items, list):
+        return findings
+    for item in unresolved_items:
+        if not isinstance(item, dict):
+            continue
+        task_id = str(item.get("registry_task_id") or item.get("routing_task_id") or item.get("task_id") or "NONE")
+        task_status = str(item.get("task_status", "")).strip()
+        correction_route_active = (
+            current_phase == "correction"
+            and audit_status == "failed"
+            and next_action_type == "correction"
+            and task_status in {"failed", "blocked"}
+            and gate_status in {"blocked", "open", "failed"}
+        )
+        if correction_route_active and not checkpoint_or_terminal_claim and not pass_claim:
+            continue
+        rule_id = str(item.get("diagnostic_rule_id") or "")
+        if _is_none(rule_id):
+            rule_id = "SIDECAR_AUDIT_FAIL_UNRESOLVED"
+        source_path = str(item.get("source_path") or "project-runtime/state/TASK_REGISTRY.json")
+        source_field = str(item.get("source_field") or "content.tasks[].audit_refs")
+        findings.append(
+            _finding(
+                rule_id,
+                "Unresolved failed AUDIT_RESULT blocks checkpoint and finalization",
+                json.dumps(
+                    {
+                        "task_id": task_id,
+                        "task_index": item.get("task_index", "NONE"),
+                        "task_status": task_status or "NONE",
+                        "audit_status": audit_status or "NONE",
+                        "unresolved_audit_failure": item,
+                        "resolved_audit_failures": audit_failure_evidence.get("resolved_audit_failures", []),
+                    },
+                    sort_keys=True,
+                ),
+                source_path,
+                source_field,
+                "Route the failed audit to correction and record correction resolution evidence before checkpoint or finalization.",
+            )
+        )
+        diagnostics = item.get("resolution_diagnostics")
+        if not isinstance(diagnostics, list):
+            continue
+        for diagnostic in diagnostics:
+            if not isinstance(diagnostic, dict):
+                continue
+            diagnostic_rule_id = str(diagnostic.get("rule_id") or "")
+            if _is_none(diagnostic_rule_id):
+                continue
+            findings.append(
+                _finding(
+                    diagnostic_rule_id,
+                    "Audit pass resolution evidence was not applied",
+                    json.dumps(
+                        {
+                            "task_id": task_id,
+                            "unresolved_audit_failure": item.get("ref", "NONE"),
+                            "resolution_diagnostic": diagnostic,
+                        },
+                        sort_keys=True,
+                    ),
+                    source_path,
+                    source_field,
+                    "Record a passing AUDIT_RESULT that explicitly cites the unresolved failed audit ref.",
+                )
+            )
+    return findings
+
+
 def _nonempty_terminal_blockers(value: object) -> list[str]:
     if isinstance(value, list):
         blockers: list[str] = []
@@ -1800,6 +1904,7 @@ def _report(root: Path, strict: bool) -> tuple[dict[str, object], int]:
     findings.extend(_reference_findings(loaded_sidecars))
     findings.extend(_artifact_package_findings(loaded_sidecars))
     findings.extend(_checkpoint_findings(root, loaded_sidecars))
+    findings.extend(_audit_failure_route_findings(root, loaded_sidecars))
     findings.extend(_bootstrap_semantic_findings(root, loaded_sidecars))
     findings.extend(_terminal_completion_findings(loaded_sidecars))
     reconciliation_enabled = current_p2_state or lifecycle_has_evidence

@@ -1109,6 +1109,212 @@ def _lifecycle_audit_pass_refs(
     return refs
 
 
+def _is_status_fail_audit_invalid(item: Mapping[str, object]) -> bool:
+    return _text(item.get("status")).lower() == "fail" and _text(item.get("result_type")) == "audit_result"
+
+
+def _valid_pass_payloads(parsed_refs: Iterable[Mapping[str, object]], passed_refs: Iterable[str]) -> list[dict[str, Any]]:
+    passed = set(passed_refs)
+    return [
+        dict(item)
+        for item in parsed_refs
+        if _text(item.get("ref")) in passed
+        and _text(item.get("status")).lower() == "pass"
+        and item.get("task_matches") is True
+        and not item.get("issues")
+    ]
+
+
+def _pass_resolves_audit_failure(
+    pass_item: Mapping[str, object],
+    failure: Mapping[str, object],
+    *,
+    ref_order: Mapping[str, int],
+) -> str:
+    fail_ref = _text(failure.get("ref"))
+    pass_ref = _text(pass_item.get("ref"))
+    if not fail_ref or not pass_ref:
+        return ""
+    if ref_order.get(pass_ref, -1) <= ref_order.get(fail_ref, -1):
+        return ""
+
+    correction_refs = _truthy_refs(pass_item.get("correction_refs"))
+    if fail_ref in correction_refs:
+        return f"passing AUDIT_RESULT {pass_ref} explicitly cites failed audit {fail_ref}"
+    return ""
+
+
+def _resolution_diagnostics_for_unresolved_failure(
+    failure: Mapping[str, object],
+    pass_items: Iterable[Mapping[str, object]],
+    *,
+    ref_order: Mapping[str, int],
+    failed_audit_refs: set[str],
+) -> list[dict[str, object]]:
+    fail_ref = _text(failure.get("ref"))
+    if not fail_ref:
+        return []
+    diagnostics: list[dict[str, object]] = []
+    seen: set[tuple[str, str]] = set()
+    for pass_item in pass_items:
+        pass_ref = _text(pass_item.get("ref"))
+        if not pass_ref or ref_order.get(pass_ref, -1) <= ref_order.get(fail_ref, -1):
+            continue
+        correction_refs = _truthy_refs(pass_item.get("correction_refs"))
+        if not correction_refs:
+            key = (pass_ref, "PASS_AUDIT_WITHOUT_EXPLICIT_RESOLUTION_REFS")
+            if key in seen:
+                continue
+            seen.add(key)
+            diagnostics.append(
+                {
+                    "rule_id": "PASS_AUDIT_WITHOUT_EXPLICIT_RESOLUTION_REFS",
+                    "pass_audit_ref": pass_ref,
+                    "unresolved_audit_ref": fail_ref,
+                    "message": "Passing AUDIT_RESULT did not cite any failed audit refs to resolve.",
+                }
+            )
+            continue
+        if fail_ref in correction_refs:
+            continue
+        unknown_refs = [ref for ref in correction_refs if ref not in failed_audit_refs]
+        rule_id = (
+            "AUDIT_PASS_REFERENCES_UNKNOWN_FAILURE_REF"
+            if unknown_refs
+            else "AUDIT_PASS_NOT_APPLIED_TO_UNREFERENCED_FAILURES"
+        )
+        key = (pass_ref, rule_id)
+        if key in seen:
+            continue
+        seen.add(key)
+        diagnostic: dict[str, object] = {
+            "rule_id": rule_id,
+            "pass_audit_ref": pass_ref,
+            "unresolved_audit_ref": fail_ref,
+            "explicit_resolution_refs": correction_refs,
+            "message": "Passing AUDIT_RESULT did not explicitly cite this failed audit ref.",
+        }
+        if unknown_refs:
+            diagnostic["unknown_resolution_refs"] = unknown_refs
+        diagnostics.append(diagnostic)
+    return diagnostics
+
+
+def _resolved_audit_failure_partition(
+    invalid_refs: Iterable[Mapping[str, object]],
+    parsed_refs: Iterable[Mapping[str, object]],
+    passed_refs: Iterable[str],
+    ordered_refs: Iterable[str],
+    task: Mapping[str, object],
+) -> tuple[list[dict[str, Any]], list[dict[str, Any]], list[dict[str, Any]]]:
+    ref_order = {ref: index for index, ref in enumerate(dict.fromkeys(ordered_refs))}
+    pass_items = _valid_pass_payloads(parsed_refs, passed_refs)
+    failed_audit_refs = {
+        _text(item.get("ref"))
+        for item in invalid_refs
+        if isinstance(item, Mapping) and _is_status_fail_audit_invalid(item) and _text(item.get("ref"))
+    }
+    remaining_invalid: list[dict[str, Any]] = []
+    unresolved_failures: list[dict[str, Any]] = []
+    resolved_failures: list[dict[str, Any]] = []
+
+    for raw_item in invalid_refs:
+        item = dict(raw_item)
+        if not _is_status_fail_audit_invalid(item):
+            remaining_invalid.append(item)
+            continue
+        resolution = ""
+        resolved_by = ""
+        for pass_item in pass_items:
+            resolution = _pass_resolves_audit_failure(
+                pass_item,
+                item,
+                ref_order=ref_order,
+            )
+            if resolution:
+                resolved_by = _text(pass_item.get("ref"))
+                break
+        if resolution:
+            resolved_failures.append(
+                {
+                    **item,
+                    "resolved": True,
+                    "resolved_by_audit_ref": resolved_by,
+                    "resolution_evidence": resolution,
+                }
+            )
+            continue
+        unresolved_item: dict[str, Any] = {**item, "resolved": False}
+        diagnostics = _resolution_diagnostics_for_unresolved_failure(
+            item,
+            pass_items,
+            ref_order=ref_order,
+            failed_audit_refs=failed_audit_refs,
+        )
+        if diagnostics:
+            unresolved_item["resolution_diagnostics"] = diagnostics
+        unresolved_failures.append(unresolved_item)
+        remaining_invalid.append(unresolved_item)
+
+    return remaining_invalid, unresolved_failures, resolved_failures
+
+
+def _audit_pass_evidence_from_refs(
+    workspace_root: Path,
+    *,
+    task_id: str,
+    task: Mapping[str, object],
+    task_status: str,
+    task_audit_refs: Iterable[str] = (),
+    artifact_audit_refs: Iterable[str] = (),
+    gate_audit_refs: Iterable[str] = (),
+    lifecycle_audit_refs: Iterable[str] = (),
+) -> dict[str, object]:
+    strict_audit_refs = list(dict.fromkeys([*task_audit_refs, *artifact_audit_refs, *gate_audit_refs]))
+    lifecycle_only_refs = [ref for ref in lifecycle_audit_refs if ref not in set(strict_audit_refs)]
+    parsed = result_parser.inspect_audit_references(
+        workspace_root,
+        strict_audit_refs,
+        task_id=task_id,
+        strict=True,
+    )
+    lifecycle_parsed = result_parser.inspect_audit_references(
+        workspace_root,
+        lifecycle_only_refs,
+        task_id=task_id,
+        strict=False,
+    )
+    ordered_refs = [*strict_audit_refs, *lifecycle_only_refs]
+    parsed_refs = [*parsed["parsed_refs"], *lifecycle_parsed["parsed_refs"]]
+    raw_invalid_refs = [*parsed["invalid_refs"], *lifecycle_parsed["invalid_refs"]]
+    unparsed_refs = [*parsed["unparsed_refs"], *lifecycle_parsed["unparsed_refs"]]
+    passed_refs = list(dict.fromkeys([*parsed["passed_refs"], *lifecycle_parsed["passed_refs"]]))
+    invalid_refs, unresolved_failures, resolved_failures = _resolved_audit_failure_partition(
+        raw_invalid_refs,
+        parsed_refs,
+        passed_refs,
+        ordered_refs,
+        task,
+    )
+    present = bool(passed_refs) and not invalid_refs and not unparsed_refs
+    return {
+        "present": present,
+        "task_id": task_id,
+        "task_status": task_status,
+        "task_status_audit_passed": task_status == "audit_passed",
+        "task_audit_refs": list(task_audit_refs),
+        "accepted_artifact_audit_refs": list(artifact_audit_refs),
+        "current_gate_audit_evidence_refs": list(gate_audit_refs),
+        "lifecycle_audit_pass_refs": list(lifecycle_audit_refs),
+        "parsed_audit_results": parsed_refs,
+        "passed_audit_refs": passed_refs,
+        "invalid_audit_results": invalid_refs,
+        "unresolved_audit_failures": unresolved_failures,
+        "resolved_audit_failures": resolved_failures,
+        "unparsed_audit_refs": unparsed_refs,
+    }
+
+
 def audit_pass_evidence_from_sidecars(
     root: str | Path,
     sidecars: Mapping[str, Mapping[str, object]],
@@ -1121,44 +1327,216 @@ def audit_pass_evidence_from_sidecars(
     project_state = _content(sidecars, "PROJECT_STATE")
     current_gate = _content(sidecars, "CURRENT_GATE")
     tasks = _tasks_by_id(sidecars)
-    resolved_task_id = task_id or _active_task_id(project_state, current_gate) or _single_active_task_id(tasks)
+    requested_task_id = "" if _is_none(task_id) else task_id
+    resolved_task_id = requested_task_id or _active_task_id(project_state, current_gate) or _single_active_task_id(tasks)
     task = tasks.get(resolved_task_id, {})
     task_status = _text(task.get("status"))
     task_audit_refs = _truthy_refs(task.get("audit_refs"))
     artifact_audit_refs = _accepted_artifact_audit_refs(sidecars, resolved_task_id)
     gate_audit_refs = _current_gate_audit_refs(sidecars)
     lifecycle_audit_refs = _lifecycle_audit_pass_refs(sidecars, resolved_task_id)
-    strict_audit_refs = list(dict.fromkeys([*task_audit_refs, *artifact_audit_refs, *gate_audit_refs]))
-    lifecycle_only_refs = [ref for ref in lifecycle_audit_refs if ref not in set(strict_audit_refs)]
-    parsed = result_parser.inspect_audit_references(
+    return _audit_pass_evidence_from_refs(
         workspace_root,
-        strict_audit_refs,
         task_id=resolved_task_id,
-        strict=True,
+        task=task,
+        task_status=task_status,
+        task_audit_refs=task_audit_refs,
+        artifact_audit_refs=artifact_audit_refs,
+        gate_audit_refs=gate_audit_refs,
+        lifecycle_audit_refs=lifecycle_audit_refs,
     )
-    lifecycle_parsed = result_parser.inspect_audit_references(
-        workspace_root,
-        lifecycle_only_refs,
-        task_id=resolved_task_id,
-        strict=False,
+
+
+def _all_accepted_artifact_audit_refs(sidecars: Mapping[str, Mapping[str, object]]) -> list[str]:
+    refs: list[str] = []
+    accepted = _content(sidecars, "ACCEPTED_ARTIFACTS").get("artifacts")
+    if isinstance(accepted, list):
+        for artifact in accepted:
+            if not isinstance(artifact, Mapping):
+                continue
+            audit_ref = artifact.get("audit_ref")
+            if isinstance(audit_ref, str) and not _is_none(audit_ref):
+                refs.append(audit_ref.strip())
+    return list(dict.fromkeys(refs))
+
+
+def _audit_failure_key(item: Mapping[str, object], source: str, index: int) -> str:
+    ref = _text(item.get("ref"))
+    if ref:
+        return ref
+    return f"{source}:{index}:{_text(item.get('task_id')) or 'UNKNOWN'}"
+
+
+def _failed_checks_from_invalid_audit(item: Mapping[str, object]) -> list[str]:
+    checks = _truthy_refs(item.get("failed_checks"))
+    if checks:
+        return checks
+    issues = item.get("issues")
+    if isinstance(issues, list):
+        for issue in issues:
+            if isinstance(issue, Mapping):
+                rule_id = _truthy_text(issue.get("rule_id"))
+                if rule_id:
+                    checks.append(rule_id)
+    return checks or ["AUDIT_RESULT_STATUS_FAIL"]
+
+
+def _enrich_audit_failure(
+    item: Mapping[str, object],
+    *,
+    source_type: str,
+    source_path: str,
+    source_field: str,
+    registry_task_id: str = "",
+    task_index: int | None = None,
+    task: Mapping[str, object] | None = None,
+) -> dict[str, Any]:
+    parsed_task_id = _truthy_text(item.get("task_id"))
+    task_map = task if isinstance(task, Mapping) else {}
+    route_task_id = registry_task_id or parsed_task_id
+    target_role = (
+        _truthy_text(task_map.get("owner_role"))
+        or _truthy_text(task_map.get("task_type"))
+        or "orchestrator"
     )
-    invalid_refs = [*parsed["invalid_refs"], *lifecycle_parsed["invalid_refs"]]
-    unparsed_refs = [*parsed["unparsed_refs"], *lifecycle_parsed["unparsed_refs"]]
-    passed_refs = list(dict.fromkeys([*parsed["passed_refs"], *lifecycle_parsed["passed_refs"]]))
-    present = bool(passed_refs) and not invalid_refs and not unparsed_refs
+    enriched: dict[str, Any] = {
+        **dict(item),
+        "audit_result_task_id": parsed_task_id or "NONE",
+        "registry_task_id": registry_task_id or "NONE",
+        "routing_task_id": route_task_id or "NONE",
+        "source_task_id": route_task_id or parsed_task_id or "NONE",
+        "target_correction_role": target_role,
+        "target_role": target_role,
+        "source_type": source_type,
+        "source_path": source_path,
+        "source_field": source_field,
+        "failed_checks": _failed_checks_from_invalid_audit(item),
+        "resolved": False,
+    }
+    if task_index is not None:
+        enriched["task_index"] = task_index
+    task_status = _truthy_text(task_map.get("status"))
+    if task_status:
+        enriched["task_status"] = task_status
+    if not route_task_id:
+        enriched["unroutable"] = True
+        enriched["routing_issue"] = "CORRECTION_REQUIRED_TARGET_UNRESOLVED"
+        enriched["diagnostic_rule_id"] = "UNROUTABLE_UNRESOLVED_AUDIT_FAIL"
+    return enriched
+
+
+def _dedupe_audit_failure_items(items: Iterable[Mapping[str, object]]) -> list[dict[str, Any]]:
+    deduped: list[dict[str, Any]] = []
+    seen: set[str] = set()
+    for index, item in enumerate(items):
+        key = _audit_failure_key(item, _text(item.get("source_type")) or "audit", index)
+        if key in seen:
+            continue
+        seen.add(key)
+        deduped.append(dict(item))
+    return deduped
+
+
+def audit_failure_evidence_from_sidecars(
+    root: str | Path,
+    sidecars: Mapping[str, Mapping[str, object]],
+) -> dict[str, object]:
+    """Scan every governed audit evidence location for unresolved failed audits."""
+
+    workspace_root = Path(root)
+    tasks_payload = _content(sidecars, "TASK_REGISTRY").get("tasks")
+    task_evidence: list[dict[str, object]] = []
+    unresolved: list[dict[str, Any]] = []
+    resolved: list[dict[str, Any]] = []
+    inspected_refs: set[str] = set()
+
+    if isinstance(tasks_payload, list):
+        for index, task in enumerate(tasks_payload):
+            if not isinstance(task, Mapping):
+                continue
+            task_id = _truthy_text(task.get("task_id"))
+            audit_refs = _truthy_refs(task.get("audit_refs"))
+            if not audit_refs:
+                continue
+            evidence = _audit_pass_evidence_from_refs(
+                workspace_root,
+                task_id=task_id,
+                task=task,
+                task_status=_text(task.get("status")),
+                task_audit_refs=audit_refs,
+            )
+            task_evidence.append({"task_index": index, **evidence})
+            inspected_refs.update(audit_refs)
+            for item in evidence.get("unresolved_audit_failures", []):
+                if isinstance(item, Mapping):
+                    unresolved.append(
+                        _enrich_audit_failure(
+                            item,
+                            source_type="task_registry",
+                            source_path="project-runtime/state/TASK_REGISTRY.json",
+                            source_field=f"content.tasks[{index}].audit_refs",
+                            registry_task_id=task_id,
+                            task_index=index,
+                            task=task,
+                        )
+                    )
+            for item in evidence.get("resolved_audit_failures", []):
+                if isinstance(item, Mapping):
+                    resolved.append(
+                        {
+                            **dict(item),
+                            "registry_task_id": task_id or "NONE",
+                            "source_type": "task_registry",
+                            "source_path": "project-runtime/state/TASK_REGISTRY.json",
+                            "source_field": f"content.tasks[{index}].audit_refs",
+                            "task_index": index,
+                        }
+                    )
+
+    global_refs = [
+        ref
+        for ref in [*_current_gate_audit_refs(sidecars), *_all_accepted_artifact_audit_refs(sidecars)]
+        if ref not in inspected_refs
+    ]
+    if global_refs:
+        global_evidence = _audit_pass_evidence_from_refs(
+            workspace_root,
+            task_id="",
+            task={},
+            task_status="",
+            gate_audit_refs=global_refs,
+        )
+        task_evidence.append({"source_type": "global_audit_refs", **global_evidence})
+        for item in global_evidence.get("unresolved_audit_failures", []):
+            if isinstance(item, Mapping):
+                unresolved.append(
+                    _enrich_audit_failure(
+                        item,
+                        source_type="global_audit_refs",
+                        source_path="project-runtime/state/CURRENT_GATE.json",
+                        source_field="content.gate_evidence",
+                    )
+                )
+        for item in global_evidence.get("resolved_audit_failures", []):
+            if isinstance(item, Mapping):
+                resolved.append(
+                    {
+                        **dict(item),
+                        "source_type": "global_audit_refs",
+                        "source_path": "project-runtime/state/CURRENT_GATE.json",
+                        "source_field": "content.gate_evidence",
+                    }
+                )
+
+    unresolved = _dedupe_audit_failure_items(unresolved)
+    resolved = _dedupe_audit_failure_items(resolved)
+    unroutable = [item for item in unresolved if item.get("unroutable") is True]
     return {
-        "present": present,
-        "task_id": resolved_task_id,
-        "task_status": task_status,
-        "task_status_audit_passed": task_status == "audit_passed",
-        "task_audit_refs": task_audit_refs,
-        "accepted_artifact_audit_refs": artifact_audit_refs,
-        "current_gate_audit_evidence_refs": gate_audit_refs,
-        "lifecycle_audit_pass_refs": lifecycle_audit_refs,
-        "parsed_audit_results": [*parsed["parsed_refs"], *lifecycle_parsed["parsed_refs"]],
-        "passed_audit_refs": passed_refs,
-        "invalid_audit_results": invalid_refs,
-        "unparsed_audit_refs": unparsed_refs,
+        "present": bool(unresolved),
+        "unresolved_audit_failures": unresolved,
+        "resolved_audit_failures": resolved,
+        "unroutable_unresolved_audit_failures": unroutable,
+        "task_evidence": task_evidence,
     }
 
 
@@ -1195,10 +1573,68 @@ def routing_authority_report(
     derived_cache = derived_next_action_cache_content(contract, sidecars, decision)
     blockers = active_blockers_from_sidecars(sidecars)
     audit_evidence: dict[str, object] = {}
+    audit_failure_evidence: dict[str, object] = {}
     if root is not None:
         signals = decision.inputs.get("sidecar_state_signals")
         audit_task_id = _text(signals.get("task_id")) if isinstance(signals, Mapping) else ""
         audit_evidence = audit_pass_evidence_from_sidecars(root, sidecars, task_id=audit_task_id)
+        audit_failure_evidence = audit_failure_evidence_from_sidecars(root, sidecars)
+        unresolved_failures = audit_failure_evidence.get("unresolved_audit_failures")
+        if isinstance(unresolved_failures, list) and unresolved_failures:
+            first_failure = unresolved_failures[0] if isinstance(unresolved_failures[0], Mapping) else {}
+            correction_task_id = _truthy_text(first_failure.get("routing_task_id")) if first_failure else ""
+            correction_action = _next_action_for_state(
+                contract,
+                "CORRECTION_REQUIRED",
+                target_role="orchestrator",
+                task_id=correction_task_id,
+            )
+            route_rule = _text(first_failure.get("diagnostic_rule_id")) or "SIDECAR_AUDIT_FAIL_UNRESOLVED"
+            route_message = (
+                "Unresolved failed AUDIT_RESULT has no routable correction target."
+                if route_rule == "UNROUTABLE_UNRESOLVED_AUDIT_FAIL"
+                else "Unresolved failed AUDIT_RESULT requires correction before checkpoint or terminal routing."
+            )
+            route_signals = dict(signals) if isinstance(signals, Mapping) else {}
+            route_signals.update(
+                {
+                    "state_source": "sidecars",
+                    "state_source_detail": "all_task_audit_scan",
+                    "task_id": correction_task_id,
+                    "unresolved_audit_failures": unresolved_failures,
+                }
+            )
+            route_finding = _finding(
+                route_rule,
+                "error",
+                route_message,
+                json.dumps(first_failure, sort_keys=True),
+                "Route the failed audit to correction and record resolution evidence before checkpoint or finalization.",
+            )
+            decision = TransitionDecision(
+                inputs={
+                    **decision.inputs,
+                    "sidecar_state_signals": route_signals,
+                    "audit_failure_evidence": audit_failure_evidence,
+                },
+                transition_selected={
+                    **decision.transition_selected,
+                    "derivation": "sidecars",
+                    "derivation_detail": "all_task_audit_scan",
+                    "state": "CORRECTION_REQUIRED",
+                    "expected_recommended_next_action": "CORRECTION_REQUIRED",
+                },
+                findings=tuple([*decision.findings, route_finding]),
+                next_action=correction_action,
+                reference_docs_used=_reference_docs(contract, "orchestrator"),
+                allowed=False,
+                current_state="CORRECTION_REQUIRED",
+                event="",
+                next_state="CORRECTION_REQUIRED",
+            )
+            payload = decision.to_json()
+            recommended = "CORRECTION_REQUIRED"
+            derived_cache = derived_next_action_cache_content(contract, sidecars, decision)
     checkpoint_rules = _mapping(contract.get("checkpoint_rules"))
     checkpoint_route = {
         "attempt": recommended == "CHECKPOINT_PREFLIGHT",
@@ -1249,6 +1685,8 @@ def routing_authority_report(
     )
     if audit_evidence:
         payload["audit_pass_evidence"] = audit_evidence
+    if audit_failure_evidence:
+        payload["audit_failure_evidence"] = audit_failure_evidence
     return payload
 
 

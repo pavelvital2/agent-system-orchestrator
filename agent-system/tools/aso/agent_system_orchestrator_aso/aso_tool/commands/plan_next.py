@@ -196,10 +196,31 @@ def _audit_fail_correction_route(
     audit_evidence: dict[str, object],
     transition_evidence: dict[str, object],
 ) -> dict[str, object]:
+    route = correction_routing.from_audit_inspection(root, audit_evidence.get("unresolved_audit_failures"))
+    if route:
+        return route
+    route = correction_routing.from_audit_inspection(root, transition_evidence.get("audit_failure_evidence"))
+    if route:
+        return route
     route = correction_routing.from_audit_inspection(root, audit_evidence.get("invalid_audit_results"))
     if route:
         return route
     return correction_routing.from_transition_evidence(root, transition_evidence)
+
+
+def _correction_route_diagnostic_rule(
+    rules: dict[str, dict[str, object]],
+    correction_route: dict[str, object],
+) -> dict[str, object] | None:
+    diagnostic_rule_id = _as_text(correction_route.get("diagnostic_rule_id"))
+    if _is_none(diagnostic_rule_id):
+        return None
+    return _rule(
+        rules,
+        diagnostic_rule_id,
+        "Unresolved AUDIT_RESULT fail could not be mapped to a canonical correction target.",
+        json.dumps(correction_route, sort_keys=True),
+    )
 
 
 def _rule(
@@ -1052,13 +1073,14 @@ def _plan(
         routing_next_action["recommended_next_action"] = _as_text(derived_next_action.get("recommended_next_action"))
 
     task_id = _as_text(routing_next_action.get("task_id"))
-    task = tasks.get(task_id, {})
+    audit_task_id = "" if _is_none(task_id) else task_id
+    task = tasks.get(audit_task_id, {})
     action_type = _as_text(routing_next_action.get("action_type"))
     dependency_status = _as_text(routing_next_action.get("dependency_status"))
     target_role = _as_text(routing_next_action.get("target_role"))
     task_packet = _as_text(routing_next_action.get("task_packet"))
     blockers = _active_blockers(project_state, routing_next_action)
-    audit_evidence = _audit_pass_evidence(root, sidecars, task, task_id)
+    audit_evidence = _audit_pass_evidence(root, sidecars, task, audit_task_id)
 
     blocking_rules = _state_verify_blockers(rules, verify_report)
     blocking_rules.extend(_placeholder_tz_blockers(root, rules, project_state, routing_next_action))
@@ -1082,7 +1104,40 @@ def _plan(
             )
         )
 
-    if _has_incident(project_state, blockers):
+    correction_route = _audit_fail_correction_route(root, audit_evidence, transition_evidence)
+    if correction_route:
+        recommended_next_action = "CORRECTION_REQUIRED"
+        target_role = "orchestrator"
+        action_type = "correction"
+        task_id = str(correction_route.get("source_task_id") or task_id or "NONE")
+        task_packet = "NONE"
+        dispatchability = _non_dispatchability(
+            action_type,
+            target_role,
+            task_id,
+            task_packet,
+            recommended_next_action,
+            "correction_required",
+            reasons=[
+                _reason(
+                    "audit_result_status_fail",
+                    "AUDIT_RESULT STATUS fail routes correction and blocks checkpoint/finalization.",
+                    "TASK_REGISTRY.content.tasks[].audit_refs",
+                )
+            ],
+        )
+        blocking_rules.append(
+            _rule(
+                rules,
+                "GOV-AUDIT-FAIL-NO-CHECKPOINT",
+                "AUDIT_RESULT STATUS fail routes correction and blocks checkpoint/finalization.",
+                str(correction_route.get("source_audit_result_ref", "NONE")),
+            )
+        )
+        diagnostic_rule = _correction_route_diagnostic_rule(rules, correction_route)
+        if diagnostic_rule:
+            blocking_rules.append(diagnostic_rule)
+    elif _has_incident(project_state, blockers):
         recommended_next_action = "FREEZE"
         dispatchability = _non_dispatchability(
             action_type,
@@ -1168,8 +1223,9 @@ def _plan(
         target_role = _as_text(routing_next_action.get("target_role"))
         task_id = _as_text(routing_next_action.get("task_id")) or task_id
         task_packet = _as_text(routing_next_action.get("task_packet")) or task_packet
-        task = tasks.get(task_id, {})
-        audit_evidence = _audit_pass_evidence(root, sidecars, task, task_id)
+        audit_task_id = "" if _is_none(task_id) else task_id
+        task = tasks.get(audit_task_id, {})
+        audit_evidence = _audit_pass_evidence(root, sidecars, task, audit_task_id)
         recommended_next_action = (
             _as_text(derived_next_action.get("recommended_next_action"))
             or transition_engine.recommendation_from_next_action_content(routing_next_action)
@@ -1222,6 +1278,9 @@ def _plan(
                             str(correction_route.get("source_audit_result_ref", "NONE")),
                         )
                     )
+                    diagnostic_rule = _correction_route_diagnostic_rule(rules, correction_route)
+                    if diagnostic_rule:
+                        blocking_rules.append(diagnostic_rule)
                 if audit_evidence["invalid_audit_results"]:
                     blocking_rules.append(
                         _rule(
@@ -1317,6 +1376,9 @@ def _plan(
                         str(correction_route.get("source_audit_result_ref", "NONE")),
                     )
                 )
+                diagnostic_rule = _correction_route_diagnostic_rule(rules, correction_route)
+                if diagnostic_rule:
+                    blocking_rules.append(diagnostic_rule)
             else:
                 target_role = "auditor"
                 dispatchability = can_dispatch_agent(

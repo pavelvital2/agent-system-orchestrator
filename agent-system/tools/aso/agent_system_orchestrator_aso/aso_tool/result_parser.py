@@ -92,6 +92,12 @@ CORRECTION_REF_LABELS = {
     "CORRECTION_TASK_PACKET_REF",
     "CORRECTION_PROPOSAL_REF",
     "CORRECTION_RESULT_REF",
+    "RESOLVES_AUDIT_REF",
+    "RESOLVES_AUDIT_REFS",
+    "RESOLVED_AUDIT_REF",
+    "RESOLVED_AUDIT_REFS",
+    "SUPERSEDES",
+    "SUPERSEDED_BY",
 }
 FINAL_RUN_RECEIPT_LABELS = {
     "FINAL_RUN_RECEIPT_REF",
@@ -465,6 +471,7 @@ def inspect_audit_references(
             "source_result_refs": list(parsed.audit.source_result_refs),
             "failed_checks": list(parsed.audit.failed_checks),
             "findings": list(parsed.audit.findings),
+            "correction_refs": list(parsed.audit.correction_refs),
             "issues": issue_payloads,
             "task_matches": task_matches,
         }
