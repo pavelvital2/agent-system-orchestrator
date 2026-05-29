@@ -522,6 +522,7 @@ def _route_guardrails(
     strict: bool,
     *,
     terminated: bool,
+    artifact_package_required: bool,
     accepted_result_package: bool,
     accepted_result_package_detail: str,
 ) -> tuple[list[Rule], list[Rule], bool]:
@@ -594,7 +595,7 @@ def _route_guardrails(
                 )
             )
             return blocking_rules, validation_errors, True
-        if strict and not accepted_result_package:
+        if strict and artifact_package_required and not accepted_result_package:
             validation_errors.append(
                 Rule(
                     "RESULT_PACKAGE_ACCEPTANCE_001",
@@ -736,6 +737,8 @@ def build_report(result_path: Path, strict: bool) -> tuple[dict[str, Any], int]:
     blocking_rules: list[Rule] = []
     accepted_result_package = True
     accepted_result_package_detail = "not required"
+    result_acceptance = result_parser.result_acceptance_metadata(fields, result_type)
+    artifact_package_required = bool(result_acceptance["artifact_package_required"])
     transition_evidence = _transition_not_run_evidence("pre_route_validation_errors")
     root = None if io_errors else _result_root(result_path)
     bootstrap_continuation = {
@@ -748,7 +751,7 @@ def build_report(result_path: Path, strict: bool) -> tuple[dict[str, Any], int]:
     correction_route: dict[str, object] = {}
     if not io_errors and not validation_errors:
         terminated = True if root is None else _has_matching_termination(root, fields, result_path)
-        if root is not None and result_type == "profile_result" and role in PROFILE_ROLES:
+        if root is not None and result_type == "profile_result" and role in PROFILE_ROLES and artifact_package_required:
             accepted_result_package, accepted_result_package_detail = _accepted_result_package(root, fields, result_path)
         transition_evidence, canonical_next_action, transition_errors = _canonical_transition_route(fields, result_type)
         bootstrap_continuation, bootstrap_rule = _bootstrap_continuation_evidence(root, fields)
@@ -757,6 +760,7 @@ def build_report(result_path: Path, strict: bool) -> tuple[dict[str, Any], int]:
             result_type,
             strict,
             terminated=terminated,
+            artifact_package_required=artifact_package_required,
             accepted_result_package=accepted_result_package,
             accepted_result_package_detail=accepted_result_package_detail,
         )
@@ -810,6 +814,8 @@ def build_report(result_path: Path, strict: bool) -> tuple[dict[str, Any], int]:
             "task": _as_string(fields, "TASK"),
             "accepted_result_package": accepted_result_package,
             "accepted_result_package_ref": accepted_result_package_detail if accepted_result_package else "",
+            "result_acceptance_mode": result_acceptance["result_acceptance_mode"],
+            "artifact_package_required": artifact_package_required,
             "source_result_refs": _source_result_refs(fields),
             "claimed_next_actions": _claimed_next_actions(fields),
             "bootstrap_continuation": bootstrap_continuation,

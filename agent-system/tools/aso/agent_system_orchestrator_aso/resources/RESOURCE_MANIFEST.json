@@ -121,8 +121,8 @@
       "size": 4580
     },
     "agent-system/02_runtime/ORCHESTRATOR_RUNTIME_CONTRACT.json": {
-      "sha256": "07e2c4087495e4919441edfcbaf5ba7033037e9da72c700dd42c0c8a523ca7ed",
-      "size": 13844
+      "sha256": "e5183b0f53ddea12ba9cf542e0dcebc94ff8134365c400ab7d37122858ed1cad",
+      "size": 15324
     },
     "agent-system/02_runtime/ORCHESTRATOR_RUNTIME_LOOP.md": {
       "sha256": "ceb54eb0491d8ad4a7e7c46842d7ba9d018657b199c4320e7b24679bd6c63483",

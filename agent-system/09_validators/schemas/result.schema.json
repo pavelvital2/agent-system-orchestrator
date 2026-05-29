@@ -36,6 +36,8 @@
     "AGENT_INSTANCE_ID": { "type": "string" },
     "ROLE": { "type": "string", "enum": ["requirements_analyst", "solution_architect", "designer", "developer", "auditor", "tester", "technical_writer", "devops_setup_engineer", "release_manager"] },
     "TASK": { "type": "string" },
+    "RESULT_ACCEPTANCE_MODE": { "type": "string", "enum": ["result_only", "artifact_package"] },
+    "ARTIFACT_PACKAGE_REQUIRED": { "oneOf": [{ "type": "boolean" }, { "type": "string", "enum": ["true", "false"] }] },
     "SUMMARY": { "$ref": "#/$defs/nonEmptyList" },
     "READ_DOCS": { "$ref": "#/$defs/listOrNone" },
     "READ_INPUTS": { "$ref": "#/$defs/listOrNone" },

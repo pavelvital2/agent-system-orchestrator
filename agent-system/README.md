@@ -499,13 +499,25 @@ paths. Outside these bounded write surfaces, ASO does not provide a runtime
 daemon, dispatch live agents, execute checkpoints, perform general
 package/runtime mutation, commit, or push authority.
 
-Profile-agent completion follows the P5 artifact package sequence:
+Profile-agent completion follows the result acceptance mode declared by the
+task/RESULT metadata.
+
+Result-only outputs:
 
 ```text
-RESULT_RECEIVED -> ARTIFACT_ACCEPTED -> AGENT_TERMINATED -> AUDIT_ROUTE_READY
+RESULT_RECEIVED -> RESULT_VALIDATED -> RESULT_ACCEPTED -> AGENT_TERMINATED -> AUDIT_ROUTE_READY
 ```
 
-Profile-agent output starts as a candidate artifact package under
+Artifact-producing outputs:
+
+```text
+RESULT_RECEIVED -> ARTIFACT_PACKAGE_RECEIVED -> ARTIFACT_VALIDATED -> ARTIFACT_ACCEPTED -> AGENT_TERMINATED -> AUDIT_ROUTE_READY
+```
+
+The legacy compressed artifact sequence
+`RESULT_RECEIVED -> ARTIFACT_ACCEPTED -> AGENT_TERMINATED -> AUDIT_ROUTE_READY`
+remains compatible. Artifact-producing profile-agent output starts as a
+candidate artifact package under
 `project-runtime/artifacts/candidates/<TASK_ID>/` with
 `manifest.json`. Legacy candidate packages named
 `artifact_package_manifest.json` are accepted with a compatibility warning.
@@ -513,12 +525,12 @@ Profile agents must not write accepted
 artifacts directly. The orchestrator accepts the candidate into
 `project-runtime/artifacts/accepted/` using canonical `manifest.json`, records the acceptance receipt and
 `ARTIFACT_ACCEPTED` lifecycle event, and only then terminates the agent
-instance and marks audit routing ready. The first real-TZ bootstrap workflow
-therefore follows candidate creation -> artifact accept -> lifecycle event ->
-audit route. Context handed to later agents must cite accepted artifact
-packages or rendered views under `project-runtime/rendered/`; raw chat context,
-raw artifacts, rejected artifacts, and local runtime scratch files are not
-accepted context.
+instance and marks audit routing ready. Result-only outputs use governed
+RESULT acceptance evidence instead and do not require synthetic accepted
+artifact package records. Context handed to later agents must cite accepted
+artifact packages, accepted result evidence, or rendered views under
+`project-runtime/rendered/`; raw chat context, raw artifacts, rejected
+artifacts, and local runtime scratch files are not accepted context.
 `AUDIT_ROUTE_READY` is a readiness marker only and does not dispatch live
 agents or execute checkpoints.
 

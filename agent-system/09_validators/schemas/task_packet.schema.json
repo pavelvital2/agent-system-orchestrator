@@ -132,6 +132,8 @@
     "SETUP_HOOKS": { "$ref": "#/$defs/listOrNone" },
     "LAUNCH_HOOKS": { "$ref": "#/$defs/listOrNone" },
     "RESULT_PATH": { "type": "string" },
+    "RESULT_ACCEPTANCE_MODE": { "type": "string", "enum": ["result_only", "artifact_package"] },
+    "ARTIFACT_PACKAGE_REQUIRED": { "oneOf": [{ "type": "boolean" }, { "type": "string", "enum": ["true", "false"] }] },
     "RISK_REQUIREMENTS": { "$ref": "#/$defs/listOrNone" },
     "MANDATORY_WORKFLOW": { "$ref": "#/$defs/nonEmptyList" },
     "NEXT_ROLE_ON_PASS": { "$ref": "#/$defs/nextRole" },

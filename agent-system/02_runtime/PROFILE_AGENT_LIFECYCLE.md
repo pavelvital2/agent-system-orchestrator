@@ -72,7 +72,21 @@ profile-agent instance are:
 `agent_result_received` and `agent_instance_terminated` must record
 `reuse_allowed: false`.
 
-The mandatory completion ordering is:
+The mandatory completion ordering depends on result acceptance mode.
+
+Result-only outputs:
+
+```text
+RESULT_RECEIVED -> RESULT_VALIDATED -> RESULT_ACCEPTED -> AGENT_TERMINATED -> AUDIT_ROUTE_READY
+```
+
+Artifact-producing outputs:
+
+```text
+RESULT_RECEIVED -> ARTIFACT_PACKAGE_RECEIVED -> ARTIFACT_VALIDATED -> ARTIFACT_ACCEPTED -> AGENT_TERMINATED -> AUDIT_ROUTE_READY
+```
+
+The legacy compressed artifact sequence remains valid for compatibility:
 
 ```text
 RESULT_RECEIVED -> ARTIFACT_ACCEPTED -> AGENT_TERMINATED -> AUDIT_ROUTE_READY
@@ -82,6 +96,11 @@ RESULT_RECEIVED -> ARTIFACT_ACCEPTED -> AGENT_TERMINATED -> AUDIT_ROUTE_READY
 carry the accepted `artifact_id`, accepted artifact ref, and artifact
 acceptance receipt ref. `AUDIT_ROUTE_READY` is a readiness marker only; it does
 not dispatch an auditor or mutate checkpoint state.
+
+For `RESULT_ACCEPTANCE_MODE: result_only` with
+`ARTIFACT_PACKAGE_REQUIRED: false`, `RESULT_ACCEPTED` is governed result
+evidence and no synthetic P5 artifact package entry is required before
+termination or audit routing.
 
 ## Required RESULT fields
 
@@ -107,13 +126,15 @@ the dispatched task and must match the task named in `TASK`.
 
 ## Termination event
 
-After `RESULT_RECEIVED`, the profile-agent RESULT remains candidate artifact
-package output under `project-runtime/artifacts/candidates/`. The orchestrator
-must accept the governed candidate package into
+After `RESULT_RECEIVED`, an artifact-producing profile-agent RESULT remains
+candidate artifact package output under `project-runtime/artifacts/candidates/`.
+The orchestrator must accept the governed candidate package into
 `project-runtime/artifacts/accepted/`, record `ARTIFACT_ACCEPTED` with its
 receipt, and only then emit `agent_instance_terminated` for the same
-`AGENT_INSTANCE_ID`. The task can be treated as audit-route-ready only after
-the subsequent `AUDIT_ROUTE_READY` event.
+`AGENT_INSTANCE_ID`. A result-only RESULT is validated and accepted as RESULT
+evidence directly, then the orchestrator may emit `agent_instance_terminated`
+without synthetic accepted artifact package state. The task can be treated as
+audit-route-ready only after the subsequent `AUDIT_ROUTE_READY` event.
 
 Downstream context must cite accepted artifact packages or rendered views under
 `project-runtime/rendered/`. Raw agent context, candidate packages, raw

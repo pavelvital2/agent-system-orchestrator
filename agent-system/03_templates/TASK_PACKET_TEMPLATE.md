@@ -717,6 +717,29 @@ Rules:
 - RESULT_PATH must not contain secrets;
 - RESULT_PATH must be compatible with filesystem governance and runtime state.
 
+## RESULT_ACCEPTANCE_MODE
+
+```text
+result_only | artifact_package
+```
+
+Rules:
+- use `result_only` when the governed RESULT markdown is the task output and
+  no candidate artifact package is produced;
+- use `artifact_package` when the task produces a candidate artifact package
+  that must pass P5 validation and acceptance before audit routing.
+
+## ARTIFACT_PACKAGE_REQUIRED
+
+```text
+false | true
+```
+
+Rules:
+- `false` pairs with `RESULT_ACCEPTANCE_MODE: result_only`;
+- `true` pairs with `RESULT_ACCEPTANCE_MODE: artifact_package`;
+- artifact-producing outputs must not use `false`.
+
 ---
 
 ## RISK_REQUIREMENTS

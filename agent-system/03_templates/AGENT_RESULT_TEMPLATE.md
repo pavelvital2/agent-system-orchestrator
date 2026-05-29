@@ -18,6 +18,9 @@ ROLE:
 TASK:
 <TASK_ID or task title>
 
+RESULT_ACCEPTANCE_MODE: result_only | artifact_package
+ARTIFACT_PACKAGE_REQUIRED: false | true
+
 SUMMARY:
 <1-5 lines>
 
@@ -194,6 +197,12 @@ their paths in `CREATED_FILES` and cite them in `EVIDENCE` with the label
 and must not be consumed by downstream context packs until a governed
 acceptance step copies them to `project-runtime/artifacts/accepted/`. Rendered
 views intended for downstream context must live under `project-runtime/rendered/`.
+
+Set `RESULT_ACCEPTANCE_MODE: result_only` and `ARTIFACT_PACKAGE_REQUIRED:
+false` when the RESULT markdown is the governed output and no candidate
+artifact package is produced. Set `RESULT_ACCEPTANCE_MODE: artifact_package`
+and `ARTIFACT_PACKAGE_REQUIRED: true` when the task produces a candidate
+artifact package that must be accepted before audit routing.
 
 `REUSE_ALLOWED` must always be `false`.
 

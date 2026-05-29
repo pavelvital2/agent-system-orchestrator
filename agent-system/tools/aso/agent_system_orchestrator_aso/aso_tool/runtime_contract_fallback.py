@@ -29,6 +29,10 @@ ORCHESTRATOR_RUNTIME_CONTRACT_JSON = r"""{
     "CREATE_AGENT_RECOMMENDED",
     "CREATE_AGENT_DISPATCHED",
     "RESULT_RECEIVED",
+    "RESULT_VALIDATED",
+    "RESULT_ACCEPTED",
+    "ARTIFACT_PACKAGE_RECEIVED",
+    "ARTIFACT_VALIDATED",
     "ARTIFACT_ACCEPTED",
     "AGENT_TERMINATED",
     "AUDIT_ROUTE_READY",
@@ -45,6 +49,10 @@ ORCHESTRATOR_RUNTIME_CONTRACT_JSON = r"""{
   "event_aliases": {
     "agent_task_dispatched": "CREATE_AGENT_DISPATCHED",
     "agent_result_received": "RESULT_RECEIVED",
+    "result_validated": "RESULT_VALIDATED",
+    "result_accepted": "RESULT_ACCEPTED",
+    "artifact_package_received": "ARTIFACT_PACKAGE_RECEIVED",
+    "artifact_validated": "ARTIFACT_VALIDATED",
     "artifact_accepted": "ARTIFACT_ACCEPTED",
     "agent_instance_terminated": "AGENT_TERMINATED",
     "AGENT_TERMINATED": "AGENT_TERMINATED",
@@ -69,10 +77,24 @@ ORCHESTRATOR_RUNTIME_CONTRACT_JSON = r"""{
       "RESULT_RECEIVED": "RESULT_PENDING_ARTIFACT_ACCEPTANCE"
     },
     "RESULT_PENDING_ARTIFACT_ACCEPTANCE": {
+      "RESULT_VALIDATED": "RESULT_VALIDATED",
+      "ARTIFACT_PACKAGE_RECEIVED": "ARTIFACT_PACKAGE_RECEIVED",
+      "ARTIFACT_ACCEPTED": "RESULT_ACCEPTED"
+    },
+    "RESULT_VALIDATED": {
+      "RESULT_ACCEPTED": "RESULT_ACCEPTED",
+      "ARTIFACT_PACKAGE_RECEIVED": "ARTIFACT_PACKAGE_RECEIVED"
+    },
+    "ARTIFACT_PACKAGE_RECEIVED": {
+      "ARTIFACT_VALIDATED": "ARTIFACT_VALIDATED",
+      "ARTIFACT_ACCEPTED": "RESULT_ACCEPTED"
+    },
+    "ARTIFACT_VALIDATED": {
       "ARTIFACT_ACCEPTED": "RESULT_ACCEPTED"
     },
     "RESULT_ACCEPTED": {
-      "AGENT_TERMINATED": "AGENT_TERMINATED"
+      "AGENT_TERMINATED": "AGENT_TERMINATED",
+      "AUDIT_ROUTE_READY": "AUDIT_PENDING"
     },
     "AGENT_TERMINATED": {
       "AUDIT_ROUTE_READY": "AUDIT_PENDING"
@@ -106,6 +128,9 @@ ORCHESTRATOR_RUNTIME_CONTRACT_JSON = r"""{
       "from_states": [
         "AGENT_RUNNING",
         "RESULT_PENDING_ARTIFACT_ACCEPTANCE",
+        "RESULT_VALIDATED",
+        "ARTIFACT_PACKAGE_RECEIVED",
+        "ARTIFACT_VALIDATED",
         "RESULT_ACCEPTED",
         "AGENT_TERMINATED",
         "AUDIT_PENDING",
@@ -142,6 +167,24 @@ ORCHESTRATOR_RUNTIME_CONTRACT_JSON = r"""{
       "dispatchable": false
     },
     "RESULT_PENDING_ARTIFACT_ACCEPTANCE": {
+      "recommended_next_action": "ACCEPT_ARTIFACT",
+      "action_type": "update_state",
+      "target_role": "orchestrator",
+      "dispatchable": false
+    },
+    "RESULT_VALIDATED": {
+      "recommended_next_action": "ACCEPT_RESULT",
+      "action_type": "update_state",
+      "target_role": "orchestrator",
+      "dispatchable": false
+    },
+    "ARTIFACT_PACKAGE_RECEIVED": {
+      "recommended_next_action": "VALIDATE_ARTIFACT",
+      "action_type": "update_state",
+      "target_role": "orchestrator",
+      "dispatchable": false
+    },
+    "ARTIFACT_VALIDATED": {
       "recommended_next_action": "ACCEPT_ARTIFACT",
       "action_type": "update_state",
       "target_role": "orchestrator",

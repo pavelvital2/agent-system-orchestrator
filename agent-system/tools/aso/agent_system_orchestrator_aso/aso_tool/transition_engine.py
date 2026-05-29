@@ -21,6 +21,10 @@ NONE_VALUES = {"", "NONE", "none", "null", "UNKNOWN"}
 LIFECYCLE_EVENT_STATES = {
     "CREATE_AGENT_DISPATCHED": "AGENT_RUNNING",
     "RESULT_RECEIVED": "RESULT_PENDING_ARTIFACT_ACCEPTANCE",
+    "RESULT_VALIDATED": "RESULT_VALIDATED",
+    "RESULT_ACCEPTED": "RESULT_ACCEPTED",
+    "ARTIFACT_PACKAGE_RECEIVED": "ARTIFACT_PACKAGE_RECEIVED",
+    "ARTIFACT_VALIDATED": "ARTIFACT_VALIDATED",
     "ARTIFACT_ACCEPTED": "RESULT_ACCEPTED",
     "AGENT_TERMINATED": "AGENT_TERMINATED",
     "AUDIT_ROUTE_READY": "AUDIT_PENDING",
@@ -47,6 +51,9 @@ AUDITOR_BOOKKEEPING_EVENTS = {
 LIFECYCLE_PROGRESS_STATES = {
     "AGENT_RUNNING",
     "RESULT_PENDING_ARTIFACT_ACCEPTANCE",
+    "RESULT_VALIDATED",
+    "ARTIFACT_PACKAGE_RECEIVED",
+    "ARTIFACT_VALIDATED",
     "RESULT_ACCEPTED",
     "AGENT_TERMINATED",
     "AUDIT_PENDING",
@@ -1321,6 +1328,25 @@ def _event_status(event: Mapping[str, object]) -> str:
     return _text(event.get("status") or event.get("result_status") or event.get("audit_status")).lower()
 
 
+def _event_acceptance_mode(event: Mapping[str, object]) -> str:
+    mode = _text(event.get("result_acceptance_mode") or event.get("RESULT_ACCEPTANCE_MODE")).lower()
+    if mode in {"result_only", "artifact_package"}:
+        return mode
+    required = event.get("artifact_package_required")
+    if isinstance(required, bool):
+        return "artifact_package" if required else "result_only"
+    required_text = _text(required or event.get("ARTIFACT_PACKAGE_REQUIRED")).lower()
+    if required_text in {"true", "yes", "required"}:
+        return "artifact_package"
+    if required_text in {"false", "no", "not_required"}:
+        return "result_only"
+    return ""
+
+
+def _events_use_result_only_acceptance(events: Iterable[Mapping[str, object]]) -> bool:
+    return any(_event_acceptance_mode(event) == "result_only" for event in events)
+
+
 def _raw_event_type(event: Mapping[str, object]) -> str:
     return _text(event.get("event_type") or event.get("event") or event.get("type"))
 
@@ -1415,11 +1441,13 @@ def _lifecycle_sequence_findings(
 ) -> list[TransitionFinding]:
     profile_positions: dict[str, int] = {}
     auditor_positions: dict[str, int] = {}
+    profile_events: list[dict[str, Any]] = []
     for index, event in enumerate(events):
         event_name = _normalize_event(contract, event)
         if _is_auditor_event(event, event_name):
             auditor_positions.setdefault(event_name, index)
         else:
+            profile_events.append(event)
             profile_positions.setdefault(event_name, index)
 
     findings: list[TransitionFinding] = []
@@ -1433,6 +1461,27 @@ def _lifecycle_sequence_findings(
                 "Record RESULT_RECEIVED before ARTIFACT_ACCEPTED.",
             )
         )
+    if "RESULT_ACCEPTED" in profile_positions:
+        if "RESULT_RECEIVED" not in profile_positions:
+            findings.append(
+                _finding(
+                    "RUNTIME_LIFECYCLE_SEQUENCE_INVALID",
+                    "error",
+                    "RESULT_ACCEPTED exists without a prior RESULT_RECEIVED lifecycle event.",
+                    f"task_id={task_id or 'NONE'}",
+                    "Record RESULT_RECEIVED before RESULT_ACCEPTED.",
+                )
+            )
+        if "RESULT_VALIDATED" not in profile_positions:
+            findings.append(
+                _finding(
+                    "RUNTIME_LIFECYCLE_SEQUENCE_INVALID",
+                    "error",
+                    "RESULT_ACCEPTED exists without RESULT_VALIDATED.",
+                    f"task_id={task_id or 'NONE'}",
+                    "Record RESULT_VALIDATED before RESULT_ACCEPTED for result-only outputs.",
+                )
+            )
     if "AGENT_TERMINATED" in profile_positions:
         if "RESULT_RECEIVED" not in profile_positions:
             findings.append(
@@ -1444,7 +1493,19 @@ def _lifecycle_sequence_findings(
                     "Record RESULT_RECEIVED before AGENT_TERMINATED.",
                 )
             )
-        if "ARTIFACT_ACCEPTED" not in profile_positions:
+        result_only_acceptance = _events_use_result_only_acceptance(profile_events)
+        if result_only_acceptance:
+            if "RESULT_ACCEPTED" not in profile_positions:
+                findings.append(
+                    _finding(
+                        "RUNTIME_LIFECYCLE_SEQUENCE_INVALID",
+                        "error",
+                        "AGENT_TERMINATED exists without RESULT_ACCEPTED for a result-only output.",
+                        f"task_id={task_id or 'NONE'}",
+                        "Record RESULT_VALIDATED and RESULT_ACCEPTED before terminating a result-only agent.",
+                    )
+                )
+        elif "ARTIFACT_ACCEPTED" not in profile_positions:
             findings.append(
                 _finding(
                     "RUNTIME_LIFECYCLE_SEQUENCE_INVALID",
@@ -1580,6 +1641,9 @@ def _lifecycle_consistency_findings(
     task_status = _text(task.get("status"))
     if state in {
         "RESULT_PENDING_ARTIFACT_ACCEPTANCE",
+        "RESULT_VALIDATED",
+        "ARTIFACT_PACKAGE_RECEIVED",
+        "ARTIFACT_VALIDATED",
         "RESULT_ACCEPTED",
         "AGENT_TERMINATED",
         "AUDIT_PENDING",
@@ -1594,7 +1658,7 @@ def _lifecycle_consistency_findings(
                     "Update TASK_REGISTRY from lifecycle events or route using the transition engine derived state.",
                 )
             )
-        if state == "RESULT_PENDING_ARTIFACT_ACCEPTANCE" and not _truthy_refs(task.get("result_refs")):
+        if state in {"RESULT_PENDING_ARTIFACT_ACCEPTANCE", "RESULT_VALIDATED"} and not _truthy_refs(task.get("result_refs")):
             findings.append(
                 _finding(
                     "RUNTIME_LIFECYCLE_RESULT_REGISTRY_STALE",
@@ -1793,6 +1857,10 @@ def recommendation_from_next_action_content(next_action: Mapping[str, object]) -
     route_hint = f"{action_id} {instruction}"
     if "NO_NEXT_ACTION" in route_hint:
         return "NO_NEXT_ACTION"
+    if "ACCEPT_RESULT" in route_hint:
+        return "ACCEPT_RESULT"
+    if "VALIDATE_ARTIFACT" in route_hint:
+        return "VALIDATE_ARTIFACT"
     if "ACCEPT_ARTIFACT" in route_hint:
         return "ACCEPT_ARTIFACT"
     if "TERMINATE_AGENT" in route_hint:

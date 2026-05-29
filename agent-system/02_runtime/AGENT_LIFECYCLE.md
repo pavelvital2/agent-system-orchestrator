@@ -32,19 +32,29 @@ logical context deletion and environment-specific physical deletion.
 ## Завершение агента
 
 Агент считается lifecycle-complete только после того, как оркестратор получил
-RESULT, записал событие `agent_result_received`, принял связанный artifact
-package с receipt через `ARTIFACT_ACCEPTED`, затем записал
-`agent_instance_terminated` для того же `AGENT_INSTANCE_ID`, и после этого
-записал `AUDIT_ROUTE_READY`.
+RESULT, записал событие `agent_result_received`, выполнил governed acceptance
+по `RESULT_ACCEPTANCE_MODE`, затем записал `agent_instance_terminated` для
+того же `AGENT_INSTANCE_ID`, и после этого записал `AUDIT_ROUTE_READY`.
 
-Обязательный порядок:
+Обязательный порядок для result-only outputs:
 
 ```text
-RESULT_RECEIVED -> ARTIFACT_ACCEPTED -> AGENT_TERMINATED -> AUDIT_ROUTE_READY
+RESULT_RECEIVED -> RESULT_VALIDATED -> RESULT_ACCEPTED -> AGENT_TERMINATED -> AUDIT_ROUTE_READY
 ```
 
-Lifecycle events after RESULT receipt must reference the accepted
-`artifact_id`, accepted artifact ref, and artifact acceptance receipt ref.
+Обязательный порядок для artifact-producing outputs:
+
+```text
+RESULT_RECEIVED -> ARTIFACT_PACKAGE_RECEIVED -> ARTIFACT_VALIDATED -> ARTIFACT_ACCEPTED -> AGENT_TERMINATED -> AUDIT_ROUTE_READY
+```
+
+Legacy compressed artifact lifecycle may still record
+`RESULT_RECEIVED -> ARTIFACT_ACCEPTED -> AGENT_TERMINATED -> AUDIT_ROUTE_READY`.
+
+Artifact-producing lifecycle events after RESULT receipt must reference the
+accepted `artifact_id`, accepted artifact ref, and artifact acceptance receipt
+ref. Result-only lifecycle events must reference the governed RESULT receipt
+and must not create synthetic accepted artifact package records.
 `AUDIT_ROUTE_READY` records readiness only; it must not dispatch an auditor,
 execute a checkpoint, or run live daemon behavior.
 
@@ -56,8 +66,9 @@ execute a checkpoint, or run live daemon behavior.
 - для новой задачи создаётся новый агент.
 - RESULT должен быть сохранён или получить deterministic `RESULT_REF`;
 - handoff, если он использовался, должен быть помечен как consumed через `CONSUMED_BY_RESULT`.
-- переход к audit routing запрещён до accepted artifact receipt,
-  orchestrator-recorded termination event, and `AUDIT_ROUTE_READY`.
+- переход к audit routing запрещён до governed result acceptance or accepted
+  artifact receipt, orchestrator-recorded termination event, and
+  `AUDIT_ROUTE_READY`.
 
 ## Запреты
 

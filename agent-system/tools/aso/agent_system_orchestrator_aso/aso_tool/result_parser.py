@@ -11,6 +11,7 @@ from . import role_registry
 
 
 RESULT_STATUSES = {"pass", "fail", "blocked", "gap"}
+RESULT_ACCEPTANCE_MODES = {"result_only", "artifact_package"}
 PROFILE_ROLES = set(role_registry.dispatchable_roles()) - {"auditor"}
 LEGACY_LIFECYCLE_SYSTEM_ROLES = set(role_registry.legacy_lifecycle_system_roles())
 LEGACY_PROFILE_RESULT_ROLES = {
@@ -56,6 +57,8 @@ SCALAR_FIELDS = {
     "AGENT_INSTANCE_ID",
     "ROLE",
     "TASK",
+    "RESULT_ACCEPTANCE_MODE",
+    "ARTIFACT_PACKAGE_REQUIRED",
     "REUSE_ALLOWED",
     "AGENT_TERMINATION_REQUIRED",
 }
@@ -204,6 +207,109 @@ def bool_field(fields: Mapping[str, Any], key: str) -> bool | None:
     return None
 
 
+def flexible_bool_field(fields: Mapping[str, Any], key: str) -> bool | None:
+    value = as_string(fields, key).lower()
+    if value in {"true", "yes", "required"}:
+        return True
+    if value in {"false", "no", "not_required"}:
+        return False
+    return None
+
+
+def result_acceptance_metadata(fields: Mapping[str, Any], result_type: str) -> dict[str, object]:
+    mode = as_string(fields, "RESULT_ACCEPTANCE_MODE").lower()
+    required = flexible_bool_field(fields, "ARTIFACT_PACKAGE_REQUIRED")
+    default_required = result_type != "audit_result"
+    if mode == "result_only":
+        resolved_required = False if required is None else required
+        return {
+            "result_acceptance_mode": mode,
+            "artifact_package_required": resolved_required,
+            "metadata_explicit": True,
+        }
+    if mode == "artifact_package":
+        resolved_required = True if required is None else required
+        return {
+            "result_acceptance_mode": mode,
+            "artifact_package_required": resolved_required,
+            "metadata_explicit": True,
+        }
+    if required is not None:
+        return {
+            "result_acceptance_mode": "artifact_package" if required else "result_only",
+            "artifact_package_required": required,
+            "metadata_explicit": True,
+        }
+    return {
+        "result_acceptance_mode": "artifact_package" if default_required else "result_only",
+        "artifact_package_required": default_required,
+        "metadata_explicit": False,
+    }
+
+
+def result_acceptance_issues(fields: Mapping[str, Any], result_type: str) -> tuple[ResultParseIssue, ...]:
+    issues: list[ResultParseIssue] = []
+    mode = as_string(fields, "RESULT_ACCEPTANCE_MODE").lower()
+    required_text = as_string(fields, "ARTIFACT_PACKAGE_REQUIRED")
+    required = flexible_bool_field(fields, "ARTIFACT_PACKAGE_REQUIRED")
+    if mode and mode not in RESULT_ACCEPTANCE_MODES:
+        issues.append(
+            ResultParseIssue(
+                "invalid_result_acceptance_mode",
+                "RESULT_FORMAT_ACCEPTANCE_MODE",
+                "error",
+                "RESULT_ACCEPTANCE_MODE must be result_only or artifact_package.",
+                f"RESULT_ACCEPTANCE_MODE={mode}",
+                "RESULT_ACCEPTANCE_MODE",
+            )
+        )
+    if required_text and required is None:
+        issues.append(
+            ResultParseIssue(
+                "invalid_artifact_package_required",
+                "RESULT_FORMAT_ARTIFACT_PACKAGE_REQUIRED",
+                "error",
+                "ARTIFACT_PACKAGE_REQUIRED must be true or false.",
+                f"ARTIFACT_PACKAGE_REQUIRED={required_text}",
+                "ARTIFACT_PACKAGE_REQUIRED",
+            )
+        )
+    if mode == "result_only" and required is True:
+        issues.append(
+            ResultParseIssue(
+                "conflicting_result_acceptance_metadata",
+                "RESULT_FORMAT_ACCEPTANCE_METADATA_CONFLICT",
+                "error",
+                "RESULT_ACCEPTANCE_MODE=result_only conflicts with ARTIFACT_PACKAGE_REQUIRED=true.",
+                "RESULT_ACCEPTANCE_MODE=result_only; ARTIFACT_PACKAGE_REQUIRED=true",
+                "RESULT_ACCEPTANCE_MODE",
+            )
+        )
+    if mode == "artifact_package" and required is False:
+        issues.append(
+            ResultParseIssue(
+                "conflicting_result_acceptance_metadata",
+                "RESULT_FORMAT_ACCEPTANCE_METADATA_CONFLICT",
+                "error",
+                "RESULT_ACCEPTANCE_MODE=artifact_package conflicts with ARTIFACT_PACKAGE_REQUIRED=false.",
+                "RESULT_ACCEPTANCE_MODE=artifact_package; ARTIFACT_PACKAGE_REQUIRED=false",
+                "RESULT_ACCEPTANCE_MODE",
+            )
+        )
+    if result_type == "audit_result" and mode == "artifact_package" and required is not True:
+        issues.append(
+            ResultParseIssue(
+                "audit_artifact_package_required_missing",
+                "RESULT_FORMAT_ACCEPTANCE_METADATA_CONFLICT",
+                "error",
+                "AUDIT_RESULT artifact-package mode must explicitly set ARTIFACT_PACKAGE_REQUIRED=true.",
+                "RESULT_ACCEPTANCE_MODE=artifact_package",
+                "ARTIFACT_PACKAGE_REQUIRED",
+            )
+        )
+    return tuple(issues)
+
+
 def file_suggests_audit(path: Path, text: str) -> bool:
     first_heading = ""
     for line in text.splitlines():
@@ -230,6 +336,7 @@ def parse_result(text: str, *, path: Path | str | None = None, strict: bool = Fa
     issues = list(structural_issues)
     if strict:
         issues.extend(_strict_identity_issues(fields))
+        issues.extend(result_acceptance_issues(fields, result_type))
     audit = _audit_details(fields, result_type)
     return ParsedResult(
         path=path_text,
