@@ -52,7 +52,7 @@ class ArtifactManifestContractTests(unittest.TestCase):
         return code, stdout.getvalue(), stderr.getvalue()
 
     def _write_candidate(self, manifest_filename: str = "manifest.json") -> Path:
-        package_root = self.root / "project-runtime/artifacts/candidates/TASK_DEMO/PACKAGE"
+        package_root = self.root / "project-runtime/artifacts/candidates/TASK_DEMO"
         if package_root.exists():
             shutil.rmtree(package_root)
         package_root.mkdir(parents=True)
@@ -73,6 +73,7 @@ class ArtifactManifestContractTests(unittest.TestCase):
         self.assertIn("artifact_package_manifest.json", artifact_contracts["candidate_manifest_legacy_aliases"])
 
     def test_legacy_manifest_validates_with_compatibility_warning(self) -> None:
+        # Legacy coverage is limited to the pre-migration manifest filename alias.
         legacy_manifest = self._write_candidate("artifact_package_manifest.json")
 
         code, stdout, stderr = self._run(
@@ -98,6 +99,7 @@ class ArtifactManifestContractTests(unittest.TestCase):
         self.assertIn("manifest.json", report["findings"][0]["details"])
 
     def test_accepting_legacy_manifest_materializes_canonical_accepted_manifest(self) -> None:
+        # Legacy coverage is limited to the pre-migration manifest filename alias.
         legacy_manifest = self._write_candidate("artifact_package_manifest.json")
         out = self.tmpdir / "accept.json"
 
@@ -117,17 +119,18 @@ class ArtifactManifestContractTests(unittest.TestCase):
 
         self.assertEqual(code, 0, stderr)
         report = json.loads(out.read_text(encoding="utf-8"))
-        accepted_root = self.root / "project-runtime/artifacts/accepted/TASK_DEMO/PACKAGE"
+        accepted_root = self.root / "project-runtime/artifacts/accepted/TASK_DEMO"
         self.assertTrue((accepted_root / "manifest.json").is_file())
         self.assertFalse((accepted_root / "artifact_package_manifest.json").exists())
         self.assertEqual(json.loads((accepted_root / "manifest.json").read_text(encoding="utf-8")), self.manifest)
         self.assertEqual(report["status"], "written")
         self.assertEqual(report["summary"], {"errors": 0, "warnings": 1})
         self.assertEqual(report["actual_write_outcome"], "completed")
-        self.assertEqual(report["receipt"]["artifact_ref"], "project-runtime/artifacts/accepted/TASK_DEMO/PACKAGE/manifest.json")
-        self.assertEqual(report["event"]["artifact_ref"], "project-runtime/artifacts/accepted/TASK_DEMO/PACKAGE/manifest.json")
+        self.assertEqual(report["receipt"]["artifact_ref"], "project-runtime/artifacts/accepted/TASK_DEMO/manifest.json")
+        self.assertEqual(report["event"]["artifact_ref"], "project-runtime/artifacts/accepted/TASK_DEMO/manifest.json")
 
     def test_accepting_explicit_legacy_manifest_replaces_invalid_canonical_manifest(self) -> None:
+        # Legacy coverage is limited to the pre-migration manifest filename alias.
         legacy_manifest = self._write_candidate("artifact_package_manifest.json")
         invalid_canonical = dict(self.manifest)
         invalid_canonical["artifact_id"] = "invalid-canonical"
@@ -156,7 +159,7 @@ class ArtifactManifestContractTests(unittest.TestCase):
 
         self.assertEqual(code, 0, stderr)
         report = json.loads(out.read_text(encoding="utf-8"))
-        accepted_root = self.root / "project-runtime/artifacts/accepted/TASK_DEMO/PACKAGE"
+        accepted_root = self.root / "project-runtime/artifacts/accepted/TASK_DEMO"
         accepted_manifest = json.loads((accepted_root / "manifest.json").read_text(encoding="utf-8"))
         self.assertEqual(accepted_manifest, self.manifest)
         self.assertFalse((accepted_root / "artifact_package_manifest.json").exists())

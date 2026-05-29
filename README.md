@@ -233,6 +233,7 @@ python3 agent-system/tools/aso/aso.py lint --root /path/to/project --mode worksp
 python3 agent-system/tools/aso/aso.py doctor --root /path/to/project --mode workspace --strict
 python3 agent-system/tools/aso/aso.py lifecycle receive-result --root /path/to/project --from-result project-runtime/results/worker/RESULT_TASK_ID_ATTEMPT_001.md --confirm-write
 python3 agent-system/tools/aso/aso.py artifact accept --root /path/to/project --package project-runtime/artifacts/candidates/TASK_ID/manifest.json --confirm-write
+python3 agent-system/tools/aso/aso.py artifact reject --root /path/to/project --candidate project-runtime/artifacts/candidates/TASK_ID/manifest.json --reason invalid_manifest --confirm-write
 python3 agent-system/tools/aso/aso.py lifecycle terminate-agent --root /path/to/project --from-result project-runtime/results/worker/RESULT_TASK_ID_ATTEMPT_001.md --confirm-write
 ```
 

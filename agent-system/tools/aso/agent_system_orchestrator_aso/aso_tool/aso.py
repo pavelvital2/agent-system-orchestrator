@@ -777,10 +777,15 @@ def build_parser() -> argparse.ArgumentParser:
     artifact_accept_parser.add_argument(
         "--package",
         "--artifact",
+        "--candidate",
         dest="artifact",
         required=True,
-        metavar="project-runtime/artifacts/candidates/...",
-        help="Candidate artifact package directory or manifest JSON under project-runtime/artifacts/candidates.",
+        metavar="project-runtime/artifacts/candidates/<TASK_ID>/manifest.json",
+        help=(
+            "Candidate artifact package directory or canonical manifest.json under "
+            "project-runtime/artifacts/candidates; legacy artifact_package_manifest.json "
+            "input is accepted with a compatibility warning."
+        ),
     )
     artifact_accept_parser.add_argument(
         "--confirm-write",
@@ -814,10 +819,15 @@ def build_parser() -> argparse.ArgumentParser:
     artifact_reject_parser.add_argument(
         "--package",
         "--artifact",
+        "--candidate",
         dest="artifact",
         required=True,
-        metavar="project-runtime/artifacts/candidates/...",
-        help="Candidate artifact package directory or manifest JSON under project-runtime/artifacts/candidates.",
+        metavar="project-runtime/artifacts/candidates/<TASK_ID>/manifest.json",
+        help=(
+            "Candidate artifact package directory or canonical manifest.json under "
+            "project-runtime/artifacts/candidates; use --reason invalid_manifest "
+            "to reject a candidate whose manifest cannot validate."
+        ),
     )
     artifact_reject_parser.add_argument(
         "--confirm-write",

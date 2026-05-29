@@ -89,7 +89,6 @@ class LifecycleCommandTests(unittest.TestCase):
                 / "artifacts"
                 / "candidates"
                 / "TASK_DEMO_001"
-                / "PACKAGE"
                 / "RESULT_TASK_DEMO_001_ATTEMPT_001.md"
             )
             package_result_path.parent.mkdir(parents=True)
@@ -130,7 +129,7 @@ class LifecycleCommandTests(unittest.TestCase):
                 "artifact",
                 "accept",
                 "--package",
-                "project-runtime/artifacts/candidates/TASK_DEMO_001/PACKAGE",
+                "project-runtime/artifacts/candidates/TASK_DEMO_001/manifest.json",
                 "--confirm-write",
                 "--format",
                 "json",

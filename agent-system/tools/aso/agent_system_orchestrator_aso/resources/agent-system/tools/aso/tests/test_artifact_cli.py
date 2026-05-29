@@ -17,9 +17,10 @@ if str(ASO_DIR) not in sys.path:
 from agent_system_orchestrator_aso.aso_tool.aso import main  # noqa: E402
 
 
-LEGACY_MANIFEST_FILENAME = "manifest.json"
-LEGACY_CANDIDATE_PACKAGE = "project-runtime/artifacts/candidates/TASK_DEMO/PACKAGE"
-LEGACY_ACCEPTED_PACKAGE = "project-runtime/artifacts/accepted/TASK_DEMO/PACKAGE"
+CANONICAL_MANIFEST_FILENAME = "manifest.json"
+CANONICAL_CANDIDATE_PACKAGE = "project-runtime/artifacts/candidates/TASK_DEMO"
+CANONICAL_CANDIDATE_MANIFEST = f"{CANONICAL_CANDIDATE_PACKAGE}/{CANONICAL_MANIFEST_FILENAME}"
+CANONICAL_ACCEPTED_PACKAGE = "project-runtime/artifacts/accepted/TASK_DEMO"
 
 
 class ArtifactCliTests(unittest.TestCase):
@@ -57,9 +58,9 @@ class ArtifactCliTests(unittest.TestCase):
             code = main(argv)
         return code, stdout.getvalue(), stderr.getvalue()
 
-    def _write_candidate(self, relpath: str = "project-runtime/artifacts/candidates/TASK_DEMO/PACKAGE") -> Path:
+    def _write_candidate(self, relpath: str = CANONICAL_CANDIDATE_PACKAGE) -> Path:
         path = self.root / relpath
-        package_root = path.parent if path.name == LEGACY_MANIFEST_FILENAME else path
+        package_root = path.parent if path.name == CANONICAL_MANIFEST_FILENAME else path
         if package_root.exists():
             shutil.rmtree(package_root)
         package_root.mkdir(parents=True, exist_ok=True)
@@ -71,7 +72,7 @@ class ArtifactCliTests(unittest.TestCase):
             encoding="utf-8",
         )
         (package_root / "evidence").mkdir()
-        manifest_path = package_root / LEGACY_MANIFEST_FILENAME
+        manifest_path = package_root / CANONICAL_MANIFEST_FILENAME
         manifest_path.write_text(json.dumps(self.manifest, indent=2) + "\n", encoding="utf-8")
         return manifest_path
 
@@ -198,7 +199,7 @@ class ArtifactCliTests(unittest.TestCase):
                 self.assertIn(rule_id, {finding["rule_id"] for finding in report["findings"]})
 
     def test_artifact_validate_missing_manifest_is_blocked(self) -> None:
-        missing = self.root / f"project-runtime/artifacts/candidates/TASK_DEMO/{LEGACY_MANIFEST_FILENAME}"
+        missing = self.root / CANONICAL_CANDIDATE_MANIFEST
 
         report = self._validate_candidate(missing)
 
@@ -258,9 +259,9 @@ class ArtifactCliTests(unittest.TestCase):
         self.assertEqual(
             runtime_files,
             [
-                "artifacts/candidates/TASK_DEMO/PACKAGE/RESULT_TASK_DEMO_ATTEMPT_001.md",
-                f"artifacts/candidates/TASK_DEMO/PACKAGE/{LEGACY_MANIFEST_FILENAME}",
-                "artifacts/candidates/TASK_DEMO/PACKAGE/structured/result_package.json",
+                "artifacts/candidates/TASK_DEMO/RESULT_TASK_DEMO_ATTEMPT_001.md",
+                f"artifacts/candidates/TASK_DEMO/{CANONICAL_MANIFEST_FILENAME}",
+                "artifacts/candidates/TASK_DEMO/structured/result_package.json",
                 "reports/validation.json",
             ],
         )
@@ -299,7 +300,7 @@ class ArtifactCliTests(unittest.TestCase):
                 "--root",
                 str(self.root),
                 "--artifact",
-                "project-runtime/artifacts/candidates/TASK_DEMO/PACKAGE",
+                CANONICAL_CANDIDATE_MANIFEST,
                 "--format",
                 "json",
             ]
@@ -309,7 +310,7 @@ class ArtifactCliTests(unittest.TestCase):
         report = json.loads(stdout)
         self.assertEqual(report["status"], "blocked")
         self.assertTrue(report["dry_run"])
-        self.assertFalse((self.root / "project-runtime/artifacts/accepted/TASK_DEMO/PACKAGE").exists())
+        self.assertFalse((self.root / CANONICAL_ACCEPTED_PACKAGE).exists())
 
     def test_artifact_accept_confirm_write_copies_candidate_without_deleting_source(self) -> None:
         candidate = self._write_candidate()
@@ -322,7 +323,7 @@ class ArtifactCliTests(unittest.TestCase):
                 "--root",
                 str(self.root),
                 "--package",
-                f"{LEGACY_CANDIDATE_PACKAGE}/{LEGACY_MANIFEST_FILENAME}",
+                CANONICAL_CANDIDATE_MANIFEST,
                 "--confirm-write",
                 "--json-out",
                 str(out),
@@ -332,7 +333,7 @@ class ArtifactCliTests(unittest.TestCase):
         self.assertEqual(code, 0, stderr)
         self.assertIn("ASO artifact accept: WRITTEN", stdout)
         report = json.loads(out.read_text(encoding="utf-8"))
-        accepted = self.root / f"{LEGACY_ACCEPTED_PACKAGE}/{LEGACY_MANIFEST_FILENAME}"
+        accepted = self.root / f"{CANONICAL_ACCEPTED_PACKAGE}/{CANONICAL_MANIFEST_FILENAME}"
         self.assertEqual(report["status"], "written")
         self.assertTrue(candidate.exists())
         self.assertEqual(json.loads(accepted.read_text(encoding="utf-8")), self.manifest)
@@ -361,7 +362,7 @@ class ArtifactCliTests(unittest.TestCase):
                 "--root",
                 str(self.root),
                 "--package",
-                "project-runtime/artifacts/candidates/TASK_DEMO/PACKAGE",
+                CANONICAL_CANDIDATE_MANIFEST,
                 "--reason",
                 "audit failed",
                 "--confirm-write",
@@ -373,9 +374,9 @@ class ArtifactCliTests(unittest.TestCase):
         self.assertEqual(code, 0, stderr)
         self.assertIn("ASO artifact reject: WRITTEN", stdout)
         report = json.loads(out.read_text(encoding="utf-8"))
-        self.assertEqual(report["target"], "project-runtime/artifacts/rejected/TASK_DEMO/PACKAGE")
+        self.assertEqual(report["target"], "project-runtime/artifacts/rejected/TASK_DEMO")
         self.assertEqual(report["reason"], "audit failed")
-        self.assertTrue((self.root / "project-runtime/artifacts/rejected/TASK_DEMO/PACKAGE/manifest.json").exists())
+        self.assertTrue((self.root / "project-runtime/artifacts/rejected/TASK_DEMO/manifest.json").exists())
         self.assertTrue((self.root / report["rejection_report_ref"]).exists())
 
     def test_artifact_list_and_render_are_read_only(self) -> None:
@@ -404,7 +405,7 @@ class ArtifactCliTests(unittest.TestCase):
                 "--root",
                 str(self.root),
                 "--package",
-                "project-runtime/artifacts/candidates/TASK_DEMO/PACKAGE",
+                CANONICAL_CANDIDATE_MANIFEST,
                 "--format",
                 "markdown",
                 "--out",
@@ -414,12 +415,12 @@ class ArtifactCliTests(unittest.TestCase):
 
         self.assertEqual(code, 0, stderr)
         self.assertIn("ASO artifact render written:", stdout)
-        self.assertIn("project-runtime/artifacts/candidates/TASK_DEMO/PACKAGE", out.read_text(encoding="utf-8"))
+        self.assertIn(CANONICAL_CANDIDATE_PACKAGE, out.read_text(encoding="utf-8"))
 
     def test_artifact_list_spec_form_filters_state(self) -> None:
         self._write_candidate()
-        accepted = self.root / "project-runtime/artifacts/accepted/TASK_DEMO/PACKAGE"
-        shutil.copytree(self.root / "project-runtime/artifacts/candidates/TASK_DEMO/PACKAGE", accepted)
+        accepted = self.root / CANONICAL_ACCEPTED_PACKAGE
+        shutil.copytree(self.root / CANONICAL_CANDIDATE_PACKAGE, accepted)
 
         code, stdout, stderr = self._run(
             [
@@ -433,8 +434,8 @@ class ArtifactCliTests(unittest.TestCase):
         )
 
         self.assertEqual(code, 0, stderr)
-        self.assertIn(f"{LEGACY_CANDIDATE_PACKAGE}/{LEGACY_MANIFEST_FILENAME}", stdout)
-        self.assertNotIn(f"{LEGACY_ACCEPTED_PACKAGE}/{LEGACY_MANIFEST_FILENAME}", stdout)
+        self.assertIn(CANONICAL_CANDIDATE_MANIFEST, stdout)
+        self.assertNotIn(f"{CANONICAL_ACCEPTED_PACKAGE}/{CANONICAL_MANIFEST_FILENAME}", stdout)
 
 
 if __name__ == "__main__":

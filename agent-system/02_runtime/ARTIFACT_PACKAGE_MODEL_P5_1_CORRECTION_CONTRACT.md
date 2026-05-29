@@ -19,10 +19,16 @@ changes package path semantics and accept/reject behavior only.
 - Bootstrap task packets use the canonical `# TASK PACKET` marker with
   `TASK_KIND: bootstrap`.
 - Artifact package manifests are stored in self-contained package directories.
+- Candidate packages use canonical `manifest.json`; legacy
+  `artifact_package_manifest.json` is an input-only compatibility alias with an
+  explicit warning.
 - Manifest file references are package-relative and must not escape the package
   root.
 - Artifact accept/reject classifies the whole package directory, not only
   `manifest.json`.
+- Accepted packages materialize canonical `manifest.json` only. Rejection with
+  reason `invalid_manifest` may write a rejection receipt even when manifest
+  validation fails.
 - Receipts record package inventory and content hashes.
 - Active P5 governance changelog entries must be accepted or explicitly
   superseded by accepted P5.1 entries.

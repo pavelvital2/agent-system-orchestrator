@@ -370,7 +370,9 @@ For `solution_architect`:
 - list changed files or NONE;
 - provide scope and forbidden-change verification.
 - cite dispatch receipt project-runtime/agents/dispatches/<AGENT_INSTANCE_ID>.json;
-- cite candidate artifact package manifest when an artifact package is created.
+- cite canonical candidate artifact package manifest at
+  project-runtime/artifacts/candidates/<TASK_ID>/manifest.json when an artifact
+  package is created.
 ```
 
 ## EXPECTED_ARTIFACT_PACKAGE

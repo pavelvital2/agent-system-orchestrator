@@ -1821,16 +1821,16 @@
       "size": 8551
     },
     "agent-system/tools/aso/tests/test_artifact.py": {
-      "sha256": "41112765b86f00b411dd138ff24978c3e1e8ec29a71f95941a1678be14691ef0",
-      "size": 5350
+      "sha256": "e0131601190eef4eb8c4f7ae2c7f50100de81558766c0e01fea1f8f3d6d558ce",
+      "size": 5346
     },
     "agent-system/tools/aso/tests/test_artifact_cli.py": {
-      "sha256": "11273b85b6c5a74bcaa6b716b979e8fa150e8012f8cbdd6fe08e2e787aa47384",
-      "size": 16774
+      "sha256": "0a48a0fd39783ec83569afdc59b8df7ac93f0dad060009506750552567e72a30",
+      "size": 16511
     },
     "agent-system/tools/aso/tests/test_artifact_manifest_contract.py": {
-      "sha256": "37a9aca46ed43890abe5e5a29f9f0301da7706cccdb80dff27774aa7e03020db",
-      "size": 7874
+      "sha256": "fe3764af662188848c4346895909c908acdeda6edcc7bee0837bb6ec89bc488e",
+      "size": 8083
     },
     "agent-system/tools/aso/tests/test_artifact_package_schemas.py": {
       "sha256": "7c237c613fedd67526c576721e0bc569045a042ab3d92c5da06b5813aabd2457",
@@ -1913,8 +1913,8 @@
       "size": 12827
     },
     "agent-system/tools/aso/tests/test_lifecycle.py": {
-      "sha256": "4170f315363b1a5c18870a7c1d34edaccbaff2cb9eb67ac7d652c36edc56bd34",
-      "size": 7965
+      "sha256": "f0cc87195fb436cbb3ba3f1ea788e734b5210f2351daf38b31e5216849e8a4b1",
+      "size": 7943
     },
     "agent-system/tools/aso/tests/test_lifecycle_state_reconciliation.py": {
       "sha256": "785bc2c93d98812db91f16d12557ddb17964e8785e08115a8f368ebe0b67f023",
@@ -1981,8 +1981,8 @@
       "size": 9765
     },
     "agent-system/tools/aso/tests/test_real_e2e_lifecycle_regression.py": {
-      "sha256": "39e4c3f464a660fb80613ff95c8739408731050bfdd3c12e1fff307333aacfaf",
-      "size": 15972
+      "sha256": "d30f4dab335988c3518734c8f1faccae9f39d92bbda171b60f1b03f2ac63ed77",
+      "size": 15956
     },
     "agent-system/tools/aso/tests/test_real_tz_e2e_smoke.py": {
       "sha256": "fd511ff79d4cc5a803c12ddba42ec68b4f56122375980c66f0c300b8ddbec745",

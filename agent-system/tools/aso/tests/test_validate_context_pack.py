@@ -11,8 +11,8 @@ from pathlib import Path
 CLI = Path(__file__).resolve().parents[1] / "aso.py"
 REPO_ROOT = Path(__file__).resolve().parents[4]
 FIXTURE_ROOT = REPO_ROOT / "agent-system" / "tests" / "fixtures" / "context_pack"
-LEGACY_MANIFEST_FILENAME = "manifest.json"
-LEGACY_CANDIDATE_MANIFEST = f"project-runtime/artifacts/candidates/TASK_DEMO/{LEGACY_MANIFEST_FILENAME}"
+CANONICAL_MANIFEST_FILENAME = "manifest.json"
+CANONICAL_CANDIDATE_MANIFEST = f"project-runtime/artifacts/candidates/TASK_DEMO/{CANONICAL_MANIFEST_FILENAME}"
 
 
 NEGATIVE_FIXTURES = {
@@ -167,7 +167,7 @@ class ValidateContextPackCommandTests(unittest.TestCase):
     def test_candidate_packages_are_not_consumable_runtime_context(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp) / "workspace"
-            candidate = root / LEGACY_CANDIDATE_MANIFEST
+            candidate = root / CANONICAL_CANDIDATE_MANIFEST
             candidate.parent.mkdir(parents=True)
             candidate.write_text('{"status":"candidate"}\n', encoding="utf-8")
             context_pack = Path(tmp) / "candidate-context.json"
@@ -177,14 +177,14 @@ class ValidateContextPackCommandTests(unittest.TestCase):
                         "task_id": "TASK_DEMO",
                         "required_docs": [
                             {
-                                "path": LEGACY_CANDIDATE_MANIFEST,
+                                "path": CANONICAL_CANDIDATE_MANIFEST,
                                 "sections": ["Candidate package"],
                                 "why_needed": "Candidate package should not be consumable.",
                             }
                         ],
                         "forbidden_docs": ["project-runtime/"],
-                        "source_of_truth": [LEGACY_CANDIDATE_MANIFEST],
-                        "accepted_artifact_packages": [LEGACY_CANDIDATE_MANIFEST],
+                        "source_of_truth": [CANONICAL_CANDIDATE_MANIFEST],
+                        "accepted_artifact_packages": [CANONICAL_CANDIDATE_MANIFEST],
                         "context_budget": {
                             "max_docs": 1,
                             "max_sections_per_doc": 1,

@@ -22,7 +22,7 @@ class ArtifactCommandContractTests(unittest.TestCase):
         self.tmpdir = Path(tempfile.mkdtemp(prefix="aso-artifact-contract-"))
         self.root = self.tmpdir / "workspace"
         self.root.mkdir()
-        self.package_root = self.root / "project-runtime/artifacts/candidates/TASK_DEMO/PACKAGE"
+        self.package_root = self.root / "project-runtime/artifacts/candidates/TASK_DEMO"
         self.manifest = {
             "artifact_package_schema_version": "1.1.0",
             "artifact_type": "RESULT",
@@ -95,7 +95,7 @@ class ArtifactCommandContractTests(unittest.TestCase):
                 "--root",
                 str(self.root),
                 "--package",
-                "project-runtime/artifacts/candidates/TASK_DEMO/PACKAGE",
+                "project-runtime/artifacts/candidates/TASK_DEMO/manifest.json",
                 "--format",
                 "json",
             ]
@@ -120,7 +120,7 @@ class ArtifactCommandContractTests(unittest.TestCase):
                 "--root",
                 str(self.root),
                 "--package",
-                "project-runtime/artifacts/candidates/TASK_DEMO/PACKAGE",
+                "project-runtime/artifacts/candidates/TASK_DEMO/manifest.json",
                 "--confirm-write",
                 "--format",
                 "json",
@@ -135,7 +135,7 @@ class ArtifactCommandContractTests(unittest.TestCase):
         self.assertEqual(report["actual_write_outcome"], "completed")
         self.assertIsNone(report["blocked_reason"])
         self.assertTrue(report["mutations_performed"])
-        self.assertTrue((self.root / "project-runtime/artifacts/accepted/TASK_DEMO/PACKAGE/manifest.json").is_file())
+        self.assertTrue((self.root / "project-runtime/artifacts/accepted/TASK_DEMO/manifest.json").is_file())
 
 
 if __name__ == "__main__":

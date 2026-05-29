@@ -24,6 +24,7 @@ SCHEMA_RELPATH = "agent-system/09_validators/schemas/artifact_package_manifest.s
 CANONICAL_MANIFEST_FILENAME = "manifest.json"
 LEGACY_MANIFEST_FILENAMES = ("artifact_package_manifest.json",)
 SUPPORTED_MANIFEST_FILENAMES = (CANONICAL_MANIFEST_FILENAME, *LEGACY_MANIFEST_FILENAMES)
+INVALID_MANIFEST_REJECTION_REASON = "invalid_manifest"
 ARTIFACT_ID_RE = re.compile(r"^[A-Z][A-Z0-9_:-]+$")
 PACKAGE_FORBIDDEN_ROOTS = (".git", ".github", ".venv", "agent-system", "project-input", "project-runtime", "project-archive")
 REQUIRED_MANIFEST_FIELDS = (
@@ -139,6 +140,10 @@ def _is_error_finding(finding: object) -> bool:
 def _finding_counts(findings: list[dict[str, str]]) -> dict[str, int]:
     errors = sum(1 for finding in findings if _is_error_finding(finding))
     return {"errors": errors, "warnings": len(findings) - errors}
+
+
+def _is_invalid_manifest_rejection(target_bucket: str, reason: str | None) -> bool:
+    return target_bucket == "rejected" and (reason or "").strip() == INVALID_MANIFEST_REJECTION_REASON
 
 
 def _blocked_reason(findings: list[dict[str, str]], extra_reasons: list[str] | None = None) -> str | None:
@@ -578,36 +583,59 @@ def _classification_plan(
 ) -> tuple[dict[str, object], Path | None, Path | None, dict[str, Any] | None]:
     source_path, source_relpath, manifest_path, error = _resolve_workspace_package(root, source_text, "candidates")
     findings: list[dict[str, str]] = []
+    blocking_findings: list[dict[str, str]] = []
     target_path: Path | None = None
     source_abs: Path | None = source_path
     selected_manifest: dict[str, Any] | None = None
+    invalid_manifest_rejection = _is_invalid_manifest_rejection(target_bucket, reason)
     if error is not None or source_path is None or source_relpath is None:
-        findings.append(_finding("ARTIFACT_CLASSIFY_PATH_001", "Candidate artifact path is invalid", error or "invalid artifact path", source_text))
+        finding = _finding("ARTIFACT_CLASSIFY_PATH_001", "Candidate artifact path is invalid", error or "invalid artifact path", source_text)
+        findings.append(finding)
+        blocking_findings.append(finding)
     else:
         target_relpath, target_error = _target_for_classification(source_relpath, target_bucket)
         if target_error is not None or target_relpath is None:
-            findings.append(_finding("ARTIFACT_CLASSIFY_TRANSITION_001", "Artifact transition is not allowed", target_error or "invalid transition", source_relpath))
+            finding = _finding("ARTIFACT_CLASSIFY_TRANSITION_001", "Artifact transition is not allowed", target_error or "invalid transition", source_relpath)
+            findings.append(finding)
+            blocking_findings.append(finding)
         else:
             target_path = root / target_relpath
         if not source_path.is_dir():
-            findings.append(_finding("ARTIFACT_CLASSIFY_READ_001", "Candidate package does not exist", "Candidate package directory must exist before classification.", source_relpath))
+            finding = _finding("ARTIFACT_CLASSIFY_READ_001", "Candidate package does not exist", "Candidate package directory must exist before classification.", source_relpath)
+            findings.append(finding)
+            blocking_findings.append(finding)
         elif manifest_path is None or not manifest_path.is_file():
-            findings.append(_finding("ARTIFACT_CLASSIFY_READ_002", "Candidate package manifest is missing", "Candidate package must contain manifest.json.", source_relpath))
+            finding = _finding("ARTIFACT_CLASSIFY_READ_002", "Candidate package manifest is missing", "Candidate package must contain manifest.json.", source_relpath)
+            findings.append(finding)
+            if not invalid_manifest_rejection:
+                blocking_findings.append(finding)
         else:
             selected_manifest, manifest_findings = _validate_manifest_selection(root, source_path, manifest_path)
             findings.extend(manifest_findings)
+            if not invalid_manifest_rejection:
+                blocking_findings.extend(manifest_findings)
         if target_path is not None and target_path.exists():
-            findings.append(_finding("ARTIFACT_CLASSIFY_IMMUTABLE_001", "Target artifact already exists", "Artifact buckets are immutable; refusing overwrite.", target_path.relative_to(root).as_posix()))
+            finding = _finding("ARTIFACT_CLASSIFY_IMMUTABLE_001", "Target artifact already exists", "Artifact buckets are immutable; refusing overwrite.", target_path.relative_to(root).as_posix())
+            findings.append(finding)
+            blocking_findings.append(finding)
 
     blocked_without_confirm = not confirmed
     counts = _finding_counts(findings)
+    blocking_counts = _finding_counts(blocking_findings)
     blocked_reasons = ["--confirm-write is required for artifact classification writes"] if blocked_without_confirm else []
-    status = "blocked" if counts["errors"] or blocked_without_confirm else "ready"
+    status = "blocked" if blocking_counts["errors"] or blocked_without_confirm else "ready"
     actual_read_outcome = (
         "completed"
-        if source_path is not None and source_path.is_dir() and manifest_path is not None and manifest_path.is_file()
+        if source_path is not None
+        and source_path.is_dir()
+        and (invalid_manifest_rejection or (manifest_path is not None and manifest_path.is_file()))
         else "blocked"
     )
+    summary = {"errors": counts["errors"] + (1 if blocked_without_confirm else 0), "warnings": counts["warnings"]}
+    nonblocking_manifest_errors = max(0, counts["errors"] - blocking_counts["errors"])
+    if nonblocking_manifest_errors:
+        summary["nonblocking_manifest_errors"] = nonblocking_manifest_errors
+        summary["blocking_errors"] = blocking_counts["errors"] + (1 if blocked_without_confirm else 0)
     report = {
         "tool": "aso",
         "command": f"artifact {target_bucket[:-2] if target_bucket == 'accepted' else 'reject'}",
@@ -620,14 +648,15 @@ def _classification_plan(
         "requested_write_mode": "confirmed_write" if confirmed else "dry_run",
         "read_only": not confirmed,
         "mutations_performed": False,
-        "blocked_reason": _blocked_reason(findings, blocked_reasons),
+        "blocked_reason": _blocked_reason(blocking_findings, blocked_reasons),
         "actual_read_outcome": actual_read_outcome,
         "actual_write_outcome": "not_requested" if not confirmed else ("blocked" if status == "blocked" else "pending"),
         "reason": reason.strip() if isinstance(reason, str) and reason.strip() else None,
         "blocked_reasons": blocked_reasons,
+        "invalid_manifest_rejection": invalid_manifest_rejection,
         "validators_run": ["candidate_package_path_guard", "storage_transition_guard", "immutability_guard", "manifest_validation", "package_inventory_hash"],
         "findings": findings,
-        "summary": {"errors": counts["errors"] + (1 if blocked_without_confirm else 0), "warnings": counts["warnings"]},
+        "summary": summary,
     }
     return report, source_abs, target_path, selected_manifest
 

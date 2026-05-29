@@ -19,7 +19,7 @@ AGENT_INSTANCE_ID = f"agent_{TASK_ID}_attempt_001"
 AUDIT_AGENT_INSTANCE_ID = f"auditor_{TASK_ID}_attempt_001"
 RESULT_REF = f"project-runtime/results/worker/RESULT_{TASK_ID}_ATTEMPT_001.md"
 AUDIT_RESULT_REF = f"project-runtime/results/audit/AUDIT_RESULT_{TASK_ID}_ATTEMPT_001.md"
-PACKAGE_REF = f"project-runtime/artifacts/candidates/{TASK_ID}/PACKAGE"
+PACKAGE_REF = f"project-runtime/artifacts/candidates/{TASK_ID}"
 MANIFEST_REF = f"{PACKAGE_REF}/manifest.json"
 
 
@@ -150,7 +150,7 @@ Synthetic failed audit for correction routing regression.
 READ_DOCS:
 - agent-system/02_runtime/ORCHESTRATOR_RUNTIME_CONTRACT.json
 READ_INPUTS:
-- project-runtime/artifacts/accepted/{TASK_ID}/PACKAGE/manifest.json
+- project-runtime/artifacts/accepted/{TASK_ID}/manifest.json
 CHANGED_FILES:
 - NONE
 CREATED_FILES:

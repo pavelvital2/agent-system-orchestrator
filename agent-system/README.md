@@ -525,7 +525,10 @@ Profile agents must not write accepted
 artifacts directly. The orchestrator accepts the candidate into
 `project-runtime/artifacts/accepted/` using canonical `manifest.json`, records the acceptance receipt and
 `ARTIFACT_ACCEPTED` lifecycle event, and only then terminates the agent
-instance and marks audit routing ready. Result-only outputs use governed
+instance and marks audit routing ready. Rejection with
+`--reason invalid_manifest` records a rejection receipt even when the candidate
+manifest cannot validate, while preserving the invalid package under
+`project-runtime/artifacts/rejected/`. Result-only outputs use governed
 RESULT acceptance evidence instead and do not require synthetic accepted
 artifact package records. Context handed to later agents must cite accepted
 artifact packages, accepted result evidence, or rendered views under
