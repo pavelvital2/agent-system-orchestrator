@@ -11,6 +11,7 @@ from datetime import datetime
 from pathlib import Path
 from typing import Iterable
 
+from .. import result_parser
 from . import mode_guard, package_checks, repair_hints, state_verify
 
 
@@ -1031,8 +1032,12 @@ def _check_result_and_audit_references(root: Path, files: dict[str, RuntimeFile]
         relpath = _rel(root, path)
         if "/results/audit/" in f"/{relpath}" or "/audits/" in f"/{relpath}":
             continue
-        fields = _read_fields(path)
-        task_id = fields.get("TASK_ID", "")
+        try:
+            parsed = result_parser.parse_result_file(path, strict=False)
+            task_id = parsed.task_id
+        except (OSError, UnicodeError):
+            fields = _read_fields(path)
+            task_id = fields.get("TASK_ID", "")
         if _is_none(task_id):
             findings.append(
                 Finding(
@@ -1058,9 +1063,14 @@ def _check_result_and_audit_references(root: Path, files: dict[str, RuntimeFile]
 
     for path in _audit_result_files(root):
         relpath = _rel(root, path)
-        fields = _read_fields(path)
-        task_id = fields.get("TASK_ID", "")
-        result_refs = _field_or_label_refs(path, fields, AUDIT_RESULT_REF_FIELDS)
+        try:
+            parsed = result_parser.parse_result_file(path, strict=False)
+            task_id = parsed.task_id
+            result_refs = list(parsed.audit.source_result_refs or parsed.references.source_result_refs)
+        except (OSError, UnicodeError):
+            fields = _read_fields(path)
+            task_id = fields.get("TASK_ID", "")
+            result_refs = _field_or_label_refs(path, fields, AUDIT_RESULT_REF_FIELDS)
 
         if _is_none(task_id):
             findings.append(

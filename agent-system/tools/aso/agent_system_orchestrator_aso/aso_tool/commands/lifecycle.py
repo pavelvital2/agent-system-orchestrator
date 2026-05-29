@@ -32,16 +32,6 @@ def _read_text(path: Path) -> tuple[str, str | None]:
         return "", str(exc)
 
 
-def _parse_fields(text: str) -> dict[str, str]:
-    parsed = result_parser.parse_result(text)
-    fields: dict[str, str] = {}
-    for key in parsed.fields:
-        value = result_parser.as_string(parsed.fields, key)
-        if value:
-            fields[key] = value
-    return fields
-
-
 def _rel(root: Path, path: Path) -> str:
     try:
         return path.resolve(strict=False).relative_to(root.resolve(strict=False)).as_posix()

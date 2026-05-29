@@ -119,6 +119,71 @@ AGENT_TERMINATION_REQUIRED: true
 """
 
 
+AUDIT_PASS_WITH_REFERENCES = """AUDIT_RESULT:
+STATUS:
+PASS
+
+TASK_ID:
+TASK_DEMO_001
+
+AGENT_INSTANCE_ID:
+audit_TASK_DEMO_001_attempt_001
+
+ROLE:
+Auditor
+
+TASK:
+TASK_DEMO_001
+
+SOURCE_RESULT_REF:
+project-runtime/results/worker/RESULT_TASK_DEMO_001_ATTEMPT_001.md
+
+SUMMARY:
+Audit passed with reference evidence.
+READ_DOCS:
+- NONE
+READ_INPUTS:
+- NONE
+CHANGED_FILES:
+- NONE
+CREATED_FILES:
+- NONE
+DELETED_FILES:
+- NONE
+COMMANDS_RUN:
+- NONE
+TESTS_RUN:
+- NONE
+EVIDENCE:
+- CANDIDATE_ARTIFACT_PACKAGE: project-runtime/artifacts/candidates/TASK_DEMO_001/manifest.json
+- ACCEPTED_RESULT_PACKAGE_REF: project-runtime/artifacts/accepted/RESULT_PACKAGE_TASK_DEMO_001_ATTEMPT_001.json
+- CORRECTION_TASK_REF: project-runtime/tasks/active/TASK_CORRECTION_TASK_DEMO_001.md
+- FINAL_RUN_RECEIPT_REF: project-runtime/receipts/lifecycle/PROJECT_FINALIZATION_RECEIPT.json
+- DISPATCH_RECEIPT_REF: project-runtime/agents/dispatches/audit_TASK_DEMO_001_attempt_001.json
+- SOURCE_BOUNDARY_STATUS: passed
+SCOPE_VERIFICATION:
+- TASK_PACKET_SCHEMA_STATUS: passed
+FORBIDDEN_CHANGES_CHECK:
+- FORBIDDEN_PATH_STATUS: passed
+FINDINGS:
+- NONE
+FAILED_CHECKS:
+- NONE
+RISKS:
+- NONE
+LIMITATIONS:
+- NONE
+BLOCKERS:
+- NONE
+GAPS:
+- NONE
+NEXT_RECOMMENDED_ACTION:
+- CHECKPOINT_PREFLIGHT
+REUSE_ALLOWED: false
+AGENT_TERMINATION_REQUIRED: true
+"""
+
+
 class ResultParserTests(unittest.TestCase):
     def test_strict_parser_accepts_template_scalar_values_on_next_line(self) -> None:
         parsed = result_parser.parse_result(canonical_result(), strict=True)
@@ -142,6 +207,85 @@ class ResultParserTests(unittest.TestCase):
             ["project-runtime/results/worker/RESULT_TASK_DEMO_001_ATTEMPT_001.md"],
         )
         self.assertIn("TASK_DEMO_001", parsed.audit.source_task_refs)
+
+    def test_parser_normalizes_legacy_aliases_and_scalar_values(self) -> None:
+        legacy = (
+            canonical_result("PASS")
+            .replace("STATUS:\nPASS", "RESULT_STATUS: PASS")
+            .replace("ROLE:\ndeveloper", "ROLE: Developer")
+            .replace("NEXT_RECOMMENDED_ACTION:", "NEXT_REQUIRED_ACTION:")
+        )
+
+        parsed = result_parser.parse_result(legacy, strict=True)
+
+        self.assertFalse(parsed.has_error, [issue.to_json() for issue in parsed.issues])
+        self.assertEqual(parsed.fields["STATUS"], "pass")
+        self.assertEqual(parsed.status, "pass")
+        self.assertEqual(parsed.role, "developer")
+        self.assertIn("NEXT_RECOMMENDED_ACTION", parsed.fields)
+
+    def test_parser_extracts_audit_reference_buckets_from_fields_and_evidence(self) -> None:
+        parsed = result_parser.parse_result(AUDIT_PASS_WITH_REFERENCES, strict=True)
+
+        self.assertFalse(parsed.has_error, [issue.to_json() for issue in parsed.issues])
+        self.assertEqual(parsed.result_type, "audit_result")
+        self.assertEqual(parsed.status, "pass")
+        self.assertEqual(parsed.role, "auditor")
+        self.assertEqual(
+            list(parsed.references.source_result_refs),
+            ["project-runtime/results/worker/RESULT_TASK_DEMO_001_ATTEMPT_001.md"],
+        )
+        self.assertIn(
+            "project-runtime/artifacts/accepted/RESULT_PACKAGE_TASK_DEMO_001_ATTEMPT_001.json",
+            parsed.references.artifact_package_refs,
+        )
+        self.assertIn(
+            "project-runtime/tasks/active/TASK_CORRECTION_TASK_DEMO_001.md",
+            parsed.references.correction_refs,
+        )
+        self.assertEqual(
+            list(parsed.references.final_run_receipt_refs),
+            ["project-runtime/receipts/lifecycle/PROJECT_FINALIZATION_RECEIPT.json"],
+        )
+        self.assertEqual(
+            list(parsed.references.dispatch_receipt_refs),
+            ["project-runtime/agents/dispatches/audit_TASK_DEMO_001_attempt_001.json"],
+        )
+        self.assertEqual(list(parsed.references.source_boundary_evidence), ["SOURCE_BOUNDARY_STATUS: passed"])
+        self.assertEqual(parsed.audit.to_json()["artifact_package_refs"], list(parsed.references.artifact_package_refs))
+
+    def test_result_only_mode_normalizes_acceptance_metadata(self) -> None:
+        text = canonical_result().replace(
+            "SUMMARY:\nDone.",
+            "\n".join(
+                [
+                    "RESULT_ACCEPTANCE_MODE: result_only",
+                    "ARTIFACT_PACKAGE_REQUIRED: false",
+                    "SUMMARY:",
+                    "Done.",
+                ]
+            ),
+        )
+
+        parsed = result_parser.parse_result(text, strict=True)
+        metadata = result_parser.result_acceptance_metadata(parsed.fields, parsed.result_type)
+
+        self.assertFalse(parsed.has_error, [issue.to_json() for issue in parsed.issues])
+        self.assertEqual(metadata["result_acceptance_mode"], "result_only")
+        self.assertFalse(metadata["artifact_package_required"])
+
+    def test_terminal_final_audit_receipt_reference_is_normalized(self) -> None:
+        text = AUDIT_PASS_WITH_REFERENCES.replace("TASK_DEMO_001", "TASK_FINAL_AUDIT_DEMO_001")
+
+        parsed = result_parser.parse_result(text, strict=True)
+
+        self.assertFalse(parsed.has_error, [issue.to_json() for issue in parsed.issues])
+        self.assertEqual(parsed.result_type, "audit_result")
+        self.assertEqual(parsed.status, "pass")
+        self.assertEqual(
+            list(parsed.references.final_run_receipt_refs),
+            ["project-runtime/receipts/lifecycle/PROJECT_FINALIZATION_RECEIPT.json"],
+        )
 
     def test_inspect_audit_references_classifies_non_utf8_ref_as_invalid(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:

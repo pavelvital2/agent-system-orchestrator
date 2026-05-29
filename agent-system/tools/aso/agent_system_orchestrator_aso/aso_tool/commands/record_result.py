@@ -118,10 +118,6 @@ def _read_result(path: Path) -> tuple[str, list[Rule]]:
         ]
 
 
-def _parse_result_fields(text: str) -> dict[str, Any]:
-    return dict(result_parser.parse_result(text).fields)
-
-
 def _as_string(fields: dict[str, Any], key: str) -> str:
     return result_parser.as_string(fields, key)
 
@@ -132,16 +128,6 @@ def _as_list(fields: dict[str, Any], key: str) -> list[str]:
 
 def _bool_field(fields: dict[str, Any], key: str) -> bool | None:
     return result_parser.bool_field(fields, key)
-
-
-def _file_suggests_audit(path: Path, text: str) -> bool:
-    return result_parser.file_suggests_audit(path, text)
-
-
-def _result_type(path: Path, text: str, role: str) -> str:
-    if role == "auditor" or _file_suggests_audit(path, text):
-        return "audit_result"
-    return "profile_result"
 
 
 def _source_result_refs(fields: dict[str, Any]) -> list[str]:
@@ -503,7 +489,7 @@ def _validate_common(
             )
         )
 
-    if _file_suggests_audit(path, text) and role and role != "auditor":
+    if result_parser.file_suggests_audit(path, text) and role and role != "auditor":
         errors.append(
             Rule(
                 "RESULT_FORMAT_008",

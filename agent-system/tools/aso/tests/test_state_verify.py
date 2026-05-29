@@ -195,6 +195,62 @@ def fixture_task(
     }
 
 
+CANONICAL_MULTILINE_AUDIT_PASS = """AUDIT_RESULT:
+STATUS:
+PASS
+
+TASK_ID:
+TASK_FIXTURE_STATE_001
+
+AGENT_INSTANCE_ID:
+audit_TASK_FIXTURE_STATE_001_attempt_001
+
+ROLE:
+Auditor
+
+TASK:
+TASK_FIXTURE_STATE_001
+
+SOURCE_RESULT_REF:
+project-runtime/results/worker/RESULT_TASK_FIXTURE_STATE_001_ATTEMPT_001.md
+
+SUMMARY:
+Audit passed.
+READ_DOCS:
+- NONE
+READ_INPUTS:
+- NONE
+CHANGED_FILES:
+- NONE
+CREATED_FILES:
+- NONE
+DELETED_FILES:
+- NONE
+COMMANDS_RUN:
+- NONE
+TESTS_RUN:
+- NONE
+EVIDENCE:
+- SOURCE_BOUNDARY_STATUS: passed
+SCOPE_VERIFICATION:
+- TASK_PACKET_SCHEMA_STATUS: passed
+FORBIDDEN_CHANGES_CHECK:
+- FORBIDDEN_PATH_STATUS: passed
+RISKS:
+- NONE
+LIMITATIONS:
+- NONE
+BLOCKERS:
+- NONE
+GAPS:
+- NONE
+NEXT_RECOMMENDED_ACTION:
+- CHECKPOINT_PREFLIGHT
+REUSE_ALLOWED: false
+AGENT_TERMINATION_REQUIRED: true
+"""
+
+
 class StateVerifyCommandTests(unittest.TestCase):
     def test_state_cli_help_declares_runtime_state_commands(self) -> None:
         result = subprocess.run(
@@ -674,6 +730,49 @@ class StateVerifyCommandTests(unittest.TestCase):
                     for finding in findings
                 ),
                 findings,
+            )
+
+    def test_checkpoint_audit_evidence_uses_normalized_parser_output_from_current_gate(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = copy_valid_workspace_with_valid_tz(tmp)
+            audit_ref = "project-runtime/results/audit/AUDIT_RESULT_TASK_FIXTURE_STATE_001_ATTEMPT_001.md"
+            audit_path = root / audit_ref
+            audit_path.parent.mkdir(parents=True)
+            audit_path.write_text(CANONICAL_MULTILINE_AUDIT_PASS, encoding="utf-8")
+
+            next_action = load_sidecar(root, "NEXT_ACTION.json")
+            next_content = next_action["content"]
+            self.assertIsInstance(next_content, dict)
+            next_content["checkpoint_policy"] = "commit_and_push"
+            next_content["checkpoint_preflight_required"] = True
+            next_content["checkpoint_receipt_required"] = True
+            next_content["checkpoint_receipt_ref"] = "project-runtime/checkpoints/CHECKPOINT_ELIGIBILITY_TASK_FIXTURE_STATE_001_1.md"
+            write_sidecar(root, "NEXT_ACTION.json", next_action)
+
+            gate = load_sidecar(root, "CURRENT_GATE.json")
+            gate_content = gate["content"]
+            self.assertIsInstance(gate_content, dict)
+            gate_content["gate_evidence"] = [audit_ref]
+            write_sidecar(root, "CURRENT_GATE.json", gate)
+
+            task_payload = load_sidecar(root, "TASK_REGISTRY.json")
+            task_content = task_payload["content"]
+            self.assertIsInstance(task_content, dict)
+            tasks = task_content["tasks"]
+            self.assertIsInstance(tasks, list)
+            self.assertIsInstance(tasks[0], dict)
+            tasks[0]["status"] = "audit_passed"
+            tasks[0]["audit_refs"] = []
+            write_sidecar(root, "TASK_REGISTRY.json", task_payload)
+            json_out = Path(tmp) / "state-verify.json"
+
+            result = run_state_verify(root, "--strict", "--json-out", str(json_out))
+
+            self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+            report = json.loads(json_out.read_text(encoding="utf-8"))
+            self.assertFalse(
+                any(finding["rule_id"].startswith("SIDECAR_CHECKPOINT") for finding in report["findings"]),
+                report["findings"],
             )
 
     def test_active_open_bootstrap_with_terminal_stop_fails(self) -> None:

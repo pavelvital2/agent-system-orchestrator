@@ -1330,11 +1330,10 @@ def _checkpoint_findings(root: Path, sidecars: dict[str, dict[str, object]]) -> 
         return []
 
     status = task.get("status")
-    audit_refs = _truthy_ref_values(task.get("audit_refs"))
-    audit_inspection = result_parser.inspect_audit_references(root, audit_refs, task_id=task_id, strict=True)
-    invalid_refs = audit_inspection["invalid_refs"]
-    unparsed_refs = audit_inspection["unparsed_refs"]
-    passed_refs = audit_inspection["passed_refs"]
+    audit_evidence = transition_engine.audit_pass_evidence_from_sidecars(root, sidecars, task_id=task_id)
+    invalid_refs = audit_evidence["invalid_audit_results"]
+    unparsed_refs = audit_evidence["unparsed_audit_refs"]
+    passed_refs = audit_evidence["passed_audit_refs"]
     if invalid_refs or unparsed_refs:
         return [
             _finding(
@@ -1362,7 +1361,11 @@ def _checkpoint_findings(root: Path, sidecars: dict[str, dict[str, object]]) -> 
             (
                 "NEXT_ACTION requests a checkpoint-capable policy, "
                 f"but TASK_REGISTRY task {task_id} has no parsed passing AUDIT_RESULT evidence. "
-                f"status={status or 'NONE'}; audit_refs={audit_refs}"
+                f"status={status or 'NONE'}; "
+                f"task_audit_refs={audit_evidence['task_audit_refs']}; "
+                f"accepted_artifact_audit_refs={audit_evidence['accepted_artifact_audit_refs']}; "
+                f"current_gate_audit_evidence_refs={audit_evidence['current_gate_audit_evidence_refs']}; "
+                f"lifecycle_audit_pass_refs={audit_evidence['lifecycle_audit_pass_refs']}"
             ),
             "project-runtime/state/NEXT_ACTION.json",
             "content.checkpoint_policy",

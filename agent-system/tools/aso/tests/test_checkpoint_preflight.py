@@ -122,6 +122,62 @@ AGENT_TERMINATION_REQUIRED: true
 """
 
 
+AUDIT_PASS_MULTILINE_NORMALIZED_RESULT = """AUDIT_RESULT:
+STATUS:
+PASS
+
+TASK_ID:
+TASK_FIXTURE_STATE_001
+
+AGENT_INSTANCE_ID:
+audit_TASK_FIXTURE_STATE_001_attempt_001
+
+ROLE:
+Auditor
+
+TASK:
+TASK_FIXTURE_STATE_001
+
+SOURCE_RESULT_REF:
+project-runtime/results/worker/RESULT_TASK_FIXTURE_STATE_001_ATTEMPT_001.md
+
+SUMMARY:
+Audit passed.
+READ_DOCS:
+- NONE
+READ_INPUTS:
+- NONE
+CHANGED_FILES:
+- NONE
+CREATED_FILES:
+- NONE
+DELETED_FILES:
+- NONE
+COMMANDS_RUN:
+- NONE
+TESTS_RUN:
+- NONE
+EVIDENCE:
+- SOURCE_BOUNDARY_STATUS: passed
+SCOPE_VERIFICATION:
+- TASK_PACKET_SCHEMA_STATUS: passed
+FORBIDDEN_CHANGES_CHECK:
+- FORBIDDEN_PATH_STATUS: passed
+RISKS:
+- NONE
+LIMITATIONS:
+- NONE
+BLOCKERS:
+- NONE
+GAPS:
+- NONE
+NEXT_RECOMMENDED_ACTION:
+- CHECKPOINT_PREFLIGHT
+REUSE_ALLOWED: false
+AGENT_TERMINATION_REQUIRED: true
+"""
+
+
 def run_preflight(root: Path, *extra: str) -> subprocess.CompletedProcess[str]:
     return subprocess.run(
         [sys.executable, str(CLI), "checkpoint-preflight", "--root", str(root), *extra],
@@ -425,6 +481,43 @@ class CheckpointPreflightCommandTests(unittest.TestCase):
             self.assertTrue(evidence["present"])
             self.assertEqual(evidence["passed_audit_refs"], [audit_ref])
             self.assertEqual(evidence["unparsed_audit_refs"], [])
+
+    def test_workspace_preflight_uses_normalized_parser_output_from_current_gate_evidence(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = copy_valid_workspace(tmp)
+            audit_ref = "project-runtime/results/audit/AUDIT_RESULT_TASK_FIXTURE_STATE_001_ATTEMPT_001.md"
+            audit_path = root / audit_ref
+            audit_path.parent.mkdir(parents=True)
+            audit_path.write_text(AUDIT_PASS_MULTILINE_NORMALIZED_RESULT, encoding="utf-8")
+            set_next_action(
+                root,
+                action_type="update_state",
+                action_semantic="normal",
+                checkpoint_policy="local_only",
+                checkpoint_preflight_required=True,
+                checkpoint_receipt_required=True,
+            )
+            set_project_state(root, checkpoint_eligibility="local_only", checkpoint_eligibility_status="eligible")
+            set_current_gate(
+                root,
+                action_semantic="normal",
+                checkpoint_eligibility="local_only",
+                checkpoint_eligibility_status="eligible",
+                gate_evidence=[audit_ref],
+            )
+            set_task(root, status="audit_passed", audit_refs=[])
+            json_out = Path(tmp) / "checkpoint-preflight.json"
+
+            result = run_preflight(root, "--mode", "workspace", "--strict", "--json-out", str(json_out))
+
+            self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+            report = json.loads(json_out.read_text(encoding="utf-8"))
+            evidence = report["evidence"]["audit_pass_evidence"]
+            self.assertTrue(evidence["present"])
+            self.assertEqual(evidence["task_audit_refs"], [])
+            self.assertEqual(evidence["current_gate_audit_evidence_refs"], [audit_ref])
+            self.assertEqual(evidence["passed_audit_refs"], [audit_ref])
+            self.assertEqual(evidence["parsed_audit_results"][0]["status"], "pass")
 
     def test_workspace_preflight_blocks_missing_audit_result_ref(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
