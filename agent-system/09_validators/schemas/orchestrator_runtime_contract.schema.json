@@ -68,8 +68,27 @@
     "allowed_events": {
       "type": "array",
       "items": {
-        "type": "string",
-        "minLength": 1
+        "enum": [
+          "CREATE_AGENT_RECOMMENDED",
+          "CREATE_AGENT_DISPATCHED",
+          "RESULT_RECEIVED",
+          "RESULT_VALIDATED",
+          "RESULT_ACCEPTED",
+          "ARTIFACT_PACKAGE_RECEIVED",
+          "ARTIFACT_VALIDATED",
+          "ARTIFACT_ACCEPTED",
+          "AGENT_TERMINATED",
+          "AUDIT_ROUTE_READY",
+          "AUDIT_RESULT_RECEIVED_PASS",
+          "AUDIT_RESULT_RECEIVED_FAIL",
+          "CORRECTION_REQUIRED",
+          "CHECKPOINT_ELIGIBLE",
+          "CHECKPOINT_PREFLIGHT_PASS",
+          "CHECKPOINT_COMMITTED_OR_ARCHIVED",
+          "FINALIZE",
+          "PROJECT_COMPLETED",
+          "NO_NEXT_ACTION"
+        ]
       },
       "minItems": 1,
       "uniqueItems": true
@@ -160,23 +179,46 @@
     },
     "required_docs_by_role": {
       "type": "object",
+      "required": [
+        "requirements_analyst",
+        "solution_architect",
+        "developer",
+        "tester",
+        "auditor",
+        "technical_writer"
+      ],
+      "properties": {
+        "requirements_analyst": { "$ref": "#/$defs/docTokenArray" },
+        "solution_architect": { "$ref": "#/$defs/docTokenArray" },
+        "developer": { "$ref": "#/$defs/docTokenArray" },
+        "tester": { "$ref": "#/$defs/docTokenArray" },
+        "auditor": { "$ref": "#/$defs/docTokenArray" },
+        "technical_writer": { "$ref": "#/$defs/docTokenArray" }
+      },
       "additionalProperties": {
-        "type": "array",
-        "items": {
-          "type": "string",
-          "minLength": 1
-        }
+        "$ref": "#/$defs/docTokenArray"
       }
     },
     "reasoning_floor_by_role": {
       "type": "object",
+      "required": [
+        "requirements_analyst",
+        "solution_architect",
+        "developer",
+        "tester",
+        "auditor",
+        "technical_writer"
+      ],
+      "properties": {
+        "requirements_analyst": { "$ref": "#/$defs/reasoningFloor" },
+        "solution_architect": { "$ref": "#/$defs/reasoningFloor" },
+        "developer": { "$ref": "#/$defs/reasoningFloor" },
+        "tester": { "$ref": "#/$defs/reasoningFloor" },
+        "auditor": { "$ref": "#/$defs/reasoningFloor" },
+        "technical_writer": { "$ref": "#/$defs/reasoningFloor" }
+      },
       "additionalProperties": {
-        "enum": [
-          "medium",
-          "high",
-          "xhigh",
-          "maximum"
-        ]
+        "$ref": "#/$defs/reasoningFloor"
       }
     },
     "dispatch_receipt_contract": {
@@ -291,7 +333,7 @@
       "properties": {
         "candidate_manifest_canonical": {
           "type": "string",
-          "minLength": 1
+          "const": "manifest.json"
         },
         "candidate_manifest_legacy_aliases": {
           "type": "array",
@@ -301,7 +343,7 @@
         },
         "accepted_manifest_canonical": {
           "type": "string",
-          "minLength": 1
+          "const": "manifest.json"
         }
       },
       "additionalProperties": true
@@ -313,6 +355,11 @@
         "audit_fail_routes_correction",
         "audit_fail_blocks_checkpoint"
       ],
+      "properties": {
+        "audit_pass_allows_checkpoint": { "const": true },
+        "audit_fail_routes_correction": { "const": true },
+        "audit_fail_blocks_checkpoint": { "const": true }
+      },
       "additionalProperties": {
         "type": "boolean"
       }
@@ -324,6 +371,11 @@
         "requires_no_open_lifecycle_blockers",
         "requires_state_consistency"
       ],
+      "properties": {
+        "requires_audit_pass": { "const": true },
+        "requires_no_open_lifecycle_blockers": { "const": true },
+        "requires_state_consistency": { "const": true }
+      },
       "additionalProperties": {
         "type": "boolean"
       }
@@ -333,7 +385,9 @@
       "required": [
         "orchestrator_must_read",
         "orchestrator_must_not_read_routinely",
-        "reference_docs_allowed_only_for"
+        "reference_docs_allowed_only_for",
+        "context_budget",
+        "stdout_policy"
       ],
       "properties": {
         "orchestrator_must_read": {
@@ -351,7 +405,57 @@
         "reference_docs_allowed_only_for": {
           "type": "array",
           "items": {
-            "type": "string"
+            "enum": [
+              "bootstrap",
+              "debug",
+              "violation_recovery",
+              "specific_validator_reference"
+            ]
+          },
+          "minItems": 1,
+          "uniqueItems": true
+        },
+        "context_budget": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "max_routine_files",
+            "max_lines_per_file",
+            "routine_reference_docs_allowed"
+          ],
+          "properties": {
+            "max_routine_files": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 12
+            },
+            "max_lines_per_file": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 300
+            },
+            "routine_reference_docs_allowed": { "const": false }
+          }
+        },
+        "stdout_policy": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "default",
+            "full_report_requires",
+            "full_diff_or_report_in_stdout_by_default"
+          ],
+          "properties": {
+            "default": { "const": "summary_only" },
+            "full_report_requires": {
+              "type": "array",
+              "items": {
+                "enum": ["--json-out", "--format json"]
+              },
+              "minItems": 1,
+              "uniqueItems": true
+            },
+            "full_diff_or_report_in_stdout_by_default": { "const": false }
           }
         }
       },
@@ -366,6 +470,7 @@
         "routine_handoff_includes",
         "routine_handoff_excludes",
         "reference_doc_inclusion_rule",
+        "role_doc_access_policy",
         "target_role_doc_map"
       ],
       "properties": {
@@ -413,6 +518,10 @@
           "uniqueItems": true
         },
         "reference_doc_inclusion_rule": {
+          "type": "string",
+          "minLength": 1
+        },
+        "role_doc_access_policy": {
           "type": "string",
           "minLength": 1
         },
@@ -512,6 +621,23 @@
     }
   },
   "$defs": {
+    "docTokenArray": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 1
+      },
+      "minItems": 1,
+      "uniqueItems": true
+    },
+    "reasoningFloor": {
+      "enum": [
+        "medium",
+        "high",
+        "xhigh",
+        "maximum"
+      ]
+    },
     "nextAction": {
       "type": "object",
       "required": [

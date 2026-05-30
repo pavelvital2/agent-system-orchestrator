@@ -58,7 +58,7 @@ class OrchestratorConveyorTests(unittest.TestCase):
         self.assertTrue(report["read_only"])
         self.assertFalse(report["mutations_performed"])
         self.assertEqual(report["summary"]["current_phase"], "implementation")
-        self.assertIn("agent-system/02_runtime/ORCHESTRATOR_CONVEYOR_PROTOCOL.md", report["context_budget"]["normal_flow_docs"])
+        self.assertIn("agent-system/02_runtime/ORCHESTRATOR_RUNTIME_CONTRACT.json", report["context_budget"]["normal_flow_docs"])
 
     def test_orchestrator_next_can_write_guarded_report(self) -> None:
         out = self.root / "project-runtime" / "reports" / "next.json"

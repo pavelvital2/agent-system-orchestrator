@@ -53,18 +53,12 @@ EVENT: <event ref | NONE>
 RESULT_OR_AUDIT_RESULT: <result ref | NONE>
 ARTIFACT_MANIFEST_OR_RECEIPT: <artifact or receipt ref | NONE>
 
-TASK_PACKET_TEMPLATE:
-- agent-system/03_templates/TASK_PACKET_TEMPLATE.md
-
-UNIVERSAL_ROLE_INSTRUCTIONS:
-- <specific target-role doc path only>
-
 REQUIRED_DOCS:
-- <path>
-- <path>
+- agent-system/02_runtime/ORCHESTRATOR_RUNTIME_CONTRACT.json
+- <current task packet>
 
 REFERENCE_DOCS:
-- <debug/explain/recovery reference path | NONE>
+- <debug/recovery/specific-validator reference path | NONE>
 REFERENCE_REASON:
 <explicit reason, validator-required reason, or NONE>
 
@@ -101,10 +95,12 @@ MANDATORY_RULES:
   invalid.
 - Do not use unaudited research as accepted input; requester return requires independent audit pass.
 - Routine context must not include the full governance corpus, all role docs,
-  all templates, full changelog, release notes, or all validator docs.
-- Reference docs are allowed only when CONTEXT_MODE is `debug`, `explain`, or
-  `violation_recovery` and REFERENCE_REASON records an explicit request or
-  validator-required reason.
+  all templates, full changelog, release reports, or validator docs.
+- Routine context carries role/result contract summaries and required-doc
+  tokens instead of embedding role docs or full templates.
+- Reference docs are allowed only for bootstrap, `debug`,
+  `violation_recovery`, or a specific validator reference with recorded
+  authorization.
 
 EXPECTED_RESULT_FORMAT:
 Use:

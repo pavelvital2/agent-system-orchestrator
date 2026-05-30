@@ -36,6 +36,7 @@ from .commands import (
     record_result,
     state_init,
     state_migrate,
+    state_reconcile,
     state_render,
     state_verify,
     status,
@@ -98,7 +99,7 @@ class _StoreExplicitBranch(argparse.Action):
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog="aso",
-        description="Read-only Agent System Orchestrator control-plane helper.",
+        description="Filesystem-governed ASO control-plane CLI with read-only diagnostics and explicit confirmed writes.",
     )
     parser.set_defaults(handler=None)
 
@@ -372,7 +373,8 @@ def build_parser() -> argparse.ArgumentParser:
         help="Create the first bounded requirements_analyst bootstrap task.",
         description=(
             "Validate a workspace-local TZ document and, with --confirm-write, create "
-            "exactly one bootstrap task packet plus dispatch-capable runtime state."
+            "exactly one bootstrap task packet under project-runtime/tasks plus "
+            "dispatch-capable runtime state under project-runtime/state."
         ),
     )
     _add_root_argument(intake_bootstrap_parser, validate=False)
@@ -391,7 +393,7 @@ def build_parser() -> argparse.ArgumentParser:
     intake_bootstrap_parser.add_argument(
         "--confirm-write",
         action="store_true",
-        help="Explicitly allow bootstrap task and runtime state writes.",
+        help="Explicitly allow writes under project-runtime/tasks and project-runtime/state.",
     )
     intake_bootstrap_parser.add_argument(
         "--deterministic-timestamps",
@@ -645,7 +647,8 @@ def build_parser() -> argparse.ArgumentParser:
             "Validate a P3 proposal against the current workspace and emit a read-only "
             "apply plan. --dry-run writes no runtime sidecars or state. --confirm-apply "
             "re-runs guards immediately before applying supported safe operations and "
-            "writing a project-runtime receipt."
+            "writing only under project-runtime/state, project-runtime/reports, and "
+            "project-runtime/receipts."
         ),
     )
     _add_root_argument(apply_parser, validate=False)
@@ -764,17 +767,25 @@ def build_parser() -> argparse.ArgumentParser:
         help="Copy a candidate artifact into the accepted bucket.",
         description=(
             "Classify an existing candidate artifact as accepted by append-only copy. "
-            "Without --confirm-write the command returns a blocked dry-run plan."
+            "Without --confirm-write the command returns a blocked dry-run plan. "
+            "Confirmed writes are limited to project-runtime/artifacts/accepted, "
+            "project-runtime/receipts/artifacts, and "
+            "project-runtime/agents/instances.jsonl."
         ),
     )
     _add_root_argument(artifact_accept_parser, validate=False)
     artifact_accept_parser.add_argument(
         "--package",
         "--artifact",
+        "--candidate",
         dest="artifact",
         required=True,
-        metavar="project-runtime/artifacts/candidates/...",
-        help="Candidate artifact package directory or manifest JSON under project-runtime/artifacts/candidates.",
+        metavar="project-runtime/artifacts/candidates/<TASK_ID>/manifest.json",
+        help=(
+            "Candidate artifact package directory or canonical manifest.json under "
+            "project-runtime/artifacts/candidates; legacy artifact_package_manifest.json "
+            "input is accepted with a compatibility warning."
+        ),
     )
     artifact_accept_parser.add_argument(
         "--confirm-write",
@@ -799,17 +810,24 @@ def build_parser() -> argparse.ArgumentParser:
         help="Copy a candidate artifact into the rejected bucket.",
         description=(
             "Classify an existing candidate artifact as rejected by append-only copy. "
-            "Without --confirm-write the command returns a blocked dry-run plan."
+            "Without --confirm-write the command returns a blocked dry-run plan. "
+            "Confirmed writes are limited to project-runtime/artifacts/rejected "
+            "and project-runtime/receipts/artifacts."
         ),
     )
     _add_root_argument(artifact_reject_parser, validate=False)
     artifact_reject_parser.add_argument(
         "--package",
         "--artifact",
+        "--candidate",
         dest="artifact",
         required=True,
-        metavar="project-runtime/artifacts/candidates/...",
-        help="Candidate artifact package directory or manifest JSON under project-runtime/artifacts/candidates.",
+        metavar="project-runtime/artifacts/candidates/<TASK_ID>/manifest.json",
+        help=(
+            "Candidate artifact package directory or canonical manifest.json under "
+            "project-runtime/artifacts/candidates; use --reason invalid_manifest "
+            "to reject a candidate whose manifest cannot validate."
+        ),
     )
     artifact_reject_parser.add_argument(
         "--confirm-write",
@@ -864,8 +882,7 @@ def build_parser() -> argparse.ArgumentParser:
         help="Render a deterministic artifact storage report.",
         description=(
             "Render a read-only artifact storage report to stdout. Writing with --out "
-            "is limited to project-runtime/reports, "
-            "project-runtime/rendered, or /tmp."
+            "is limited to project-runtime/reports, project-runtime/rendered, or /tmp."
         ),
     )
     _add_root_argument(artifact_render_parser, validate=False)
@@ -939,9 +956,9 @@ def build_parser() -> argparse.ArgumentParser:
         description=(
             "Read-only context minimization report for orchestrator handoff inputs. "
             "Routine mode emits runtime contract sections, current state refs, current "
-            "task/result/artifact refs, and target-role-specific docs. Debug, explain, "
-            "or violation-recovery reference docs require an explicit reason or "
-            "--validator-required."
+            "task/result/artifact refs, and target-role summaries. Debug and "
+            "violation-recovery reference docs require --reference-reason; "
+            "--validator-required is limited to specific validator files."
         ),
     )
     _add_root_argument(orchestrator_context_parser, validate=False)
@@ -963,13 +980,13 @@ def build_parser() -> argparse.ArgumentParser:
         action="append",
         default=[],
         metavar="PATH",
-        help="Debug/explain/recovery reference doc to include with explicit authorization.",
+        help="Reference doc path; requires debug/violation_recovery with a reason or validator-required specific validator file.",
     )
     orchestrator_context_parser.add_argument("--reference-reason", metavar="TEXT")
     orchestrator_context_parser.add_argument(
         "--validator-required",
         action="store_true",
-        help="Mark reference docs as required by a validator.",
+        help="Authorize only specific agent-system/09_validators/... file refs required by a validator.",
     )
     orchestrator_context_parser.set_defaults(handler=orchestrator.run_context)
 
@@ -1018,7 +1035,8 @@ def build_parser() -> argparse.ArgumentParser:
         help="Record a RESULT_RECEIVED event for a completed agent RESULT.",
         description=(
             "Validate a RESULT artifact and append a RESULT_RECEIVED lifecycle event "
-            "to project-runtime/agents/instances.jsonl. Writes require --confirm-write."
+            "to project-runtime/agents/instances.jsonl, then materialize derived "
+            "project-runtime views. Writes require --confirm-write."
         ),
     )
     _add_root_argument(receive_result_parser, validate=False)
@@ -1041,8 +1059,9 @@ def build_parser() -> argparse.ArgumentParser:
         description=(
             "Validate a RESULT artifact, require RESULT_RECEIVED and profile artifact "
             "acceptance where applicable, then append termination lifecycle evidence to "
-            "project-runtime/agents/instances.jsonl. Failed AUDIT_RESULT termination "
-            "routes correction and does not emit AUDIT_ROUTE_READY. Writes require --confirm-write."
+            "project-runtime/agents/instances.jsonl and materialize derived "
+            "project-runtime views. Failed AUDIT_RESULT termination routes correction "
+            "and does not emit AUDIT_ROUTE_READY. Writes require --confirm-write."
         ),
     )
     _add_root_argument(terminate_agent_parser, validate=False)
@@ -1058,6 +1077,36 @@ def build_parser() -> argparse.ArgumentParser:
         help="Append the termination event under project-runtime/agents/instances.jsonl.",
     )
     terminate_agent_parser.set_defaults(handler=lifecycle.run_terminate_agent)
+
+    finalize_parser = lifecycle_subparsers.add_parser(
+        "finalize",
+        help="Finalize a project into PROJECT_COMPLETED terminal state.",
+        description=(
+            "Validate final audit/checkpoint completion, then with --confirm-write "
+            "write PROJECT_COMPLETED sidecars, a finalization receipt, and verify the "
+            "terminal state. Confirmed writes are limited to project-runtime/state, "
+            "project-runtime/receipts/lifecycle, and project-runtime Markdown views. "
+            "Without --confirm-write this is a dry-run."
+        ),
+    )
+    _add_root_argument(finalize_parser, validate=False)
+    finalize_mode = finalize_parser.add_mutually_exclusive_group()
+    finalize_mode.add_argument(
+        "--dry-run",
+        action="store_true",
+        help="Validate and render the finalization plan without mutating runtime state.",
+    )
+    finalize_mode.add_argument(
+        "--confirm-write",
+        action="store_true",
+        help="Write terminal sidecars and a project finalization receipt.",
+    )
+    finalize_parser.add_argument(
+        "--json-out",
+        metavar="PATH",
+        help="Write the finalization dry-run or receipt report JSON to PATH.",
+    )
+    finalize_parser.set_defaults(handler=lifecycle.run_finalize)
 
     incident_parser = subparsers.add_parser(
         "incident",
@@ -1271,6 +1320,8 @@ def build_parser() -> argparse.ArgumentParser:
         help="Initialize Runtime Schema 3.1.1 JSON state sidecars.",
         description=(
             "Plan or create Runtime Schema 3.1.1 JSON sidecars under project-runtime/state. "
+            "With --tz, confirmed writes may also canonicalize the TZ document under "
+            "project-input and materialize project-runtime compatibility views. "
             "Runtime writes use current UTC timestamps by default. Dry-run writes nothing; "
             "writes require --confirm-write."
         ),
@@ -1325,7 +1376,7 @@ def build_parser() -> argparse.ArgumentParser:
     state_init_parser.add_argument(
         "--confirm-write",
         action="store_true",
-        help="Explicitly allow writes under project-runtime/state.",
+        help="Explicitly allow writes under project-runtime/state, project-runtime compatibility views, and project-input TZ paths.",
     )
     state_init_parser.add_argument(
         "--deterministic-timestamps",
@@ -1367,7 +1418,7 @@ def build_parser() -> argparse.ArgumentParser:
     state_migrate_parser.add_argument(
         "--json-out",
         metavar="PATH",
-        help="Write the migration plan or receipt JSON under /tmp or project-runtime reports/receipts.",
+        help="Write the migration plan or receipt JSON under /tmp, project-runtime/reports, or project-runtime/receipts.",
     )
     state_migrate_parser.set_defaults(handler=state_migrate.run)
 
@@ -1377,8 +1428,8 @@ def build_parser() -> argparse.ArgumentParser:
         description=(
             "Render deterministic Markdown or JSON reports from project-runtime/state "
             "JSON sidecars. The command is read-only except for explicit --out report "
-            "writes or --confirm-write materialization of derived project-runtime/*.md "
-            "compatibility views."
+            "writes or --confirm-write refresh of the derived NEXT_ACTION cache plus "
+            "materialization of project-runtime/*.md compatibility views."
         ),
     )
     _add_root_argument(state_render_parser, validate=False)
@@ -1391,12 +1442,12 @@ def build_parser() -> argparse.ArgumentParser:
     state_render_parser.add_argument(
         "--out",
         metavar="PATH",
-        help="Write report to /tmp/... or <workspace>/project-runtime/reports|rendered/...",
+        help="Write report to /tmp/... or <workspace>/project-runtime/reports or project-runtime/rendered/...",
     )
     state_render_parser.add_argument(
         "--confirm-write",
         action="store_true",
-        help="Materialize derived project-runtime/*.md compatibility views from JSON sidecars.",
+        help="Refresh derived NEXT_ACTION cache when valid, then materialize project-runtime/*.md compatibility views from JSON sidecars.",
     )
     state_render_parser.set_defaults(handler=state_render.run)
 
@@ -1421,6 +1472,41 @@ def build_parser() -> argparse.ArgumentParser:
     )
     state_verify_parser.set_defaults(handler=state_verify.run)
 
+    state_reconcile_parser = state_subparsers.add_parser(
+        "reconcile",
+        help="Reconcile governed runtime state from structured evidence.",
+        description=(
+            "Derive canonical registry, gate, and next-action state from sidecars, "
+            "lifecycle logs, RESULT/AUDIT_RESULT files, receipts, and correction/checkpoint records. "
+            "Dry runs are read-only. Confirmed writes are bounded to project-runtime/state, "
+            "project-runtime/*.md compatibility views, and project-runtime/receipts/state-reconciliation."
+        ),
+    )
+    _add_root_argument(state_reconcile_parser, validate=False)
+    reconcile_mode = state_reconcile_parser.add_mutually_exclusive_group()
+    reconcile_mode.add_argument(
+        "--dry-run",
+        action="store_true",
+        help="Preview the deterministic reconciliation diff without writing. This is the default.",
+    )
+    reconcile_mode.add_argument(
+        "--confirm-write",
+        action="store_true",
+        help="Apply the reconciliation diff and write a state mutation receipt.",
+    )
+    state_reconcile_parser.add_argument(
+        "--format",
+        choices=("text", "json"),
+        default="text",
+        help="Output format (default: text).",
+    )
+    state_reconcile_parser.add_argument(
+        "--json-out",
+        metavar="PATH",
+        help="Write the reconciliation report JSON to this explicit path.",
+    )
+    state_reconcile_parser.set_defaults(handler=state_reconcile.run)
+
     project_parser = subparsers.add_parser(
         "project",
         help="Project Factory workspace commands.",
@@ -1431,9 +1517,11 @@ def build_parser() -> argparse.ArgumentParser:
         "create",
         help="Create a local Project Factory workspace.",
         description=(
-            "Create a clean local Project Factory workspace. Local mode does not "
-            "create GitHub repositories, use credentials, commit, push, dispatch agents, "
-            "or mutate runtime schema."
+            "Create a clean local Project Factory workspace under an explicit --target. "
+            "Local creation may write agent-system, aso.lock, project-input, "
+            "project-runtime, and project-archive inside that target. Local mode does "
+            "not create GitHub repositories, use credentials, commit, push, dispatch "
+            "agents, or mutate runtime schema."
         ),
     )
     create_mode_group = project_create_parser.add_mutually_exclusive_group()
@@ -1564,7 +1652,9 @@ def build_parser() -> argparse.ArgumentParser:
         description=(
             "Guide users through Project Factory workspace creation. Dry-run emits a "
             "deterministic plan without git, gh, network, or filesystem writes. Real "
-            "creation or publication requires explicit confirmation."
+            "creation or publication requires explicit confirmation and writes only "
+            "under the explicit target: agent-system, aso.lock, project-input, "
+            "project-runtime, and project-archive."
         ),
     )
     wizard_parser.add_argument(

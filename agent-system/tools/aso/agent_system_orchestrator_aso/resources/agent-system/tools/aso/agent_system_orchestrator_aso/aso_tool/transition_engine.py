@@ -485,6 +485,36 @@ def validate_runtime_contract(contract: Mapping[str, Any]) -> ContractValidation
     ):
         if not isinstance(routine_policy.get(field), list):
             errors.append(f"routine_context_policy.{field} must be a list")
+    reference_reasons = set(_string_list(routine_policy.get("reference_docs_allowed_only_for")))
+    expected_reference_reasons = {"bootstrap", "debug", "violation_recovery", "specific_validator_reference"}
+    if reference_reasons != expected_reference_reasons:
+        errors.append(
+            "routine_context_policy.reference_docs_allowed_only_for must be bootstrap, debug, violation_recovery, and specific_validator_reference"
+        )
+    context_budget = _mapping(routine_policy.get("context_budget"))
+    if not context_budget:
+        errors.append("routine_context_policy.context_budget must be an object")
+    else:
+        for field in ("max_routine_files", "max_lines_per_file"):
+            if not isinstance(context_budget.get(field), int) or context_budget.get(field, 0) <= 0:
+                errors.append(f"routine_context_policy.context_budget.{field} must be a positive integer")
+        if context_budget.get("routine_reference_docs_allowed") is not False:
+            errors.append("routine_context_policy.context_budget.routine_reference_docs_allowed must be false")
+    stdout_policy = _mapping(routine_policy.get("stdout_policy"))
+    if not stdout_policy:
+        errors.append("routine_context_policy.stdout_policy must be an object")
+    else:
+        if stdout_policy.get("default") != "summary_only":
+            errors.append("routine_context_policy.stdout_policy.default must be summary_only")
+        if stdout_policy.get("full_diff_or_report_in_stdout_by_default") is not False:
+            errors.append(
+                "routine_context_policy.stdout_policy.full_diff_or_report_in_stdout_by_default must be false"
+            )
+        full_report_requires = set(_string_list(stdout_policy.get("full_report_requires")))
+        if not {"--json-out", "--format json"}.issubset(full_report_requires):
+            errors.append(
+                "routine_context_policy.stdout_policy.full_report_requires must include --json-out and --format json"
+            )
 
     handoff_context = _mapping(contract.get("handoff_context_builder_contract"))
     if handoff_context.get("normal_context_mode") != "routine":
@@ -502,6 +532,8 @@ def validate_runtime_contract(contract: Mapping[str, Any]) -> ContractValidation
             errors.append(f"handoff_context_builder_contract.{field} must be a non-empty list")
     if not _text(handoff_context.get("reference_doc_inclusion_rule")):
         errors.append("handoff_context_builder_contract.reference_doc_inclusion_rule is required")
+    if not _text(handoff_context.get("role_doc_access_policy")):
+        errors.append("handoff_context_builder_contract.role_doc_access_policy is required")
     target_role_doc_map = _mapping(handoff_context.get("target_role_doc_map"))
     for role in allowed_roles:
         if role not in target_role_doc_map:

@@ -69,6 +69,10 @@ class OrchestratorHandoffContractTests(unittest.TestCase):
         self.assertEqual(payload["prompt_ref"], "project-runtime/handoffs/TASK_FIXTURE_STATE_001.prompt.md")
         self.assertEqual(payload["handoff_ref"], "project-runtime/handoffs/TASK_FIXTURE_STATE_001.json")
         self.assertEqual(
+            payload["allowed_sources_ref"],
+            "project-runtime/handoffs/TASK_FIXTURE_STATE_001.allowed_sources.json",
+        )
+        self.assertEqual(
             payload["expected_result_path"],
             "project-runtime/results/worker/RESULT_TASK_FIXTURE_STATE_001_ATTEMPT_001.md",
         )
@@ -79,14 +83,31 @@ class OrchestratorHandoffContractTests(unittest.TestCase):
         self.assertEqual(payload["lifecycle_policy"], "one_agent_one_task_delete_after_result")
         self.assertFalse(payload["governance_corpus_included"])
         self.assertEqual(payload["reference_docs"], [])
+        self.assertEqual(payload["context_budget"]["max_routine_files"], 6)
+        self.assertEqual(payload["context_budget"]["max_lines_per_file"], 160)
+        self.assertFalse(payload["context_budget"]["full_diff_or_report_in_stdout_by_default"])
+        self.assertFalse(payload["context_budget"]["routine_reference_docs_allowed"])
+        self.assertEqual(payload["role_contract_summary"]["role"], "developer")
+        self.assertEqual(payload["role_contract_summary"]["role_reasoning_floor"], "high")
+        self.assertEqual(payload["result_contract_summary"]["result_kind"], "worker_result")
         self.assertFalse(payload["external_runner_contract"]["live_dispatch_performed_by_aso"])
         self.assertIn("codex exec", payload["external_runner_contract"]["external_runner_command_template"])
 
         required_paths = {doc["path"] for doc in payload["required_docs"]}
+        allowed_source_refs = {entry["ref"] for entry in payload["allowed_sources"]["allowed_refs"]}
         self.assertIn("agent-system/02_runtime/ORCHESTRATOR_RUNTIME_CONTRACT.json", required_paths)
         self.assertIn("project-runtime/tasks/active/TASK_FIXTURE_STATE_001.md", required_paths)
-        self.assertIn("agent-system/01_roles/DEVELOPER.md", required_paths)
-        self.assertIn("agent-system/03_templates/AGENT_RESULT_TEMPLATE.md", required_paths)
+        self.assertNotIn("agent-system/01_roles/DEVELOPER.md", required_paths)
+        self.assertNotIn("agent-system/03_templates/AGENT_RESULT_TEMPLATE.md", required_paths)
+        self.assertTrue(all(doc["line_limit"] <= payload["context_budget"]["max_lines_per_file"] for doc in payload["required_docs"]))
+        self.assertIn("project-runtime/handoffs/TASK_FIXTURE_STATE_001.json", allowed_source_refs)
+        self.assertIn("project-runtime/handoffs/TASK_FIXTURE_STATE_001.prompt.md", allowed_source_refs)
+        self.assertNotIn("agent-system/01_roles/DEVELOPER.md", allowed_source_refs)
+        self.assertNotIn("agent-system/03_templates/AGENT_RESULT_TEMPLATE.md", allowed_source_refs)
+        self.assertEqual(
+            payload["allowed_sources"]["severity_interpretation"]["correction_task_created_only_for"],
+            ["SB3_BLOCKING", "SB4_INVALIDATING"],
+        )
         self.assertIn("agent-system/09_validators/", payload["forbidden_docs"])
         self.assertTrue(handoff_artifacts.validate_handoff_artifact(payload).passed)
 
@@ -97,8 +118,9 @@ class OrchestratorHandoffContractTests(unittest.TestCase):
 
         code, _, stderr = self._run(["plan-next", "--root", str(root), "--strict", "--json-out", str(out)])
 
-        self.assertEqual(code, 1, stderr)
+        self.assertEqual(code, 0, stderr)
         report = json.loads(out.read_text(encoding="utf-8"))
+        self.assertEqual(report["route_status"], "ready")
         self.assertFalse(report["dispatchable"])
         handoff = report["handoff_artifact"]
         self.assertFalse(handoff["required"])
@@ -123,6 +145,157 @@ class OrchestratorHandoffContractTests(unittest.TestCase):
         joined = "\n".join(validation.errors)
         self.assertIn("routine handoff must not include reference_docs", joined)
         self.assertIn("broad governance corpus path: agent-system/09_validators/", joined)
+
+    def test_routine_handoff_rejects_governance_files_inside_forbidden_dirs(self) -> None:
+        contract = transition_engine.load_runtime_contract()
+        forbidden_refs = (
+            "agent-system/01_roles/DEVELOPER.md",
+            "agent-system/04_roles/DEVELOPER.md",
+            "agent-system/03_templates/AGENT_RESULT_TEMPLATE.md",
+            "agent-system/GOVERNANCE_CHANGELOG.md",
+            "agent-system/11_release/ASO_P58_REAL_E2E_LIFECYCLE_HARDENING_V3_7_9_VALIDATION_REPORT.md",
+            "agent-system/09_validators/schemas/orchestrator_handoff.schema.json",
+        )
+
+        for ref in forbidden_refs:
+            with self.subTest(ref=ref):
+                payload = handoff_artifacts.build_handoff_artifact(
+                    contract=contract,
+                    task_id="TASK_DEMO_001",
+                    role="developer",
+                    resolved_reasoning_level="high",
+                    task_packet="project-runtime/tasks/active/TASK_DEMO_001.md",
+                    reference_docs=[ref],
+                )
+
+                validation = handoff_artifacts.validate_handoff_artifact(payload)
+
+                self.assertFalse(validation.passed)
+                joined = "\n".join(validation.errors)
+                self.assertIn("routine handoff must not include reference_docs", joined)
+                self.assertIn(f"broad governance corpus path: {ref}", joined)
+
+    def test_debug_handoff_allows_authorized_specific_validator_reference(self) -> None:
+        contract = transition_engine.load_runtime_contract()
+        payload = handoff_artifacts.build_handoff_artifact(
+            contract=contract,
+            task_id="TASK_DEMO_001",
+            role="tester",
+            resolved_reasoning_level="high",
+            task_packet="project-runtime/tasks/active/TASK_DEMO_001.md",
+            context_mode="debug",
+            reference_docs=["agent-system/09_validators/schemas/result.schema.json"],
+            reference_reason="specific validator reference for reported failure",
+        )
+
+        validation = handoff_artifacts.validate_handoff_artifact(payload)
+
+        self.assertTrue(validation.passed, validation.errors)
+        self.assertEqual(payload["reference_docs"][0]["authorization"], "explicit_reference_reason")
+
+    def test_explain_handoff_rejects_generic_reference_docs(self) -> None:
+        contract = transition_engine.load_runtime_contract()
+        payload = handoff_artifacts.build_handoff_artifact(
+            contract=contract,
+            task_id="TASK_DEMO_001",
+            role="developer",
+            resolved_reasoning_level="high",
+            task_packet="project-runtime/tasks/active/TASK_DEMO_001.md",
+            context_mode="explain",
+            reference_docs=["agent-system/03_templates/AGENT_RESULT_TEMPLATE.md"],
+            reference_reason="generic explain request",
+        )
+
+        validation = handoff_artifacts.validate_handoff_artifact(payload)
+
+        self.assertFalse(validation.passed)
+        self.assertIn("must record authorization outside routine mode", "\n".join(validation.errors))
+
+    def test_explain_validator_required_handoff_rejects_template_reference(self) -> None:
+        contract = transition_engine.load_runtime_contract()
+        payload = handoff_artifacts.build_handoff_artifact(
+            contract=contract,
+            task_id="TASK_DEMO_001",
+            role="developer",
+            resolved_reasoning_level="high",
+            task_packet="project-runtime/tasks/active/TASK_DEMO_001.md",
+            context_mode="explain",
+            reference_docs=["agent-system/03_templates/AGENT_RESULT_TEMPLATE.md"],
+            validator_required=True,
+        )
+
+        validation = handoff_artifacts.validate_handoff_artifact(payload)
+
+        self.assertFalse(validation.passed)
+        joined = "\n".join(validation.errors)
+        self.assertIn("must record authorization outside routine mode", joined)
+        self.assertNotIn("agent-system/03_templates/AGENT_RESULT_TEMPLATE.md", {
+            entry["ref"] for entry in payload["allowed_sources"]["allowed_refs"]
+        })
+
+        stale_payload = json.loads(json.dumps(payload))
+        stale_payload["reference_docs"][0]["authorization"] = "validator_required"
+        stale_validation = handoff_artifacts.validate_handoff_artifact(stale_payload)
+
+        self.assertFalse(stale_validation.passed)
+        self.assertIn(
+            "validator_required authorization is limited to specific validator references",
+            "\n".join(stale_validation.errors),
+        )
+
+    def test_explain_validator_required_handoff_rejects_parent_segment_validator_escape(self) -> None:
+        contract = transition_engine.load_runtime_contract()
+        escaped_ref = "agent-system/09_validators/../03_templates/AGENT_RESULT_TEMPLATE.md"
+        payload = handoff_artifacts.build_handoff_artifact(
+            contract=contract,
+            task_id="TASK_DEMO_001",
+            role="developer",
+            resolved_reasoning_level="high",
+            task_packet="project-runtime/tasks/active/TASK_DEMO_001.md",
+            context_mode="explain",
+            reference_docs=[escaped_ref],
+            validator_required=True,
+        )
+
+        validation = handoff_artifacts.validate_handoff_artifact(payload)
+
+        self.assertFalse(validation.passed)
+        self.assertIn("must record authorization outside routine mode", "\n".join(validation.errors))
+        allowed_refs = {entry["ref"] for entry in payload["allowed_sources"]["allowed_refs"]}
+        self.assertNotIn(escaped_ref, allowed_refs)
+        self.assertNotIn("agent-system/03_templates/AGENT_RESULT_TEMPLATE.md", allowed_refs)
+
+        forged_payload = json.loads(json.dumps(payload))
+        forged_payload["reference_docs"][0]["path"] = escaped_ref
+        forged_payload["reference_docs"][0]["authorization"] = "validator_required"
+        forged_validation = handoff_artifacts.validate_handoff_artifact(forged_payload)
+
+        self.assertFalse(forged_validation.passed)
+        self.assertIn(
+            "validator_required authorization is limited to specific validator references",
+            "\n".join(forged_validation.errors),
+        )
+
+    def test_explain_validator_required_handoff_allows_concrete_validator_reference(self) -> None:
+        contract = transition_engine.load_runtime_contract()
+        validator_ref = "agent-system/09_validators/schemas/orchestrator_handoff.schema.json"
+        payload = handoff_artifacts.build_handoff_artifact(
+            contract=contract,
+            task_id="TASK_DEMO_001",
+            role="developer",
+            resolved_reasoning_level="high",
+            task_packet="project-runtime/tasks/active/TASK_DEMO_001.md",
+            context_mode="explain",
+            reference_docs=[validator_ref],
+            validator_required=True,
+        )
+
+        validation = handoff_artifacts.validate_handoff_artifact(payload)
+
+        self.assertTrue(validation.passed, validation.errors)
+        self.assertEqual(payload["reference_docs"][0]["authorization"], "validator_required")
+        allowed_refs = {entry["ref"] for entry in payload["allowed_sources"]["allowed_refs"]}
+        self.assertIn(validator_ref, allowed_refs)
 
     @unittest.skipIf(Draft202012Validator is None, "jsonschema is not installed")
     def test_handoff_schema_accepts_planner_payload(self) -> None:

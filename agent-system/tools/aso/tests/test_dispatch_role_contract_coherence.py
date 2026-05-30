@@ -96,6 +96,7 @@ def _handoff_payload(role: str) -> dict[str, object]:
         {
             "path": "agent-system/02_runtime/ORCHESTRATOR_RUNTIME_CONTRACT.json",
             "sections": ["Runtime contract"],
+            "line_limit": 160,
             "why_needed": "Required for role contract validation.",
             "source": "runtime_contract",
         }
@@ -121,7 +122,26 @@ def _handoff_payload(role: str) -> dict[str, object]:
         "allowed_sources": allowed_sources,
         "required_docs": required_docs,
         "required_doc_tokens": ["runtime_contract"],
-        "forbidden_docs": ["agent-system/09_validators/"],
+        "context_budget": {
+            "max_routine_files": 6,
+            "max_lines_per_file": 160,
+            "stdout_default": "summary_only",
+            "stdout_full_report_requires": ["--json-out", "--format json"],
+            "full_diff_or_report_in_stdout_by_default": False,
+            "routine_reference_docs_allowed": False,
+        },
+        "role_contract_summary": {
+            "role": role,
+            "role_reasoning_floor": "high",
+            "required_doc_tokens": ["runtime_contract"],
+            "role_doc_access": "Role docs are reference docs only.",
+        },
+        "result_contract_summary": {
+            "result_kind": "worker_result",
+            "template_ref": "agent-system/03_templates/AGENT_RESULT_TEMPLATE.md",
+            "summary": "Formal RESULT fields are required; routine handoff provides a summary.",
+        },
+        "forbidden_docs": ["agent-system/09_validators/", "agent-system/01_roles/", "agent-system/04_roles/", "agent-system/03_templates/"],
         "reference_docs": [],
         "governance_corpus_included": False,
         "expected_result_path": "project-runtime/results/worker/RESULT_TASK_DEMO_001_ATTEMPT_001.md",

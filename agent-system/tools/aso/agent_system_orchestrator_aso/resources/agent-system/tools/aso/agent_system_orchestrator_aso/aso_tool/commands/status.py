@@ -300,7 +300,11 @@ def _state_reconciliation_findings(root: Path) -> list[Finding]:
         if not isinstance(item, dict):
             continue
         rule_id = str(item.get("rule_id", ""))
-        if not rule_id.startswith("RUNTIME_"):
+        if not rule_id.startswith("RUNTIME_") and rule_id not in {
+            "SIDECAR_AUDIT_FAIL_UNRESOLVED",
+            "UNROUTABLE_UNRESOLVED_AUDIT_FAIL",
+            "CORRECTION_REQUIRED_TARGET_UNRESOLVED",
+        }:
             continue
         severity = str(item.get("severity", "error")) or "error"
         path = str(item.get("path", "")) or "project-runtime/state/NEXT_ACTION.json"
@@ -326,11 +330,40 @@ def _runtime_consistency(findings: list[Finding]) -> str:
     return "PASS"
 
 
+def _transition_summary(root: Path) -> dict[str, object]:
+    state_root = root / "project-runtime" / "state"
+    lifecycle_log = root / "project-runtime" / "agents" / "instances.jsonl"
+    if not state_root.is_dir() and not lifecycle_log.exists():
+        return {
+            "enabled": False,
+            "current_state": UNKNOWN,
+            "recommended_next_action": UNKNOWN,
+            "contract_authoritative": False,
+        }
+    report, _exit_code = state_verify._report(root, False)
+    reconciliation = report.get("reconciliation")
+    if not isinstance(reconciliation, dict) or "current_state" not in reconciliation:
+        return {
+            "enabled": False,
+            "current_state": UNKNOWN,
+            "recommended_next_action": UNKNOWN,
+            "contract_authoritative": False,
+        }
+    return {
+        "enabled": bool(reconciliation.get("enabled")),
+        "status": reconciliation.get("status", UNKNOWN),
+        "current_state": reconciliation.get("current_state", UNKNOWN),
+        "recommended_next_action": reconciliation.get("canonical_recommended_next_action", UNKNOWN),
+        "contract_authoritative": bool(reconciliation.get("contract_authoritative")),
+    }
+
+
 def _report(root: Path) -> dict[str, object]:
     files = {name: _read_runtime_file(root, name) for name in RUNTIME_FILES}
     push_values = _push_allowed_values(files)
     findings = _findings(root, files, push_values)
     consistency = _runtime_consistency(findings)
+    transition_summary = _transition_summary(root)
 
     status_by_consistency = {
         "PASS": "passed",
@@ -354,6 +387,9 @@ def _report(root: Path) -> dict[str, object]:
             "push_allowed_values": push_values,
             "runtime_consistency": consistency,
             "finding_count": len(findings),
+            "transition_engine": transition_summary,
+            "transition_state": transition_summary["current_state"],
+            "transition_recommended_next_action": transition_summary["recommended_next_action"],
         },
         "files": {
             runtime_file.relpath: {

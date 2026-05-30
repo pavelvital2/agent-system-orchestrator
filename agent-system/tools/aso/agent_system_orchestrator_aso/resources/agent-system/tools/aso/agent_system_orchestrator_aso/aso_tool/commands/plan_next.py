@@ -14,14 +14,15 @@ from .. import correction_routing
 from .. import dispatch_receipts
 from .. import handoff_artifacts
 from .. import role_registry
-from .. import result_parser
 from .. import resources
 from .. import transition_engine
 
 
 EXIT_OK = 0
 EXIT_BLOCKED = 1
-EXIT_IO_ERROR = 3
+EXIT_RUNTIME_ERROR = 2
+EXIT_INVALID_STATE = 3
+EXIT_IO_ERROR = EXIT_RUNTIME_ERROR
 
 RULES_RELATIVE_PATH = Path("agent-system/09_validators/rules/governance_rules.json")
 NONE_VALUES = {"", "NONE", "none", "null", "UNKNOWN"}
@@ -71,6 +72,15 @@ PROJECT_STATE_READY_REPOSITORY_LOCK_STATUSES = {"accepted"}
 PROJECT_STATE_READY_BASELINE_STATUSES = {"passed"}
 PROJECT_STATE_IDENTITY_STATUSES = state_verify.ENUM_FIELDS[("PROJECT_STATE", "identity_validation_status")]
 PROJECT_STATE_REPOSITORY_LOCK_STATUSES = state_verify.ENUM_FIELDS[("PROJECT_STATE", "repository_lock_status")]
+INVALID_STATE_RULE_IDS = {
+    "SIDECAR_JSON_PARSE_ERROR",
+    "SIDECAR_TOP_LEVEL_NOT_OBJECT",
+    "SIDECAR_REQUIRED_SIDECAR_MISSING",
+    "SIDECAR_SCHEMA_VERSION_MISSING_OR_INVALID",
+    "RUNTIME_LIFECYCLE_LOG_JSON_INVALID",
+    "RUNTIME_LIFECYCLE_LOG_EVENT_INVALID",
+    "RUNTIME_LIFECYCLE_LOG_UNREADABLE",
+}
 
 
 def _is_none(value: object) -> bool:
@@ -148,25 +158,12 @@ def _tasks_by_id(sidecars: dict[str, dict[str, object]]) -> dict[str, dict[str, 
     return result
 
 
-def _truthy_string_list(value: object) -> list[str]:
-    if not isinstance(value, list):
-        return []
-    refs: list[str] = []
-    for item in value:
-        if isinstance(item, str) and not _is_none(item):
-            refs.append(item.strip())
-    return refs
-
-
 def _active_blockers(project_state: dict[str, object], next_action: dict[str, object]) -> list[str]:
     blockers: list[str] = []
     for key in ("active_blockers", "checkpoint_blocked_by"):
         value = project_state.get(key)
         if isinstance(value, list):
             blockers.extend(str(item).strip() for item in value if not _is_none(item))
-    value = next_action.get("blocked_by")
-    if isinstance(value, list):
-        blockers.extend(str(item).strip() for item in value if not _is_none(item))
     return sorted(set(blocker for blocker in blockers if blocker))
 
 
@@ -185,58 +182,13 @@ def _has_owner_or_gap_blocker(blockers: list[str]) -> bool:
     return any(token in joined for token in ("gap", "owner", "decision", "question"))
 
 
-def _accepted_artifact_audit_refs(sidecars: dict[str, dict[str, object]], task_id: str) -> list[str]:
-    accepted = _content(sidecars, "ACCEPTED_ARTIFACTS")
-    artifacts = accepted.get("artifacts")
-    refs: list[str] = []
-    if not isinstance(artifacts, list):
-        return refs
-    for artifact in artifacts:
-        if not isinstance(artifact, dict):
-            continue
-        if artifact.get("source_task") != task_id and artifact.get("task_id") != task_id:
-            continue
-        audit_ref = artifact.get("audit_ref")
-        if isinstance(audit_ref, str) and not _is_none(audit_ref):
-            refs.append(audit_ref.strip())
-    return refs
-
-
-def _current_gate_audit_evidence(sidecars: dict[str, dict[str, object]]) -> list[str]:
-    refs: list[str] = []
-    for item in _truthy_string_list(_content(sidecars, "CURRENT_GATE").get("gate_evidence")):
-        if "audit" in item.lower():
-            refs.append(item)
-    return refs
-
-
 def _audit_pass_evidence(
     root: Path,
     sidecars: dict[str, dict[str, object]],
     task: dict[str, object],
     task_id: str,
 ) -> dict[str, object]:
-    task_status = _as_text(task.get("status"))
-    task_audit_refs = _truthy_string_list(task.get("audit_refs"))
-    artifact_audit_refs = _accepted_artifact_audit_refs(sidecars, task_id)
-    current_gate_refs = _current_gate_audit_evidence(sidecars)
-    audit_refs = [*task_audit_refs, *artifact_audit_refs, *current_gate_refs]
-    parsed_evidence = result_parser.inspect_audit_references(root, audit_refs, task_id=task_id, strict=True)
-    invalid_refs = parsed_evidence["invalid_refs"]
-    unparsed_refs = parsed_evidence["unparsed_refs"]
-    passed_refs = parsed_evidence["passed_refs"]
-    present = bool(passed_refs) and not invalid_refs and not unparsed_refs
-    return {
-        "present": present,
-        "task_status": task_status,
-        "task_audit_refs": task_audit_refs,
-        "accepted_artifact_audit_refs": artifact_audit_refs,
-        "current_gate_audit_evidence_refs": current_gate_refs,
-        "parsed_audit_results": parsed_evidence["parsed_refs"],
-        "passed_audit_refs": passed_refs,
-        "invalid_audit_results": invalid_refs,
-        "unparsed_audit_refs": unparsed_refs,
-    }
+    return transition_engine.audit_pass_evidence_from_sidecars(root, sidecars, task_id=task_id)
 
 
 def _audit_fail_correction_route(
@@ -244,10 +196,31 @@ def _audit_fail_correction_route(
     audit_evidence: dict[str, object],
     transition_evidence: dict[str, object],
 ) -> dict[str, object]:
+    route = correction_routing.from_audit_inspection(root, audit_evidence.get("unresolved_audit_failures"))
+    if route:
+        return route
+    route = correction_routing.from_audit_inspection(root, transition_evidence.get("audit_failure_evidence"))
+    if route:
+        return route
     route = correction_routing.from_audit_inspection(root, audit_evidence.get("invalid_audit_results"))
     if route:
         return route
     return correction_routing.from_transition_evidence(root, transition_evidence)
+
+
+def _correction_route_diagnostic_rule(
+    rules: dict[str, dict[str, object]],
+    correction_route: dict[str, object],
+) -> dict[str, object] | None:
+    diagnostic_rule_id = _as_text(correction_route.get("diagnostic_rule_id"))
+    if _is_none(diagnostic_rule_id):
+        return None
+    return _rule(
+        rules,
+        diagnostic_rule_id,
+        "Unresolved AUDIT_RESULT fail could not be mapped to a canonical correction target.",
+        json.dumps(correction_route, sort_keys=True),
+    )
 
 
 def _rule(
@@ -360,10 +333,10 @@ def _dedupe_rules(blockers: list[dict[str, object]]) -> list[dict[str, object]]:
     return deduped
 
 
-def _transition_engine_evidence(sidecars: dict[str, dict[str, object]]) -> dict[str, object]:
+def _transition_engine_evidence(root: Path, sidecars: dict[str, dict[str, object]]) -> dict[str, object]:
     try:
         contract = transition_engine.load_runtime_contract()
-        return transition_engine.explain_next_action_from_sidecars(contract, sidecars).to_json()
+        return transition_engine.routing_authority_report(contract, sidecars, root=root)
     except (OSError, transition_engine.RuntimeContractError) as exc:
         return {
             "allowed": False,
@@ -381,7 +354,11 @@ def _transition_engine_evidence(sidecars: dict[str, dict[str, object]]) -> dict[
 
 
 def _is_checkpoint_attempt(next_action: dict[str, object]) -> bool:
-    return next_action.get("checkpoint_policy") in CHECKPOINT_PREFLIGHT_POLICIES
+    try:
+        contract = transition_engine.load_runtime_contract()
+        return transition_engine.is_checkpoint_next_action(contract, next_action)
+    except (OSError, transition_engine.RuntimeContractError):
+        return next_action.get("checkpoint_policy") in CHECKPOINT_PREFLIGHT_POLICIES
 
 
 def _reason(reason_code: str, message: str, input_ref: str) -> dict[str, object]:
@@ -458,6 +435,8 @@ def _non_dispatch_status(action_type: str, recommended_next_action: str) -> str:
         return "frozen"
     if recommended_next_action == "BOOTSTRAP_PREP":
         return "bootstrap_required"
+    if recommended_next_action == "NO_NEXT_ACTION":
+        return "stopped"
     if recommended_next_action == "STOP" or action_type == "stop":
         return "stopped"
     if recommended_next_action == "CORRECTION_REQUIRED" or action_type == "correction":
@@ -1010,6 +989,13 @@ def _needs_bootstrap_reconciliation(
     )
 
 
+def _is_project_completed(project_state: dict[str, object]) -> bool:
+    return (
+        project_state.get("project_status") == "completed"
+        or project_state.get("current_phase") == "completed"
+    )
+
+
 def _plan(
     root: Path,
     strict: bool,
@@ -1023,17 +1009,81 @@ def _plan(
     current_gate = _content(sidecars, "CURRENT_GATE")
     next_action = _content(sidecars, "NEXT_ACTION")
     tasks = _tasks_by_id(sidecars)
-    task_id = _as_text(next_action.get("task_id"))
-    task = tasks.get(task_id, {})
-    action_type = _as_text(next_action.get("action_type"))
-    dependency_status = _as_text(next_action.get("dependency_status"))
-    target_role = _as_text(next_action.get("target_role"))
-    task_packet = _as_text(next_action.get("task_packet"))
-    blockers = _active_blockers(project_state, next_action)
-    audit_evidence = _audit_pass_evidence(root, sidecars, task, task_id)
+    transition_evidence = _transition_engine_evidence(root, sidecars)
+    transition_selected = transition_evidence.get("transition_selected")
+    derived_next_action = transition_evidence.get("next_action")
+    derived_next_action_cache = transition_evidence.get("derived_next_action_cache")
+    correction_route: dict[str, object] = {}
+    lifecycle_derived = (
+        isinstance(transition_selected, dict)
+        and transition_selected.get("derivation") == "lifecycle_log"
+        and isinstance(derived_next_action, dict)
+    )
+    reconciliation = verify_report.get("reconciliation") if isinstance(verify_report.get("reconciliation"), dict) else {}
+    transition_findings = transition_evidence.get("findings")
+    transition_stale = (
+        isinstance(transition_findings, list)
+        and any(isinstance(item, dict) and item.get("rule_id") == "RUNTIME_NEXT_ACTION_STALE" for item in transition_findings)
+    )
+    verify_state = verify_report.get("state") if isinstance(verify_report.get("state"), dict) else {}
+    current_runtime_schema_state = bool(verify_state.get("runtime_schema_current_p2"))
+    derived_cache_authoritative = (
+        bool(reconciliation.get("enabled"))
+        and transition_stale
+        and (current_runtime_schema_state or lifecycle_derived)
+        and isinstance(transition_selected, dict)
+        and transition_selected.get("derivation") in {"sidecars", "lifecycle_log"}
+        and isinstance(derived_next_action, dict)
+    )
+    canonical_routing_available = (
+        isinstance(transition_selected, dict)
+        and transition_selected.get("derivation") in {"sidecars", "lifecycle_log"}
+        and isinstance(derived_next_action, dict)
+    )
+    cache_mismatches = transition_selected.get("cache_mismatches") if isinstance(transition_selected, dict) else []
+    task_id_cache_mismatch = (
+        isinstance(cache_mismatches, list)
+        and any(isinstance(item, dict) and item.get("field") == "task_id" for item in cache_mismatches)
+    )
+    checkpoint_cache_mismatch = (
+        isinstance(cache_mismatches, list)
+        and any(
+            isinstance(item, dict)
+            and item.get("field")
+            in {"checkpoint_policy", "checkpoint_preflight_required", "checkpoint_receipt_required"}
+            for item in cache_mismatches
+        )
+    )
+    route_cache_mismatch = (
+        isinstance(cache_mismatches, list)
+        and any(isinstance(item, dict) and item.get("field") == "action_type" for item in cache_mismatches)
+    )
+    use_canonical_routing = canonical_routing_available and (
+        lifecycle_derived
+        or current_runtime_schema_state
+        or checkpoint_cache_mismatch
+        or (derived_cache_authoritative and (task_id_cache_mismatch or route_cache_mismatch))
+    )
+    routing_next_action = dict(next_action)
+    if use_canonical_routing:
+        if isinstance(derived_next_action_cache, dict):
+            routing_next_action = dict(derived_next_action_cache)
+        else:
+            routing_next_action = dict(derived_next_action)
+        routing_next_action["recommended_next_action"] = _as_text(derived_next_action.get("recommended_next_action"))
+
+    task_id = _as_text(routing_next_action.get("task_id"))
+    audit_task_id = "" if _is_none(task_id) else task_id
+    task = tasks.get(audit_task_id, {})
+    action_type = _as_text(routing_next_action.get("action_type"))
+    dependency_status = _as_text(routing_next_action.get("dependency_status"))
+    target_role = _as_text(routing_next_action.get("target_role"))
+    task_packet = _as_text(routing_next_action.get("task_packet"))
+    blockers = _active_blockers(project_state, routing_next_action)
+    audit_evidence = _audit_pass_evidence(root, sidecars, task, audit_task_id)
 
     blocking_rules = _state_verify_blockers(rules, verify_report)
-    blocking_rules.extend(_placeholder_tz_blockers(root, rules, project_state, next_action))
+    blocking_rules.extend(_placeholder_tz_blockers(root, rules, project_state, routing_next_action))
     recommended_next_action = "NONE"
     dispatchability: dict[str, object] = _non_dispatchability(
         action_type,
@@ -1043,16 +1093,6 @@ def _plan(
         "NONE",
         "blocked",
     )
-    transition_evidence = _transition_engine_evidence(sidecars)
-    transition_selected = transition_evidence.get("transition_selected")
-    derived_next_action = transition_evidence.get("next_action")
-    correction_route: dict[str, object] = {}
-    lifecycle_derived = (
-        isinstance(transition_selected, dict)
-        and transition_selected.get("derivation") == "lifecycle_log"
-        and isinstance(derived_next_action, dict)
-    )
-    routing_next_action = dict(next_action)
 
     if rules_evidence.get("load_error"):
         blocking_rules.append(
@@ -1064,7 +1104,40 @@ def _plan(
             )
         )
 
-    if _has_incident(project_state, blockers):
+    correction_route = _audit_fail_correction_route(root, audit_evidence, transition_evidence)
+    if correction_route:
+        recommended_next_action = "CORRECTION_REQUIRED"
+        target_role = "orchestrator"
+        action_type = "correction"
+        task_id = str(correction_route.get("source_task_id") or task_id or "NONE")
+        task_packet = "NONE"
+        dispatchability = _non_dispatchability(
+            action_type,
+            target_role,
+            task_id,
+            task_packet,
+            recommended_next_action,
+            "correction_required",
+            reasons=[
+                _reason(
+                    "audit_result_status_fail",
+                    "AUDIT_RESULT STATUS fail routes correction and blocks checkpoint/finalization.",
+                    "TASK_REGISTRY.content.tasks[].audit_refs",
+                )
+            ],
+        )
+        blocking_rules.append(
+            _rule(
+                rules,
+                "GOV-AUDIT-FAIL-NO-CHECKPOINT",
+                "AUDIT_RESULT STATUS fail routes correction and blocks checkpoint/finalization.",
+                str(correction_route.get("source_audit_result_ref", "NONE")),
+            )
+        )
+        diagnostic_rule = _correction_route_diagnostic_rule(rules, correction_route)
+        if diagnostic_rule:
+            blocking_rules.append(diagnostic_rule)
+    elif _has_incident(project_state, blockers):
         recommended_next_action = "FREEZE"
         dispatchability = _non_dispatchability(
             action_type,
@@ -1100,7 +1173,7 @@ def _plan(
                 ", ".join(blockers) or dependency_status,
             )
         )
-    elif _needs_bootstrap_reconciliation(root, project_state, current_gate, next_action):
+    elif _needs_bootstrap_reconciliation(root, project_state, current_gate, routing_next_action):
         recommended_next_action = "BOOTSTRAP_PREP"
         target_role = "orchestrator"
         dispatchability = _non_dispatchability(
@@ -1119,21 +1192,129 @@ def _plan(
                 "route=repair_bootstrap_state/create_or_reference_bootstrap_task_packet",
             )
         )
-    elif lifecycle_derived and isinstance(derived_next_action, dict):
-        routing_next_action.update(derived_next_action)
+    elif _is_project_completed(project_state) and verify_exit_code == 0:
+        if isinstance(derived_next_action, dict):
+            routing_next_action.update(derived_next_action)
+        action_type = _as_text(routing_next_action.get("action_type")) or "stop"
+        target_role = _as_text(routing_next_action.get("target_role")) or "none"
+        task_id = "NONE"
+        task_packet = "NONE"
+        recommended_next_action = (
+            _as_text(routing_next_action.get("recommended_next_action"))
+            or "NO_NEXT_ACTION"
+        )
+        dispatchability = _non_dispatchability(
+            action_type,
+            target_role,
+            task_id,
+            task_packet,
+            recommended_next_action,
+            "stopped",
+            reasons=[
+                _reason(
+                    "project_completed",
+                    "PROJECT_COMPLETED has no further orchestrator action.",
+                    "PROJECT_STATE.content.project_status",
+                )
+            ],
+        )
+    elif use_canonical_routing and isinstance(derived_next_action, dict):
         action_type = _as_text(routing_next_action.get("action_type"))
         target_role = _as_text(routing_next_action.get("target_role"))
         task_id = _as_text(routing_next_action.get("task_id")) or task_id
         task_packet = _as_text(routing_next_action.get("task_packet")) or task_packet
-        task = tasks.get(task_id, {})
-        audit_evidence = _audit_pass_evidence(root, sidecars, task, task_id)
+        audit_task_id = "" if _is_none(task_id) else task_id
+        task = tasks.get(audit_task_id, {})
+        audit_evidence = _audit_pass_evidence(root, sidecars, task, audit_task_id)
         recommended_next_action = (
             _as_text(derived_next_action.get("recommended_next_action"))
             or transition_engine.recommendation_from_next_action_content(routing_next_action)
         )
         if recommended_next_action == "CORRECTION_REQUIRED":
             correction_route = _audit_fail_correction_route(root, audit_evidence, transition_evidence)
-        if action_type == "create_agent":
+        if recommended_next_action == "CHECKPOINT_PREFLIGHT":
+            if audit_evidence["present"]:
+                dispatchability = _non_dispatchability(
+                    action_type,
+                    target_role,
+                    task_id,
+                    task_packet,
+                    recommended_next_action,
+                    "blocked",
+                )
+            else:
+                correction_route = _audit_fail_correction_route(root, audit_evidence, transition_evidence)
+                recommended_next_action = "CORRECTION_REQUIRED"
+                target_role = "orchestrator"
+                dispatchability = _non_dispatchability(
+                    "correction",
+                    target_role,
+                    task_id,
+                    "NONE",
+                    recommended_next_action,
+                    "correction_required",
+                    reasons=[
+                        _reason(
+                            "audit_pass_evidence_missing",
+                            "Checkpoint preflight requires parsed audit-pass evidence from canonical task state.",
+                            "TASK_REGISTRY.content.tasks[].audit_refs",
+                        )
+                    ],
+                )
+                blocking_rules.append(
+                    _rule(
+                        rules,
+                        "GOV-CHECKPOINT-AUDIT-GATE",
+                        "Checkpoint preflight is blocked because audit-pass evidence is absent.",
+                        f"task_id={task_id or 'NONE'}",
+                    )
+                )
+                if correction_route:
+                    blocking_rules.append(
+                        _rule(
+                            rules,
+                            "GOV-AUDIT-FAIL-NO-CHECKPOINT",
+                            "AUDIT_RESULT STATUS fail routes correction and blocks checkpoint preflight.",
+                            str(correction_route.get("source_audit_result_ref", "NONE")),
+                        )
+                    )
+                    diagnostic_rule = _correction_route_diagnostic_rule(rules, correction_route)
+                    if diagnostic_rule:
+                        blocking_rules.append(diagnostic_rule)
+                if audit_evidence["invalid_audit_results"]:
+                    blocking_rules.append(
+                        _rule(
+                            rules,
+                            "GOV-CHECKPOINT-AUDIT-GATE",
+                            "Parsed AUDIT_RESULT evidence is not a pass for this task.",
+                            json.dumps(audit_evidence["invalid_audit_results"], sort_keys=True),
+                        )
+                    )
+                if audit_evidence["unparsed_audit_refs"]:
+                    blocking_rules.append(
+                        _rule(
+                            rules,
+                            "GOV-CHECKPOINT-AUDIT-GATE",
+                            "AUDIT_RESULT evidence references are missing or unreadable.",
+                            json.dumps(audit_evidence["unparsed_audit_refs"], sort_keys=True),
+                        )
+                    )
+        elif recommended_next_action == "CORRECTION_REQUIRED" and action_type == "correction":
+            dispatchability = can_dispatch_agent(
+                root,
+                action_type,
+                target_role,
+                task_id,
+                task_packet,
+                routing_next_action,
+                project_state,
+                current_gate,
+                task,
+                blocking_rules,
+            )
+            recommended_next_action = str(dispatchability["recommended_next_action"])
+            target_role = str(dispatchability["target_role"])
+        elif action_type == "create_agent":
             dispatchability = can_dispatch_agent(
                 root,
                 action_type,
@@ -1156,7 +1337,7 @@ def _plan(
                 recommended_next_action,
                 _non_dispatch_status(action_type, recommended_next_action),
             )
-    elif _is_checkpoint_attempt(next_action):
+    elif not use_canonical_routing and _is_checkpoint_attempt(next_action):
         if audit_evidence["present"]:
             recommended_next_action = "CHECKPOINT_PREFLIGHT"
             dispatchability = _non_dispatchability(
@@ -1195,6 +1376,9 @@ def _plan(
                         str(correction_route.get("source_audit_result_ref", "NONE")),
                     )
                 )
+                diagnostic_rule = _correction_route_diagnostic_rule(rules, correction_route)
+                if diagnostic_rule:
+                    blocking_rules.append(diagnostic_rule)
             else:
                 target_role = "auditor"
                 dispatchability = can_dispatch_agent(
@@ -1272,7 +1456,7 @@ def _plan(
             target_role,
             task_id,
             task_packet,
-            next_action,
+            routing_next_action,
             project_state,
             current_gate,
             task,
@@ -1348,10 +1532,10 @@ def _plan(
             "next_action": {
                 "action_type": action_type,
                 "dependency_status": dependency_status,
-                "action_semantic": next_action.get("action_semantic", ""),
-                "checkpoint_policy": next_action.get("checkpoint_policy", ""),
-                "blocked_by": next_action.get("blocked_by", []),
-                "routing_source": "transition_engine" if lifecycle_derived else "stored",
+                "action_semantic": routing_next_action.get("action_semantic", ""),
+                "checkpoint_policy": routing_next_action.get("checkpoint_policy", ""),
+                "blocked_by": routing_next_action.get("blocked_by", []),
+                "routing_source": "transition_engine" if use_canonical_routing else "stored",
                 "stored_action_type": next_action.get("action_type", ""),
                 "stored_target_role": next_action.get("target_role", ""),
                 "routing_action_type": routing_next_action.get("action_type", ""),
@@ -1400,6 +1584,56 @@ def _write_json(path_text: str, report: dict[str, object]) -> bool:
     return True
 
 
+def _state_verify_findings(report: dict[str, object]) -> list[dict[str, object]]:
+    evidence = report.get("evidence")
+    if not isinstance(evidence, dict):
+        return []
+    state_verify_evidence = evidence.get("state_verify")
+    if not isinstance(state_verify_evidence, dict):
+        return []
+    findings = state_verify_evidence.get("findings")
+    return [dict(item) for item in findings if isinstance(item, dict)] if isinstance(findings, list) else []
+
+
+def _has_invalid_state(report: dict[str, object]) -> bool:
+    for finding in _state_verify_findings(report):
+        if finding.get("severity") != "error":
+            continue
+        rule_id = str(finding.get("rule_id") or "")
+        if rule_id in INVALID_STATE_RULE_IDS:
+            return True
+    return False
+
+
+def _has_valid_correction_route(report: dict[str, object]) -> bool:
+    if report.get("recommended_next_action") != "CORRECTION_REQUIRED":
+        return False
+    correction_route = report.get("correction_routing")
+    if isinstance(correction_route, dict) and correction_route.get("route") == "CORRECTION_REQUIRED":
+        return True
+    dispatchability = report.get("dispatchability")
+    if isinstance(dispatchability, dict) and dispatchability.get("action_type") == "correction":
+        return report.get("status") == "correction_required"
+    evidence = report.get("evidence")
+    if isinstance(evidence, dict):
+        next_action = evidence.get("next_action")
+        if isinstance(next_action, dict) and next_action.get("routing_action_type") == "correction":
+            return True
+    return False
+
+
+def _route_exit_contract(report: dict[str, object], verify_exit_code: int) -> tuple[str, bool, int]:
+    if _has_invalid_state(report):
+        return "invalid_state", True, EXIT_INVALID_STATE
+    if verify_exit_code == state_verify.EXIT_IO_ERROR:
+        return "runtime_error", True, EXIT_RUNTIME_ERROR
+    if _has_valid_correction_route(report):
+        return "ready", False, EXIT_OK
+    if report.get("status") == "ready":
+        return "ready", False, EXIT_OK
+    return "governance_blocked", False, EXIT_BLOCKED
+
+
 def run(args: argparse.Namespace) -> int:
     """Run the dry-run planner."""
 
@@ -1408,7 +1642,11 @@ def run(args: argparse.Namespace) -> int:
     sidecars = _load_sidecars(root)
     rules, rules_evidence = _load_governance_rules(root)
     report = _plan(root, bool(args.strict), verify_report, verify_exit_code, sidecars, rules, rules_evidence)
+    route_status, fatal, exit_code = _route_exit_contract(report, verify_exit_code)
+    report["route_status"] = route_status
+    report["fatal"] = fatal
+    report["exit_code"] = exit_code
     _print_text(report)
     if args.json_out and not _write_json(str(args.json_out), report):
-        return EXIT_IO_ERROR
-    return EXIT_OK if report["status"] == "ready" else EXIT_BLOCKED
+        return EXIT_RUNTIME_ERROR
+    return exit_code

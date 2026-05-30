@@ -36,9 +36,11 @@ SIDECAR_FILENAMES = (
 )
 
 CANONICAL_TZ_PATH = Path("project-input") / "TZ.md"
-DEFAULT_TZ_TEXT = "# TZ\n\nTIMEZONE: UTC\n"
 RFC3339_UTC_RE = re.compile(r"^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z$")
 TIMESTAMP_SENTINEL = "<runtime-timestamp>"
+PLACEHOLDER_STATUS_KEY = "STATUS"
+PLACEHOLDER_STATUS_VALUE = "placeholder"
+PLACEHOLDER_MUST_REPLACE_KEY = "MUST_REPLACE_BEFORE_LIFECYCLE"
 
 MARKDOWN_SOURCES = {
     "PROJECT_STATE": "project-runtime/PROJECT_STATE.md",
@@ -364,13 +366,71 @@ def _workspace_relative_existing_tz_path(root: Path, value: str) -> tuple[Path |
         return None, f"--tz file is not readable: {exc}"
     if not text.strip():
         return None, f"--tz file is empty: {value}"
+    placeholder_error = _tz_placeholder_error(relpath, text)
+    if placeholder_error:
+        return None, placeholder_error
     return relpath, ""
+
+
+def _metadata_value(line: str, key: str) -> str | None:
+    prefix = f"{key}:"
+    if not line.upper().startswith(prefix):
+        return None
+    return line[len(prefix):].strip()
+
+
+def is_placeholder_tz_text(text: str) -> bool:
+    status_placeholder = False
+    must_replace = False
+    for raw_line in text.splitlines():
+        line = raw_line.strip()
+        status = _metadata_value(line, PLACEHOLDER_STATUS_KEY)
+        if status is not None and status.lower() == PLACEHOLDER_STATUS_VALUE:
+            status_placeholder = True
+        must_replace_value = _metadata_value(line, PLACEHOLDER_MUST_REPLACE_KEY)
+        if must_replace_value is not None and must_replace_value.lower() == "true":
+            must_replace = True
+    return status_placeholder or must_replace
+
+
+def _tz_placeholder_error(relpath: Path, text: str) -> str:
+    if not is_placeholder_tz_text(text):
+        return ""
+    return (
+        f"{relpath.as_posix()} is a placeholder TZ document; replace it with a real "
+        "workspace-local TZ document before lifecycle bootstrap"
+    )
+
+
+def tz_placeholder_status(root: Path, relpath: Path) -> tuple[bool, str]:
+    path = root / relpath
+    try:
+        text = path.read_text(encoding="utf-8")
+    except OSError as exc:
+        return False, f"{relpath.as_posix()} is missing or unreadable: {exc}"
+    error = _tz_placeholder_error(relpath, text)
+    if error:
+        return True, error
+    return False, f"{relpath.as_posix()} is not marked as a placeholder"
 
 
 def select_canonical_tz(root: Path, value: str | None) -> tuple[TzSelection | None, str]:
     canonical_abs = root / CANONICAL_TZ_PATH
     if not value:
-        return TzSelection(CANONICAL_TZ_PATH, None, None, False, "canonical TZ path selected"), ""
+        if canonical_abs.exists() and not canonical_abs.is_file():
+            return None, f"{CANONICAL_TZ_PATH.as_posix()} exists but is not a file"
+        if not canonical_abs.is_file():
+            return None, "--tz is required when project-input/TZ.md is absent"
+        try:
+            canonical_text = canonical_abs.read_text(encoding="utf-8")
+        except OSError as exc:
+            return None, f"{CANONICAL_TZ_PATH.as_posix()} is not readable: {exc}"
+        if not canonical_text.strip():
+            return None, f"{CANONICAL_TZ_PATH.as_posix()} exists but is empty"
+        placeholder_error = _tz_placeholder_error(CANONICAL_TZ_PATH, canonical_text)
+        if placeholder_error:
+            return None, placeholder_error
+        return TzSelection(CANONICAL_TZ_PATH, canonical_abs, None, False, "canonical TZ path selected"), ""
 
     explicit_relpath, error = _workspace_relative_existing_tz_path(root, value)
     if explicit_relpath is None:
@@ -387,6 +447,12 @@ def select_canonical_tz(root: Path, value: str | None) -> tuple[TzSelection | No
             return None, f"{CANONICAL_TZ_PATH.as_posix()} is not readable: {exc}"
         if not canonical_text.strip():
             return None, f"{CANONICAL_TZ_PATH.as_posix()} exists but is empty"
+        if is_placeholder_tz_text(canonical_text):
+            detail = (
+                f"will replace placeholder project-input/TZ.md with explicit TZ "
+                f"{explicit_relpath.as_posix()}"
+            )
+            return TzSelection(CANONICAL_TZ_PATH, root / explicit_relpath, explicit_relpath, True, detail), ""
         detail = (
             f"existing canonical TZ document preserved; explicit TZ {explicit_relpath.as_posix()} "
             f"validated but not copied"
@@ -490,6 +556,11 @@ def write_selected_tz_document(root: Path, selection: TzSelection) -> tuple[bool
     if path.exists():
         if not path.is_file():
             return False, f"{tz_path.as_posix()} exists but is not a file"
+        if selection.copy_to_canonical:
+            if selection.source_path is None:
+                return False, "canonical TZ copy source is missing"
+            path.write_text(selection.source_path.read_text(encoding="utf-8"), encoding="utf-8")
+            return True, f"copied {selection.explicit_tz_path.as_posix()} to project-input/TZ.md"
         if selection.explicit_tz_path and selection.explicit_tz_path != tz_path:
             return True, selection.detail
         return True, "existing TZ document preserved"
@@ -500,10 +571,9 @@ def write_selected_tz_document(root: Path, selection: TzSelection) -> tuple[bool
                 return False, "canonical TZ copy source is missing"
             path.write_text(selection.source_path.read_text(encoding="utf-8"), encoding="utf-8")
             return True, f"copied {selection.explicit_tz_path.as_posix()} to project-input/TZ.md"
-        path.write_text(DEFAULT_TZ_TEXT, encoding="utf-8")
     except OSError as exc:
         return False, str(exc)
-    return True, "wrote default TZ document"
+    return False, f"{tz_path.as_posix()} is missing; provide --tz with a real workspace-local TZ document"
 
 
 def _write_sidecars(state_root: Path, sidecars: dict[str, dict[str, Any]]) -> tuple[bool, str]:

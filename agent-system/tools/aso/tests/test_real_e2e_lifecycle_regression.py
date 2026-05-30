@@ -253,10 +253,16 @@ class RealE2ELifecycleRegressionTests(unittest.TestCase):
             routine_paths = {doc["path"] for doc in handoff_context["required_docs"]}
             self.assertIn("agent-system/02_runtime/ORCHESTRATOR_RUNTIME_CONTRACT.json", routine_paths)
             self.assertIn(TASK_PACKET, routine_paths)
-            self.assertIn("agent-system/01_roles/REQUIREMENTS_ANALYST.md", routine_paths)
-            self.assertIn("agent-system/03_templates/AGENT_RESULT_TEMPLATE.md", routine_paths)
+            self.assertNotIn("agent-system/01_roles/REQUIREMENTS_ANALYST.md", routine_paths)
+            self.assertNotIn("agent-system/03_templates/AGENT_RESULT_TEMPLATE.md", routine_paths)
+            self.assertEqual(handoff_context["role_contract_summary"]["role"], "requirements_analyst")
+            self.assertEqual(handoff_context["role_contract_summary"]["role_reasoning_floor"], "xhigh")
+            self.assertEqual(handoff_context["result_contract_summary"]["result_kind"], "worker_result")
             for routine_path in routine_paths:
                 self.assertNotEqual(routine_path, "agent-system/GOVERNANCE_CHANGELOG.md")
+                self.assertFalse(routine_path.startswith("agent-system/01_roles/"))
+                self.assertFalse(routine_path.startswith("agent-system/04_roles/"))
+                self.assertFalse(routine_path.startswith("agent-system/03_templates/"))
                 self.assertFalse(routine_path.startswith("agent-system/09_validators/"))
                 self.assertFalse(routine_path.startswith("agent-system/11_release/"))
 

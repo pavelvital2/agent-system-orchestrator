@@ -12,7 +12,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
-from .. import artifact_storage, runtime_schema_contracts
+from .. import artifact_storage, runtime_schema_contracts, state_materialization, transition_engine
 from . import output_policy
 
 
@@ -24,6 +24,7 @@ SCHEMA_RELPATH = "agent-system/09_validators/schemas/artifact_package_manifest.s
 CANONICAL_MANIFEST_FILENAME = "manifest.json"
 LEGACY_MANIFEST_FILENAMES = ("artifact_package_manifest.json",)
 SUPPORTED_MANIFEST_FILENAMES = (CANONICAL_MANIFEST_FILENAME, *LEGACY_MANIFEST_FILENAMES)
+INVALID_MANIFEST_REJECTION_REASON = "invalid_manifest"
 ARTIFACT_ID_RE = re.compile(r"^[A-Z][A-Z0-9_:-]+$")
 PACKAGE_FORBIDDEN_ROOTS = (".git", ".github", ".venv", "agent-system", "project-input", "project-runtime", "project-archive")
 REQUIRED_MANIFEST_FIELDS = (
@@ -64,6 +65,35 @@ ALLOWED_ROLES = (
     "owner",
 )
 ALLOWED_STATUSES = ("pass", "fail", "blocked", "gap", "pending")
+
+
+def _allowed_roles_from_contract() -> tuple[str, ...]:
+    try:
+        contract = transition_engine.load_runtime_contract()
+    except (OSError, transition_engine.RuntimeContractError):
+        return ALLOWED_ROLES
+    roles = transition_engine.contract_roles(contract)
+    values = [
+        *[str(role) for role in roles.get("allowed_roles", [])],
+        *[str(role) for role in roles.get("forbidden_dispatch_roles", [])],
+    ]
+    return tuple(dict.fromkeys(role for role in values if role))
+
+
+def _allowed_statuses_from_contract() -> tuple[str, ...]:
+    try:
+        contract = transition_engine.load_runtime_contract()
+    except (OSError, transition_engine.RuntimeContractError):
+        return ALLOWED_STATUSES
+    lifecycle = transition_engine.lifecycle_status_contract(contract)
+    values = [
+        *[str(status) for status in lifecycle.get("profile_result_statuses", [])],
+        *[str(status) for status in lifecycle.get("audit_result_statuses", [])],
+        "blocked",
+        "gap",
+        "pending",
+    ]
+    return tuple(dict.fromkeys(status for status in values if status))
 
 
 def _now_utc() -> str:
@@ -110,6 +140,10 @@ def _is_error_finding(finding: object) -> bool:
 def _finding_counts(findings: list[dict[str, str]]) -> dict[str, int]:
     errors = sum(1 for finding in findings if _is_error_finding(finding))
     return {"errors": errors, "warnings": len(findings) - errors}
+
+
+def _is_invalid_manifest_rejection(target_bucket: str, reason: str | None) -> bool:
+    return target_bucket == "rejected" and (reason or "").strip() == INVALID_MANIFEST_REJECTION_REASON
 
 
 def _blocked_reason(findings: list[dict[str, str]], extra_reasons: list[str] | None = None) -> str | None:
@@ -273,6 +307,8 @@ def _validate_manifest_payload(payload: dict[str, Any], root: Path, package_root
         else None
     )
     allowed_types = tuple(schema_types) if isinstance(schema_types, list) else ALLOWED_ARTIFACT_TYPES
+    allowed_roles = _allowed_roles_from_contract()
+    allowed_statuses = _allowed_statuses_from_contract()
 
     missing = [field for field in REQUIRED_MANIFEST_FIELDS if field not in payload]
     extra = sorted(set(payload) - set(REQUIRED_MANIFEST_FIELDS))
@@ -290,12 +326,12 @@ def _validate_manifest_payload(payload: dict[str, Any], root: Path, package_root
         findings.append(_finding("ARTIFACT_VALIDATE_SCHEMA_005", "Artifact id is invalid", "artifact_id must match ^[A-Z][A-Z0-9_:-]+$.", "artifact_id"))
     if not isinstance(payload.get("task_id"), str) or not str(payload.get("task_id", "")).strip():
         findings.append(_finding("ARTIFACT_VALIDATE_SCHEMA_006", "Task id is invalid", "task_id must be a non-empty string.", "task_id"))
-    if payload.get("role") not in ALLOWED_ROLES:
-        findings.append(_finding("ARTIFACT_VALIDATE_SCHEMA_007", "Role is unsupported", f"role must be one of: {', '.join(ALLOWED_ROLES)}.", "role"))
+    if payload.get("role") not in allowed_roles:
+        findings.append(_finding("ARTIFACT_VALIDATE_SCHEMA_007", "Role is unsupported", f"role must be one of: {', '.join(allowed_roles)}.", "role"))
     if not isinstance(payload.get("attempt_no"), int) or isinstance(payload.get("attempt_no"), bool) or payload.get("attempt_no", 0) < 1:
         findings.append(_finding("ARTIFACT_VALIDATE_SCHEMA_008", "Attempt number is invalid", "attempt_no must be an integer >= 1.", "attempt_no"))
-    if payload.get("status") not in ALLOWED_STATUSES:
-        findings.append(_finding("ARTIFACT_VALIDATE_SCHEMA_009", "Status is unsupported", f"status must be one of: {', '.join(ALLOWED_STATUSES)}.", "status"))
+    if payload.get("status") not in allowed_statuses:
+        findings.append(_finding("ARTIFACT_VALIDATE_SCHEMA_009", "Status is unsupported", f"status must be one of: {', '.join(allowed_statuses)}.", "status"))
     for error in _existing_package_path_errors(package_root, payload.get("main_document"), "main_document"):
         findings.append(_finding("ARTIFACT_VALIDATE_PATH_001", "Main document path is invalid", error, "main_document"))
     for field in ("structured_artifacts", "evidence_refs"):
@@ -314,8 +350,8 @@ def _validate_manifest_payload(payload: dict[str, Any], root: Path, package_root
             findings.append(_finding("ARTIFACT_VALIDATE_SCHEMA_012", "Producer fields are invalid", "producer must contain only agent_instance_id and role.", "producer"))
         if not isinstance(producer.get("agent_instance_id"), str) or not str(producer.get("agent_instance_id", "")).strip():
             findings.append(_finding("ARTIFACT_VALIDATE_SCHEMA_013", "Producer agent id is invalid", "producer.agent_instance_id must be non-empty.", "producer.agent_instance_id"))
-        if producer.get("role") not in ALLOWED_ROLES:
-            findings.append(_finding("ARTIFACT_VALIDATE_SCHEMA_014", "Producer role is unsupported", f"producer.role must be one of: {', '.join(ALLOWED_ROLES)}.", "producer.role"))
+        if producer.get("role") not in allowed_roles:
+            findings.append(_finding("ARTIFACT_VALIDATE_SCHEMA_014", "Producer role is unsupported", f"producer.role must be one of: {', '.join(allowed_roles)}.", "producer.role"))
     return findings
 
 
@@ -547,36 +583,59 @@ def _classification_plan(
 ) -> tuple[dict[str, object], Path | None, Path | None, dict[str, Any] | None]:
     source_path, source_relpath, manifest_path, error = _resolve_workspace_package(root, source_text, "candidates")
     findings: list[dict[str, str]] = []
+    blocking_findings: list[dict[str, str]] = []
     target_path: Path | None = None
     source_abs: Path | None = source_path
     selected_manifest: dict[str, Any] | None = None
+    invalid_manifest_rejection = _is_invalid_manifest_rejection(target_bucket, reason)
     if error is not None or source_path is None or source_relpath is None:
-        findings.append(_finding("ARTIFACT_CLASSIFY_PATH_001", "Candidate artifact path is invalid", error or "invalid artifact path", source_text))
+        finding = _finding("ARTIFACT_CLASSIFY_PATH_001", "Candidate artifact path is invalid", error or "invalid artifact path", source_text)
+        findings.append(finding)
+        blocking_findings.append(finding)
     else:
         target_relpath, target_error = _target_for_classification(source_relpath, target_bucket)
         if target_error is not None or target_relpath is None:
-            findings.append(_finding("ARTIFACT_CLASSIFY_TRANSITION_001", "Artifact transition is not allowed", target_error or "invalid transition", source_relpath))
+            finding = _finding("ARTIFACT_CLASSIFY_TRANSITION_001", "Artifact transition is not allowed", target_error or "invalid transition", source_relpath)
+            findings.append(finding)
+            blocking_findings.append(finding)
         else:
             target_path = root / target_relpath
         if not source_path.is_dir():
-            findings.append(_finding("ARTIFACT_CLASSIFY_READ_001", "Candidate package does not exist", "Candidate package directory must exist before classification.", source_relpath))
+            finding = _finding("ARTIFACT_CLASSIFY_READ_001", "Candidate package does not exist", "Candidate package directory must exist before classification.", source_relpath)
+            findings.append(finding)
+            blocking_findings.append(finding)
         elif manifest_path is None or not manifest_path.is_file():
-            findings.append(_finding("ARTIFACT_CLASSIFY_READ_002", "Candidate package manifest is missing", "Candidate package must contain manifest.json.", source_relpath))
+            finding = _finding("ARTIFACT_CLASSIFY_READ_002", "Candidate package manifest is missing", "Candidate package must contain manifest.json.", source_relpath)
+            findings.append(finding)
+            if not invalid_manifest_rejection:
+                blocking_findings.append(finding)
         else:
             selected_manifest, manifest_findings = _validate_manifest_selection(root, source_path, manifest_path)
             findings.extend(manifest_findings)
+            if not invalid_manifest_rejection:
+                blocking_findings.extend(manifest_findings)
         if target_path is not None and target_path.exists():
-            findings.append(_finding("ARTIFACT_CLASSIFY_IMMUTABLE_001", "Target artifact already exists", "Artifact buckets are immutable; refusing overwrite.", target_path.relative_to(root).as_posix()))
+            finding = _finding("ARTIFACT_CLASSIFY_IMMUTABLE_001", "Target artifact already exists", "Artifact buckets are immutable; refusing overwrite.", target_path.relative_to(root).as_posix())
+            findings.append(finding)
+            blocking_findings.append(finding)
 
     blocked_without_confirm = not confirmed
     counts = _finding_counts(findings)
+    blocking_counts = _finding_counts(blocking_findings)
     blocked_reasons = ["--confirm-write is required for artifact classification writes"] if blocked_without_confirm else []
-    status = "blocked" if counts["errors"] or blocked_without_confirm else "ready"
+    status = "blocked" if blocking_counts["errors"] or blocked_without_confirm else "ready"
     actual_read_outcome = (
         "completed"
-        if source_path is not None and source_path.is_dir() and manifest_path is not None and manifest_path.is_file()
+        if source_path is not None
+        and source_path.is_dir()
+        and (invalid_manifest_rejection or (manifest_path is not None and manifest_path.is_file()))
         else "blocked"
     )
+    summary = {"errors": counts["errors"] + (1 if blocked_without_confirm else 0), "warnings": counts["warnings"]}
+    nonblocking_manifest_errors = max(0, counts["errors"] - blocking_counts["errors"])
+    if nonblocking_manifest_errors:
+        summary["nonblocking_manifest_errors"] = nonblocking_manifest_errors
+        summary["blocking_errors"] = blocking_counts["errors"] + (1 if blocked_without_confirm else 0)
     report = {
         "tool": "aso",
         "command": f"artifact {target_bucket[:-2] if target_bucket == 'accepted' else 'reject'}",
@@ -589,14 +648,15 @@ def _classification_plan(
         "requested_write_mode": "confirmed_write" if confirmed else "dry_run",
         "read_only": not confirmed,
         "mutations_performed": False,
-        "blocked_reason": _blocked_reason(findings, blocked_reasons),
+        "blocked_reason": _blocked_reason(blocking_findings, blocked_reasons),
         "actual_read_outcome": actual_read_outcome,
         "actual_write_outcome": "not_requested" if not confirmed else ("blocked" if status == "blocked" else "pending"),
         "reason": reason.strip() if isinstance(reason, str) and reason.strip() else None,
         "blocked_reasons": blocked_reasons,
+        "invalid_manifest_rejection": invalid_manifest_rejection,
         "validators_run": ["candidate_package_path_guard", "storage_transition_guard", "immutability_guard", "manifest_validation", "package_inventory_hash"],
         "findings": findings,
-        "summary": {"errors": counts["errors"] + (1 if blocked_without_confirm else 0), "warnings": counts["warnings"]},
+        "summary": summary,
     }
     return report, source_abs, target_path, selected_manifest
 
@@ -708,6 +768,11 @@ def _run_classify(args: argparse.Namespace, target_bucket: str) -> int:
                 receipt_path.parent.mkdir(parents=True, exist_ok=True)
                 receipt_path.write_text(_json_bytes(receipt), encoding="utf-8")
                 _append_lifecycle_event(root, event)
+                materialization = state_materialization.materialize_after_confirmed_write(root)
+                report["state_materialization"] = materialization.to_json()
+                if not materialization.ok:
+                    print(f"aso {report['command']}: failed to materialize state sidecars: {materialization.error}", file=sys.stderr)
+                    return EXIT_IO_ERROR
                 report["receipt"] = receipt
                 report["receipt_ref"] = receipt_relpath
                 report["event"] = event

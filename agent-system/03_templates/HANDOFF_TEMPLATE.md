@@ -41,7 +41,7 @@ REFERENCE_DOCS:
 - <reference path | NONE>
 
 REFERENCE_REASON:
-<explicit debug/explain/recovery reason, validator-required reason, or NONE>
+<explicit debug/recovery reason, specific validator-required reason, or NONE>
 
 SCOPE:
 IN:
@@ -88,13 +88,13 @@ SUPERSEDED_BY:
 - Superseded or cancelled handoffs must not be dispatched.
 - A handoff cannot override role instructions, task packet scope, runtime state, or governance.
 - Routine handoffs must use the compact runtime contract, current state refs,
-  current task packet, current event/result/artifact refs, and only the
-  specific target role doc plus role-required doc tokens.
+  current task packet, current event/result/artifact refs, allowed sources,
+  role/result contract summaries, lifecycle policy, and expected output paths.
 - Routine handoffs must not include the full governance corpus, all role docs,
-  all templates, full changelog, release notes, or all validator docs.
-- `REFERENCE_DOCS` may be non-`NONE` only for `debug`, `explain`, or
-  `violation_recovery` context with `REFERENCE_REASON`, or when a validator
-  explicitly requires the reference.
+  all templates, full changelog, release reports, or validator docs.
+- `REFERENCE_DOCS` may be non-`NONE` only for bootstrap, `debug`,
+  `violation_recovery`, or a specific validator reference with recorded
+  authorization.
 - A handoff to `project_owner` for design-gap resolution must reference exactly
   one audited owner question card and must not ask technical implementation
   questions.

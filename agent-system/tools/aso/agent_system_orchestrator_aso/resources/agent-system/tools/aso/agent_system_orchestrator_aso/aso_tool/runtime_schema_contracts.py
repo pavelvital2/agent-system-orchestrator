@@ -45,6 +45,19 @@ OPTIONAL_SIDECARS = (
 )
 ALL_SIDECARS = REQUIRED_SIDECARS + OPTIONAL_SIDECARS
 
+# NEXT_ACTION is required for compatibility with existing operators and reports,
+# but its route-driving fields are a rendered cache. Dispatch and checkpoint
+# decisions must derive the expected cache from these canonical inputs.
+NEXT_ACTION_DERIVATION_INPUTS = (
+    "TASK_REGISTRY",
+    "project-runtime/agents/instances.jsonl",
+    "ACCEPTED_ARTIFACTS",
+    "AUDIT_RESULT references",
+    "CURRENT_GATE",
+    "correction_links and correction routing records",
+    "ORCHESTRATOR_RUNTIME_CONTRACT.json",
+)
+
 LIFECYCLE_STATUSES = (
     "bootstrap",
     "requirements",
@@ -144,6 +157,8 @@ def contract_summary() -> dict[str, object]:
         "optional_envelope_fields": list(OPTIONAL_ENVELOPE_FIELDS),
         "required_sidecars": list(REQUIRED_SIDECARS),
         "optional_sidecars": list(OPTIONAL_SIDECARS),
+        "next_action_cache_view": True,
+        "next_action_derivation_inputs": list(NEXT_ACTION_DERIVATION_INPUTS),
         "compatibility_statuses": list(COMPATIBILITY_STATUSES),
     }
 

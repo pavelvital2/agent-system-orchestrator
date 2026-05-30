@@ -42,13 +42,14 @@ Routine handoffs include only:
 - current runtime state refs;
 - current event, RESULT/AUDIT_RESULT, artifact manifest, or receipt refs;
 - current task packet;
-- the specific target role doc;
+- target-role contract summary;
 - doc tokens required by the target role.
 
 Routine handoffs must not include the full governance corpus, all role docs,
 all templates, full changelog, release notes, or all validator docs. Reference
-docs are allowed only in `debug`, `explain`, or `violation_recovery` mode with
-an explicit reason, or when a validator marks them required.
+docs are allowed only in `debug` or `violation_recovery` mode with an explicit
+reason, or when `--validator-required` names a specific file under
+`agent-system/09_validators/`.
 
 ## Profile-Agent Dispatch Handoff JSON
 
@@ -75,9 +76,10 @@ The handoff JSON must name:
 - `lifecycle_policy`.
 
 Routine handoff JSON must set `governance_corpus_included: false` and must not
-include broad governance corpus paths. Debug, explain, or violation-recovery
-handoffs may include reference docs only when the handoff records an explicit
-reference reason or validator-required authorization.
+include broad governance corpus paths. Debug or violation-recovery handoffs may
+include role, template, changelog, or release reference docs only with an
+explicit reference reason. Validator-required authorization is limited to
+specific files under `agent-system/09_validators/`.
 
 ASO does not execute Codex, run a daemon, or mutate task outputs for this
 contract. The external runner contract is:

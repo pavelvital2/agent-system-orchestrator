@@ -359,12 +359,15 @@ ORCHESTRATOR_RUNTIME_CONTRACT_JSON = r"""{
       "forbidden_docs",
       "allowed_sources_ref",
       "allowed_sources",
+      "context_budget",
+      "role_contract_summary",
+      "result_contract_summary",
       "prompt_ref",
       "expected_result_path",
       "expected_artifact_package_path",
       "lifecycle_policy"
     ],
-    "forbidden_governance_corpus_rule": "Routine handoffs must not include the full governance corpus unless context_mode is debug, explain, or violation_recovery and a reference reason or validator_required authorization is recorded.",
+    "forbidden_governance_corpus_rule": "Routine handoffs must not include the full governance corpus, role docs, template docs, changelog, release reports, or validator docs. Reference docs require debug or violation_recovery mode with reference_reason, or a specific validator reference with validator_required authorization.",
     "runner": "external_codex_cli",
     "runner_semantics": "ASO emits reproducible handoff JSON and dispatch receipts for externally invoked Codex CLI runs; ASO does not execute the runner, daemonize work, or mutate task outputs.",
     "external_runner_command_template": "codex exec -C <WORKSPACE_ROOT> -m <MODEL> -c model_reasoning_effort=\"<REASONING_EFFORT>\" - < <PROMPT_REF>",
@@ -440,6 +443,7 @@ ORCHESTRATOR_RUNTIME_CONTRACT_JSON = r"""{
     ],
     "default_forbidden_refs": [
       "agent-system/01_roles/",
+      "agent-system/04_roles/",
       "agent-system/03_templates/",
       "agent-system/GOVERNANCE_CHANGELOG.md",
       "agent-system/11_release/",
@@ -485,9 +489,21 @@ ORCHESTRATOR_RUNTIME_CONTRACT_JSON = r"""{
       "bootstrap",
       "debug",
       "violation_recovery",
-      "audit_dispute",
       "specific_validator_reference"
-    ]
+    ],
+    "context_budget": {
+      "max_routine_files": 6,
+      "max_lines_per_file": 160,
+      "routine_reference_docs_allowed": false
+    },
+    "stdout_policy": {
+      "default": "summary_only",
+      "full_report_requires": [
+        "--json-out",
+        "--format json"
+      ],
+      "full_diff_or_report_in_stdout_by_default": false
+    }
   },
   "handoff_context_builder_contract": {
     "normal_context_mode": "routine",
@@ -525,17 +541,23 @@ ORCHESTRATOR_RUNTIME_CONTRACT_JSON = r"""{
       "current_result_or_audit_result_reference",
       "current_artifact_manifest_or_receipt_reference",
       "allowed_sources",
-      "specific_target_role_doc",
-      "target_role_required_doc_tokens"
+      "target_role_required_doc_tokens",
+      "role_contract_summary",
+      "result_contract_summary",
+      "resolved_reasoning_floor",
+      "lifecycle_policy",
+      "expected_output_paths"
     ],
     "routine_handoff_excludes": [
       "agent-system/01_roles/",
+      "agent-system/04_roles/",
       "agent-system/03_templates/",
       "agent-system/GOVERNANCE_CHANGELOG.md",
       "agent-system/11_release/",
       "agent-system/09_validators/"
     ],
-    "reference_doc_inclusion_rule": "Reference docs outside routine_handoff_includes require context_mode debug, explain, or violation_recovery plus either an explicit reference_reason or validator_required=true.",
+    "reference_doc_inclusion_rule": "Reference docs are excluded from routine handoffs. They require context_mode debug or violation_recovery plus explicit reference_reason, or validator_required=true for a specific validator reference.",
+    "role_doc_access_policy": "Role docs are reference docs only. Routine handoffs use role_contract_summary and required_docs_by_role tokens from this runtime contract instead of embedding role doc files.",
     "target_role_doc_map": {
       "requirements_analyst": "agent-system/01_roles/REQUIREMENTS_ANALYST.md",
       "solution_architect": "agent-system/01_roles/SOLUTION_ARCHITECT.md",

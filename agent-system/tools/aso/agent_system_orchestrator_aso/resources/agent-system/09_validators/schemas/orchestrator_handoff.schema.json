@@ -18,6 +18,9 @@
     "allowed_sources",
     "required_docs",
     "required_doc_tokens",
+    "context_budget",
+    "role_contract_summary",
+    "result_contract_summary",
     "forbidden_docs",
     "reference_docs",
     "governance_corpus_included",
@@ -123,6 +126,73 @@
       "type": "array",
       "items": { "type": "string", "minLength": 1 }
     },
+    "context_budget": {
+      "type": "object",
+      "additionalProperties": true,
+      "required": [
+        "max_routine_files",
+        "max_lines_per_file",
+        "stdout_default",
+        "stdout_full_report_requires",
+        "full_diff_or_report_in_stdout_by_default",
+        "routine_reference_docs_allowed"
+      ],
+      "properties": {
+        "max_routine_files": { "type": "integer", "minimum": 1, "maximum": 12 },
+        "max_lines_per_file": { "type": "integer", "minimum": 1, "maximum": 300 },
+        "stdout_default": { "const": "summary_only" },
+        "stdout_full_report_requires": {
+          "type": "array",
+          "items": { "enum": ["--json-out", "--format json"] },
+          "minItems": 1,
+          "uniqueItems": true
+        },
+        "full_diff_or_report_in_stdout_by_default": { "const": false },
+        "routine_reference_docs_allowed": { "const": false }
+      }
+    },
+    "role_contract_summary": {
+      "type": "object",
+      "additionalProperties": true,
+      "required": ["role", "role_reasoning_floor", "required_doc_tokens", "role_doc_access"],
+      "properties": {
+        "role": {
+          "type": "string",
+          "enum": [
+            "requirements_analyst",
+            "solution_architect",
+            "developer",
+            "tester",
+            "auditor",
+            "technical_writer"
+          ]
+        },
+        "role_reasoning_floor": {
+          "type": "string",
+          "enum": ["medium", "high", "xhigh", "maximum"]
+        },
+        "required_doc_tokens": {
+          "type": "array",
+          "items": { "type": "string", "minLength": 1 }
+        },
+        "role_doc_access": { "type": "string", "minLength": 1 }
+      }
+    },
+    "result_contract_summary": {
+      "type": "object",
+      "additionalProperties": true,
+      "required": ["result_kind", "template_ref", "summary"],
+      "properties": {
+        "result_kind": {
+          "enum": ["worker_result", "test_result", "audit_result"]
+        },
+        "template_ref": {
+          "const": "agent-system/03_templates/AGENT_RESULT_TEMPLATE.md"
+        },
+        "summary": { "type": "string", "minLength": 1 },
+        "expected_result_path_template": { "type": "string", "minLength": 1 }
+      }
+    },
     "forbidden_docs": {
       "type": "array",
       "items": { "type": "string", "minLength": 1 },
@@ -221,7 +291,7 @@
     "docRef": {
       "type": "object",
       "additionalProperties": true,
-      "required": ["path", "sections", "why_needed", "source"],
+      "required": ["path", "sections", "line_limit", "why_needed", "source"],
       "properties": {
         "path": {
           "type": "string",
@@ -231,6 +301,11 @@
           "type": "array",
           "items": { "type": "string", "minLength": 1 },
           "minItems": 1
+        },
+        "line_limit": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 300
         },
         "why_needed": {
           "type": "string",

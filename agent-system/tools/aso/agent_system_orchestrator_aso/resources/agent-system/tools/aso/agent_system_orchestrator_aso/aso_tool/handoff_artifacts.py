@@ -22,11 +22,18 @@ AUDIT_RESULT_REF_TEMPLATE = "project-runtime/results/audit/AUDIT_RESULT_<TASK_ID
 ARTIFACT_PACKAGE_REF_TEMPLATE = "project-runtime/artifacts/candidates/<TASK_ID>/manifest.json"
 DEFAULT_LIFECYCLE_POLICY = "one_agent_one_task_delete_after_result"
 NONE_REF = "NONE"
+REFERENCE_CONTEXT_MODES = {"debug", "violation_recovery"}
+SPECIFIC_VALIDATOR_REFERENCE_PREFIX = "agent-system/09_validators/"
 CURRENT_TASK_TOKENS = {"current_task_packet", "current_test_packet", "current_audit_packet"}
+DEFAULT_MAX_ROUTINE_FILES = 6
+DEFAULT_MAX_LINES_PER_FILE = 160
+GENERIC_REFERENCE_REASONS = {
+    "Explicit reference.",
+    "Reference doc requested without valid authorization.",
+    "Required by validator.",
+    "Specific validator reference required by validator.",
+}
 TOKEN_DOC_MAP = {
-    "agent_result_template": "agent-system/03_templates/AGENT_RESULT_TEMPLATE.md",
-    "test_result_template": "agent-system/03_templates/AGENT_RESULT_TEMPLATE.md",
-    "audit_result_template": "agent-system/03_templates/AGENT_RESULT_TEMPLATE.md",
     "artifact_contract_summary": "agent-system/02_runtime/ORCHESTRATOR_RUNTIME_CONTRACT.json",
     "audit_rules_summary": "agent-system/02_runtime/ORCHESTRATOR_RUNTIME_CONTRACT.json",
 }
@@ -79,11 +86,39 @@ def _normalize_path(value: object) -> str:
         return NONE_REF
     text = text.split("#", 1)[0].strip().replace("\\", "/")
     has_trailing_slash = text.endswith("/")
-    parts = [part for part in text.split("/") if part not in {"", "."}]
-    if not parts or any(part == ".." for part in parts):
+    parts = _canonical_path_parts(text)
+    if not parts:
         return text
     normalized = "/".join(parts)
     if has_trailing_slash:
+        normalized = f"{normalized}/"
+    return normalized
+
+
+def _canonical_path_parts(text: str) -> list[str] | None:
+    parts: list[str] = []
+    for part in text.split("/"):
+        if part in {"", "."}:
+            continue
+        if part == "..":
+            if not parts:
+                return None
+            parts.pop()
+            continue
+        parts.append(part)
+    return parts or None
+
+
+def _canonical_path(value: object) -> str | None:
+    text = _text(value).strip("`'\"")
+    if not text or text.upper() == NONE_REF:
+        return NONE_REF
+    text = text.split("#", 1)[0].strip().replace("\\", "/")
+    parts = _canonical_path_parts(text)
+    if not parts:
+        return None
+    normalized = "/".join(parts)
+    if text.endswith("/"):
         normalized = f"{normalized}/"
     return normalized
 
@@ -95,6 +130,7 @@ def _doc_ref(path: str, why_needed: str, *, source: str = "routine") -> dict[str
     return {
         "path": normalized,
         "sections": ["Bounded task-relevant sections"],
+        "line_limit": DEFAULT_MAX_LINES_PER_FILE,
         "why_needed": why_needed,
         "source": source,
     }
@@ -142,15 +178,6 @@ def _runtime_contract_ref(contract: Mapping[str, Any]) -> dict[str, object] | No
     return ref
 
 
-def _target_role_doc_ref(contract: Mapping[str, Any], target_role: str) -> dict[str, object] | None:
-    handoff_context = _mapping(contract.get("handoff_context_builder_contract"))
-    role_doc_map = _mapping(handoff_context.get("target_role_doc_map"))
-    ref = _doc_ref(_text(role_doc_map.get(target_role)), f"Specific role instructions for target role {target_role}.")
-    if ref is not None:
-        ref["sections"] = ["Role rules for this target role"]
-    return ref
-
-
 def _required_doc_refs(
     contract: Mapping[str, Any],
     target_role: str,
@@ -163,12 +190,14 @@ def _required_doc_refs(
     task_ref = _doc_ref(task_packet, "Current task packet for this bounded handoff.")
     if task_ref is not None:
         refs.append(task_ref)
-    role_ref = _target_role_doc_ref(contract, target_role)
-    if role_ref is not None:
-        refs.append(role_ref)
     role_required_refs, role_required_tokens = _role_required_doc_refs(contract, target_role, task_packet)
     refs.extend(role_required_refs)
-    return _dedupe_doc_refs(refs), role_required_tokens
+    refs = _dedupe_doc_refs(refs)
+    budget = _routine_context_budget(contract)
+    max_lines = int(budget["max_lines_per_file"])
+    for ref in refs:
+        ref["line_limit"] = max_lines
+    return refs, role_required_tokens
 
 
 def _handoff_context_contract(contract: Mapping[str, Any]) -> dict[str, Any]:
@@ -184,6 +213,63 @@ def _forbidden_doc_tokens(contract: Mapping[str, Any]) -> list[str]:
     return _string_list(routine_policy.get("orchestrator_must_not_read_routinely"))
 
 
+def _positive_int(value: object, default: int) -> int:
+    return value if isinstance(value, int) and value > 0 else default
+
+
+def _routine_context_budget(contract: Mapping[str, Any]) -> dict[str, object]:
+    routine_policy = _mapping(contract.get("routine_context_policy"))
+    budget = _mapping(routine_policy.get("context_budget"))
+    stdout_policy = _mapping(routine_policy.get("stdout_policy"))
+    return {
+        "max_routine_files": _positive_int(budget.get("max_routine_files"), DEFAULT_MAX_ROUTINE_FILES),
+        "max_lines_per_file": _positive_int(budget.get("max_lines_per_file"), DEFAULT_MAX_LINES_PER_FILE),
+        "stdout_default": _text(stdout_policy.get("default")) or "summary_only",
+        "stdout_full_report_requires": _string_list(stdout_policy.get("full_report_requires"))
+        or ["--json-out", "--format json"],
+        "full_diff_or_report_in_stdout_by_default": False,
+        "routine_reference_docs_allowed": False,
+    }
+
+
+def _reasoning_floor(contract: Mapping[str, Any], target_role: str) -> str:
+    floors = _mapping(contract.get("reasoning_floor_by_role"))
+    return _text(floors.get(target_role)) or NONE_REF
+
+
+def _role_contract_summary(
+    contract: Mapping[str, Any],
+    target_role: str,
+    required_doc_tokens: list[str],
+) -> dict[str, object]:
+    handoff_context = _handoff_context_contract(contract)
+    return {
+        "role": target_role or NONE_REF,
+        "role_reasoning_floor": _reasoning_floor(contract, target_role),
+        "required_doc_tokens": required_doc_tokens,
+        "role_doc_access": _text(handoff_context.get("role_doc_access_policy"))
+        or "Role docs are reference-only and are not embedded in routine handoffs.",
+    }
+
+
+def _result_contract_summary(target_role: str, required_doc_tokens: list[str]) -> dict[str, object]:
+    if target_role == "auditor" or "audit_result_template" in required_doc_tokens:
+        result_kind = "audit_result"
+        expected_path_template = AUDIT_RESULT_REF_TEMPLATE
+    elif "test_result_template" in required_doc_tokens:
+        result_kind = "test_result"
+        expected_path_template = WORKER_RESULT_REF_TEMPLATE
+    else:
+        result_kind = "worker_result"
+        expected_path_template = WORKER_RESULT_REF_TEMPLATE
+    return {
+        "result_kind": result_kind,
+        "template_ref": "agent-system/03_templates/AGENT_RESULT_TEMPLATE.md",
+        "summary": "Formal RESULT fields are required; routine handoff provides this summary instead of embedding the full template.",
+        "expected_result_path_template": expected_path_template,
+    }
+
+
 def _packet_field(packet_fields: Mapping[str, str], key: str, default: str) -> str:
     value = _text(packet_fields.get(key))
     return default if not value or value.upper() == NONE_REF else value
@@ -196,12 +282,51 @@ def _is_broad_reference(path: str, forbidden_docs: list[str]) -> bool:
         if forbidden.endswith("/"):
             if clean_path == clean_forbidden:
                 return True
+            if clean_path.startswith(f"{clean_forbidden}/"):
+                return True
             if clean_path in {f"{clean_forbidden}/*", f"{clean_forbidden}/**"}:
                 return True
             continue
         if clean_path == clean_forbidden:
             return True
     return False
+
+
+def _is_specific_validator_reference(path: str) -> bool:
+    canonical_path = _canonical_path(path)
+    if not canonical_path:
+        return False
+    clean_path = canonical_path.rstrip("/")
+    if "*" in clean_path:
+        return False
+    if not clean_path.startswith(SPECIFIC_VALIDATOR_REFERENCE_PREFIX):
+        return False
+    if clean_path == SPECIFIC_VALIDATOR_REFERENCE_PREFIX.rstrip("/"):
+        return False
+    return bool(clean_path.rsplit("/", 1)[-1].count("."))
+
+
+def _reference_doc_authorization(
+    *,
+    path: str,
+    context_mode: str,
+    reference_reason: str,
+    validator_required: bool,
+) -> str:
+    if (
+        context_mode != "routine"
+        and validator_required
+        and _is_specific_validator_reference(path)
+    ):
+        return "validator_required"
+    if context_mode in REFERENCE_CONTEXT_MODES and reference_reason:
+        return "explicit_reference_reason"
+    return ""
+
+
+def _has_explicit_reference_reason(doc: Mapping[str, object]) -> bool:
+    reason = _text(doc.get("why_needed"))
+    return bool(reason and reason not in GENERIC_REFERENCE_REASONS)
 
 
 def build_handoff_artifact(
@@ -229,14 +354,28 @@ def build_handoff_artifact(
     context_mode = context_mode or _text(handoff_context.get("normal_context_mode")) or "routine"
     refs = [_normalize_path(path) for path in (reference_docs or [])]
     reference_doc_refs: list[dict[str, object]] = []
+    authorized_reference_doc_refs: list[dict[str, object]] = []
     for path in refs:
+        authorization = _reference_doc_authorization(
+            path=path,
+            context_mode=context_mode,
+            reference_reason=reference_reason,
+            validator_required=validator_required,
+        )
         ref = _doc_ref(
             path,
-            reference_reason or ("Required by validator." if validator_required else "Explicit reference."),
-            source="validator_required" if validator_required else context_mode,
+            reference_reason
+            or (
+                "Specific validator reference required by validator."
+                if authorization == "validator_required"
+                else "Reference doc requested without valid authorization."
+            ),
+            source="validator_required" if authorization == "validator_required" else context_mode,
         )
         if ref is not None:
-            ref["authorization"] = "validator_required" if validator_required else "explicit_reference_reason"
+            if authorization:
+                ref["authorization"] = authorization
+                authorized_reference_doc_refs.append(ref)
             reference_doc_refs.append(ref)
 
     result_path = _packet_field(packet_fields, "RESULT_PATH", expected_result_path(task_id, role))
@@ -254,7 +393,7 @@ def build_handoff_artifact(
         role=role,
         task_packet=task_packet,
         required_docs=required_docs,
-        reference_docs=reference_doc_refs,
+        reference_docs=authorized_reference_doc_refs,
         current_result=current_result,
         current_artifact=current_artifact,
     )
@@ -272,12 +411,15 @@ def build_handoff_artifact(
         "allowed_sources": allowed_sources,
         "required_docs": required_docs,
         "required_doc_tokens": required_doc_tokens,
+        "context_budget": _routine_context_budget(contract),
+        "role_contract_summary": _role_contract_summary(contract, role, required_doc_tokens),
+        "result_contract_summary": _result_contract_summary(role, required_doc_tokens),
         "forbidden_docs": forbidden_docs,
         "forbidden_doc_tokens": _forbidden_doc_tokens(contract),
         "reference_docs": _dedupe_doc_refs(reference_doc_refs),
         "reference_doc_inclusion_rule": _text(handoff_context.get("reference_doc_inclusion_rule")),
         "routine_context_includes": _string_list(handoff_context.get("routine_handoff_includes")),
-        "governance_corpus_included": bool(reference_doc_refs and context_mode != "routine"),
+        "governance_corpus_included": bool(authorized_reference_doc_refs and context_mode != "routine"),
         "current_state_refs": [
             "project-runtime/state/*.json",
             "project-runtime/agents/instances.jsonl",
@@ -324,6 +466,9 @@ def validate_handoff_artifact(payload: Mapping[str, Any]) -> HandoffValidationRe
         "required_docs",
         "forbidden_docs",
         "reference_docs",
+        "context_budget",
+        "role_contract_summary",
+        "result_contract_summary",
         "allowed_sources_ref",
         "allowed_sources",
         "expected_result_path",
@@ -376,6 +521,17 @@ def validate_handoff_artifact(payload: Mapping[str, Any]) -> HandoffValidationRe
     if not isinstance(reference_docs, list):
         errors.append("reference_docs must be a list")
         reference_docs = []
+    budget = _mapping(payload.get("context_budget"))
+    max_routine_files = _positive_int(budget.get("max_routine_files"), 0)
+    max_lines_per_file = _positive_int(budget.get("max_lines_per_file"), 0)
+    if not max_routine_files:
+        errors.append("context_budget.max_routine_files must be a positive integer")
+    if not max_lines_per_file:
+        errors.append("context_budget.max_lines_per_file must be a positive integer")
+    if budget.get("full_diff_or_report_in_stdout_by_default") is not False:
+        errors.append("context_budget.full_diff_or_report_in_stdout_by_default must be false")
+    if budget.get("routine_reference_docs_allowed") is not False:
+        errors.append("context_budget.routine_reference_docs_allowed must be false")
 
     all_doc_refs: list[object] = [*required_docs, *reference_docs] if isinstance(required_docs, list) else list(reference_docs)
     for index, doc in enumerate(all_doc_refs):
@@ -385,18 +541,64 @@ def validate_handoff_artifact(payload: Mapping[str, Any]) -> HandoffValidationRe
         path = _normalize_path(doc.get("path"))
         if path == NONE_REF:
             errors.append(f"doc reference {index} must include a concrete path")
+        line_limit = doc.get("line_limit")
+        if context_mode == "routine":
+            if not isinstance(line_limit, int) or line_limit <= 0:
+                errors.append(f"doc reference {index} must include a positive line_limit in routine mode")
+            elif max_lines_per_file and line_limit > max_lines_per_file:
+                errors.append(
+                    f"doc reference {index} line_limit exceeds context_budget.max_lines_per_file"
+                )
         if context_mode == "routine" and _is_broad_reference(path, forbidden_docs):
             errors.append(f"routine handoff must not include broad governance corpus path: {path}")
 
     if context_mode == "routine":
+        if max_routine_files and len(all_doc_refs) > max_routine_files:
+            errors.append("routine handoff exceeds context_budget.max_routine_files")
         if reference_docs:
             errors.append("routine handoff must not include reference_docs")
         if payload.get("governance_corpus_included") is not False:
             errors.append("routine handoff must set governance_corpus_included to false")
     elif reference_docs:
         for index, doc in enumerate(reference_docs):
-            if not isinstance(doc, Mapping) or not _text(doc.get("authorization")):
+            if not isinstance(doc, Mapping):
                 errors.append(f"reference_docs[{index}] must record authorization outside routine mode")
+                continue
+            path = _normalize_path(doc.get("path"))
+            authorization = _text(doc.get("authorization"))
+            if not authorization:
+                errors.append(f"reference_docs[{index}] must record authorization outside routine mode")
+                continue
+            if authorization == "validator_required":
+                if not _is_specific_validator_reference(path):
+                    errors.append(
+                        f"reference_docs[{index}] validator_required authorization is limited to specific validator references"
+                    )
+            elif authorization == "explicit_reference_reason":
+                if context_mode not in REFERENCE_CONTEXT_MODES:
+                    errors.append(
+                        f"reference_docs[{index}] requires debug or violation_recovery for explicit reference_reason authorization"
+                    )
+                if not _has_explicit_reference_reason(doc):
+                    errors.append(f"reference_docs[{index}] must include an explicit reference_reason")
+            else:
+                errors.append(
+                    f"reference_docs[{index}] authorization must be explicit_reference_reason or validator_required"
+                )
+
+    role_summary = _mapping(payload.get("role_contract_summary"))
+    if role_summary.get("role") != payload.get("role"):
+        errors.append("role_contract_summary.role must match role")
+    if not _text(role_summary.get("role_reasoning_floor")):
+        errors.append("role_contract_summary.role_reasoning_floor must be non-empty")
+    if not isinstance(role_summary.get("required_doc_tokens"), list):
+        errors.append("role_contract_summary.required_doc_tokens must be a list")
+
+    result_summary = _mapping(payload.get("result_contract_summary"))
+    if _text(result_summary.get("result_kind")) not in {"worker_result", "test_result", "audit_result"}:
+        errors.append("result_contract_summary.result_kind must be worker_result, test_result, or audit_result")
+    if result_summary.get("template_ref") != "agent-system/03_templates/AGENT_RESULT_TEMPLATE.md":
+        errors.append("result_contract_summary.template_ref must identify the canonical RESULT template")
 
     result_path = _text(payload.get("expected_result_path"))
     if not result_path.startswith("project-runtime/results/"):

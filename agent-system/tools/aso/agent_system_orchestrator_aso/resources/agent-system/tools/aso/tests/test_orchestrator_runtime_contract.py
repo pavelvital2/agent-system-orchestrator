@@ -18,6 +18,7 @@ sys.path.insert(0, str(ASO_TOOL_ROOT))
 
 from agent_system_orchestrator_aso.aso_tool import transition_engine  # noqa: E402
 from agent_system_orchestrator_aso.aso_tool import runtime_contract_fallback  # noqa: E402
+from agent_system_orchestrator_aso.aso_tool import role_registry  # noqa: E402
 
 
 class OrchestratorRuntimeContractTests(unittest.TestCase):
@@ -82,17 +83,30 @@ class OrchestratorRuntimeContractTests(unittest.TestCase):
         context_policy = contract["routine_context_policy"]
         self.assertIn("ORCHESTRATOR_RUNTIME_CONTRACT.json", context_policy["orchestrator_must_read"])
         self.assertIn("all_role_docs", context_policy["orchestrator_must_not_read_routinely"])
+        self.assertEqual(
+            set(context_policy["reference_docs_allowed_only_for"]),
+            {"bootstrap", "debug", "violation_recovery", "specific_validator_reference"},
+        )
+        self.assertEqual(context_policy["context_budget"]["max_routine_files"], 6)
+        self.assertEqual(context_policy["context_budget"]["max_lines_per_file"], 160)
+        self.assertFalse(context_policy["context_budget"]["routine_reference_docs_allowed"])
+        self.assertEqual(context_policy["stdout_policy"]["default"], "summary_only")
+        self.assertFalse(context_policy["stdout_policy"]["full_diff_or_report_in_stdout_by_default"])
 
         handoff_context = contract["handoff_context_builder_contract"]
         self.assertEqual(handoff_context["normal_context_mode"], "routine")
         self.assertIn("debug", handoff_context["allowed_context_modes"])
         self.assertIn("explain", handoff_context["allowed_context_modes"])
+        self.assertIn("source_boundary_contract", handoff_context["runtime_contract_required_sections"])
+        self.assertIn("allowed_sources", handoff_context["routine_handoff_includes"])
+        self.assertIn("role_contract_summary", handoff_context["routine_handoff_includes"])
+        self.assertIn("result_contract_summary", handoff_context["routine_handoff_includes"])
+        self.assertIn("expected_output_paths", handoff_context["routine_handoff_includes"])
+        self.assertNotIn("specific_target_role_doc", handoff_context["routine_handoff_includes"])
+        self.assertIn("agent-system/01_roles/", handoff_context["routine_handoff_excludes"])
+        self.assertIn("agent-system/04_roles/", handoff_context["routine_handoff_excludes"])
         self.assertIn("agent-system/03_templates/", handoff_context["routine_handoff_excludes"])
-        self.assertIn("developer", handoff_context["target_role_doc_map"])
-        self.assertEqual(
-            handoff_context["target_role_doc_map"]["developer"],
-            "agent-system/01_roles/DEVELOPER.md",
-        )
+        self.assertIn("reference docs only", handoff_context["role_doc_access_policy"])
 
     def test_roles_have_reasoning_floors_and_required_docs(self) -> None:
         contract = transition_engine.load_runtime_contract()
@@ -103,6 +117,20 @@ class OrchestratorRuntimeContractTests(unittest.TestCase):
                 self.assertIn(contract["reasoning_floor_by_role"][role], {"medium", "high", "xhigh", "maximum"})
                 self.assertIn(role, contract["required_docs_by_role"])
                 self.assertGreater(len(contract["required_docs_by_role"][role]), 0)
+
+    def test_dispatch_roles_are_derived_from_runtime_contract(self) -> None:
+        contract = transition_engine.load_runtime_contract()
+        expected = tuple(
+            role
+            for role in contract["allowed_roles"]
+            if role not in set(contract["forbidden_dispatch_roles"])
+        )
+
+        self.assertEqual(role_registry.dispatchable_roles(contract), expected)
+        self.assertNotIn("release_manager", role_registry.dispatchable_roles(contract))
+        self.assertNotIn("devops_setup_engineer", role_registry.dispatchable_roles(contract))
+        self.assertNotIn("designer", role_registry.dispatchable_roles(contract))
+        self.assertIn("release_manager", role_registry.legacy_lifecycle_system_roles())
 
     def test_contract_defines_external_dispatch_receipt_contract(self) -> None:
         contract = transition_engine.load_runtime_contract()
@@ -161,12 +189,43 @@ class OrchestratorRuntimeContractTests(unittest.TestCase):
                 "resolved_reasoning_level",
                 "required_docs",
                 "forbidden_docs",
+                "allowed_sources_ref",
+                "allowed_sources",
+                "context_budget",
+                "role_contract_summary",
+                "result_contract_summary",
                 "prompt_ref",
                 "expected_result_path",
                 "expected_artifact_package_path",
                 "lifecycle_policy",
             }.issubset(set(handoff_contract["required_fields"]))
         )
+
+    def test_contract_defines_source_boundary_severity_contract(self) -> None:
+        contract = transition_engine.load_runtime_contract()
+        source_boundary_contract = contract["source_boundary_contract"]
+
+        self.assertEqual(
+            source_boundary_contract["schema_ref"],
+            "agent-system/09_validators/schemas/allowed_sources.schema.json",
+        )
+        self.assertEqual(
+            source_boundary_contract["allowed_sources_ref_template"],
+            "project-runtime/handoffs/<TASK_ID>.allowed_sources.json",
+        )
+        self.assertEqual(
+            source_boundary_contract["severity_order"],
+            [
+                "SB0_ALLOWED",
+                "SB1_REPORTING_ONLY",
+                "SB2_GOVERNANCE_WARNING",
+                "SB3_BLOCKING",
+                "SB4_INVALIDATING",
+            ],
+        )
+        self.assertEqual(set(source_boundary_contract["correction_required_for"]), {"SB3_BLOCKING", "SB4_INVALIDATING"})
+        self.assertIn("own_prompt", source_boundary_contract["allowed_delivery_context_classes"])
+        self.assertIn("agent-system/09_validators/", source_boundary_contract["default_forbidden_refs"])
 
 
 if __name__ == "__main__":

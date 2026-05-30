@@ -99,25 +99,42 @@
     {
       "path": "agent-system/02_runtime/ORCHESTRATOR_RUNTIME_CONTRACT.json",
       "sections": ["<runtime_contract_required_sections>"],
+      "line_limit": 160,
       "why_needed": "Compact operational transition and routine handoff contract.",
       "source": "routine"
     },
     {
       "path": "<TASK_PACKET_REF>",
       "sections": ["Bounded task-relevant sections"],
+      "line_limit": 160,
       "why_needed": "Current task packet for this bounded handoff.",
-      "source": "routine"
-    },
-    {
-      "path": "<TARGET_ROLE_DOC_REF>",
-      "sections": ["Role rules for this target role"],
-      "why_needed": "Specific role instructions for target role <PROFILE_ROLE>.",
       "source": "routine"
     }
   ],
   "required_doc_tokens": ["<required_docs_by_role tokens>"],
+  "context_budget": {
+    "max_routine_files": 6,
+    "max_lines_per_file": 160,
+    "stdout_default": "summary_only",
+    "stdout_full_report_requires": ["--json-out", "--format json"],
+    "full_diff_or_report_in_stdout_by_default": false,
+    "routine_reference_docs_allowed": false
+  },
+  "role_contract_summary": {
+    "role": "<PROFILE_ROLE>",
+    "role_reasoning_floor": "<medium|high|xhigh|maximum>",
+    "required_doc_tokens": ["<required_docs_by_role tokens>"],
+    "role_doc_access": "Role docs are reference docs only and are not embedded in routine handoffs."
+  },
+  "result_contract_summary": {
+    "result_kind": "<worker_result|test_result|audit_result>",
+    "template_ref": "agent-system/03_templates/AGENT_RESULT_TEMPLATE.md",
+    "summary": "Formal RESULT fields are required; routine handoff provides this summary instead of embedding the full template.",
+    "expected_result_path_template": "project-runtime/results/worker/RESULT_<TASK_ID>_ATTEMPT_001.md"
+  },
   "forbidden_docs": [
     "agent-system/01_roles/",
+    "agent-system/04_roles/",
     "agent-system/03_templates/",
     "agent-system/GOVERNANCE_CHANGELOG.md",
     "agent-system/11_release/",
@@ -132,7 +149,7 @@
     "historical_contracts"
   ],
   "reference_docs": [],
-  "reference_doc_inclusion_rule": "Reference docs outside routine handoff inputs require context_mode debug, explain, or violation_recovery plus an explicit reference reason or validator_required=true.",
+  "reference_doc_inclusion_rule": "Reference docs are excluded from routine handoffs. They require context_mode debug or violation_recovery plus explicit reference_reason, or validator_required=true for a specific validator reference.",
   "routine_context_includes": [
     "runtime_contract_required_sections",
     "project-runtime/state/*.json",
@@ -141,8 +158,12 @@
     "current_event_reference",
     "current_result_or_audit_result_reference",
     "current_artifact_manifest_or_receipt_reference",
-    "specific_target_role_doc",
-    "target_role_required_doc_tokens"
+    "target_role_required_doc_tokens",
+    "role_contract_summary",
+    "result_contract_summary",
+    "resolved_reasoning_floor",
+    "lifecycle_policy",
+    "expected_output_paths"
   ],
   "governance_corpus_included": false,
   "current_state_refs": [

@@ -956,9 +956,9 @@ def build_parser() -> argparse.ArgumentParser:
         description=(
             "Read-only context minimization report for orchestrator handoff inputs. "
             "Routine mode emits runtime contract sections, current state refs, current "
-            "task/result/artifact refs, and target-role-specific docs. Debug, explain, "
-            "or violation-recovery reference docs require an explicit reason or "
-            "--validator-required."
+            "task/result/artifact refs, and target-role summaries. Debug and "
+            "violation-recovery reference docs require --reference-reason; "
+            "--validator-required is limited to specific validator files."
         ),
     )
     _add_root_argument(orchestrator_context_parser, validate=False)
@@ -980,13 +980,13 @@ def build_parser() -> argparse.ArgumentParser:
         action="append",
         default=[],
         metavar="PATH",
-        help="Debug/explain/recovery reference doc to include with explicit authorization.",
+        help="Reference doc path; requires debug/violation_recovery with a reason or validator-required specific validator file.",
     )
     orchestrator_context_parser.add_argument("--reference-reason", metavar="TEXT")
     orchestrator_context_parser.add_argument(
         "--validator-required",
         action="store_true",
-        help="Mark reference docs as required by a validator.",
+        help="Authorize only specific agent-system/09_validators/... file refs required by a validator.",
     )
     orchestrator_context_parser.set_defaults(handler=orchestrator.run_context)
 

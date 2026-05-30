@@ -18,8 +18,9 @@ The JSON form is canonical in `agent-system/03_templates/CONTEXT_PACK_TEMPLATE.j
 - `rendered_views`: optional rendered view paths under
   `project-runtime/rendered/` that the pack consumes.
 - `context_mode`: `routine`, `debug`, `explain`, or `violation_recovery`.
-- `reference_docs`: optional debug/explain/recovery references, each with an
-  authorization reason or validator-required marker.
+- `reference_docs`: optional references; generic role, template, changelog, and
+  release docs require `debug` or `violation_recovery` with an explicit reason,
+  while `validator_required` is limited to specific validator files.
 - `context_budget`: explicit limits for document count, sections per document,
   and generated JSON characters.
 
@@ -56,8 +57,8 @@ acceptance step materializes an immutable accepted package.
 Routine orchestrator context packs must follow
 `ORCHESTRATOR_RUNTIME_CONTRACT.json` `handoff_context_builder_contract`: runtime
 contract sections, current state refs, current task packet, current
-event/result/artifact refs, and target-role-specific docs only. They must not
-include the full governance corpus, all role docs, all templates, full
-changelog, release notes, or all validator docs. Reference docs require
-`debug`, `explain`, or `violation_recovery` mode with an explicit reason, or a
-validator-required marker.
+event/result/artifact refs, role summaries, and role-required doc tokens only.
+They must not include the full governance corpus, all role docs, all templates,
+full changelog, release notes, or all validator docs. Reference docs require
+`debug` or `violation_recovery` mode with an explicit reason, unless
+`validator_required` names a specific validator file.

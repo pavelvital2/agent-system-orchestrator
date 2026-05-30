@@ -139,6 +139,12 @@ AUTHORITY_SURFACE_CONTRACT: tuple[dict[str, object], ...] = (
         "tests": ("agent-system/tools/aso/tests/test_lifecycle.py",),
     },
     {
+        "command": ("lifecycle", "finalize"),
+        "confirmation_options": ("--confirm-write",),
+        "allowed_write_roots": ("project-runtime/state", "project-runtime/receipts/lifecycle", "project-runtime"),
+        "tests": ("agent-system/tools/aso/tests/test_lifecycle_finalization.py",),
+    },
+    {
         "command": ("state", "init"),
         "confirmation_options": ("--confirm-write",),
         "allowed_write_roots": ("project-runtime/state", "project-runtime", "project-input"),
@@ -155,6 +161,16 @@ AUTHORITY_SURFACE_CONTRACT: tuple[dict[str, object], ...] = (
         "confirmation_options": ("--confirm-write",),
         "allowed_write_roots": ("project-runtime/*.md", "project-runtime/reports", "project-runtime/rendered"),
         "tests": ("agent-system/tools/aso/tests/test_state_render.py",),
+    },
+    {
+        "command": ("state", "reconcile"),
+        "confirmation_options": ("--confirm-write",),
+        "allowed_write_roots": (
+            "project-runtime/state",
+            "project-runtime/*.md",
+            "project-runtime/receipts/state-reconciliation",
+        ),
+        "tests": ("agent-system/tools/aso/tests/test_state_reconcile.py",),
     },
     {
         "command": ("project", "create"),

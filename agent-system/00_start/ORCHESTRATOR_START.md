@@ -172,14 +172,14 @@ context:
 3. The current task packet from `NEXT_ACTION.task_packet`.
 4. The current event, RESULT/AUDIT_RESULT, artifact manifest, or receipt refs
    relevant to the active transition.
-5. The specific role doc and role-required doc tokens for the target profile
-   role only.
+5. The target-role contract summary and role-required doc tokens for the target
+   profile role only.
 
 Routine handoffs must not read the full governance corpus, all role docs, all
 templates, full changelog, release notes, or all validator docs. Reference docs
-may be attached only in explicit `debug`, `explain`, or
-`violation_recovery` mode with a recorded reason, or when a validator requires
-the reference. The read-only helper command is:
+may be attached only in explicit `debug` or `violation_recovery` mode with a
+recorded reason, or when `--validator-required` names a specific file under
+`agent-system/09_validators/`. The read-only helper command is:
 
 ```bash
 aso orchestrator context --root <workspace> --format json
