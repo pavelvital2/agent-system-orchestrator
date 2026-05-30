@@ -121,8 +121,8 @@
       "size": 4580
     },
     "agent-system/02_runtime/ORCHESTRATOR_RUNTIME_CONTRACT.json": {
-      "sha256": "c2c5adf6d7f6629c11acf5927135352b6d47553597c566daf33b7f8a9c65a12a",
-      "size": 19222
+      "sha256": "4883a3615fff45781d0889043ec5117d8cd841ad444915ac340c712ffd754f67",
+      "size": 34565
     },
     "agent-system/02_runtime/ORCHESTRATOR_RUNTIME_LOOP.md": {
       "sha256": "ceb54eb0491d8ad4a7e7c46842d7ba9d018657b199c4320e7b24679bd6c63483",
@@ -181,12 +181,12 @@
       "size": 1130
     },
     "agent-system/03_templates/AGENT_RESULT_TEMPLATE.md": {
-      "sha256": "952f8db189c07416bb119cf433806b4b77acacb569cc21fe8b9313c6eacd6973",
-      "size": 7482
+      "sha256": "f81040c5cffea8ee9dcba323c73fcd3d17b2154a249791b0e533f2f3b9787ca6",
+      "size": 12144
     },
     "agent-system/03_templates/BOOTSTRAP_TASK_PACKET_TEMPLATE.md": {
-      "sha256": "e92187c904119c6fd15ca9bdb34587ddd4e88df0e0927a9cc0a01d01de839d21",
-      "size": 8934
+      "sha256": "a3e049aa7a4213de701c79b6585c631d6bc82efc3ed3cae34fe2da18530f5e21",
+      "size": 9865
     },
     "agent-system/03_templates/CAPABILITY_MATRIX_DRAFT_TEMPLATE.md": {
       "sha256": "0bb29a9af2cc83748816196922144f338a97ab8e1a24a90645aa584d64bc93cc",
@@ -309,8 +309,8 @@
       "size": 1257
     },
     "agent-system/03_templates/TASK_PACKET_TEMPLATE.md": {
-      "sha256": "8c1937bdfa1e1a72af07be122cff7f3df500d828884dcc030a47f6bbf6ea955e",
-      "size": 22356
+      "sha256": "235113ffecf1b841c86e0840e9f0dd347bee697281721ef911bc61454d10c19e",
+      "size": 24161
     },
     "agent-system/03_templates/TASK_PROPOSAL_TEMPLATE.md": {
       "sha256": "0c06eeb53fd231cf32fd0f28cfac78788b22e4600d0522b40e473bfa56ed8962",
@@ -341,24 +341,24 @@
       "size": 501
     },
     "agent-system/03_templates/audit_result_package.template.json": {
-      "sha256": "611faa5193c3069d0d4a150dc35a33f0dd30068794496587b8f21257c68c4e37",
-      "size": 3003
+      "sha256": "be72356839912acf747013ad3f305bb2d65a78dfb256960f6a6cd887801f919b",
+      "size": 3111
     },
     "agent-system/03_templates/dispatch_receipt.template.json": {
       "sha256": "57bd314c11e66638a84fb089218780e966433281c2af3ae1a5f874bc7cfd368b",
       "size": 905
     },
     "agent-system/03_templates/orchestrator_handoff.template.json": {
-      "sha256": "36ed92c2bc2357c74262843a1014ae73242a8baa25f72ea156a9b1821e5ced00",
-      "size": 8377
+      "sha256": "deb0c7e8610aeb3f7ff0a15acfbed2f48f2824a13a0d7f9a6cf12c2f02543209",
+      "size": 15521
     },
     "agent-system/03_templates/proposal_artifact.template.json": {
       "sha256": "c914290091413c3902af6fa70eace816d0c0551db2fcd0a8db2f0a719fc9324c",
       "size": 1031
     },
     "agent-system/03_templates/result_package.template.json": {
-      "sha256": "1da309e8a3ec4f9fea25256e3050cab4a9ffcc3c0d0dcc986936b0ebb1222670",
-      "size": 1324
+      "sha256": "b414f6c2f2cf648cb222269d89e2312f9dbf1c81a5f28dc709a022f955a1378b",
+      "size": 1426
     },
     "agent-system/03_templates/state/accepted_artifacts.schema.json": {
       "sha256": "c6c93723cfab20f5724ef1b8099e1a6f1df421c2c531ea3d3ffbb4353b4cdbd4",
@@ -385,8 +385,8 @@
       "size": 2654
     },
     "agent-system/03_templates/structured_artifact.template.json": {
-      "sha256": "700e6cbd7b3056bd6058cb30f8f0cdda1f5b0b4b16c43079871cbe71cb16dca8",
-      "size": 678
+      "sha256": "fff8203aa03126c06a1c6ce5aa54f565637b5c68522dbb0f6bb6fd963060d533",
+      "size": 791
     },
     "agent-system/04_state/ACCEPTED_ARTIFACTS_TEMPLATE.md": {
       "sha256": "1d6632d58b9eec8450f607ccc05a7ccf78c30f8abd52721a695c1862ef563a91",
@@ -961,16 +961,16 @@
       "size": 136754
     },
     "agent-system/ORCHESTRATOR_RUNTIME_CONTRACT.json": {
-      "sha256": "c2c5adf6d7f6629c11acf5927135352b6d47553597c566daf33b7f8a9c65a12a",
-      "size": 19222
+      "sha256": "4883a3615fff45781d0889043ec5117d8cd841ad444915ac340c712ffd754f67",
+      "size": 34565
     },
     "agent-system/PACKAGE_VERSIONING.md": {
       "sha256": "af1a2325e5044906dd3aafbd44aa96836c8adca9914f5532c8b6eebc938eb7c5",
       "size": 24930
     },
     "agent-system/README.md": {
-      "sha256": "2c53ee2f1586402ea9d5b09b2421126f7483fbfcfc06206f971426ff8e954b3a",
-      "size": 40345
+      "sha256": "cd57befb2b749a951a7e779d1a1e6c93e08e37c49c0ac5bd7b0d12e18ba128d5",
+      "size": 42026
     },
     "agent-system/scripts/checkpoint_preflight.sh": {
       "sha256": "2a09ca60456af7caa0d57648a329dffd52d718ce0df4a6a98f59ddf18db013bb",
@@ -1569,8 +1569,8 @@
       "size": 13099
     },
     "agent-system/tools/aso/agent_system_orchestrator_aso/aso_tool/commands/intake.py": {
-      "sha256": "cddab4af9e7cdbd9b2a3e797695c4c0c6199e31d5e39973fbee7a3f101482035",
-      "size": 14752
+      "sha256": "f7bb075fe21b586db8e6c43dc0d83c089a3c4ae3faa957f3f2f2c2233afcc1c1",
+      "size": 15605
     },
     "agent-system/tools/aso/agent_system_orchestrator_aso/aso_tool/commands/lifecycle.py": {
       "sha256": "6122fc1873127bb75986628abaa760035b0970d7bba2f725bc03f0f68b40369c",
@@ -1585,8 +1585,8 @@
       "size": 5978
     },
     "agent-system/tools/aso/agent_system_orchestrator_aso/aso_tool/commands/orchestrator.py": {
-      "sha256": "b33469bc698a5bb232256912328eae0c0dcb35fb86af726f960cd7d820f0addb",
-      "size": 30016
+      "sha256": "59c33dfb84154219a6fda2081c80fb07c443f2e56c4260da69fad3157062e421",
+      "size": 29726
     },
     "agent-system/tools/aso/agent_system_orchestrator_aso/aso_tool/commands/output_policy.py": {
       "sha256": "8c6d4f8107986b79873d139e7f2e9e3222a28671585b301d0827802c1e5c3f3e",
@@ -1681,8 +1681,8 @@
       "size": 8809
     },
     "agent-system/tools/aso/agent_system_orchestrator_aso/aso_tool/handoff_artifacts.py": {
-      "sha256": "d7609a0e1d795b66432e2dd5ab9129832d09d9da1d6144a3a4bb5f2f97a2df25",
-      "size": 29035
+      "sha256": "16127c3247ace67689ed0154a43d867bbe1a7a5c1bf9ba7ff31cd4c292cfbcc1",
+      "size": 29509
     },
     "agent-system/tools/aso/agent_system_orchestrator_aso/aso_tool/lockfile.py": {
       "sha256": "a5073020d4afefde48e8ee36c9199d34744eae6e628b99710111c973373270db",
@@ -1709,8 +1709,12 @@
       "size": 9613
     },
     "agent-system/tools/aso/agent_system_orchestrator_aso/aso_tool/result_parser.py": {
-      "sha256": "b1a5bc6ab6fffd433d8f6d5e218d708b417ab3a98dd87157ea157bd55fb61405",
-      "size": 28834
+      "sha256": "6362550d1c1c2e3ab8da78e3cd09323a7463d829eb681b89f7216893ca8bddb8",
+      "size": 30856
+    },
+    "agent-system/tools/aso/agent_system_orchestrator_aso/aso_tool/role_output_contracts.py": {
+      "sha256": "03070b0c57c8b215ac33ae705a1ed9d9a3f96263e9bac3928344ab6c4b0b0a5c",
+      "size": 11157
     },
     "agent-system/tools/aso/agent_system_orchestrator_aso/aso_tool/role_registry.py": {
       "sha256": "9ff059984d9c94081f6c763f7ee8da030c9c9c6b83740deecce70e00553a2628",
@@ -1729,8 +1733,8 @@
       "size": 36781
     },
     "agent-system/tools/aso/agent_system_orchestrator_aso/aso_tool/runtime_contract_fallback.py": {
-      "sha256": "5fdcff7036bb4bd5737322bb1c0760e9e9d6c0944a8e30e10b617c433bb41bb2",
-      "size": 19451
+      "sha256": "86b66d4bacba77d9f112efdf780489b0836473fcc143806dbdc3c540072e45cd",
+      "size": 34794
     },
     "agent-system/tools/aso/agent_system_orchestrator_aso/aso_tool/runtime_schema_contracts.py": {
       "sha256": "d0c6587ed5061e44c20bdc96425cf165064018bcce44e4827bb15a142b69faff",
@@ -2013,8 +2017,12 @@
       "size": 25574
     },
     "agent-system/tools/aso/tests/test_result_parser.py": {
-      "sha256": "83aa5c4b48e3bebf5d4ccf8e99f3dcf493a70532e59661f88e3858dbe3cdffa6",
-      "size": 6248
+      "sha256": "bc575f55c85b2503c5ff63958d2a06cf17a0c6d45997c826efdcaae3e97a0f81",
+      "size": 11791
+    },
+    "agent-system/tools/aso/tests/test_role_output_contracts.py": {
+      "sha256": "9d007caee08122a6d97d8463776803b510be7e591a09902e5aae434a2063e324",
+      "size": 6628
     },
     "agent-system/tools/aso/tests/test_runtime_schema_contracts.py": {
       "sha256": "7836e778bd0747967b0a15f4a898a36b20ed04ebdff59b32eaf927215b2338d8",
@@ -2065,5 +2073,8 @@
       "size": 10473
     }
   },
+  "required_directory_sentinels": [],
+  "required_file_sentinels": [],
+  "resource_root": "agent-system",
   "schema": "aso_resource_manifest_v1"
 }

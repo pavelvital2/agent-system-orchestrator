@@ -20,7 +20,9 @@
     "task_packet_ref": "<TASK_PACKET_REF>",
     "validator_error_refs": [],
     "accepted_artifact_refs": [],
-    "allowed_project_refs": ["<TASK_PACKET_REF>"],
+    "allowed_project_refs": [
+      "<TASK_PACKET_REF>"
+    ],
     "allowed_refs": [
       {
         "ref": "project-runtime/handoffs/<TASK_ID>.json",
@@ -89,48 +91,293 @@
         "SB3_BLOCKING",
         "SB4_INVALIDATING"
       ],
-      "correction_task_created_only_for": ["SB3_BLOCKING", "SB4_INVALIDATING"],
-      "no_correction_task_for": ["SB0_ALLOWED", "SB1_REPORTING_ONLY", "SB2_GOVERNANCE_WARNING"],
-      "fresh_agent_required_for": ["SB4_INVALIDATING"],
+      "correction_task_created_only_for": [
+        "SB3_BLOCKING",
+        "SB4_INVALIDATING"
+      ],
+      "no_correction_task_for": [
+        "SB0_ALLOWED",
+        "SB1_REPORTING_ONLY",
+        "SB2_GOVERNANCE_WARNING"
+      ],
+      "fresh_agent_required_for": [
+        "SB4_INVALIDATING"
+      ],
       "default_for_unclassified_source_boundary_fail": "SB3_BLOCKING"
     }
   },
   "required_docs": [
     {
       "path": "agent-system/02_runtime/ORCHESTRATOR_RUNTIME_CONTRACT.json",
-      "sections": ["<runtime_contract_required_sections>"],
+      "sections": [
+        "<runtime_contract_required_sections>"
+      ],
       "line_limit": 160,
       "why_needed": "Compact operational transition and routine handoff contract.",
       "source": "routine"
     },
     {
       "path": "<TASK_PACKET_REF>",
-      "sections": ["Bounded task-relevant sections"],
+      "sections": [
+        "Bounded task-relevant sections"
+      ],
       "line_limit": 160,
       "why_needed": "Current task packet for this bounded handoff.",
       "source": "routine"
     }
   ],
-  "required_doc_tokens": ["<required_docs_by_role tokens>"],
+  "required_doc_tokens": [
+    "<required_docs_by_role tokens>"
+  ],
   "context_budget": {
     "max_routine_files": 6,
     "max_lines_per_file": 160,
     "stdout_default": "summary_only",
-    "stdout_full_report_requires": ["--json-out", "--format json"],
+    "stdout_full_report_requires": [
+      "--json-out",
+      "--format json"
+    ],
     "full_diff_or_report_in_stdout_by_default": false,
     "routine_reference_docs_allowed": false
   },
   "role_contract_summary": {
     "role": "<PROFILE_ROLE>",
     "role_reasoning_floor": "<medium|high|xhigh|maximum>",
-    "required_doc_tokens": ["<required_docs_by_role tokens>"],
+    "required_doc_tokens": [
+      "<required_docs_by_role tokens>"
+    ],
     "role_doc_access": "Role docs are reference docs only and are not embedded in routine handoffs."
   },
   "result_contract_summary": {
     "result_kind": "<worker_result|test_result|audit_result>",
     "template_ref": "agent-system/03_templates/AGENT_RESULT_TEMPLATE.md",
-    "summary": "Formal RESULT fields are required; routine handoff provides this summary instead of embedding the full template.",
-    "expected_result_path_template": "project-runtime/results/worker/RESULT_<TASK_ID>_ATTEMPT_001.md"
+    "summary": "Formal RESULT fields, role-specific skeletons, output paths, and self-validation evidence are derived from role_output_contracts.",
+    "expected_result_path_template": "project-runtime/results/worker/RESULT_<TASK_ID>_ATTEMPT_001.md",
+    "contract_version": "1.0.0",
+    "role": "<PROFILE_ROLE>",
+    "required_result_fields": [
+      "STATUS",
+      "TASK_ID",
+      "AGENT_INSTANCE_ID",
+      "ROLE",
+      "TASK",
+      "SUMMARY",
+      "READ_DOCS",
+      "READ_INPUTS",
+      "CHANGED_FILES",
+      "CREATED_FILES",
+      "DELETED_FILES",
+      "COMMANDS_RUN",
+      "TESTS_RUN",
+      "EVIDENCE",
+      "SCOPE_VERIFICATION",
+      "FORBIDDEN_CHANGES_CHECK",
+      "RISKS",
+      "LIMITATIONS",
+      "BLOCKERS",
+      "GAPS",
+      "NEXT_RECOMMENDED_ACTION",
+      "REUSE_ALLOWED",
+      "AGENT_TERMINATION_REQUIRED"
+    ],
+    "required_result_constants": {
+      "REUSE_ALLOWED": "false",
+      "AGENT_TERMINATION_REQUIRED": "true"
+    },
+    "result_acceptance": {
+      "mode_field": "RESULT_ACCEPTANCE_MODE",
+      "artifact_required_field": "ARTIFACT_PACKAGE_REQUIRED",
+      "valid_modes": [
+        "artifact_package",
+        "result_only"
+      ]
+    },
+    "required_outputs": [
+      "result_file"
+    ],
+    "conditional_outputs": [
+      "artifact_manifest",
+      "main_document",
+      "structured_artifact",
+      "correction_result"
+    ],
+    "output_paths": {
+      "result": "project-runtime/results/worker/RESULT_<TASK_ID>_ATTEMPT_001.md",
+      "candidate_artifact_manifest": "project-runtime/artifacts/candidates/<TASK_ID>/manifest.json",
+      "candidate_main_document": "project-runtime/artifacts/candidates/<TASK_ID>/RESULT.md",
+      "candidate_structured_artifact": "project-runtime/artifacts/candidates/<TASK_ID>/structured/result_package.json"
+    },
+    "minimal_skeletons": {
+      "result_file": {
+        "format": "markdown",
+        "marker": "RESULT:",
+        "path_template": "project-runtime/results/worker/RESULT_<TASK_ID>_ATTEMPT_001.md",
+        "required_fields": [
+          "STATUS",
+          "TASK_ID",
+          "AGENT_INSTANCE_ID",
+          "ROLE",
+          "TASK",
+          "SUMMARY",
+          "READ_DOCS",
+          "READ_INPUTS",
+          "CHANGED_FILES",
+          "CREATED_FILES",
+          "DELETED_FILES",
+          "COMMANDS_RUN",
+          "TESTS_RUN",
+          "EVIDENCE",
+          "SCOPE_VERIFICATION",
+          "FORBIDDEN_CHANGES_CHECK",
+          "RISKS",
+          "LIMITATIONS",
+          "BLOCKERS",
+          "GAPS",
+          "NEXT_RECOMMENDED_ACTION",
+          "REUSE_ALLOWED",
+          "AGENT_TERMINATION_REQUIRED"
+        ],
+        "required_constants": {
+          "REUSE_ALLOWED": "false",
+          "AGENT_TERMINATION_REQUIRED": "true"
+        },
+        "validation_evidence_minimum": [
+          "VALIDATION_STATUS: passed | not_run",
+          "VALIDATION_COMMAND: <command and result> | VALIDATION_NOT_RUN_REASON: <reason>"
+        ]
+      },
+      "artifact_manifest": {
+        "format": "json",
+        "path_template": "project-runtime/artifacts/candidates/<TASK_ID>/manifest.json",
+        "required_fields": [
+          "artifact_package_schema_version",
+          "artifact_type",
+          "artifact_id",
+          "task_id",
+          "role",
+          "attempt_no",
+          "status",
+          "main_document",
+          "structured_artifacts",
+          "evidence_refs",
+          "created_at",
+          "producer"
+        ],
+        "minimal_json": {
+          "artifact_package_schema_version": "1.1.0",
+          "artifact_type": "RESULT",
+          "artifact_id": "RESULT_<TASK_ID>_ATTEMPT_001",
+          "task_id": "<TASK_ID>",
+          "role": "<ROLE>",
+          "attempt_no": 1,
+          "status": "pass",
+          "main_document": "RESULT.md",
+          "structured_artifacts": [
+            "structured/result_package.json"
+          ],
+          "evidence_refs": "NONE",
+          "created_at": "<RFC3339_UTC>",
+          "producer": {
+            "agent_instance_id": "<AGENT_INSTANCE_ID>",
+            "role": "<ROLE>"
+          }
+        }
+      },
+      "main_document": {
+        "format": "markdown",
+        "path_template": "RESULT.md",
+        "required_sections": [
+          "RESULT:"
+        ]
+      },
+      "structured_artifact": {
+        "format": "json",
+        "path_template": "structured/result_package.json",
+        "required_fields": [
+          "schema_version",
+          "package_version",
+          "governance_ruleset_version",
+          "runtime_schema_version",
+          "artifact_package_schema_version",
+          "artifact_id",
+          "artifact_type",
+          "created_at",
+          "created_by",
+          "source_refs",
+          "content",
+          "validation"
+        ]
+      },
+      "correction_result": {
+        "format": "markdown",
+        "marker": "RESULT:",
+        "path_template": "project-runtime/results/worker/RESULT_<TASK_ID>_ATTEMPT_001.md",
+        "required_fields": [
+          "STATUS",
+          "TASK_ID",
+          "AGENT_INSTANCE_ID",
+          "ROLE",
+          "TASK",
+          "SUMMARY",
+          "READ_DOCS",
+          "READ_INPUTS",
+          "CHANGED_FILES",
+          "CREATED_FILES",
+          "DELETED_FILES",
+          "COMMANDS_RUN",
+          "TESTS_RUN",
+          "EVIDENCE",
+          "SCOPE_VERIFICATION",
+          "FORBIDDEN_CHANGES_CHECK",
+          "RISKS",
+          "LIMITATIONS",
+          "BLOCKERS",
+          "GAPS",
+          "NEXT_RECOMMENDED_ACTION",
+          "REUSE_ALLOWED",
+          "AGENT_TERMINATION_REQUIRED"
+        ],
+        "required_evidence_labels": [
+          "CORRECTION_OF",
+          "RESOLVES_AUDIT_REF",
+          "VALIDATION_STATUS"
+        ]
+      }
+    },
+    "self_validation": {
+      "required_before_result": true,
+      "evidence_fields": [
+        "COMMANDS_RUN",
+        "TESTS_RUN",
+        "EVIDENCE",
+        "SCOPE_VERIFICATION"
+      ],
+      "required_evidence_labels": [
+        "VALIDATION_STATUS",
+        "VALIDATION_COMMAND",
+        "RESULT_SCHEMA_STATUS",
+        "ARTIFACT_MANIFEST_SCHEMA_STATUS",
+        "VALIDATION_NOT_RUN_REASON"
+      ],
+      "not_run_requires_reason": true,
+      "pass_status_rule": "STATUS: pass is forbidden when any required RESULT, artifact manifest, main document, structured artifact, audit result, or correction result schema validation fails."
+    },
+    "pass_status_rule": "STATUS: pass is forbidden when any required RESULT, artifact manifest, main document, structured artifact, audit result, or correction result schema validation fails.",
+    "first_pass_acceptance_metrics": {
+      "stage1_final_report_required": true,
+      "definition": "First-pass acceptance means attempt 1 reached accepted RESULT/audit routing without schema-only correction.",
+      "fields": [
+        "task_id",
+        "role",
+        "attempt_no",
+        "result_schema_valid_on_first_parse",
+        "required_output_schemas_valid_on_first_parse",
+        "validation_evidence_present",
+        "audit_passed_first_attempt",
+        "schema_only_correction_count",
+        "first_pass_accepted"
+      ]
+    }
   },
   "forbidden_docs": [
     "agent-system/01_roles/",
@@ -161,6 +408,9 @@
     "target_role_required_doc_tokens",
     "role_contract_summary",
     "result_contract_summary",
+    "first_pass_acceptance_metrics",
+    "self_validation_contract",
+    "role_output_contract_summary",
     "resolved_reasoning_floor",
     "lifecycle_policy",
     "expected_output_paths"

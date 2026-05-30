@@ -17,7 +17,8 @@
     "status": "not_run",
     "validators": "NONE",
     "notes": [
-      "Template only. This is package metadata, not a Runtime Schema sidecar."
+      "Template only. This is package metadata, not a Runtime Schema sidecar.",
+      "VALIDATION_NOT_RUN_REASON: skeleton template; validate materialized structured artifacts before RESULT."
     ]
   }
 }

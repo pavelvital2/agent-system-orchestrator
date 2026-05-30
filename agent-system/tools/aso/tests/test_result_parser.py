@@ -52,6 +52,8 @@ TESTS_RUN:
 - NONE
 EVIDENCE:
 - RESULT_STATUS: {status}
+- VALIDATION_STATUS: passed
+- RESULT_SCHEMA_STATUS: passed
 SCOPE_VERIFICATION:
 - NONE
 FORBIDDEN_CHANGES_CHECK:
@@ -96,6 +98,7 @@ TESTS_RUN:
 EVIDENCE:
 - SOURCE_RESULT_REF: project-runtime/results/worker/RESULT_TASK_DEMO_001_ATTEMPT_001.md
 - CHANGED_FILES_SCOPE_STATUS: failed
+- VALIDATION_STATUS: passed
 SCOPE_VERIFICATION:
 - TASK_PACKET_SCHEMA_STATUS: passed
 FORBIDDEN_CHANGES_CHECK:
@@ -160,6 +163,7 @@ EVIDENCE:
 - CORRECTION_TASK_REF: project-runtime/tasks/active/TASK_CORRECTION_TASK_DEMO_001.md
 - FINAL_RUN_RECEIPT_REF: project-runtime/receipts/lifecycle/PROJECT_FINALIZATION_RECEIPT.json
 - DISPATCH_RECEIPT_REF: project-runtime/agents/dispatches/audit_TASK_DEMO_001_attempt_001.json
+- VALIDATION_STATUS: passed
 - SOURCE_BOUNDARY_STATUS: passed
 SCOPE_VERIFICATION:
 - TASK_PACKET_SCHEMA_STATUS: passed
@@ -313,6 +317,15 @@ class ResultParserTests(unittest.TestCase):
         self.assertIn(result_parser.REASON_MISSING_TASK_ID, reason_codes)
         self.assertIn(result_parser.REASON_MISSING_AGENT_INSTANCE_ID, reason_codes)
         self.assertIn(result_parser.REASON_MISSING_ROLE, reason_codes)
+
+    def test_status_pass_rejects_failed_schema_validation_evidence(self) -> None:
+        text = canonical_result().replace("RESULT_SCHEMA_STATUS: passed", "RESULT_SCHEMA_STATUS: failed")
+
+        parsed = result_parser.parse_result(text, strict=True)
+
+        reason_codes = {issue.reason_code for issue in parsed.issues}
+        self.assertIn(result_parser.REASON_FAILED_VALIDATION_EVIDENCE, reason_codes)
+        self.assertTrue(parsed.has_error)
 
     def test_record_result_and_lifecycle_use_multiline_identity_fields(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:

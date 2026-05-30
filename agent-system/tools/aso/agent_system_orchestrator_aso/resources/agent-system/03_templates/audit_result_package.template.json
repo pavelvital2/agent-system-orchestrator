@@ -89,7 +89,8 @@
     "status": "not_run",
     "validators": "NONE",
     "notes": [
-      "Template only. It does not authorize checkpoint execution."
+      "Template only. It does not authorize checkpoint execution.",
+      "VALIDATION_NOT_RUN_REASON: skeleton template; validate a materialized audit package before RESULT."
     ]
   }
 }

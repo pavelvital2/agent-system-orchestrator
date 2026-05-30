@@ -46,6 +46,8 @@ TESTS_RUN:
 - <test/check and concise result> | NONE
 
 EVIDENCE:
+- VALIDATION_STATUS: passed | not_run
+- VALIDATION_COMMAND: <command and concise result> | VALIDATION_NOT_RUN_REASON: <reason validation could not be run>
 - <command/result/file/report> | NONE
 
 SCOPE_VERIFICATION:
@@ -100,6 +102,169 @@ UNRESOLVED_FINDINGS
 DESIGN_OR_TASK_IMPLICATIONS
 RECOMMENDED_NEXT_ACTION
 ```
+
+## Self-validation rule
+
+Before returning RESULT, the agent must validate every required output it
+created or state why validation could not be run. Record that evidence in
+`COMMANDS_RUN`, `TESTS_RUN`, `EVIDENCE`, or `SCOPE_VERIFICATION` with compact
+labels such as:
+
+```text
+VALIDATION_STATUS: passed | not_run
+VALIDATION_COMMAND: <command and concise result>
+VALIDATION_NOT_RUN_REASON: <bounded reason>
+RESULT_SCHEMA_STATUS: passed | not_run
+ARTIFACT_MANIFEST_SCHEMA_STATUS: passed | not_run
+STRUCTURED_ARTIFACT_SCHEMA_STATUS: passed | not_run
+TASK_PACKET_SCHEMA_STATUS: passed | not_run
+```
+
+If any required RESULT, artifact manifest, main document, structured artifact,
+audit result, or correction result schema validation fails, the agent must not
+return `STATUS: pass`. Use `STATUS: fail`, `blocked`, or `gap` as appropriate
+and cite the failed validation evidence.
+
+## Minimal valid skeletons
+
+Worker RESULT skeleton:
+
+```text
+RESULT:
+STATUS: pass | fail | blocked | gap
+TASK_ID: <TASK_ID>
+AGENT_INSTANCE_ID: <AGENT_INSTANCE_ID>
+ROLE: <requirements_analyst | solution_architect | developer | tester | technical_writer>
+TASK: <TASK_ID>
+RESULT_ACCEPTANCE_MODE: result_only | artifact_package
+ARTIFACT_PACKAGE_REQUIRED: false | true
+SUMMARY:
+- <summary>
+READ_DOCS:
+- <path> | NONE
+READ_INPUTS:
+- <path or input ref> | NONE
+CHANGED_FILES:
+- <path> | NONE
+CREATED_FILES:
+- <path> | NONE
+DELETED_FILES:
+- <path> | NONE
+COMMANDS_RUN:
+- <command and result> | NONE
+TESTS_RUN:
+- <test/check and result> | NONE
+EVIDENCE:
+- VALIDATION_STATUS: passed | not_run
+- VALIDATION_COMMAND: <command and result> | VALIDATION_NOT_RUN_REASON: <reason>
+SCOPE_VERIFICATION:
+- <scope check> | NONE
+FORBIDDEN_CHANGES_CHECK:
+- <forbidden-change check> | NONE
+RISKS:
+- <risk> | NONE
+LIMITATIONS:
+- <limitation> | NONE
+BLOCKERS:
+- <blocker> | NONE
+GAPS:
+- NONE
+NEXT_RECOMMENDED_ACTION:
+- CREATE_AUDITOR | ROUTE_CORRECTION | NONE
+REUSE_ALLOWED: false
+AGENT_TERMINATION_REQUIRED: true
+```
+
+Audit RESULT skeleton:
+
+```text
+AUDIT_RESULT:
+STATUS: pass | fail
+TASK_ID: <TASK_ID>
+AGENT_INSTANCE_ID: <AUDITOR_AGENT_INSTANCE_ID>
+ROLE: auditor
+TASK: <TASK_ID>
+SUMMARY:
+- <summary>
+READ_DOCS:
+- <path> | NONE
+READ_INPUTS:
+- <audited result/package refs>
+CHANGED_FILES:
+- NONE
+CREATED_FILES:
+- <path> | NONE
+DELETED_FILES:
+- NONE
+COMMANDS_RUN:
+- <audit validation command and result> | NONE
+TESTS_RUN:
+- <test/check and result> | NONE
+EVIDENCE:
+- SOURCE_RESULT_REF: project-runtime/results/worker/RESULT_<TASK_ID>_ATTEMPT_<N>.md
+- VALIDATION_STATUS: passed | not_run
+- VALIDATION_COMMAND: <command and result> | VALIDATION_NOT_RUN_REASON: <reason>
+- CHANGED_FILES_SCOPE_STATUS: passed | failed | not_applicable
+- TASK_PACKET_SCHEMA_STATUS: passed | failed | not_applicable
+- REPOSITORY_IDENTITY_STATUS: passed | failed | not_applicable
+- FORBIDDEN_PATH_STATUS: passed | failed | not_applicable
+- RUNTIME_MUTATION_STATUS: passed | failed | not_applicable
+- EVIDENCE_STATUS: passed | failed | not_applicable
+- SECRET_EXPOSURE_STATUS: passed | failed | not_applicable
+- REASONING_LEVEL_COMPLIANCE: passed | failed | not_applicable
+- VALIDATED_TASK_PACKETS: <refs/statuses> | NONE
+SCOPE_VERIFICATION:
+- <scope check> | NONE
+FORBIDDEN_CHANGES_CHECK:
+- <forbidden-change check> | NONE
+FINDINGS:
+- NONE | <finding>
+FAILED_CHECKS:
+- NONE | <failed check id>
+RISKS:
+- <risk> | NONE
+LIMITATIONS:
+- <limitation> | NONE
+BLOCKERS:
+- NONE | audit_failed
+GAPS:
+- NONE
+NEXT_RECOMMENDED_ACTION:
+- CHECKPOINT_PREFLIGHT | ROUTE_CORRECTION
+REUSE_ALLOWED: false
+AGENT_TERMINATION_REQUIRED: true
+```
+
+Correction RESULTs use the worker skeleton and must also cite
+`CORRECTION_OF`, `RESOLVES_AUDIT_REF`, or equivalent correction references in
+`EVIDENCE` or `SCOPE_VERIFICATION`.
+
+Candidate artifact package manifest skeleton:
+
+```json
+{
+  "artifact_package_schema_version": "1.1.0",
+  "artifact_type": "RESULT",
+  "artifact_id": "RESULT_<TASK_ID>_ATTEMPT_001",
+  "task_id": "<TASK_ID>",
+  "role": "<ROLE>",
+  "attempt_no": 1,
+  "status": "pass",
+  "main_document": "RESULT.md",
+  "structured_artifacts": ["structured/result_package.json"],
+  "evidence_refs": "NONE",
+  "created_at": "<RFC3339_UTC>",
+  "producer": {
+    "agent_instance_id": "<AGENT_INSTANCE_ID>",
+    "role": "<ROLE>"
+  }
+}
+```
+
+Main documents inside candidate packages should be package-relative
+(`RESULT.md`, `AUDIT_RESULT.md`, or another task-specific main document).
+Structured artifacts should use the schema-valid envelope from
+`agent-system/03_templates/structured_artifact.template.json`.
 
 ## Status rule
 

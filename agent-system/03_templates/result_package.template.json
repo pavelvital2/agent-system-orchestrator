@@ -39,7 +39,8 @@
     "status": "not_run",
     "validators": "NONE",
     "notes": [
-      "Template only. It does not create result storage or lifecycle integration."
+      "Template only. It does not create result storage or lifecycle integration.",
+      "VALIDATION_NOT_RUN_REASON: skeleton template; validate a materialized package before RESULT."
     ]
   }
 }

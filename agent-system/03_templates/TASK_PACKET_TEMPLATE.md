@@ -742,6 +742,34 @@ Rules:
 
 ---
 
+## ROLE_OUTPUT_CONTRACT_SUMMARY
+
+The orchestrator handoff must include the role-specific
+`result_contract_summary` derived from
+`agent-system/02_runtime/ORCHESTRATOR_RUNTIME_CONTRACT.json`
+`role_output_contracts`.
+
+Required compact contents:
+
+```text
+- expected RESULT path for the assigned role;
+- required RESULT fields and constants;
+- minimal valid skeletons for RESULT/AUDIT_RESULT/correction RESULT as applicable;
+- candidate artifact manifest path and JSON skeleton when package output is allowed;
+- main document and structured artifact skeletons when package output is allowed;
+- self-validation labels required before RESULT;
+- first-pass acceptance metric fields for Stage 1 final reporting.
+```
+
+Self-validation rule:
+
+```text
+The agent must cite validation evidence or VALIDATION_NOT_RUN_REASON before RESULT.
+STATUS: pass is invalid when any required output schema validation fails.
+```
+
+---
+
 ## RISK_REQUIREMENTS
 
 Какие риски агент обязан явно указать.
@@ -975,6 +1003,11 @@ agent-system/02_runtime/ACCEPTED_STATE_LOCKING.md
 ```text
 agent-system/03_templates/AGENT_RESULT_TEMPLATE.md
 ```
+
+Before RESULT, the agent must validate required outputs or explicitly state why
+validation could not be run. `STATUS: pass` must not be used when the RESULT,
+candidate artifact manifest, main document, structured artifact, audit result,
+or correction result required by this packet would fail schema validation.
 
 ---
 

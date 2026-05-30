@@ -318,6 +318,27 @@ Rules:
 - `AGENT_TERMINATION_REQUIRED` must be `true`;
 - profile-agent execution evidence must be tied to a dispatch receipt before
   the RESULT can pass audit.
+- the RESULT must include validation evidence or `VALIDATION_NOT_RUN_REASON`;
+- `STATUS: pass` must not be used if required RESULT or package schema
+  validation fails.
+
+## ROLE_OUTPUT_CONTRACT_SUMMARY
+
+The bootstrap handoff must provide the assigned role's compact
+`result_contract_summary` from the machine-readable runtime contract
+`role_output_contracts`.
+
+Minimum contents:
+
+```text
+- expected RESULT path;
+- required RESULT fields and constants;
+- minimal RESULT/correction RESULT skeletons;
+- candidate artifact manifest skeleton when an artifact package is created;
+- main document and structured artifact skeletons when package output is created;
+- self-validation evidence labels;
+- Stage 1 first-pass acceptance metric fields.
+```
 
 ## ALLOWED_FILE_CHANGES
 
@@ -370,7 +391,9 @@ For `solution_architect`:
 - list changed files or NONE;
 - provide scope and forbidden-change verification.
 - cite dispatch receipt project-runtime/agents/dispatches/<AGENT_INSTANCE_ID>.json;
-- cite candidate artifact package manifest when an artifact package is created.
+- cite canonical candidate artifact package manifest at
+  project-runtime/artifacts/candidates/<TASK_ID>/manifest.json when an artifact
+  package is created.
 ```
 
 ## EXPECTED_ARTIFACT_PACKAGE
@@ -495,6 +518,9 @@ Rules:
 ```text
 agent-system/03_templates/AGENT_RESULT_TEMPLATE.md
 ```
+
+The agent must validate required outputs before RESULT or explicitly explain
+why validation could not be run.
 
 ## TERMINAL_CONDITIONS
 

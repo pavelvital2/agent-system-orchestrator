@@ -522,6 +522,7 @@ ORCHESTRATOR_RUNTIME_CONTRACT_JSON = r"""{
       "forbidden_transitions",
       "next_actions_by_state",
       "required_docs_by_role",
+      "role_output_contracts",
       "reasoning_floor_by_role",
       "dispatch_receipt_contract",
       "handoff_artifact_contract",
@@ -544,6 +545,9 @@ ORCHESTRATOR_RUNTIME_CONTRACT_JSON = r"""{
       "target_role_required_doc_tokens",
       "role_contract_summary",
       "result_contract_summary",
+      "first_pass_acceptance_metrics",
+      "self_validation_contract",
+      "role_output_contract_summary",
       "resolved_reasoning_floor",
       "lifecycle_policy",
       "expected_output_paths"
@@ -565,6 +569,440 @@ ORCHESTRATOR_RUNTIME_CONTRACT_JSON = r"""{
       "tester": "agent-system/01_roles/TESTER.md",
       "auditor": "agent-system/01_roles/AUDITOR.md",
       "technical_writer": "agent-system/01_roles/TECHNICAL_WRITER.md"
+    }
+  },
+  "role_output_contracts": {
+    "contract_version": "1.0.0",
+    "common_result_required_fields": [
+      "STATUS",
+      "TASK_ID",
+      "AGENT_INSTANCE_ID",
+      "ROLE",
+      "TASK",
+      "SUMMARY",
+      "READ_DOCS",
+      "READ_INPUTS",
+      "CHANGED_FILES",
+      "CREATED_FILES",
+      "DELETED_FILES",
+      "COMMANDS_RUN",
+      "TESTS_RUN",
+      "EVIDENCE",
+      "SCOPE_VERIFICATION",
+      "FORBIDDEN_CHANGES_CHECK",
+      "RISKS",
+      "LIMITATIONS",
+      "BLOCKERS",
+      "GAPS",
+      "NEXT_RECOMMENDED_ACTION",
+      "REUSE_ALLOWED",
+      "AGENT_TERMINATION_REQUIRED"
+    ],
+    "common_result_required_constants": {
+      "REUSE_ALLOWED": "false",
+      "AGENT_TERMINATION_REQUIRED": "true"
+    },
+    "self_validation": {
+      "required_before_result": true,
+      "evidence_fields": [
+        "COMMANDS_RUN",
+        "TESTS_RUN",
+        "EVIDENCE",
+        "SCOPE_VERIFICATION"
+      ],
+      "required_evidence_labels": [
+        "VALIDATION_STATUS",
+        "VALIDATION_COMMAND",
+        "RESULT_SCHEMA_STATUS",
+        "ARTIFACT_MANIFEST_SCHEMA_STATUS",
+        "VALIDATION_NOT_RUN_REASON"
+      ],
+      "not_run_requires_reason": true,
+      "pass_status_rule": "STATUS: pass is forbidden when any required RESULT, artifact manifest, main document, structured artifact, audit result, or correction result schema validation fails."
+    },
+    "output_path_templates": {
+      "worker_result": "project-runtime/results/worker/RESULT_<TASK_ID>_ATTEMPT_001.md",
+      "audit_result": "project-runtime/results/audit/AUDIT_RESULT_<TASK_ID>_ATTEMPT_001.md",
+      "candidate_artifact_manifest": "project-runtime/artifacts/candidates/<TASK_ID>/manifest.json",
+      "candidate_main_document": "project-runtime/artifacts/candidates/<TASK_ID>/RESULT.md",
+      "candidate_structured_artifact": "project-runtime/artifacts/candidates/<TASK_ID>/structured/<ARTIFACT_ID>.json"
+    },
+    "minimal_skeletons": {
+      "result_file": {
+        "format": "markdown",
+        "marker": "RESULT:",
+        "path_template": "project-runtime/results/worker/RESULT_<TASK_ID>_ATTEMPT_001.md",
+        "required_fields": [
+          "STATUS",
+          "TASK_ID",
+          "AGENT_INSTANCE_ID",
+          "ROLE",
+          "TASK",
+          "SUMMARY",
+          "READ_DOCS",
+          "READ_INPUTS",
+          "CHANGED_FILES",
+          "CREATED_FILES",
+          "DELETED_FILES",
+          "COMMANDS_RUN",
+          "TESTS_RUN",
+          "EVIDENCE",
+          "SCOPE_VERIFICATION",
+          "FORBIDDEN_CHANGES_CHECK",
+          "RISKS",
+          "LIMITATIONS",
+          "BLOCKERS",
+          "GAPS",
+          "NEXT_RECOMMENDED_ACTION",
+          "REUSE_ALLOWED",
+          "AGENT_TERMINATION_REQUIRED"
+        ],
+        "required_constants": {
+          "REUSE_ALLOWED": "false",
+          "AGENT_TERMINATION_REQUIRED": "true"
+        },
+        "validation_evidence_minimum": [
+          "VALIDATION_STATUS: passed | not_run",
+          "VALIDATION_COMMAND: <command and result> | VALIDATION_NOT_RUN_REASON: <reason>"
+        ]
+      },
+      "audit_result_file": {
+        "format": "markdown",
+        "marker": "AUDIT_RESULT:",
+        "path_template": "project-runtime/results/audit/AUDIT_RESULT_<TASK_ID>_ATTEMPT_001.md",
+        "required_fields": [
+          "STATUS",
+          "TASK_ID",
+          "AGENT_INSTANCE_ID",
+          "ROLE",
+          "TASK",
+          "SUMMARY",
+          "READ_DOCS",
+          "READ_INPUTS",
+          "CHANGED_FILES",
+          "CREATED_FILES",
+          "DELETED_FILES",
+          "COMMANDS_RUN",
+          "TESTS_RUN",
+          "EVIDENCE",
+          "SCOPE_VERIFICATION",
+          "FORBIDDEN_CHANGES_CHECK",
+          "RISKS",
+          "LIMITATIONS",
+          "BLOCKERS",
+          "GAPS",
+          "NEXT_RECOMMENDED_ACTION",
+          "REUSE_ALLOWED",
+          "AGENT_TERMINATION_REQUIRED"
+        ],
+        "required_constants": {
+          "ROLE": "auditor",
+          "REUSE_ALLOWED": "false",
+          "AGENT_TERMINATION_REQUIRED": "true"
+        },
+        "validation_evidence_minimum": [
+          "SOURCE_RESULT_REF: project-runtime/results/worker/RESULT_<TASK_ID>_ATTEMPT_<N>.md",
+          "VALIDATION_STATUS: passed | not_run",
+          "VALIDATION_COMMAND: <command and result> | VALIDATION_NOT_RUN_REASON: <reason>"
+        ],
+        "mandatory_audit_labels": [
+          "CHANGED_FILES_SCOPE_STATUS",
+          "TASK_PACKET_SCHEMA_STATUS",
+          "REPOSITORY_IDENTITY_STATUS",
+          "FORBIDDEN_PATH_STATUS",
+          "RUNTIME_MUTATION_STATUS",
+          "EVIDENCE_STATUS",
+          "SECRET_EXPOSURE_STATUS",
+          "REASONING_LEVEL_COMPLIANCE",
+          "VALIDATED_TASK_PACKETS"
+        ]
+      },
+      "correction_result": {
+        "format": "markdown",
+        "marker": "RESULT:",
+        "path_template": "project-runtime/results/worker/RESULT_<TASK_ID>_ATTEMPT_001.md",
+        "required_fields": [
+          "STATUS",
+          "TASK_ID",
+          "AGENT_INSTANCE_ID",
+          "ROLE",
+          "TASK",
+          "SUMMARY",
+          "READ_DOCS",
+          "READ_INPUTS",
+          "CHANGED_FILES",
+          "CREATED_FILES",
+          "DELETED_FILES",
+          "COMMANDS_RUN",
+          "TESTS_RUN",
+          "EVIDENCE",
+          "SCOPE_VERIFICATION",
+          "FORBIDDEN_CHANGES_CHECK",
+          "RISKS",
+          "LIMITATIONS",
+          "BLOCKERS",
+          "GAPS",
+          "NEXT_RECOMMENDED_ACTION",
+          "REUSE_ALLOWED",
+          "AGENT_TERMINATION_REQUIRED"
+        ],
+        "required_evidence_labels": [
+          "CORRECTION_OF",
+          "RESOLVES_AUDIT_REF",
+          "VALIDATION_STATUS"
+        ]
+      },
+      "artifact_manifest": {
+        "format": "json",
+        "path_template": "project-runtime/artifacts/candidates/<TASK_ID>/manifest.json",
+        "required_fields": [
+          "artifact_package_schema_version",
+          "artifact_type",
+          "artifact_id",
+          "task_id",
+          "role",
+          "attempt_no",
+          "status",
+          "main_document",
+          "structured_artifacts",
+          "evidence_refs",
+          "created_at",
+          "producer"
+        ],
+        "minimal_json": {
+          "artifact_package_schema_version": "1.1.0",
+          "artifact_type": "RESULT",
+          "artifact_id": "RESULT_<TASK_ID>_ATTEMPT_001",
+          "task_id": "<TASK_ID>",
+          "role": "<ROLE>",
+          "attempt_no": 1,
+          "status": "pass",
+          "main_document": "RESULT.md",
+          "structured_artifacts": [
+            "structured/result_package.json"
+          ],
+          "evidence_refs": "NONE",
+          "created_at": "<RFC3339_UTC>",
+          "producer": {
+            "agent_instance_id": "<AGENT_INSTANCE_ID>",
+            "role": "<ROLE>"
+          }
+        }
+      },
+      "main_document": {
+        "format": "markdown",
+        "path_template": "RESULT.md",
+        "required_sections": [
+          "RESULT:"
+        ]
+      },
+      "structured_artifact": {
+        "format": "json",
+        "path_template": "structured/result_package.json",
+        "required_fields": [
+          "schema_version",
+          "package_version",
+          "governance_ruleset_version",
+          "runtime_schema_version",
+          "artifact_package_schema_version",
+          "artifact_id",
+          "artifact_type",
+          "created_at",
+          "created_by",
+          "source_refs",
+          "content",
+          "validation"
+        ]
+      }
+    },
+    "roles": {
+      "requirements_analyst": {
+        "result_kind": "worker_result",
+        "expected_result_path_template": "project-runtime/results/worker/RESULT_<TASK_ID>_ATTEMPT_001.md",
+        "result_acceptance_default": "artifact_package_when_candidate_package_is_created_else_result_only",
+        "required_outputs": [
+          "result_file"
+        ],
+        "conditional_outputs": [
+          "artifact_manifest",
+          "main_document",
+          "structured_artifact",
+          "correction_result"
+        ],
+        "required_skeletons": [
+          "result_file"
+        ],
+        "conditional_skeletons": [
+          "artifact_manifest",
+          "main_document",
+          "structured_artifact",
+          "correction_result"
+        ],
+        "output_paths": {
+          "result": "project-runtime/results/worker/RESULT_<TASK_ID>_ATTEMPT_001.md",
+          "candidate_artifact_manifest": "project-runtime/artifacts/candidates/<TASK_ID>/manifest.json",
+          "candidate_main_document": "project-runtime/artifacts/candidates/<TASK_ID>/RESULT.md",
+          "candidate_structured_artifact": "project-runtime/artifacts/candidates/<TASK_ID>/structured/result_package.json"
+        }
+      },
+      "solution_architect": {
+        "result_kind": "worker_result",
+        "expected_result_path_template": "project-runtime/results/worker/RESULT_<TASK_ID>_ATTEMPT_001.md",
+        "result_acceptance_default": "artifact_package_when_candidate_package_is_created_else_result_only",
+        "required_outputs": [
+          "result_file"
+        ],
+        "conditional_outputs": [
+          "artifact_manifest",
+          "main_document",
+          "structured_artifact",
+          "correction_result"
+        ],
+        "required_skeletons": [
+          "result_file"
+        ],
+        "conditional_skeletons": [
+          "artifact_manifest",
+          "main_document",
+          "structured_artifact",
+          "correction_result"
+        ],
+        "output_paths": {
+          "result": "project-runtime/results/worker/RESULT_<TASK_ID>_ATTEMPT_001.md",
+          "candidate_artifact_manifest": "project-runtime/artifacts/candidates/<TASK_ID>/manifest.json",
+          "candidate_main_document": "project-runtime/artifacts/candidates/<TASK_ID>/RESULT.md",
+          "candidate_structured_artifact": "project-runtime/artifacts/candidates/<TASK_ID>/structured/result_package.json"
+        }
+      },
+      "developer": {
+        "result_kind": "worker_result",
+        "expected_result_path_template": "project-runtime/results/worker/RESULT_<TASK_ID>_ATTEMPT_001.md",
+        "result_acceptance_default": "artifact_package_when_candidate_package_is_created_else_result_only",
+        "required_outputs": [
+          "result_file"
+        ],
+        "conditional_outputs": [
+          "artifact_manifest",
+          "main_document",
+          "structured_artifact",
+          "correction_result"
+        ],
+        "required_skeletons": [
+          "result_file"
+        ],
+        "conditional_skeletons": [
+          "artifact_manifest",
+          "main_document",
+          "structured_artifact",
+          "correction_result"
+        ],
+        "output_paths": {
+          "result": "project-runtime/results/worker/RESULT_<TASK_ID>_ATTEMPT_001.md",
+          "candidate_artifact_manifest": "project-runtime/artifacts/candidates/<TASK_ID>/manifest.json",
+          "candidate_main_document": "project-runtime/artifacts/candidates/<TASK_ID>/RESULT.md",
+          "candidate_structured_artifact": "project-runtime/artifacts/candidates/<TASK_ID>/structured/result_package.json"
+        }
+      },
+      "technical_writer": {
+        "result_kind": "worker_result",
+        "expected_result_path_template": "project-runtime/results/worker/RESULT_<TASK_ID>_ATTEMPT_001.md",
+        "result_acceptance_default": "artifact_package_when_candidate_package_is_created_else_result_only",
+        "required_outputs": [
+          "result_file"
+        ],
+        "conditional_outputs": [
+          "artifact_manifest",
+          "main_document",
+          "structured_artifact",
+          "correction_result"
+        ],
+        "required_skeletons": [
+          "result_file"
+        ],
+        "conditional_skeletons": [
+          "artifact_manifest",
+          "main_document",
+          "structured_artifact",
+          "correction_result"
+        ],
+        "output_paths": {
+          "result": "project-runtime/results/worker/RESULT_<TASK_ID>_ATTEMPT_001.md",
+          "candidate_artifact_manifest": "project-runtime/artifacts/candidates/<TASK_ID>/manifest.json",
+          "candidate_main_document": "project-runtime/artifacts/candidates/<TASK_ID>/RESULT.md",
+          "candidate_structured_artifact": "project-runtime/artifacts/candidates/<TASK_ID>/structured/result_package.json"
+        }
+      },
+      "tester": {
+        "result_kind": "test_result",
+        "expected_result_path_template": "project-runtime/results/worker/RESULT_<TASK_ID>_ATTEMPT_001.md",
+        "result_acceptance_default": "artifact_package_when_candidate_package_is_created_else_result_only",
+        "required_outputs": [
+          "result_file"
+        ],
+        "conditional_outputs": [
+          "artifact_manifest",
+          "main_document",
+          "structured_artifact",
+          "correction_result"
+        ],
+        "required_skeletons": [
+          "result_file"
+        ],
+        "conditional_skeletons": [
+          "artifact_manifest",
+          "main_document",
+          "structured_artifact",
+          "correction_result"
+        ],
+        "output_paths": {
+          "result": "project-runtime/results/worker/RESULT_<TASK_ID>_ATTEMPT_001.md",
+          "candidate_artifact_manifest": "project-runtime/artifacts/candidates/<TASK_ID>/manifest.json",
+          "candidate_main_document": "project-runtime/artifacts/candidates/<TASK_ID>/RESULT.md",
+          "candidate_structured_artifact": "project-runtime/artifacts/candidates/<TASK_ID>/structured/result_package.json"
+        }
+      },
+      "auditor": {
+        "result_kind": "audit_result",
+        "expected_result_path_template": "project-runtime/results/audit/AUDIT_RESULT_<TASK_ID>_ATTEMPT_001.md",
+        "result_acceptance_default": "result_only_unless_audit_task_explicitly_produces_candidate_package",
+        "required_outputs": [
+          "audit_result_file"
+        ],
+        "conditional_outputs": [
+          "artifact_manifest",
+          "main_document",
+          "structured_artifact"
+        ],
+        "required_skeletons": [
+          "audit_result_file"
+        ],
+        "conditional_skeletons": [
+          "artifact_manifest",
+          "main_document",
+          "structured_artifact"
+        ],
+        "output_paths": {
+          "result": "project-runtime/results/audit/AUDIT_RESULT_<TASK_ID>_ATTEMPT_001.md",
+          "candidate_artifact_manifest": "project-runtime/artifacts/candidates/<TASK_ID>/manifest.json",
+          "candidate_main_document": "project-runtime/artifacts/candidates/<TASK_ID>/RESULT.md",
+          "candidate_structured_artifact": "project-runtime/artifacts/candidates/<TASK_ID>/structured/result_package.json"
+        }
+      }
+    },
+    "first_pass_acceptance_metrics": {
+      "stage1_final_report_required": true,
+      "definition": "First-pass acceptance means attempt 1 reached accepted RESULT/audit routing without schema-only correction.",
+      "fields": [
+        "task_id",
+        "role",
+        "attempt_no",
+        "result_schema_valid_on_first_parse",
+        "required_output_schemas_valid_on_first_parse",
+        "validation_evidence_present",
+        "audit_passed_first_attempt",
+        "schema_only_correction_count",
+        "first_pass_accepted"
+      ]
     }
   }
 }

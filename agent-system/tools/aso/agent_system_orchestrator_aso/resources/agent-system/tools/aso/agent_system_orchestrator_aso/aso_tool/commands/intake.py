@@ -216,6 +216,16 @@ Create the first bounded requirements analysis from the raw TZ document.
 
 - The profile-agent RESULT must follow `agent-system/03_templates/AGENT_RESULT_TEMPLATE.md`.
 - The RESULT must use `TASK_ID: {TASK_ID}`, `ROLE: {TARGET_ROLE}`, `REUSE_ALLOWED: false`, and `AGENT_TERMINATION_REQUIRED: true`.
+- The RESULT must include validation evidence or `VALIDATION_NOT_RUN_REASON`.
+- The agent must not return `STATUS: pass` if required RESULT or artifact package schema validation fails.
+
+## ROLE_OUTPUT_CONTRACT_SUMMARY
+
+- The handoff provides `result_contract_summary` from `role_output_contracts` in `agent-system/02_runtime/ORCHESTRATOR_RUNTIME_CONTRACT.json`.
+- Expected RESULT path: `project-runtime/results/worker/RESULT_{TASK_ID}_ATTEMPT_001.md`.
+- Expected candidate artifact manifest: `project-runtime/artifacts/candidates/{TASK_ID}/manifest.json`.
+- Minimal skeletons required before RESULT: RESULT file, artifact manifest, package main document, structured artifact, and correction RESULT when correction evidence is applicable.
+- Self-validation evidence must cite `VALIDATION_STATUS` plus `VALIDATION_COMMAND` or `VALIDATION_NOT_RUN_REASON`.
 
 ## EVIDENCE_REQUIREMENTS
 

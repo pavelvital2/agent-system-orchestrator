@@ -335,10 +335,12 @@ forbidden document checks, and required document existence under `--root`.
 
 Runtime State P2 command surfaces are local and offline.
 `project-runtime/state/*.json` sidecars are canonical for Runtime Schema
-`3.1.1`. Markdown runtime files are generated compatibility views, and report
-outputs are diagnostics generated from JSON, not canonical state sources. The
-active package version is `3.7.9` and the active runtime schema version is
-`3.1.1`.
+`3.1.1`. `NEXT_ACTION.json` is the rendered compatibility/cache view derived
+from task registry, lifecycle, artifact, audit, gate, correction, and
+runtime-contract inputs. Markdown runtime files are generated compatibility
+views, and report outputs are diagnostics generated from JSON, not canonical
+state sources. The active package version is `3.7.9` and the active runtime
+schema version is `3.1.1`.
 
 ```text
 python3 agent-system/tools/aso/aso.py validate-rules --root . --strict
@@ -368,8 +370,9 @@ fails closed on malformed or ambiguous state, and writes migration receipts
 under allowed runtime report paths. Without
 `--confirm-write`, `aso state render` is read-only except for explicit report
 output to `/tmp`, `project-runtime/reports`, or `project-runtime/rendered`.
-With `--confirm-write`, it writes generated Markdown compatibility views for
-every canonical JSON sidecar. `aso state verify`
+With `--confirm-write`, it refreshes the derived `NEXT_ACTION.json` cache when
+structurally valid and writes generated Markdown compatibility views for every
+canonical JSON sidecar. `aso state verify`
 validates Runtime Schema `3.1.1` envelopes, sidecar types, required fields,
 schema alignment, task references, and compatibility diagnostics, then emits
 optional JSON evidence. `aso plan-next` recommends the next orchestrator action
@@ -496,13 +499,34 @@ paths. Outside these bounded write surfaces, ASO does not provide a runtime
 daemon, dispatch live agents, execute checkpoints, perform general
 package/runtime mutation, commit, or push authority.
 
-Profile-agent completion follows the P5 artifact package sequence:
+Profile-agent completion follows the result acceptance mode declared by the
+task/RESULT metadata.
+
+Routine handoffs include a compact `result_contract_summary` derived from
+`ORCHESTRATOR_RUNTIME_CONTRACT.json` `role_output_contracts`. The summary gives
+the role its expected RESULT path, minimal valid skeletons for RESULT,
+AUDIT_RESULT, correction RESULT, artifact manifests, main documents, and
+structured artifacts as applicable, plus the self-validation labels to cite
+before RESULT. A profile agent must cite validation evidence or
+`VALIDATION_NOT_RUN_REASON`; `STATUS: pass` is invalid when a required output
+schema validation fails.
+
+Result-only outputs:
 
 ```text
-RESULT_RECEIVED -> ARTIFACT_ACCEPTED -> AGENT_TERMINATED -> AUDIT_ROUTE_READY
+RESULT_RECEIVED -> RESULT_VALIDATED -> RESULT_ACCEPTED -> AGENT_TERMINATED -> AUDIT_ROUTE_READY
 ```
 
-Profile-agent output starts as a candidate artifact package under
+Artifact-producing outputs:
+
+```text
+RESULT_RECEIVED -> ARTIFACT_PACKAGE_RECEIVED -> ARTIFACT_VALIDATED -> ARTIFACT_ACCEPTED -> AGENT_TERMINATED -> AUDIT_ROUTE_READY
+```
+
+The legacy compressed artifact sequence
+`RESULT_RECEIVED -> ARTIFACT_ACCEPTED -> AGENT_TERMINATED -> AUDIT_ROUTE_READY`
+remains compatible. Artifact-producing profile-agent output starts as a
+candidate artifact package under
 `project-runtime/artifacts/candidates/<TASK_ID>/` with
 `manifest.json`. Legacy candidate packages named
 `artifact_package_manifest.json` are accepted with a compatibility warning.
@@ -510,12 +534,15 @@ Profile agents must not write accepted
 artifacts directly. The orchestrator accepts the candidate into
 `project-runtime/artifacts/accepted/` using canonical `manifest.json`, records the acceptance receipt and
 `ARTIFACT_ACCEPTED` lifecycle event, and only then terminates the agent
-instance and marks audit routing ready. The first real-TZ bootstrap workflow
-therefore follows candidate creation -> artifact accept -> lifecycle event ->
-audit route. Context handed to later agents must cite accepted artifact
-packages or rendered views under `project-runtime/rendered/`; raw chat context,
-raw artifacts, rejected artifacts, and local runtime scratch files are not
-accepted context.
+instance and marks audit routing ready. Rejection with
+`--reason invalid_manifest` records a rejection receipt even when the candidate
+manifest cannot validate, while preserving the invalid package under
+`project-runtime/artifacts/rejected/`. Result-only outputs use governed
+RESULT acceptance evidence instead and do not require synthetic accepted
+artifact package records. Context handed to later agents must cite accepted
+artifact packages, accepted result evidence, or rendered views under
+`project-runtime/rendered/`; raw chat context, raw artifacts, rejected
+artifacts, and local runtime scratch files are not accepted context.
 `AUDIT_ROUTE_READY` is a readiness marker only and does not dispatch live
 agents or execute checkpoints.
 
@@ -614,6 +641,10 @@ agent-system/11_release/STAGE3_SAFE_AUTOMATION_DIAGNOSTICS_RELEASE_NOTES.md
 The Stage 1 final validation report is accepted evidence and must remain
 intact. The original Stage 2 validation report remains historical evidence but
 is superseded for current acceptance by the Stage 2 state-contract correction.
+Stage 1 final reporting must include the first-pass acceptance metrics declared
+by `role_output_contracts`, including first-attempt schema validity,
+validation-evidence presence, audit-first-pass status, schema-only correction
+count, and first-pass accepted status.
 That historical Stage 2 evidence used `CURRENT_PACKAGE_VERSION: 3.0.1`; the
 correction report is the current acceptance source for the governed `3.0.2`
 package/governance tuple.

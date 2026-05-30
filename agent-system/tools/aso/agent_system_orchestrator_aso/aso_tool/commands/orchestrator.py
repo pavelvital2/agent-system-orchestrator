@@ -12,6 +12,7 @@ from . import output_policy
 from . import plan_next
 from . import state_verify
 from .. import source_boundary
+from .. import role_output_contracts
 from .. import transition_engine
 
 
@@ -292,15 +293,12 @@ def _reasoning_floor(contract: dict[str, Any], target_role: str) -> str:
     return _as_text(floors.get(target_role)) or NONE_REF
 
 
-def _result_contract_summary(target_role: str, required_doc_tokens: list[str]) -> dict[str, object]:
-    result_kind = "audit_result" if target_role == "auditor" or "audit_result_template" in required_doc_tokens else "worker_result"
-    if "test_result_template" in required_doc_tokens:
-        result_kind = "test_result"
-    return {
-        "result_kind": result_kind,
-        "template_ref": "agent-system/03_templates/AGENT_RESULT_TEMPLATE.md",
-        "summary": "Formal RESULT fields are required; routine context carries this summary instead of the full template.",
-    }
+def _result_contract_summary(
+    contract: dict[str, Any],
+    target_role: str,
+    required_doc_tokens: list[str],
+) -> dict[str, object]:
+    return role_output_contracts.result_contract_summary(contract, target_role, required_doc_tokens)
 
 
 def _current_next_action(root: Path) -> dict[str, Any]:
@@ -554,7 +552,7 @@ def _context_report(root: Path, args: argparse.Namespace) -> tuple[dict[str, obj
                 "role_doc_access": _as_text(handoff_contract.get("role_doc_access_policy"))
                 or "Role docs are reference-only and are not embedded in routine context.",
             },
-            "result_contract_summary": _result_contract_summary(target_role, role_required_tokens),
+            "result_contract_summary": _result_contract_summary(contract, target_role, role_required_tokens),
             "routine_includes": _string_list(handoff_contract.get("routine_handoff_includes")),
             "routine_excludes": _broad_routine_paths(contract),
             "reference_doc_inclusion_rule": _as_text(handoff_contract.get("reference_doc_inclusion_rule")),

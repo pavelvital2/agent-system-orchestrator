@@ -502,6 +502,15 @@ package/runtime mutation, commit, or push authority.
 Profile-agent completion follows the result acceptance mode declared by the
 task/RESULT metadata.
 
+Routine handoffs include a compact `result_contract_summary` derived from
+`ORCHESTRATOR_RUNTIME_CONTRACT.json` `role_output_contracts`. The summary gives
+the role its expected RESULT path, minimal valid skeletons for RESULT,
+AUDIT_RESULT, correction RESULT, artifact manifests, main documents, and
+structured artifacts as applicable, plus the self-validation labels to cite
+before RESULT. A profile agent must cite validation evidence or
+`VALIDATION_NOT_RUN_REASON`; `STATUS: pass` is invalid when a required output
+schema validation fails.
+
 Result-only outputs:
 
 ```text
@@ -632,6 +641,10 @@ agent-system/11_release/STAGE3_SAFE_AUTOMATION_DIAGNOSTICS_RELEASE_NOTES.md
 The Stage 1 final validation report is accepted evidence and must remain
 intact. The original Stage 2 validation report remains historical evidence but
 is superseded for current acceptance by the Stage 2 state-contract correction.
+Stage 1 final reporting must include the first-pass acceptance metrics declared
+by `role_output_contracts`, including first-attempt schema validity,
+validation-evidence presence, audit-first-pass status, schema-only correction
+count, and first-pass accepted status.
 That historical Stage 2 evidence used `CURRENT_PACKAGE_VERSION: 3.0.1`; the
 correction report is the current acceptance source for the governed `3.0.2`
 package/governance tuple.

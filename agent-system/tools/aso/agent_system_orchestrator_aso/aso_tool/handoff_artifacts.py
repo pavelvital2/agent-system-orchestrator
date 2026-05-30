@@ -7,6 +7,7 @@ from dataclasses import dataclass
 from typing import Any, Mapping
 
 from . import dispatch_receipts
+from . import role_output_contracts
 from . import source_boundary
 from . import transition_engine
 
@@ -252,22 +253,12 @@ def _role_contract_summary(
     }
 
 
-def _result_contract_summary(target_role: str, required_doc_tokens: list[str]) -> dict[str, object]:
-    if target_role == "auditor" or "audit_result_template" in required_doc_tokens:
-        result_kind = "audit_result"
-        expected_path_template = AUDIT_RESULT_REF_TEMPLATE
-    elif "test_result_template" in required_doc_tokens:
-        result_kind = "test_result"
-        expected_path_template = WORKER_RESULT_REF_TEMPLATE
-    else:
-        result_kind = "worker_result"
-        expected_path_template = WORKER_RESULT_REF_TEMPLATE
-    return {
-        "result_kind": result_kind,
-        "template_ref": "agent-system/03_templates/AGENT_RESULT_TEMPLATE.md",
-        "summary": "Formal RESULT fields are required; routine handoff provides this summary instead of embedding the full template.",
-        "expected_result_path_template": expected_path_template,
-    }
+def _result_contract_summary(
+    contract: Mapping[str, Any],
+    target_role: str,
+    required_doc_tokens: list[str],
+) -> dict[str, object]:
+    return role_output_contracts.result_contract_summary(contract, target_role, required_doc_tokens)
 
 
 def _packet_field(packet_fields: Mapping[str, str], key: str, default: str) -> str:
@@ -413,7 +404,7 @@ def build_handoff_artifact(
         "required_doc_tokens": required_doc_tokens,
         "context_budget": _routine_context_budget(contract),
         "role_contract_summary": _role_contract_summary(contract, role, required_doc_tokens),
-        "result_contract_summary": _result_contract_summary(role, required_doc_tokens),
+        "result_contract_summary": _result_contract_summary(contract, role, required_doc_tokens),
         "forbidden_docs": forbidden_docs,
         "forbidden_doc_tokens": _forbidden_doc_tokens(contract),
         "reference_docs": _dedupe_doc_refs(reference_doc_refs),
@@ -599,6 +590,19 @@ def validate_handoff_artifact(payload: Mapping[str, Any]) -> HandoffValidationRe
         errors.append("result_contract_summary.result_kind must be worker_result, test_result, or audit_result")
     if result_summary.get("template_ref") != "agent-system/03_templates/AGENT_RESULT_TEMPLATE.md":
         errors.append("result_contract_summary.template_ref must identify the canonical RESULT template")
+    if not _string_list(result_summary.get("required_result_fields")):
+        errors.append("result_contract_summary.required_result_fields must be a non-empty list")
+    if not _mapping(result_summary.get("required_result_constants")):
+        errors.append("result_contract_summary.required_result_constants must be a non-empty object")
+    if not _mapping(result_summary.get("minimal_skeletons")):
+        errors.append("result_contract_summary.minimal_skeletons must be a non-empty object")
+    self_validation = _mapping(result_summary.get("self_validation"))
+    if self_validation.get("required_before_result") is not True:
+        errors.append("result_contract_summary.self_validation.required_before_result must be true")
+    if not _text(result_summary.get("pass_status_rule")):
+        errors.append("result_contract_summary.pass_status_rule must be non-empty")
+    if not _mapping(result_summary.get("first_pass_acceptance_metrics")):
+        errors.append("result_contract_summary.first_pass_acceptance_metrics must be a non-empty object")
 
     result_path = _text(payload.get("expected_result_path"))
     if not result_path.startswith("project-runtime/results/"):

@@ -127,6 +127,20 @@ FIELD_ALIASES = {
 }
 LOWERCASE_SCALAR_FIELDS = {"STATUS", "ROLE", "RESULT_ACCEPTANCE_MODE"}
 BOOLEAN_TEXT_FIELDS = {"ARTIFACT_PACKAGE_REQUIRED", "REUSE_ALLOWED", "AGENT_TERMINATION_REQUIRED"}
+VALIDATION_STATUS_LABEL_TERMS = {
+    "VALIDATION",
+    "SCHEMA",
+    "CHANGED_FILES_SCOPE",
+    "FORBIDDEN_PATH",
+    "RUNTIME_MUTATION",
+    "EVIDENCE",
+    "SECRET_EXPOSURE",
+    "REPOSITORY_IDENTITY",
+    "REASONING_LEVEL",
+    "SOURCE_BOUNDARY",
+    "VALIDATED_TASK_PACKETS",
+}
+VALIDATION_FAILURE_VALUES = {"fail", "failed", "error", "errors", "invalid", "rejected"}
 
 REASON_MISSING_ROLE = "missing_role"
 REASON_MISSING_TASK_ID = "missing_task_id"
@@ -134,6 +148,7 @@ REASON_MISSING_AGENT_INSTANCE_ID = "missing_agent_instance_id"
 REASON_MISSING_STATUS = "missing_status"
 REASON_MALFORMED_SECTION = "malformed_section"
 REASON_MISSING_REQUIRED_FIELD = "missing_required_field"
+REASON_FAILED_VALIDATION_EVIDENCE = "failed_validation_evidence"
 
 IDENTITY_REASON_BY_FIELD = {
     "ROLE": REASON_MISSING_ROLE,
@@ -393,6 +408,24 @@ def result_acceptance_issues(fields: Mapping[str, Any], result_type: str) -> tup
     return tuple(issues)
 
 
+def result_self_validation_issues(fields: Mapping[str, Any], result_type: str) -> tuple[ResultParseIssue, ...]:
+    if as_string(fields, "STATUS").lower() != "pass":
+        return ()
+    failures = _failed_validation_evidence(fields)
+    if not failures:
+        return ()
+    return (
+        ResultParseIssue(
+            REASON_FAILED_VALIDATION_EVIDENCE,
+            "RESULT_FORMAT_PASS_VALIDATION_CONFLICT",
+            "error",
+            "STATUS: pass is invalid when required output validation evidence reports failure.",
+            "; ".join(failures[:10]),
+            "STATUS",
+        ),
+    )
+
+
 def file_suggests_audit(path: Path, text: str) -> bool:
     first_heading = ""
     for line in text.splitlines():
@@ -420,6 +453,7 @@ def parse_result(text: str, *, path: Path | str | None = None, strict: bool = Fa
     if strict:
         issues.extend(_strict_identity_issues(fields))
         issues.extend(result_acceptance_issues(fields, result_type))
+        issues.extend(result_self_validation_issues(fields, result_type))
     references = _references(fields)
     audit = _audit_details(fields, result_type, references)
     return ParsedResult(
@@ -759,6 +793,31 @@ def _failed_checks(fields: Mapping[str, Any]) -> list[str]:
             elif not label and "failed" in item.lower():
                 checks.append(item)
     return _dedupe(check for check in checks if check and check.upper() != "NONE")
+
+
+def _failed_validation_evidence(fields: Mapping[str, Any]) -> list[str]:
+    failures: list[str] = []
+    for label in fields:
+        if not _is_validation_status_label(label):
+            continue
+        for value in as_list(fields, label):
+            if _is_failure_value(value):
+                failures.append(f"{label}: {value}")
+    for item in _iter_field_items(fields):
+        label, value = _label_value(item)
+        if _is_validation_status_label(label) and _is_failure_value(value):
+            failures.append(f"{label}: {value}")
+    return _dedupe(failures)
+
+
+def _is_validation_status_label(label: str) -> bool:
+    if not label:
+        return False
+    return label.endswith("_STATUS") and any(term in label for term in VALIDATION_STATUS_LABEL_TERMS)
+
+
+def _is_failure_value(value: str) -> bool:
+    return value.strip().lower().replace("-", "_") in VALIDATION_FAILURE_VALUES
 
 
 def _source_result_refs(fields: Mapping[str, Any]) -> list[str]:
