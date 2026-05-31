@@ -449,6 +449,34 @@ def _package_report(root: Path) -> dict[str, object]:
     }
 
 
+def _print_compact_text(report: dict[str, object]) -> None:
+    summary = report["summary"]
+    if not isinstance(summary, dict):
+        raise TypeError("internal status report summary must be a dictionary")
+
+    push_values = summary["push_allowed_values"]
+    if not isinstance(push_values, dict):
+        raise TypeError("internal push_allowed_values must be a dictionary")
+
+    print(f"Project: {summary['project']}")
+    print(f"Branch: {summary['branch']}")
+    print(f"Project status: {summary['project_status']}")
+    print(f"Current gate: {summary['current_gate']}")
+    print(f"Checkpoint status: {summary['checkpoint_status']}")
+    print(f"Next action: {summary['next_action']}")
+    print(f"Push allowed values: {_push_allowed_line(push_values)}")
+    print(f"Runtime consistency: {summary['runtime_consistency']}")
+    print(f"Findings: {summary['finding_count']}")
+    transition = summary.get("transition_engine")
+    if isinstance(transition, dict) and transition.get("enabled"):
+        print(f"Transition state: {transition.get('current_state', UNKNOWN)}")
+        print(f"Transition next action: {transition.get('recommended_next_action', UNKNOWN)}")
+    for finding in report["findings"][:3]:
+        if not isinstance(finding, dict):
+            continue
+        print(f"- {finding['severity']} {finding['rule_id']}: {finding['title']}")
+
+
 def _print_text(report: dict[str, object]) -> None:
     summary = report["summary"]
     if not isinstance(summary, dict):
@@ -524,7 +552,10 @@ def run(args: argparse.Namespace) -> int:
         _print_package_text(report)
     else:
         report = _report(args.root)
-        _print_text(report)
+        if getattr(args, "full", False):
+            _print_text(report)
+        else:
+            _print_compact_text(report)
     if args.json_out and not _write_json(args.json_out, report):
         return EXIT_IO_ERROR
     if args.mode == "package" and report.get("status") == "failed":

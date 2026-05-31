@@ -25,6 +25,7 @@ from .commands import (
     intake,
     lifecycle,
     lint,
+    operator_reporting,
     package_layout,
     package_sync,
     orchestrator,
@@ -119,6 +120,17 @@ def build_parser() -> argparse.ArgumentParser:
         "--json-out",
         metavar="PATH",
         help="Write the status report JSON to this explicit path.",
+    )
+    status_output = status_parser.add_mutually_exclusive_group()
+    status_output.add_argument(
+        "--compact",
+        action="store_true",
+        help="Print the compact operator status summary (default).",
+    )
+    status_output.add_argument(
+        "--full",
+        action="store_true",
+        help="Print the full status text with finding details.",
     )
     status_parser.set_defaults(handler=status.run)
 
@@ -921,6 +933,110 @@ def build_parser() -> argparse.ArgumentParser:
         help="Accepted for compatibility; explicit --out report writes are path-policy guarded.",
     )
     artifact_render_parser.set_defaults(handler=artifact.run_render)
+
+    monitor_summary_parser = subparsers.add_parser(
+        "monitor-summary",
+        help="Print compact operator monitoring state.",
+        description=(
+            "Read-only Stage 1 operator summary for current phase, active blocker, "
+            "waiting-for state, audit status, terminal state, and final receipt refs."
+        ),
+    )
+    _add_root_argument(monitor_summary_parser, validate=False)
+    monitor_summary_parser.add_argument(
+        "--json",
+        action="store_true",
+        help="Print the monitor summary as JSON to stdout.",
+    )
+    monitor_summary_parser.add_argument(
+        "--json-out",
+        metavar="PATH",
+        help="Write the monitor summary JSON to /tmp/... or project-runtime/reports/...",
+    )
+    monitor_summary_parser.set_defaults(handler=operator_reporting.run_monitor_summary)
+
+    report_parser = subparsers.add_parser(
+        "report",
+        help="Generate compact operator reports and final receipts.",
+        description=(
+            "Stage 1 reporting surfaces. Default stdout is compact; full reports "
+            "are written to files or printed only with --diff-mode full."
+        ),
+    )
+    report_subparsers = report_parser.add_subparsers(dest="report_command", metavar="COMMAND")
+
+    report_operator_parser = report_subparsers.add_parser(
+        "operator",
+        help="Generate the operator state report.",
+    )
+    _add_root_argument(report_operator_parser, validate=False)
+    report_operator_parser.add_argument(
+        "--json",
+        action="store_true",
+        help="Print compact JSON to stdout, or full JSON with --diff-mode full.",
+    )
+    report_operator_parser.add_argument(
+        "--json-out",
+        metavar="PATH",
+        help="Write the full JSON report to /tmp/... or project-runtime/reports/...",
+    )
+    report_operator_parser.add_argument(
+        "--out",
+        metavar="PATH",
+        help="Write the Markdown report to /tmp/... or project-runtime/reports/...",
+    )
+    report_operator_parser.add_argument(
+        "--diff-mode",
+        choices=("compact", "full"),
+        default="compact",
+        help="Use full only when the complete report is intentionally requested on stdout.",
+    )
+    report_operator_parser.add_argument(
+        "--record-event",
+        action="store_true",
+        help="Append an operator event record; requires --confirm-write.",
+    )
+    report_operator_parser.add_argument(
+        "--confirm-write",
+        action="store_true",
+        help="Allow appending the operator event log under project-runtime/events.",
+    )
+    report_operator_parser.add_argument("--event-command", metavar="TEXT")
+    report_operator_parser.add_argument("--event-exit-code", type=int, default=0)
+    report_operator_parser.add_argument("--stdout-ref", action="append", default=[], metavar="PATH")
+    report_operator_parser.add_argument("--stderr-ref", action="append", default=[], metavar="PATH")
+    report_operator_parser.add_argument("--file-changed", action="append", default=[], metavar="PATH")
+    report_operator_parser.add_argument("--agent", action="append", default=[], metavar="AGENT_INSTANCE_ID")
+    report_operator_parser.add_argument("--handoff", action="append", default=[], metavar="PATH")
+    report_operator_parser.add_argument("--result", action="append", default=[], metavar="PATH")
+    report_operator_parser.add_argument("--audit", action="append", default=[], metavar="PATH")
+    report_operator_parser.add_argument("--blocker", action="append", default=[], metavar="TEXT")
+    report_operator_parser.add_argument("--manual-nudge", action="append", default=[], metavar="TEXT")
+    report_operator_parser.add_argument("--mutation-receipt", action="append", default=[], metavar="PATH")
+    report_operator_parser.set_defaults(handler=operator_reporting.run_report_operator)
+
+    report_final_run_parser = report_subparsers.add_parser(
+        "final-run",
+        help="Generate FINAL_RUN_RECEIPT.json and Markdown receipt.",
+    )
+    _add_root_argument(report_final_run_parser, validate=False)
+    report_final_run_parser.add_argument(
+        "--confirm-write",
+        action="store_true",
+        help="Write project-runtime/reports/FINAL_RUN_RECEIPT.json and .md.",
+    )
+    report_final_run_parser.add_argument(
+        "--json",
+        action="store_true",
+        help="Print compact JSON to stdout, or full receipt JSON with --diff-mode full.",
+    )
+    report_final_run_parser.add_argument(
+        "--diff-mode",
+        choices=("compact", "full"),
+        default="compact",
+        help="Use full only when the complete final receipt is intentionally requested on stdout.",
+    )
+    report_final_run_parser.set_defaults(handler=operator_reporting.run_report_final_run)
 
     orchestrator_parser = subparsers.add_parser(
         "orchestrator",

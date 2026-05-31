@@ -145,6 +145,18 @@ AUTHORITY_SURFACE_CONTRACT: tuple[dict[str, object], ...] = (
         "tests": ("agent-system/tools/aso/tests/test_lifecycle_finalization.py",),
     },
     {
+        "command": ("report", "operator"),
+        "confirmation_options": ("--confirm-write",),
+        "allowed_write_roots": ("project-runtime/events", "project-runtime/reports"),
+        "tests": ("agent-system/tools/aso/tests/test_operator_reporting.py",),
+    },
+    {
+        "command": ("report", "final-run"),
+        "confirmation_options": ("--confirm-write",),
+        "allowed_write_roots": ("project-runtime/reports",),
+        "tests": ("agent-system/tools/aso/tests/test_operator_reporting.py",),
+    },
+    {
         "command": ("state", "init"),
         "confirmation_options": ("--confirm-write",),
         "allowed_write_roots": ("project-runtime/state", "project-runtime", "project-input"),

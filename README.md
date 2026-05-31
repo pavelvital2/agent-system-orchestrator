@@ -229,13 +229,30 @@ Initialized project workspaces use explicit workspace mode:
 ```text
 python3 agent-system/tools/aso/aso.py state render --root /path/to/project --confirm-write
 python3 agent-system/tools/aso/aso.py status --root /path/to/project --mode workspace
+python3 agent-system/tools/aso/aso.py status --root /path/to/project --mode workspace --compact
+python3 agent-system/tools/aso/aso.py monitor-summary --root /path/to/project --json
+python3 agent-system/tools/aso/aso.py report operator --root /path/to/project --json-out project-runtime/reports/OPERATOR_REPORT.json --out project-runtime/reports/OPERATOR_REPORT.md
 python3 agent-system/tools/aso/aso.py lint --root /path/to/project --mode workspace --strict
 python3 agent-system/tools/aso/aso.py doctor --root /path/to/project --mode workspace --strict
 python3 agent-system/tools/aso/aso.py lifecycle receive-result --root /path/to/project --from-result project-runtime/results/worker/RESULT_TASK_ID_ATTEMPT_001.md --confirm-write
 python3 agent-system/tools/aso/aso.py artifact accept --root /path/to/project --package project-runtime/artifacts/candidates/TASK_ID/manifest.json --confirm-write
 python3 agent-system/tools/aso/aso.py artifact reject --root /path/to/project --candidate project-runtime/artifacts/candidates/TASK_ID/manifest.json --reason invalid_manifest --confirm-write
 python3 agent-system/tools/aso/aso.py lifecycle terminate-agent --root /path/to/project --from-result project-runtime/results/worker/RESULT_TASK_ID_ATTEMPT_001.md --confirm-write
+python3 agent-system/tools/aso/aso.py report final-run --root /path/to/project --confirm-write
 ```
+
+Operator reporting commands default to compact stdout. `monitor-summary --json`
+is the read-only machine surface for current phase, active blocker,
+waiting-for state, audit status, terminal state, and final receipt refs.
+`report operator` writes full JSON/Markdown reports only to `/tmp` or explicit
+`project-runtime/reports` paths unless `--diff-mode full` is requested for
+stdout. `report operator --record-event --confirm-write` appends an operator
+event record with command, exit code, stdout/stderr refs, changed-file refs,
+agents, handoffs, results, audits, blockers, manual nudge markers, and
+mutation receipt refs. `report final-run --confirm-write` writes
+`project-runtime/reports/FINAL_RUN_RECEIPT.json` and the Markdown equivalent
+with final status, audit status, product tests, commits, agents, tasks,
+artifacts, manual nudges, known limitations, and terminal state.
 
 `state init --confirm-write`, `intake bootstrap --confirm-write`, and
 `state render --confirm-write` materialize generated Markdown compatibility
