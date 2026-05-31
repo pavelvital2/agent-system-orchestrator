@@ -10,6 +10,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Iterable
 
+from .. import enum_registry
 from .. import runtime_schema_contracts
 from .. import result_parser
 from .. import transition_engine
@@ -22,6 +23,7 @@ EXIT_IO_ERROR = 3
 
 LEGACY_SCHEMA_VERSION = "2.0.0"
 CURRENT_SCHEMA_VERSION = runtime_schema_contracts.ACTIVE_RUNTIME_SCHEMA_VERSION
+SUPPORTED_SCHEMA_VERSIONS = frozenset(runtime_schema_contracts.LEGACY_COMPATIBILITY)
 LEGACY_ENVELOPE_FIELDS = (
     "schema_version",
     "sidecar_type",
@@ -57,34 +59,13 @@ IANA_SINGLETON_TIMEZONES = {
     "UTC",
     "WET",
 }
-PROFILE_ROLES = {
-    "requirements_analyst",
-    "solution_architect",
-    "designer",
-    "developer",
-    "auditor",
-    "tester",
-    "technical_writer",
-    "devops_setup_engineer",
-    "release_manager",
-}
-CONTROL_OR_TARGET_ROLES = PROFILE_ROLES | {"orchestrator", "project_owner", "none"}
+PROFILE_ROLES = set(enum_registry.PROFILE_RESULT_ROLE_IDS)
+CONTROL_OR_TARGET_ROLES = set(enum_registry.CONTROL_OR_TARGET_ROLE_IDS)
 OWNER_ROLES = PROFILE_ROLES | {"orchestrator", "project_owner"}
-ACTION_SEMANTICS = {"normal", "wait_for_owner", "pause", "stop_terminal", "completed_state_transition"}
+ACTION_SEMANTICS = set(enum_registry.ACTION_SEMANTICS)
 BLOCKER_TYPES = {"owner_decision", "pause", "audit_fail", "gap", "runtime", "dependency", "governance", "other"}
-TASK_STATUSES = {
-    "pending",
-    "ready",
-    "running",
-    "audit_pending",
-    "audit_passed",
-    "checkpoint_done",
-    "blocked",
-    "failed",
-    "superseded",
-    "completed",
-}
-TASK_RESOLUTION_STATUSES = {"not_required", "unresolved", "resolved", "superseded"}
+TASK_STATUSES = set(enum_registry.TASK_STATUSES)
+TASK_RESOLUTION_STATUSES = set(enum_registry.TASK_RESOLUTION_STATUSES)
 
 
 @dataclass(frozen=True)
@@ -345,34 +326,15 @@ ENUM_FIELDS = {
     ("PROJECT_STATE", "repository_lock_status"): {"absent", "draft", "accepted", "revoked", "blocked"},
     ("PROJECT_STATE", "baseline_tracking_status"): {"not_checked", "passed", "blocked", "owner_action_required"},
     ("PROJECT_STATE", "project_input_tracking_policy"): {"tracked", "owner-private/untracked", "not_set"},
-    ("PROJECT_STATE", "checkpoint_eligibility"): {"blocked", "local_only", "push_allowed", "not_applicable"},
-    ("PROJECT_STATE", "audit_status"): {"not_applicable", "pending", "passed", "failed", "blocked", "gap"},
-    ("PROJECT_STATE", "checkpoint_eligibility_status"): {"not_checked", "eligible", "ineligible", "blocked"},
-    ("PROJECT_STATE", "checkpoint_preflight_status"): {"not_run", "passed", "failed", "blocked"},
+    ("PROJECT_STATE", "checkpoint_eligibility"): set(enum_registry.CHECKPOINT_ELIGIBILITIES),
+    ("PROJECT_STATE", "audit_status"): set(enum_registry.AUDIT_STATUSES),
+    ("PROJECT_STATE", "checkpoint_eligibility_status"): set(enum_registry.CHECKPOINT_ELIGIBILITY_STATUSES),
+    ("PROJECT_STATE", "checkpoint_preflight_status"): set(enum_registry.CHECKPOINT_PREFLIGHT_STATUSES),
     ("PROJECT_STATE", "commit_status"): {"not_required", "not_attempted", "committed", "failed", "blocked"},
     ("PROJECT_STATE", "push_status"): {"not_required", "not_attempted", "pushed", "failed", "blocked"},
     ("PROJECT_STATE", "last_push_target_status"): {"not_checked", "matched", "mismatched", "blocked", "not_required"},
-    ("PROJECT_STATE", "project_checkpoint_status"): {"not_required", "pending", "passed", "failed", "blocked"},
-    ("PROJECT_STATE", "current_phase"): {
-        "bootstrap",
-        "requirements",
-        "design",
-        "design_audit",
-        "implementation",
-        "implementation_audit",
-        "audit",
-        "testing",
-        "setup",
-        "run",
-        "launch",
-        "documentation",
-        "handover",
-        "correction",
-        "blocked",
-        "finalization",
-        "final_acceptance",
-        "completed",
-    },
+    ("PROJECT_STATE", "project_checkpoint_status"): set(enum_registry.PROJECT_CHECKPOINT_STATUSES),
+    ("PROJECT_STATE", "current_phase"): set(enum_registry.LIFECYCLE_STATUSES),
     ("PROJECT_STATE", "project_status"): {"active", "blocked", "completed", "archived"},
     ("PROJECT_STATE", "action_semantic"): ACTION_SEMANTICS,
     ("PROJECT_STATE", "active_branches[].status"): {"active", "blocked", "completed", "archived"},
@@ -403,33 +365,21 @@ ENUM_FIELDS = {
     ("CURRENT_GATE", "workspace_identity_status"): {"not_checked", "passed", "failed", "blocked"},
     ("CURRENT_GATE", "repository_lock_status"): {"absent", "draft", "accepted", "revoked", "blocked", "not_required"},
     ("CURRENT_GATE", "baseline_tracking_status"): {"not_checked", "passed", "blocked", "owner_action_required"},
-    ("CURRENT_GATE", "checkpoint_eligibility"): {"blocked", "local_only", "push_allowed", "not_applicable"},
-    ("CURRENT_GATE", "checkpoint_eligibility_status"): {"not_checked", "eligible", "ineligible", "blocked"},
-    ("CURRENT_GATE", "project_checkpoint_status"): {"not_required", "pending", "passed", "failed", "blocked"},
+    ("CURRENT_GATE", "checkpoint_eligibility"): set(enum_registry.CHECKPOINT_ELIGIBILITIES),
+    ("CURRENT_GATE", "checkpoint_eligibility_status"): set(enum_registry.CHECKPOINT_ELIGIBILITY_STATUSES),
+    ("CURRENT_GATE", "project_checkpoint_status"): set(enum_registry.PROJECT_CHECKPOINT_STATUSES),
     ("CURRENT_GATE", "required_next_role"): CONTROL_OR_TARGET_ROLES,
     ("CURRENT_GATE", "blocking_status.blocker_type"): BLOCKER_TYPES,
-    ("NEXT_ACTION", "action_type"): {"create_agent", "route_result", "update_state", "wait_for_owner", "correction", "finalize", "stop"},
+    ("NEXT_ACTION", "action_type"): set(enum_registry.ACTION_TYPES),
     ("NEXT_ACTION", "target_role"): CONTROL_OR_TARGET_ROLES,
-    ("NEXT_ACTION", "dependency_status"): {"ready", "blocked", "completed", "not_applicable"},
+    ("NEXT_ACTION", "dependency_status"): set(enum_registry.ACTION_STATUSES),
     ("NEXT_ACTION", "action_semantic"): ACTION_SEMANTICS,
     ("NEXT_ACTION", "checkpoint_policy"): {"forbidden", "local_only", "commit_and_push", "no_checkpoint"},
     ("NEXT_ACTION", "requester_return_context.requested_by_role"): PROFILE_ROLES | {"NONE"},
     ("NEXT_ACTION", "requester_return_context.return_to_role_after_audit_pass"): PROFILE_ROLES | {"none"},
     ("NEXT_ACTION", "blocking_or_resume_context.blocker_type"): BLOCKER_TYPES,
     ("TASK_REGISTRY", "tasks[].task_type"): PROFILE_ROLES,
-    ("TASK_REGISTRY", "tasks[].task_kind"): {
-        "bootstrap",
-        "normal",
-        "research_dependency",
-        "design_continuation",
-        "task_continuation",
-        "correction",
-        "audit",
-        "testing",
-        "setup",
-        "launch",
-        "handover",
-    },
+    ("TASK_REGISTRY", "tasks[].task_kind"): set(enum_registry.TASK_KINDS),
     ("TASK_REGISTRY", "tasks[].owner_role"): CONTROL_OR_TARGET_ROLES,
     ("TASK_REGISTRY", "tasks[].status"): TASK_STATUSES,
     ("TASK_REGISTRY", "tasks[].raw_status"): TASK_STATUSES,
@@ -622,11 +572,9 @@ def _value_to_text(value: object) -> str:
 
 def _markdown_scalar(value: str) -> object:
     normalized = value.strip()
-    lowered = normalized.lower()
-    if lowered in {"yes", "true"}:
-        return True
-    if lowered in {"no", "false"}:
-        return False
+    boolean = enum_registry.normalize_boolean_text(normalized, allow_legacy=True)
+    if boolean.valid:
+        return boolean.value
     return normalized
 
 
@@ -962,6 +910,12 @@ def _validate_markdown_parity(root: Path, spec: SidecarSpec, content: dict[str, 
     return findings
 
 
+def _requires_legacy_markdown_parity(schema_version: object) -> bool:
+    """Return whether a legacy sidecar still treats Markdown as a paired source."""
+
+    return schema_version == LEGACY_SCHEMA_VERSION
+
+
 def _validate_sidecar(
     root: Path,
     spec: SidecarSpec,
@@ -1038,8 +992,9 @@ def _validate_sidecar(
     findings: list[Finding] = []
     raw_schema_version = payload.get("schema_version")
     is_current_schema = raw_schema_version == CURRENT_SCHEMA_VERSION
-    envelope_fields = CURRENT_ENVELOPE_FIELDS if is_current_schema else LEGACY_ENVELOPE_FIELDS
-    envelope_field_set = CURRENT_ENVELOPE_FIELD_SET if is_current_schema else LEGACY_ENVELOPE_FIELD_SET
+    has_current_envelope = raw_schema_version != LEGACY_SCHEMA_VERSION
+    envelope_fields = CURRENT_ENVELOPE_FIELDS if has_current_envelope else LEGACY_ENVELOPE_FIELDS
+    envelope_field_set = CURRENT_ENVELOPE_FIELD_SET if has_current_envelope else LEGACY_ENVELOPE_FIELD_SET
 
     for field in envelope_fields:
         if field not in payload:
@@ -1065,12 +1020,12 @@ def _validate_sidecar(
             )
         )
 
-    if raw_schema_version not in {LEGACY_SCHEMA_VERSION, CURRENT_SCHEMA_VERSION}:
+    if raw_schema_version not in SUPPORTED_SCHEMA_VERSIONS:
         findings.append(
             _finding(
                 "SIDECAR_SCHEMA_VERSION_MISSING_OR_INVALID",
                 "Sidecar schema version is invalid",
-                f"{relpath}.schema_version must be {LEGACY_SCHEMA_VERSION!r} or {CURRENT_SCHEMA_VERSION!r}.",
+                f"{relpath}.schema_version must be one of {sorted(SUPPORTED_SCHEMA_VERSIONS)!r}.",
                 relpath,
                 "schema_version",
                 "Use a supported runtime sidecar schema version.",
@@ -1162,7 +1117,7 @@ def _validate_sidecar(
     findings.extend(_validate_required_fields(spec, content, relpath))
     if isinstance(content, dict):
         findings.extend(_validate_enum_values(spec, content, relpath))
-        if not is_current_schema:
+        if _requires_legacy_markdown_parity(raw_schema_version):
             findings.extend(_validate_markdown_parity(root, spec, content, relpath))
     return payload, findings
 

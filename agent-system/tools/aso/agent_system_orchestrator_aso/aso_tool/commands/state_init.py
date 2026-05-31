@@ -1,4 +1,4 @@
-"""Guarded Runtime Schema 3.1.1 workspace state initializer."""
+"""Guarded current Runtime Schema workspace state initializer."""
 
 from __future__ import annotations
 
@@ -189,7 +189,10 @@ def _initial_sidecars(
                 "current_phase": "bootstrap",
                 "project_status": "active",
                 "action_semantic": "normal",
-                "semantic_reason": "Initial Runtime Schema 3.1.1 state created by aso state init.",
+                "semantic_reason": (
+                    f"Initial Runtime Schema {runtime_schema_contracts.ACTIVE_RUNTIME_SCHEMA_VERSION} "
+                    "state created by aso state init."
+                ),
                 "active_branches": [],
                 "completed_milestones": [],
                 "active_risks": [],

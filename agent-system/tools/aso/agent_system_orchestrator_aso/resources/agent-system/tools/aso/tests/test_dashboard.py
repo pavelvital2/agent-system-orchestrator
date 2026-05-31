@@ -172,7 +172,7 @@ class DashboardCommandTests(unittest.TestCase):
 
         self.assertEqual(init.returncode, 0, init.stdout + init.stderr)
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
-        self.assertIn("<span>Runtime Schema</span><strong>3.1.1</strong>", result.stdout)
+        self.assertIn("<span>Runtime Schema</span><strong>3.2.0</strong>", result.stdout)
         self.assertIn("<th scope=\"row\">Current P2 state</th><td>true</td>", result.stdout)
         self.assertIn("<th scope=\"row\">Verify status</th><td>passed</td>", result.stdout)
 
@@ -180,10 +180,10 @@ class DashboardCommandTests(unittest.TestCase):
         result = run_dashboard(P2_VALID_WORKSPACE)
 
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
-        self.assertIn("<span>Runtime Schema</span><strong>3.1.1</strong>", result.stdout)
+        self.assertIn("<span>Runtime Schema</span><strong>3.2.0</strong>", result.stdout)
         self.assertIn("<th scope=\"row\">Current P2 state</th><td>true</td>", result.stdout)
         self.assertIn("<th scope=\"row\">Verify status</th><td>passed</td>", result.stdout)
-        self.assertIn("<th scope=\"row\">Migration available</th><td>0</td>", result.stdout)
+        self.assertIn("<th scope=\"row\">Migration available</th><td>9</td>", result.stdout)
 
     def test_uncheckpointed_audit_dependency_blocks_dashboard_readiness(self) -> None:
         result = run_dashboard(DAG_AUDIT_ONLY_DEP)

@@ -8,10 +8,12 @@ from pathlib import Path
 from typing import Any, Iterable, Mapping
 
 from . import dispatch_receipts
+from . import enum_registry
 from . import result_parser
 from . import role_registry
 from . import resources
 from . import runtime_contract_fallback
+from . import runtime_schema_contracts
 from . import source_boundary
 
 
@@ -334,6 +336,7 @@ def validate_runtime_contract(contract: Mapping[str, Any]) -> ContractValidation
         "artifact_package_schema_version",
         "allowed_roles",
         "forbidden_dispatch_roles",
+        "role_registry",
         "allowed_events",
         "state_transitions",
         "forbidden_transitions",
@@ -352,6 +355,15 @@ def validate_runtime_contract(contract: Mapping[str, Any]) -> ContractValidation
     for field in required:
         if field not in contract:
             errors.append(f"{field} is required")
+    expected_versions = {
+        "package_version": runtime_schema_contracts.ACTIVE_PACKAGE_VERSION,
+        "governance_ruleset_version": runtime_schema_contracts.ACTIVE_GOVERNANCE_RULESET_VERSION,
+        "runtime_schema_version": runtime_schema_contracts.ACTIVE_RUNTIME_SCHEMA_VERSION,
+        "artifact_package_schema_version": runtime_schema_contracts.ACTIVE_ARTIFACT_PACKAGE_SCHEMA_VERSION,
+    }
+    for field, expected in expected_versions.items():
+        if contract.get(field) != expected:
+            errors.append(f"{field} must be {expected}")
 
     allowed_roles = _string_list(contract.get("allowed_roles"))
     forbidden_roles = _string_list(contract.get("forbidden_dispatch_roles"))
@@ -367,6 +379,7 @@ def validate_runtime_contract(contract: Mapping[str, Any]) -> ContractValidation
     if set(allowed_roles) & set(forbidden_roles):
         overlap = ", ".join(sorted(set(allowed_roles) & set(forbidden_roles)))
         errors.append(f"roles cannot be both allowed and forbidden for dispatch: {overlap}")
+    errors.extend(role_registry.role_registry_errors(contract))
 
     transitions = _mapping(contract.get("state_transitions"))
     if not transitions:
@@ -2296,9 +2309,10 @@ def _event_acceptance_mode(event: Mapping[str, object]) -> str:
     if isinstance(required, bool):
         return "artifact_package" if required else "result_only"
     required_text = _text(required or event.get("ARTIFACT_PACKAGE_REQUIRED")).lower()
-    if required_text in {"true", "yes", "required"}:
+    normalized_bool = enum_registry.normalize_boolean_text(required_text)
+    if normalized_bool.value is True:
         return "artifact_package"
-    if required_text in {"false", "no", "not_required"}:
+    if normalized_bool.value is False:
         return "result_only"
     return ""
 

@@ -64,8 +64,8 @@ ASO with normal dependency and build isolation behavior. The installer must
 still verify the canonical package from this checkout, not a root-level
 duplicate Python tree.
 
-This install document covers the P58/P58F1 no-upgrade correction context:
-package version `3.7.9` with runtime schema `3.1.1` and artifact package schema
+This install document covers the S1.140 enum/schema/version coherence context:
+package version `3.8.0` with runtime schema `3.2.0` and artifact package schema
 `1.1.0`. P57 documents ASO workflow readiness through installed real-TZ
 intake/bootstrap and read-only plan-next dispatchability while preserving the
 Runtime State sidecar schema, the artifact package schema, and the Project
@@ -268,7 +268,7 @@ aso state init --root /tmp/aso-state-demo --project-name "State Demo" --project-
 aso state init --root /tmp/aso-state-demo --project-name "State Demo" --project-slug state-demo --profile generic --repo-url none --branch main --tz project-input/TZ_REAL.md --confirm-write --json-out /tmp/aso-state-init-receipt.json
 aso state verify --root /tmp/aso-state-demo --strict --json-out /tmp/aso-state-verify.json
 aso state render --root /tmp/aso-state-demo --format markdown --out /tmp/aso-state-render.md
-aso state migrate --root agent-system/tests/fixtures/state/valid_workspace --to 3.1.1 --dry-run --json-out /tmp/aso-state-migrate-plan.json
+aso state migrate --root agent-system/tests/fixtures/state/valid_workspace --to 3.2.0 --dry-run --json-out /tmp/aso-state-migrate-plan.json
 ```
 
 `aso state init --dry-run` writes no files. Confirmed initialization requires a
@@ -372,7 +372,7 @@ aso lint --root /tmp/demo-reference --mode workspace --strict
 aso doctor --root /tmp/demo-reference --mode workspace --strict
 ```
 
-Local generated projects may initialize Runtime Schema `3.1.1` JSON sidecars
+Local generated projects may initialize Runtime Schema `3.2.0` JSON sidecars
 under their ignored `project-runtime/state/` root. Those files are local
 runtime state and must not be tracked or published by generated-project
 publication flows.

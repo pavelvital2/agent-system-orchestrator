@@ -17,6 +17,7 @@ PACKAGE_VERSION = runtime_schema_contracts.ACTIVE_PACKAGE_VERSION
 RUNTIME_SCHEMA_VERSION = runtime_schema_contracts.ACTIVE_RUNTIME_SCHEMA_VERSION
 COMPATIBLE_ENGINE_VERSION_TUPLES = (
     (PACKAGE_VERSION, RUNTIME_SCHEMA_VERSION),
+    ("3.7.9", "3.1.1"),  # legacy-compatible P58 tuple; not active output
     ("3.7.8", "3.1.1"),  # legacy-compatible P57 tuple; not active output
     ("3.7.3", "3.1.1"),
     ("3.7.2", "3.1.0"),

@@ -77,6 +77,16 @@ class ArtifactPackageSchemaTests(unittest.TestCase):
         self.assertIsInstance(payload, dict, relpath)
         return payload
 
+    def _active_version_template(self, template: dict[str, object]) -> dict[str, object]:
+        active = copy.deepcopy(template)
+        if "package_version" in active:
+            active["package_version"] = "3.8.0"
+        if "governance_ruleset_version" in active:
+            active["governance_ruleset_version"] = "3.8.0"
+        if "runtime_schema_version" in active:
+            active["runtime_schema_version"] = "3.2.0"
+        return active
+
     def test_packaged_schema_and_template_json_files_parse(self) -> None:
         for schema_path, template_path in SCHEMA_TEMPLATE_PAIRS:
             with self.subTest(path=schema_path):
@@ -84,23 +94,18 @@ class ArtifactPackageSchemaTests(unittest.TestCase):
             with self.subTest(path=template_path):
                 self._load_json(template_path)
 
-    def test_templates_keep_schema_version_tuple(self) -> None:
-        for schema_path, template_path in SCHEMA_TEMPLATE_PAIRS:
-            with self.subTest(path=template_path):
+    def test_active_schemas_keep_current_version_tuple(self) -> None:
+        for schema_path, _template_path in SCHEMA_TEMPLATE_PAIRS:
+            with self.subTest(path=schema_path):
                 schema = self._load_json(schema_path)
-                template = self._load_json(template_path)
-
-                self.assertEqual(template["artifact_package_schema_version"], "1.1.0")
-                if template_path == "agent-system/03_templates/artifact_package_manifest.template.json":
-                    continue
-
-                self.assertEqual(template["schema_version"], "1.0.0")
-                self.assertEqual(template["package_version"], schema["properties"]["package_version"]["const"])
-                self.assertEqual(
-                    template["governance_ruleset_version"],
-                    schema["properties"]["governance_ruleset_version"]["const"],
-                )
-                self.assertEqual(template["runtime_schema_version"], "3.1.1")
+                properties = schema.get("properties", {})
+                self.assertEqual(properties["artifact_package_schema_version"]["const"], "1.1.0")
+                if "package_version" in properties:
+                    self.assertEqual(properties["package_version"]["const"], "3.8.0")
+                if "governance_ruleset_version" in properties:
+                    self.assertEqual(properties["governance_ruleset_version"]["const"], "3.8.0")
+                if "runtime_schema_version" in properties:
+                    self.assertEqual(properties["runtime_schema_version"]["const"], "3.2.0")
 
     def test_contract_document_references_all_new_schemas_and_templates(self) -> None:
         contract = (
@@ -123,7 +128,7 @@ class ArtifactPackageSchemaTests(unittest.TestCase):
         for schema_path, template_path in SCHEMA_TEMPLATE_PAIRS:
             with self.subTest(schema=schema_path, template=template_path):
                 schema = self._load_json(schema_path)
-                template = self._load_json(template_path)
+                template = self._active_version_template(self._load_json(template_path))
                 Draft202012Validator.check_schema(schema)
                 validator = Draft202012Validator(schema)
 

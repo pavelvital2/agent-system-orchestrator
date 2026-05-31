@@ -12,6 +12,7 @@
     "artifact_package_schema_version",
     "allowed_roles",
     "forbidden_dispatch_roles",
+    "role_registry",
     "allowed_events",
     "state_transitions",
     "forbidden_transitions",
@@ -64,6 +65,54 @@
         "minLength": 1
       },
       "uniqueItems": true
+    },
+    "role_registry": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "dispatchable_role_ids",
+        "legacy_lifecycle_system_role_ids",
+        "control_or_pseudo_role_ids",
+        "forbidden_dispatch_role_ids"
+      ],
+      "properties": {
+        "dispatchable_role_ids": {
+          "type": "array",
+          "items": {
+            "enum": [
+              "requirements_analyst",
+              "solution_architect",
+              "developer",
+              "tester",
+              "auditor",
+              "technical_writer"
+            ]
+          },
+          "minItems": 1,
+          "uniqueItems": true
+        },
+        "legacy_lifecycle_system_role_ids": {
+          "type": "array",
+          "items": {
+            "enum": ["designer", "devops_setup_engineer", "release_manager"]
+          },
+          "uniqueItems": true
+        },
+        "control_or_pseudo_role_ids": {
+          "type": "array",
+          "items": {
+            "enum": ["orchestrator", "project_owner", "owner", "control", "none"]
+          },
+          "uniqueItems": true
+        },
+        "forbidden_dispatch_role_ids": {
+          "type": "array",
+          "items": {
+            "enum": ["orchestrator", "owner", "control", "release_manager"]
+          },
+          "uniqueItems": true
+        }
+      }
     },
     "allowed_events": {
       "type": "array",

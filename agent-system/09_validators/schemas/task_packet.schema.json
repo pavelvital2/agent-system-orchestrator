@@ -114,7 +114,7 @@
     "FORBIDDEN_SOURCES": { "$ref": "#/$defs/listOrNone" },
     "EXPECTED_EVIDENCE": { "$ref": "#/$defs/listOrNone" },
     "EXPECTED_OUTPUT": { "$ref": "#/$defs/listOrNone" },
-    "RETURN_TO_REQUESTER_AFTER_AUDIT_PASS": { "type": "string", "enum": ["yes", "no"] },
+    "RETURN_TO_REQUESTER_AFTER_AUDIT_PASS": { "oneOf": [{ "type": "boolean" }, { "type": "string", "enum": ["true", "false"] }] },
     "RETURN_TO_ROLE_AFTER_AUDIT_PASS": { "$ref": "#/$defs/requesterReturnRole" },
     "RETURN_TASK_AFTER_AUDIT_PASS": { "type": "string" },
     "PURPOSE": { "type": "string" },
@@ -159,7 +159,7 @@
       "then": {
         "properties": {
           "AUDIT_REQUIREMENTS": { "const": "mandatory" },
-          "RETURN_TO_REQUESTER_AFTER_AUDIT_PASS": { "const": "yes" }
+          "RETURN_TO_REQUESTER_AFTER_AUDIT_PASS": { "oneOf": [{ "const": true }, { "const": "true" }] }
         }
       }
     },

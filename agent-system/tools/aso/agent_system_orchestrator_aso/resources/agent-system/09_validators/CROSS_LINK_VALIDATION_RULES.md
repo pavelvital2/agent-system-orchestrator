@@ -362,15 +362,16 @@ of reasoning-level policy changes for the relevant versioned task.
 For current readiness checks, validators must confirm the active tuple:
 
 ```text
-CURRENT_PACKAGE_VERSION: 3.7.9
-CURRENT_GOVERNANCE_RULESET_VERSION: 3.7.9
-CURRENT_RUNTIME_SCHEMA_VERSION: 3.1.1
+CURRENT_PACKAGE_VERSION: 3.8.0
+CURRENT_GOVERNANCE_RULESET_VERSION: 3.8.0
+CURRENT_RUNTIME_SCHEMA_VERSION: 3.2.0
 ARTIFACT_PACKAGE_SCHEMA_VERSION: 1.1.0
 ```
 
 Historical readiness evidence remains historical and must not be used as
-current package constants. Runtime Schema `3.1.1` and Artifact Package Schema
-`1.1.0` remain active for the P57 governance documentation authority sync.
+current package constants. Runtime Schema `3.2.0` and Artifact Package Schema
+`1.1.0` are active; Runtime Schema `3.1.1` remains legacy-compatible
+migration input only.
 
 ## Changelog traceability checks
 

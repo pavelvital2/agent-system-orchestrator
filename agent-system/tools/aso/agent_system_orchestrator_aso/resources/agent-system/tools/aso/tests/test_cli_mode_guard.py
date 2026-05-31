@@ -8,13 +8,19 @@ import tempfile
 import unittest
 from pathlib import Path
 
+TESTS_DIR = Path(__file__).resolve().parent
+if str(TESTS_DIR) not in sys.path:
+    sys.path.insert(0, str(TESTS_DIR))
+
+from package_fixture_helpers import PYPROJECT_RESOURCE_DATA, write_minimal_package_resources, write_resource_manifest_in
+
 
 CLI = Path(__file__).resolve().parents[1] / "aso.py"
 
 
 PACKAGE_README = """# Package
 
-Use the read-only ASO helper at `agent-system/tools/aso/aso.py`.
+Use the ASO helper at `agent-system/tools/aso/aso.py` for read-only diagnostics plus explicit confirmed writes.
 
 ```text
 python3 agent-system/tools/aso/aso.py status --root . --mode package
@@ -23,7 +29,7 @@ python3 agent-system/tools/aso/aso.py status --root /path/to/project --mode work
 python3 agent-system/tools/aso/aso.py lint --root /path/to/project --mode workspace --strict
 ```
 
-It does not provide mutation, dispatch, or checkpoint commands.
+It does not dispatch live agents, execute checkpoints, or run daemons.
 """
 
 
@@ -77,9 +83,9 @@ def _write_runtime(root: Path) -> None:
         json.dumps(
             {
                 "project_slug": "demo-project",
-                "package_version": "3.7.9",
-                "governance_ruleset_version": "3.7.9",
-                "runtime_schema_version": "3.1.1",
+                "package_version": "3.8.0",
+                "governance_ruleset_version": "3.8.0",
+                "runtime_schema_version": "3.2.0",
             },
             indent=2,
         )
@@ -131,9 +137,12 @@ def _write_package_fixture(root: Path) -> None:
             "[tool.setuptools.packages.find]\n"
             'where = ["agent-system/tools/aso"]\n'
             'include = ["agent_system_orchestrator_aso*"]\n'
-        ),
+        )
+        + PYPROJECT_RESOURCE_DATA,
         encoding="utf-8",
     )
+    write_minimal_package_resources(package)
+    write_resource_manifest_in(root)
     (root / ".gitignore").write_text(
         "/project-runtime/\n/project-input/\n/project-archive/\n",
         encoding="utf-8",

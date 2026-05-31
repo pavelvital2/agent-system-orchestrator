@@ -7,12 +7,13 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Iterable, Mapping
 
+from . import enum_registry
 from . import role_registry
 from . import source_boundary
 
 
 RESULT_STATUSES = {"pass", "fail", "blocked", "gap"}
-RESULT_ACCEPTANCE_MODES = {"result_only", "artifact_package"}
+RESULT_ACCEPTANCE_MODES = set(enum_registry.RESULT_ACCEPTANCE_MODES)
 PROFILE_ROLES = set(role_registry.dispatchable_roles()) - {"auditor"}
 LEGACY_LIFECYCLE_SYSTEM_ROLES = set(role_registry.legacy_lifecycle_system_roles())
 LEGACY_PROFILE_RESULT_ROLES = {
@@ -307,9 +308,10 @@ def bool_field(fields: Mapping[str, Any], key: str) -> bool | None:
 
 def flexible_bool_field(fields: Mapping[str, Any], key: str) -> bool | None:
     value = as_string(fields, key).lower()
-    if value in {"true", "yes", "required"}:
+    normalized = enum_registry.normalize_boolean_text(value)
+    if normalized.value is True:
         return True
-    if value in {"false", "no", "not_required"}:
+    if normalized.value is False:
         return False
     return None
 
@@ -614,6 +616,19 @@ def _parse_fields(text: str, *, strict: bool, path_text: str) -> tuple[dict[str,
                 )
             saw_field = True
             if value:
+                if strict and key in BOOLEAN_TEXT_FIELDS:
+                    normalized_bool = enum_registry.normalize_boolean_text(value)
+                    if normalized_bool.was_legacy:
+                        issues.append(
+                            ResultParseIssue(
+                                "legacy_boolean_normalized",
+                                "RESULT_FORMAT_LEGACY_BOOLEAN_NORMALIZED",
+                                "warning",
+                                f"{key} uses legacy boolean text; normalized to canonical true/false.",
+                                f"{key}={value}",
+                                field=key,
+                            )
+                        )
                 fields[key] = _normalize_field_value(key, value)
                 current_key = None
                 current_lines = []
@@ -676,11 +691,9 @@ def _normalize_field_value(key: str, value: str) -> str:
     if key in LOWERCASE_SCALAR_FIELDS:
         return normalized.lower()
     if key in BOOLEAN_TEXT_FIELDS:
-        lowered = normalized.lower()
-        if lowered in {"true", "yes", "required"}:
-            return "true"
-        if lowered in {"false", "no", "not_required"}:
-            return "false"
+        normalized_bool = enum_registry.normalize_boolean_text(normalized)
+        if normalized_bool.valid:
+            return normalized_bool.canonical_text
     return normalized
 
 

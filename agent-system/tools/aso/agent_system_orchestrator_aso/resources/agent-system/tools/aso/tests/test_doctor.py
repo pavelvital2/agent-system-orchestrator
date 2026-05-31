@@ -7,13 +7,19 @@ import tempfile
 import unittest
 from pathlib import Path
 
+TESTS_DIR = Path(__file__).resolve().parent
+if str(TESTS_DIR) not in sys.path:
+    sys.path.insert(0, str(TESTS_DIR))
+
+from package_fixture_helpers import PYPROJECT_RESOURCE_DATA, write_minimal_package_resources, write_resource_manifest_in
+
 
 CLI = Path(__file__).resolve().parents[1] / "aso.py"
 
 
 PACKAGE_README = """# Package
 
-Use the read-only ASO helper at `agent-system/tools/aso/aso.py`.
+Use the ASO helper at `agent-system/tools/aso/aso.py` for read-only diagnostics plus explicit confirmed writes.
 
 ```text
 python3 agent-system/tools/aso/aso.py status --root . --mode package
@@ -22,7 +28,7 @@ python3 agent-system/tools/aso/aso.py status --root /path/to/project --mode work
 python3 agent-system/tools/aso/aso.py lint --root /path/to/project --mode workspace --strict
 ```
 
-It does not provide mutation, dispatch, or checkpoint commands.
+It does not dispatch live agents, execute checkpoints, or run daemons.
 """
 
 
@@ -40,9 +46,9 @@ PROJECT_CHECKPOINT_STATUS: pending
 CHECKPOINT_ELIGIBILITY: eligible
 CHECKPOINT_BLOCKED_BY: NONE
 PUSH_ALLOWED: false
-PACKAGE_VERSION: 3.1.1
-GOVERNANCE_RULESET_VERSION: 3.1.1
-RUNTIME_SCHEMA_VERSION: 3.0.0
+PACKAGE_VERSION: 3.8.0
+GOVERNANCE_RULESET_VERSION: 3.8.0
+RUNTIME_SCHEMA_VERSION: 3.2.0
 """,
     "CURRENT_GATE.md": """# CURRENT_GATE
 
@@ -160,9 +166,9 @@ def write_package_fixture(root: Path) -> list[Path]:
 
 ## Active version constants
 
-CURRENT_PACKAGE_VERSION: 3.1.1
-CURRENT_GOVERNANCE_RULESET_VERSION: 3.1.1
-CURRENT_RUNTIME_SCHEMA_VERSION: 3.0.0
+CURRENT_PACKAGE_VERSION: 3.8.0
+CURRENT_GOVERNANCE_RULESET_VERSION: 3.8.0
+CURRENT_RUNTIME_SCHEMA_VERSION: 3.2.0
 """,
         "pyproject.toml": """[build-system]
 requires = ["setuptools>=68"]
@@ -170,7 +176,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "agent-system-orchestrator"
-version = "3.1.1"
+version = "3.8.0"
 
 [project.scripts]
 aso = "agent_system_orchestrator_aso.cli:main"
@@ -178,7 +184,8 @@ aso = "agent_system_orchestrator_aso.cli:main"
 [tool.setuptools.packages.find]
 where = ["agent-system/tools/aso"]
 include = ["agent_system_orchestrator_aso*"]
-""",
+"""
+        + PYPROJECT_RESOURCE_DATA,
         "Makefile": """.PHONY: test smoke doctor lint
 
 test:
@@ -207,7 +214,7 @@ on:
             'if __name__ == "__main__":\n'
             "    sys.exit(main())\n"
         ),
-        "agent-system/tools/aso/agent_system_orchestrator_aso/__init__.py": '__version__ = "3.1.1"\n',
+        "agent-system/tools/aso/agent_system_orchestrator_aso/__init__.py": '__version__ = "3.8.0"\n',
         "agent-system/tools/aso/agent_system_orchestrator_aso/cli.py": "from .aso_tool.aso import main\n",
         "agent-system/tools/aso/agent_system_orchestrator_aso/aso_tool/__init__.py": "",
         "agent-system/tools/aso/agent_system_orchestrator_aso/aso_tool/aso.py": (
@@ -235,6 +242,12 @@ on:
         path.parent.mkdir(parents=True, exist_ok=True)
         path.write_text(text, encoding="utf-8")
         paths.append(path)
+    paths.extend(
+        write_minimal_package_resources(
+            root / "agent-system" / "tools" / "aso" / "agent_system_orchestrator_aso"
+        )
+    )
+    paths.append(write_resource_manifest_in(root))
     project_input = root / "project-input"
     project_input.mkdir()
     local_note = project_input / "local-task.md"
@@ -391,9 +404,19 @@ PUSH_ALLOWED: false
     def test_workspace_doctor_reports_bootstrap_repair_hints(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
-            init = run_aso("state", "init", "--root", str(root), "--project-slug", "doctor-bsr", "--confirm-write")
             (root / "project-input").mkdir(exist_ok=True)
             (root / "project-input" / "TZ.md").write_text("# TZ\n\nTIMEZONE: Europe/Moscow\n", encoding="utf-8")
+            init = run_aso(
+                "state",
+                "init",
+                "--root",
+                str(root),
+                "--project-slug",
+                "doctor-bsr",
+                "--tz",
+                "project-input/TZ.md",
+                "--confirm-write",
+            )
             render = run_aso("state", "render", "--root", str(root), "--confirm-write")
             project_state = root / "project-runtime" / "state" / "PROJECT_STATE.json"
             project_payload = json.loads(project_state.read_text(encoding="utf-8"))

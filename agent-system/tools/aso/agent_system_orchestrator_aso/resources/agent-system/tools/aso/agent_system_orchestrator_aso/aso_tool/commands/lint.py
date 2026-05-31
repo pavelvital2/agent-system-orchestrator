@@ -673,7 +673,13 @@ def _active_version_tuple(root: Path) -> tuple[dict[str, str], str]:
     text, error = _read_text(path)
     if error:
         return {}, _rel(root, path)
-    fields = {occurrence.key: occurrence.value for occurrence in _parse_occurrences(text)}
+    active_section = re.search(
+        r"^## Active version constants\s*(?P<body>.*?)(?=^##\s+|\Z)",
+        text,
+        re.MULTILINE | re.DOTALL,
+    )
+    source = active_section.group("body") if active_section else text
+    fields = {occurrence.key: occurrence.value for occurrence in _parse_occurrences(source)}
     return {field_name: fields.get(field_name, "") for field_name in ACTIVE_VERSION_FIELD_NAMES}, _rel(root, path)
 
 

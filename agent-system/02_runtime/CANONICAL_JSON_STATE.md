@@ -13,17 +13,17 @@ agents authority to write runtime state.
 ## Runtime State P2 authority model
 
 `project-runtime/state/*.json` sidecars are the canonical
-machine-verifiable representation of Runtime Schema `3.1.1` runtime state.
+machine-verifiable representation of Runtime Schema `3.2.0` runtime state.
 Markdown runtime files remain supported as generated compatibility and
 human-readable render views.
 
-For Runtime Schema `3.1.1`:
+For Runtime Schema `3.2.0`:
 
 ```text
 1. If a valid JSON sidecar and its Markdown view both exist, validators should
    use the JSON sidecar as the structured input and verify parity with the
    Markdown view for governed fields.
-2. If a required JSON sidecar is missing, current Runtime Schema `3.1.1`
+2. If a required JSON sidecar is missing, current Runtime Schema `3.2.0`
    validation must report the missing canonical state instead of treating the
    Markdown view as authoritative.
 3. If JSON and Markdown conflict on governed fields, validators must fail
@@ -272,7 +272,7 @@ validation_errors
 
 ## Migration compatibility
 
-Runtime Schema `3.1.1` validators should prefer JSON sidecars for structured
+Runtime Schema `3.2.0` validators should prefer JSON sidecars for structured
 checks and treat missing required sidecars as missing canonical runtime state.
 Historical workspaces without sidecars require governed migration or
 compatibility handling before current strict validation can pass.

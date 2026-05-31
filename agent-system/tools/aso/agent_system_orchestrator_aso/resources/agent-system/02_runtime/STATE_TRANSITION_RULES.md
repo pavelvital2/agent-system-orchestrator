@@ -358,7 +358,7 @@ WORKSPACE_TYPE: package_repo | project_workspace | implementation_repo
 
 `WORKSPACE_TYPE: test_fixture` must always keep `PUSH_ALLOWED: false`.
 
-For Runtime Schema 3.1.1 dispatch readiness, the canonical status fields are:
+For Runtime Schema 3.2.0 dispatch readiness, the canonical status fields are:
 
 ```text
 PROJECT_STATE.IDENTITY_VALIDATION_STATUS: not_checked | passed | failed | blocked

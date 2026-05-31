@@ -215,7 +215,7 @@ must use `project-runtime/results/worker/RESULT_<TASK_ID>_ATTEMPT_<N>.md`.
 storage for historical audit evidence. New audit RESULT files must use
 `project-runtime/results/audit/AUDIT_RESULT_<TASK_ID>_ATTEMPT_<N>.md`.
 
-`project-runtime/state/` contains the canonical Runtime Schema `3.1.1` JSON
+`project-runtime/state/` contains the canonical Runtime Schema `3.2.0` JSON
 sidecar model documented in
 `agent-system/02_runtime/CANONICAL_JSON_STATE_PREPARATION.md` and
 `agent-system/02_runtime/CANONICAL_JSON_STATE.md`.
@@ -233,7 +233,7 @@ project-runtime/state/ACCEPTED_ARTIFACTS.json
 project-runtime/state/CHECKPOINT_STATE.json
 ```
 
-Runtime Schema `3.1.1` sidecars are canonical runtime state. Markdown files
+Runtime Schema `3.2.0` sidecars are canonical runtime state. Markdown files
 under `project-runtime/*.md` are compatibility views generated from those JSON
 sidecars; every canonical sidecar receives a generated view when materialized.
 

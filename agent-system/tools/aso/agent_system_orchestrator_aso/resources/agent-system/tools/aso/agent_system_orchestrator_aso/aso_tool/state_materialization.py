@@ -10,6 +10,7 @@ from pathlib import Path, PurePosixPath
 from typing import Any, Iterable, Mapping
 
 from . import correction_routing
+from . import enum_registry
 from . import result_parser
 from . import runtime_schema_contracts
 from . import transition_engine
@@ -793,7 +794,7 @@ def _touch(payload: dict[str, Any], timestamp: str) -> None:
 
 def _markdown_value(value: object) -> str:
     if isinstance(value, bool):
-        return "yes" if value else "no"
+        return enum_registry.canonical_bool_text(value)
     if isinstance(value, list):
         return "NONE" if not value else ", ".join(str(item) for item in value)
     if isinstance(value, dict):

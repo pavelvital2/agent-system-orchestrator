@@ -88,7 +88,7 @@ def normalize_current_p2_fixture(root: Path) -> None:
             if "governance_ruleset_version" in content:
                 content["governance_ruleset_version"] = ACTIVE_PACKAGE_VERSION
             if payload.get("sidecar_type") == "PROJECT_STATE":
-                content["semantic_reason"] = "Current Runtime Schema 3.1.1 test fixture."
+                content["semantic_reason"] = "Current Runtime Schema 3.2.0 test fixture."
             if payload.get("sidecar_type") == "SCHEMA_MANIFEST":
                 entries = content.get("sidecars")
                 if isinstance(entries, list):
@@ -295,7 +295,7 @@ class StateVerifyCommandTests(unittest.TestCase):
             self.assertTrue(report["state"]["runtime_schema_current_p2"])
             self.assertEqual(report["state"]["required_sidecars_missing"], [])
             self.assertEqual(report["state"]["optional_sidecars_missing"], [])
-            self.assertEqual(report["runtime_schema_contract"]["runtime_schema_version"], "3.1.1")
+            self.assertEqual(report["runtime_schema_contract"]["runtime_schema_version"], "3.2.0")
 
     def test_strict_verify_flags_stale_checkpoint_cache_for_active_running_task(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:

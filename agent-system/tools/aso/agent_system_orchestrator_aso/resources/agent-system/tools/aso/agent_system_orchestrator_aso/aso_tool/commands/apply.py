@@ -13,6 +13,7 @@ from pathlib import Path
 from typing import Any, NamedTuple
 
 from .. import proposal_contracts
+from .. import runtime_schema_contracts
 from . import output_policy, state_verify
 from .propose_next_task import _base_state_hashes, _canonical_json_bytes
 
@@ -212,8 +213,11 @@ def _runtime_schema_reasons(root: Path, proposal: dict[str, Any], verify_report:
         reasons.append(f"runtime_schema_mismatch: proposal runtime_schema_version must be {expected}")
     manifest = _load_sidecar_content(root, "SCHEMA_MANIFEST.json")
     manifest_version = manifest.get("runtime_schema_version")
-    if manifest_version and manifest_version != expected:
-        reasons.append(f"runtime_schema_mismatch: workspace runtime_schema_version is {manifest_version!r}")
+    manifest_status = runtime_schema_contracts.compatibility_status(manifest_version)
+    if manifest_version and manifest_status not in {"current", "compatible_migration_available"}:
+        reasons.append(
+            f"runtime_schema_mismatch: workspace runtime_schema_version is {manifest_version!r}"
+        )
     contract = verify_report.get("runtime_schema_contract")
     contract_version = contract.get("runtime_schema_version") if isinstance(contract, dict) else expected
     if contract_version != expected:

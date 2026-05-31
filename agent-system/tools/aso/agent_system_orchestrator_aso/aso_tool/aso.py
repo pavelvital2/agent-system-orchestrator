@@ -1317,9 +1317,9 @@ def build_parser() -> argparse.ArgumentParser:
     state_subparsers = state_parser.add_subparsers(dest="state_command", metavar="COMMAND")
     state_init_parser = state_subparsers.add_parser(
         "init",
-        help="Initialize Runtime Schema 3.1.1 JSON state sidecars.",
+        help=f"Initialize Runtime Schema {runtime_schema_contracts.ACTIVE_RUNTIME_SCHEMA_VERSION} JSON state sidecars.",
         description=(
-            "Plan or create Runtime Schema 3.1.1 JSON sidecars under project-runtime/state. "
+            f"Plan or create Runtime Schema {runtime_schema_contracts.ACTIVE_RUNTIME_SCHEMA_VERSION} JSON sidecars under project-runtime/state. "
             "With --tz, confirmed writes may also canonicalize the TZ document under "
             "project-input and materialize project-runtime compatibility views. "
             "Runtime writes use current UTC timestamps by default. Dry-run writes nothing; "
@@ -1360,8 +1360,8 @@ def build_parser() -> argparse.ArgumentParser:
     )
     state_init_parser.add_argument(
         "--runtime-schema-version",
-        default="3.1.1",
-        help="Runtime schema version to initialize (default: 3.1.1).",
+        default=runtime_schema_contracts.ACTIVE_RUNTIME_SCHEMA_VERSION,
+        help=f"Runtime schema version to initialize (default: {runtime_schema_contracts.ACTIVE_RUNTIME_SCHEMA_VERSION}).",
     )
     state_init_parser.add_argument(
         "--tz",
@@ -1392,18 +1392,18 @@ def build_parser() -> argparse.ArgumentParser:
 
     state_migrate_parser = state_subparsers.add_parser(
         "migrate",
-        help="Migrate compatible legacy JSON state sidecars to Runtime Schema 3.1.1.",
+        help=f"Migrate compatible legacy JSON state sidecars to Runtime Schema {runtime_schema_contracts.ACTIVE_RUNTIME_SCHEMA_VERSION}.",
         description=(
             "Plan or perform a deterministic migration from compatible Runtime Schema "
-            "2.0.0 sidecars to Runtime Schema 3.1.1 envelopes. Dry-run writes nothing; "
+            f"2.0.0 sidecars to Runtime Schema {runtime_schema_contracts.ACTIVE_RUNTIME_SCHEMA_VERSION} envelopes. Dry-run writes nothing; "
             "writes require --confirm-write and produce a governed migration receipt."
         ),
     )
     _add_root_argument(state_migrate_parser, validate=False)
     state_migrate_parser.add_argument(
         "--to",
-        default="3.1.1",
-        help="Target runtime schema version (default: 3.1.1).",
+        default=runtime_schema_contracts.ACTIVE_RUNTIME_SCHEMA_VERSION,
+        help=f"Target runtime schema version (default: {runtime_schema_contracts.ACTIVE_RUNTIME_SCHEMA_VERSION}).",
     )
     state_migrate_parser.add_argument(
         "--dry-run",

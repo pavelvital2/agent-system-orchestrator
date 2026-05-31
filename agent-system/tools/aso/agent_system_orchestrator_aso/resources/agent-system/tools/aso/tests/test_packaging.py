@@ -3,10 +3,14 @@ from __future__ import annotations
 import subprocess
 import sys
 import unittest
-import tomllib
 from importlib import import_module
 from importlib import metadata
 from pathlib import Path
+
+try:
+    import tomllib
+except ModuleNotFoundError:  # pragma: no cover - Python 3.10 fallback
+    import tomli as tomllib
 
 
 REPO_ROOT = Path(__file__).resolve().parents[4]
@@ -15,6 +19,7 @@ ASO_TOOL_ROOT = REPO_ROOT / "agent-system" / "tools" / "aso"
 sys.path.insert(0, str(ASO_TOOL_ROOT))
 
 import agent_system_orchestrator_aso.cli as wrapper_cli  # noqa: E402
+from agent_system_orchestrator_aso.aso_tool import runtime_schema_contracts  # noqa: E402
 
 
 class PackagingCommandTests(unittest.TestCase):
@@ -29,7 +34,8 @@ class PackagingCommandTests(unittest.TestCase):
         )
 
         self.assertEqual(result.returncode, 0, result.stderr)
-        self.assertIn("Read-only Agent System Orchestrator control-plane helper.", result.stdout)
+        self.assertIn("Filesystem-governed ASO control-plane CLI with read-only diagnostics", result.stdout)
+        self.assertIn("explicit confirmed writes.", result.stdout)
         self.assertIn("status", result.stdout)
         self.assertIn("lint", result.stdout)
         self.assertIn("doctor", result.stdout)
@@ -57,6 +63,12 @@ class PackagingCommandTests(unittest.TestCase):
         test_extra = pyproject["project"]["optional-dependencies"]["test"]
 
         self.assertIn("jsonschema>=4.22", test_extra)
+
+    def test_python_310_toml_parser_runtime_dependency_is_conditional(self) -> None:
+        pyproject = tomllib.loads((REPO_ROOT / "pyproject.toml").read_text(encoding="utf-8"))
+        dependencies = pyproject["project"]["dependencies"]
+
+        self.assertIn('tomli>=2; python_version < "3.11"', dependencies)
 
     def test_schema_test_environment_has_jsonschema_available(self) -> None:
         try:
@@ -117,7 +129,6 @@ class PackagingCommandTests(unittest.TestCase):
 
     def test_package_version_is_coherent(self) -> None:
         pyproject = tomllib.loads((REPO_ROOT / "pyproject.toml").read_text(encoding="utf-8"))
-        package_versioning = (REPO_ROOT / "agent-system" / "PACKAGE_VERSIONING.md").read_text(encoding="utf-8")
         root_readme = (REPO_ROOT / "README.md").read_text(encoding="utf-8")
         agent_readme = (REPO_ROOT / "agent-system" / "README.md").read_text(encoding="utf-8")
         authority_map = (
@@ -125,15 +136,14 @@ class PackagingCommandTests(unittest.TestCase):
         ).read_text(encoding="utf-8")
         package_version = pyproject["project"]["version"]
 
-        self.assertEqual(package_version, "3.7.9")
-        self.assertIn("CURRENT_PACKAGE_VERSION: 3.7.9", package_versioning)
-        self.assertIn("CURRENT_GOVERNANCE_RULESET_VERSION: 3.7.9", package_versioning)
-        self.assertIn("CURRENT_RUNTIME_SCHEMA_VERSION: 3.1.1", package_versioning)
-        self.assertIn("ARTIFACT_PACKAGE_SCHEMA_VERSION: 1.1.0", package_versioning)
-        self.assertIn("governed `3.7.9` package/governance tuple", root_readme)
-        self.assertIn("governed `3.7.9` package/governance tuple", agent_readme)
-        self.assertIn("package_version: 3.7.9", authority_map)
-        self.assertIn("governance_ruleset_version: 3.7.9", authority_map)
+        self.assertEqual(package_version, runtime_schema_contracts.ACTIVE_PACKAGE_VERSION)
+        self.assertIn(f"governed `{package_version}` package/governance tuple", root_readme)
+        self.assertIn(f"governed `{package_version}` package/governance tuple", agent_readme)
+        self.assertIn(f"package_version: {package_version}", authority_map)
+        self.assertIn(
+            f"governance_ruleset_version: {runtime_schema_contracts.ACTIVE_GOVERNANCE_RULESET_VERSION}",
+            authority_map,
+        )
 
     def test_package_layout_verify_accepts_package_mode(self) -> None:
         result = subprocess.run(
@@ -165,12 +175,19 @@ class PackagingCommandTests(unittest.TestCase):
         self.assertIn("install-test:", makefile)
         self.assertIn('-m pip install -e ".[test]"', makefile)
         self.assertIn("agent-system/scripts/install_aso_clean.sh --source .", makefile)
+        self.assertIn("agent-system/scripts/installed_cli_smoke.sh", makefile)
+        self.assertIn('python" -m pip install "$$dist_dir"/*.whl', makefile)
+        self.assertIn('python" -m pip install "$$dist_dir"/*.tar.gz', makefile)
+        self.assertIn('build-venv/bin/python" -m pip install -U pip setuptools wheel build', makefile)
+        self.assertIn('build-venv/bin/python" -m build "$$build_src" --outdir "$$dist_dir"', makefile)
         self.assertIn("--with-test", makefile)
         self.assertIn("import jsonschema", makefile)
         self.assertIn("md.version('jsonschema')", makefile)
-        self.assertIn("bin/aso\" --help >/dev/null", makefile)
-        self.assertIn("bin/aso\" status --root . --mode package", makefile)
-        self.assertIn("bin/aso\" package-layout verify --root . --mode package --strict", makefile)
+        self.assertIn("clean-console", makefile)
+        self.assertIn("wheel-console", makefile)
+        self.assertIn("sdist-console", makefile)
+        self.assertIn("project create --local --target", makefile)
+        self.assertIn("project verify-clean --root", makefile)
         self.assertIn("agent_system_orchestrator_aso.cli", makefile)
         self.assertIn("/site-packages/agent_system_orchestrator_aso/__init__.py", makefile)
         self.assertIn("e2e-real-tz-smoke:", makefile)
@@ -179,6 +196,19 @@ class PackagingCommandTests(unittest.TestCase):
         self.assertIn("$(MAKE) install-test-smoke", makefile)
         self.assertIn("$(MAKE) e2e-real-tz-smoke", makefile)
         self.assertIn("$(MAKE) source-contamination-guard", makefile)
+
+    def test_editable_installers_use_isolated_dependency_install(self) -> None:
+        for relpath in ("install.sh", "install.ps1"):
+            with self.subTest(relpath=relpath):
+                installer = (REPO_ROOT / relpath).read_text(encoding="utf-8")
+
+                self.assertNotIn("--system-site-packages", installer)
+                self.assertNotIn("--no-deps", installer)
+                self.assertNotIn("--no-build-isolation", installer)
+                self.assertIn("pip install --upgrade pip setuptools wheel", installer)
+                self.assertIn("install -e .", installer)
+                self.assertIn("project create --local --target", installer)
+                self.assertIn("project verify-clean --root", installer)
 
 
 if __name__ == "__main__":

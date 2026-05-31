@@ -1,15 +1,14 @@
-"""Embedded runtime contract fallback for installed ASO packages."""
+"""Packaged fallback copy of ORCHESTRATOR_RUNTIME_CONTRACT.json."""
 
 from __future__ import annotations
 
 
-ORIGIN = "agent_system_orchestrator_aso.aso_tool.runtime_contract_fallback"
-
-ORCHESTRATOR_RUNTIME_CONTRACT_JSON = r"""{
+ORCHESTRATOR_RUNTIME_CONTRACT_JSON = r"""
+{
   "contract_version": "1.0.0",
-  "package_version": "3.7.9",
-  "governance_ruleset_version": "3.7.9",
-  "runtime_schema_version": "3.1.1",
+  "package_version": "3.8.0",
+  "governance_ruleset_version": "3.8.0",
+  "runtime_schema_version": "3.2.0",
   "artifact_package_schema_version": "1.1.0",
   "allowed_roles": [
     "requirements_analyst",
@@ -25,6 +24,34 @@ ORCHESTRATOR_RUNTIME_CONTRACT_JSON = r"""{
     "control",
     "release_manager"
   ],
+  "role_registry": {
+    "dispatchable_role_ids": [
+      "requirements_analyst",
+      "solution_architect",
+      "developer",
+      "tester",
+      "auditor",
+      "technical_writer"
+    ],
+    "legacy_lifecycle_system_role_ids": [
+      "designer",
+      "devops_setup_engineer",
+      "release_manager"
+    ],
+    "control_or_pseudo_role_ids": [
+      "orchestrator",
+      "project_owner",
+      "owner",
+      "control",
+      "none"
+    ],
+    "forbidden_dispatch_role_ids": [
+      "orchestrator",
+      "owner",
+      "control",
+      "release_manager"
+    ]
+  },
   "allowed_events": [
     "CREATE_AGENT_RECOMMENDED",
     "CREATE_AGENT_DISPATCHED",
@@ -516,6 +543,7 @@ ORCHESTRATOR_RUNTIME_CONTRACT_JSON = r"""{
     "runtime_contract_required_sections": [
       "allowed_roles",
       "forbidden_dispatch_roles",
+      "role_registry",
       "allowed_events",
       "event_aliases",
       "state_transitions",
@@ -1006,4 +1034,5 @@ ORCHESTRATOR_RUNTIME_CONTRACT_JSON = r"""{
     }
   }
 }
+
 """

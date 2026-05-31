@@ -19,6 +19,7 @@ sys.path.insert(0, str(ASO_TOOL_ROOT))
 from agent_system_orchestrator_aso.aso_tool import transition_engine  # noqa: E402
 from agent_system_orchestrator_aso.aso_tool import runtime_contract_fallback  # noqa: E402
 from agent_system_orchestrator_aso.aso_tool import role_registry  # noqa: E402
+from agent_system_orchestrator_aso.aso_tool import runtime_schema_contracts  # noqa: E402
 
 
 class OrchestratorRuntimeContractTests(unittest.TestCase):
@@ -33,7 +34,7 @@ class OrchestratorRuntimeContractTests(unittest.TestCase):
 
         self.assertTrue(validation.passed, validation.errors)
         self.assertEqual(contract["contract_version"], "1.0.0")
-        self.assertEqual(contract["runtime_schema_version"], "3.1.1")
+        self.assertEqual(contract["runtime_schema_version"], runtime_schema_contracts.ACTIVE_RUNTIME_SCHEMA_VERSION)
         self.assertEqual(contract["artifact_package_schema_version"], "1.1.0")
 
     def test_installed_package_fallback_matches_source_contract(self) -> None:
@@ -63,6 +64,11 @@ class OrchestratorRuntimeContractTests(unittest.TestCase):
         self.assertNotIn("orchestrator", allowed_roles)
         self.assertIn("orchestrator", forbidden_roles)
         self.assertFalse(allowed_roles & forbidden_roles)
+        self.assertEqual(
+            tuple(contract["role_registry"]["dispatchable_role_ids"]),
+            role_registry.dispatchable_roles(contract),
+        )
+        self.assertEqual(role_registry.role_registry_errors(contract), ())
 
         for event_name in (
             "CREATE_AGENT_DISPATCHED",

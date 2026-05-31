@@ -5,11 +5,13 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Any
 
+from . import enum_registry
 
-ACTIVE_RUNTIME_SCHEMA_VERSION = "3.1.1"
-ACTIVE_PACKAGE_VERSION = "3.7.9"
-ACTIVE_GOVERNANCE_RULESET_VERSION = "3.7.9"
-ACTIVE_ARTIFACT_PACKAGE_SCHEMA_VERSION = "1.1.0"
+
+ACTIVE_RUNTIME_SCHEMA_VERSION = enum_registry.ACTIVE_RUNTIME_SCHEMA_VERSION
+ACTIVE_PACKAGE_VERSION = enum_registry.ACTIVE_PACKAGE_VERSION
+ACTIVE_GOVERNANCE_RULESET_VERSION = enum_registry.ACTIVE_GOVERNANCE_RULESET_VERSION
+ACTIVE_ARTIFACT_PACKAGE_SCHEMA_VERSION = enum_registry.ACTIVE_ARTIFACT_PACKAGE_SCHEMA_VERSION
 
 STATE_ROOT = "project-runtime/state"
 CONTRACT_RELATIVE_PATH = "agent-system/09_validators/schemas/runtime_state_3_1_0.contract.json"
@@ -58,70 +60,18 @@ NEXT_ACTION_DERIVATION_INPUTS = (
     "ORCHESTRATOR_RUNTIME_CONTRACT.json",
 )
 
-LIFECYCLE_STATUSES = (
-    "bootstrap",
-    "requirements",
-    "design",
-    "design_audit",
-    "implementation",
-    "implementation_audit",
-    "audit",
-    "testing",
-    "setup",
-    "run",
-    "launch",
-    "documentation",
-    "handover",
-    "correction",
-    "blocked",
-    "finalization",
-    "final_acceptance",
-    "completed",
-)
-CHECKPOINT_STATUSES = (
-    "not_required",
-    "not_run",
-    "pending",
-    "eligible",
-    "ineligible",
-    "passed",
-    "failed",
-    "blocked",
-)
-ACTION_STATUSES = (
-    "ready",
-    "blocked",
-    "completed",
-    "not_applicable",
-)
-ACTION_TYPES = (
-    "create_agent",
-    "route_result",
-    "update_state",
-    "wait_for_owner",
-    "correction",
-    "finalize",
-    "stop",
-)
-ACTION_SEMANTICS = (
-    "normal",
-    "wait_for_owner",
-    "pause",
-    "stop_terminal",
-    "completed_state_transition",
-)
-COMPATIBILITY_STATUSES = (
-    "current",
-    "compatible_migration_available",
-    "compatible_legacy_read_only",
-    "unsupported",
-    "malformed",
-)
+LIFECYCLE_STATUSES = enum_registry.LIFECYCLE_STATUSES
+CHECKPOINT_STATUSES = enum_registry.CHECKPOINT_STATUSES
+ACTION_STATUSES = enum_registry.ACTION_STATUSES
+ACTION_TYPES = enum_registry.ACTION_TYPES
+ACTION_SEMANTICS = enum_registry.ACTION_SEMANTICS
+COMPATIBILITY_STATUSES = enum_registry.COMPATIBILITY_STATUSES
 
 LEGACY_COMPATIBILITY = {
     "2.0.0": "compatible_migration_available",
     "3.0.0": "compatible_migration_available",
     "3.1.0": "compatible_migration_available",
+    "3.1.1": "compatible_migration_available",
     ACTIVE_RUNTIME_SCHEMA_VERSION: "current",
 }
 
@@ -167,8 +117,14 @@ def validate_contract_document(contract: dict[str, Any]) -> ContractValidationRe
     """Validate the packaged contract document using only stdlib data checks."""
 
     errors: list[str] = []
+    if contract.get("package_version") != ACTIVE_PACKAGE_VERSION:
+        errors.append(f"package_version must be {ACTIVE_PACKAGE_VERSION}")
+    if contract.get("governance_ruleset_version") != ACTIVE_GOVERNANCE_RULESET_VERSION:
+        errors.append(f"governance_ruleset_version must be {ACTIVE_GOVERNANCE_RULESET_VERSION}")
     if contract.get("runtime_schema_version") != ACTIVE_RUNTIME_SCHEMA_VERSION:
-        errors.append("runtime_schema_version must be 3.1.1")
+        errors.append(f"runtime_schema_version must be {ACTIVE_RUNTIME_SCHEMA_VERSION}")
+    if contract.get("artifact_package_schema_version") != ACTIVE_ARTIFACT_PACKAGE_SCHEMA_VERSION:
+        errors.append(f"artifact_package_schema_version must be {ACTIVE_ARTIFACT_PACKAGE_SCHEMA_VERSION}")
     if contract.get("state_root") != STATE_ROOT:
         errors.append("state_root must be project-runtime/state")
 
@@ -223,8 +179,10 @@ def validate_contract_document(contract: dict[str, Any]) -> ContractValidationRe
         errors.append("migration_compatibility must be an object")
     else:
         supported = compatibility.get("supported_source_schema_versions")
-        if supported != ["2.0.0", "3.0.0", "3.1.0"]:
-            errors.append("migration_compatibility.supported_source_schema_versions must be ['2.0.0', '3.0.0', '3.1.0']")
+        if supported != ["2.0.0", "3.0.0", "3.1.0", "3.1.1"]:
+            errors.append(
+                "migration_compatibility.supported_source_schema_versions must be ['2.0.0', '3.0.0', '3.1.0', '3.1.1']"
+            )
         default_status = compatibility.get("default_unsupported_status")
         if default_status != "unsupported":
             errors.append("migration_compatibility.default_unsupported_status must be unsupported")

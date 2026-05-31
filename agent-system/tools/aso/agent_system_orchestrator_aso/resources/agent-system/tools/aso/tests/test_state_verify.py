@@ -64,6 +64,13 @@ def write_sidecar(root: Path, name: str, payload: dict[str, object]) -> None:
     )
 
 
+def write_sidecar_raw(root: Path, name: str, payload: dict[str, object]) -> None:
+    (root / "project-runtime" / "state" / name).write_text(
+        json.dumps(payload, indent=2, sort_keys=True) + "\n",
+        encoding="utf-8",
+    )
+
+
 def normalize_current_p2_fixture(root: Path) -> None:
     state_root = root / "project-runtime" / "state"
     for path in sorted(state_root.glob("*.json")):
@@ -81,7 +88,7 @@ def normalize_current_p2_fixture(root: Path) -> None:
             if "governance_ruleset_version" in content:
                 content["governance_ruleset_version"] = ACTIVE_PACKAGE_VERSION
             if payload.get("sidecar_type") == "PROJECT_STATE":
-                content["semantic_reason"] = "Current Runtime Schema 3.1.1 test fixture."
+                content["semantic_reason"] = "Current Runtime Schema 3.2.0 test fixture."
             if payload.get("sidecar_type") == "SCHEMA_MANIFEST":
                 entries = content.get("sidecars")
                 if isinstance(entries, list):
@@ -188,6 +195,62 @@ def fixture_task(
     }
 
 
+CANONICAL_MULTILINE_AUDIT_PASS = """AUDIT_RESULT:
+STATUS:
+PASS
+
+TASK_ID:
+TASK_FIXTURE_STATE_001
+
+AGENT_INSTANCE_ID:
+audit_TASK_FIXTURE_STATE_001_attempt_001
+
+ROLE:
+Auditor
+
+TASK:
+TASK_FIXTURE_STATE_001
+
+SOURCE_RESULT_REF:
+project-runtime/results/worker/RESULT_TASK_FIXTURE_STATE_001_ATTEMPT_001.md
+
+SUMMARY:
+Audit passed.
+READ_DOCS:
+- NONE
+READ_INPUTS:
+- NONE
+CHANGED_FILES:
+- NONE
+CREATED_FILES:
+- NONE
+DELETED_FILES:
+- NONE
+COMMANDS_RUN:
+- NONE
+TESTS_RUN:
+- NONE
+EVIDENCE:
+- SOURCE_BOUNDARY_STATUS: passed
+SCOPE_VERIFICATION:
+- TASK_PACKET_SCHEMA_STATUS: passed
+FORBIDDEN_CHANGES_CHECK:
+- FORBIDDEN_PATH_STATUS: passed
+RISKS:
+- NONE
+LIMITATIONS:
+- NONE
+BLOCKERS:
+- NONE
+GAPS:
+- NONE
+NEXT_RECOMMENDED_ACTION:
+- CHECKPOINT_PREFLIGHT
+REUSE_ALLOWED: false
+AGENT_TERMINATION_REQUIRED: true
+"""
+
+
 class StateVerifyCommandTests(unittest.TestCase):
     def test_state_cli_help_declares_runtime_state_commands(self) -> None:
         result = subprocess.run(
@@ -232,7 +295,86 @@ class StateVerifyCommandTests(unittest.TestCase):
             self.assertTrue(report["state"]["runtime_schema_current_p2"])
             self.assertEqual(report["state"]["required_sidecars_missing"], [])
             self.assertEqual(report["state"]["optional_sidecars_missing"], [])
-            self.assertEqual(report["runtime_schema_contract"]["runtime_schema_version"], "3.1.1")
+            self.assertEqual(report["runtime_schema_contract"]["runtime_schema_version"], "3.2.0")
+
+    def test_strict_verify_flags_stale_checkpoint_cache_for_active_running_task(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = copy_p2_valid_workspace_with_valid_bootstrap_state(tmp)
+            active_task_id = "TASK_ACTIVE_LIFECYCLE"
+            old_task_id = "TASK_OLD_CHECKPOINT_DONE"
+            active_packet = f"project-runtime/tasks/active/{active_task_id}.md"
+            old_packet = f"project-runtime/tasks/active/{old_task_id}.md"
+
+            registry = load_sidecar(root, "TASK_REGISTRY.json")
+            old_task = fixture_task(old_task_id, task_packet=old_packet)
+            old_task["status"] = "checkpoint_done"
+            old_task["audit_refs"] = ["project-runtime/results/audit/AUDIT_RESULT_OLD_ATTEMPT_001.md"]
+            active_task = fixture_task(active_task_id, task_packet=active_packet)
+            active_task["status"] = "running"
+            registry["content"]["tasks"] = [old_task, active_task]
+            write_sidecar_raw(root, "TASK_REGISTRY.json", registry)
+
+            accepted = load_sidecar(root, "ACCEPTED_ARTIFACTS.json")
+            accepted["content"]["artifacts"] = []
+            write_sidecar_raw(root, "ACCEPTED_ARTIFACTS.json", accepted)
+
+            project_state = load_sidecar(root, "PROJECT_STATE.json")
+            project_state["content"].update(
+                {
+                    "current_phase": "implementation",
+                    "project_status": "active",
+                    "active_branches": [],
+                    "active_blockers": [],
+                    "checkpoint_blocked_by": [],
+                    "checkpoint_eligibility": "not_applicable",
+                    "checkpoint_eligibility_status": "not_checked",
+                    "project_checkpoint_status": "not_required",
+                }
+            )
+            write_sidecar_raw(root, "PROJECT_STATE.json", project_state)
+
+            current_gate = load_sidecar(root, "CURRENT_GATE.json")
+            current_gate["content"].update(
+                {
+                    "status": "open",
+                    "task_id": "NONE",
+                    "task_packet": "NONE",
+                    "required_next_role": "none",
+                    "checkpoint_eligibility": "not_applicable",
+                    "checkpoint_eligibility_status": "not_checked",
+                    "project_checkpoint_status": "not_required",
+                }
+            )
+            write_sidecar_raw(root, "CURRENT_GATE.json", current_gate)
+
+            next_action = load_sidecar(root, "NEXT_ACTION.json")
+            next_action["content"].update(
+                {
+                    "action_type": "update_state",
+                    "target_role": "orchestrator",
+                    "task_id": old_task_id,
+                    "task_packet": old_packet,
+                    "dependency_status": "ready",
+                    "blocked_by": [],
+                    "action_semantic": "normal",
+                    "checkpoint_policy": "local_only",
+                    "checkpoint_preflight_required": True,
+                    "checkpoint_receipt_required": True,
+                }
+            )
+            write_sidecar_raw(root, "NEXT_ACTION.json", next_action)
+
+            json_out = Path(tmp) / "state-verify.json"
+
+            result = run_state_verify(root, "--strict", "--json-out", str(json_out))
+
+            self.assertEqual(result.returncode, 1, result.stdout + result.stderr)
+            report = json.loads(json_out.read_text(encoding="utf-8"))
+            rule_ids = {finding["rule_id"] for finding in report["findings"]}
+            self.assertIn("RUNTIME_NEXT_ACTION_STALE", rule_ids)
+            self.assertIn("STALE_NEXT_ACTION_TASK_ID", rule_ids)
+            self.assertEqual(report["reconciliation"]["canonical_recommended_next_action"], "WAIT_FOR_RESULT")
+            self.assertEqual(report["reconciliation"]["derived_next_action_cache"]["task_id"], active_task_id)
 
     def test_existing_negative_fixtures_fail_with_stable_rule_ids(self) -> None:
         cases = {
@@ -319,7 +461,7 @@ class StateVerifyCommandTests(unittest.TestCase):
             next_content["action_semantic"] = "normal"
             next_content["workspace_identity_required"] = True
             next_content["repository_lock_required"] = True
-            write_sidecar(root, "NEXT_ACTION.json", next_action)
+            write_sidecar_raw(root, "NEXT_ACTION.json", next_action)
 
             result = run_state_verify(root, "--strict")
 
@@ -499,7 +641,7 @@ class StateVerifyCommandTests(unittest.TestCase):
             content["checkpoint_preflight_required"] = True
             content["checkpoint_receipt_required"] = True
             content["checkpoint_receipt_ref"] = "project-runtime/checkpoints/CHECKPOINT_ELIGIBILITY_TASK_FIXTURE_STATE_001_1.md"
-            write_sidecar(root, "NEXT_ACTION.json", payload)
+            write_sidecar_raw(root, "NEXT_ACTION.json", payload)
 
             result = run_state_verify(root, "--strict")
 
@@ -517,7 +659,7 @@ class StateVerifyCommandTests(unittest.TestCase):
             content["checkpoint_preflight_required"] = True
             content["checkpoint_receipt_required"] = True
             content["checkpoint_receipt_ref"] = "project-runtime/checkpoints/CHECKPOINT_ELIGIBILITY_TASK_FIXTURE_STATE_001_1.md"
-            write_sidecar(root, "NEXT_ACTION.json", payload)
+            write_sidecar_raw(root, "NEXT_ACTION.json", payload)
 
             task_payload = load_sidecar(root, "TASK_REGISTRY.json")
             task_content = task_payload["content"]
@@ -559,7 +701,7 @@ class StateVerifyCommandTests(unittest.TestCase):
             content["checkpoint_preflight_required"] = True
             content["checkpoint_receipt_required"] = True
             content["checkpoint_receipt_ref"] = "project-runtime/checkpoints/CHECKPOINT_ELIGIBILITY_TASK_FIXTURE_STATE_001_1.md"
-            write_sidecar(root, "NEXT_ACTION.json", payload)
+            write_sidecar_raw(root, "NEXT_ACTION.json", payload)
 
             task_payload = load_sidecar(root, "TASK_REGISTRY.json")
             task_content = task_payload["content"]
@@ -590,6 +732,49 @@ class StateVerifyCommandTests(unittest.TestCase):
                 findings,
             )
 
+    def test_checkpoint_audit_evidence_uses_normalized_parser_output_from_current_gate(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = copy_valid_workspace_with_valid_tz(tmp)
+            audit_ref = "project-runtime/results/audit/AUDIT_RESULT_TASK_FIXTURE_STATE_001_ATTEMPT_001.md"
+            audit_path = root / audit_ref
+            audit_path.parent.mkdir(parents=True)
+            audit_path.write_text(CANONICAL_MULTILINE_AUDIT_PASS, encoding="utf-8")
+
+            next_action = load_sidecar(root, "NEXT_ACTION.json")
+            next_content = next_action["content"]
+            self.assertIsInstance(next_content, dict)
+            next_content["checkpoint_policy"] = "commit_and_push"
+            next_content["checkpoint_preflight_required"] = True
+            next_content["checkpoint_receipt_required"] = True
+            next_content["checkpoint_receipt_ref"] = "project-runtime/checkpoints/CHECKPOINT_ELIGIBILITY_TASK_FIXTURE_STATE_001_1.md"
+            write_sidecar(root, "NEXT_ACTION.json", next_action)
+
+            gate = load_sidecar(root, "CURRENT_GATE.json")
+            gate_content = gate["content"]
+            self.assertIsInstance(gate_content, dict)
+            gate_content["gate_evidence"] = [audit_ref]
+            write_sidecar(root, "CURRENT_GATE.json", gate)
+
+            task_payload = load_sidecar(root, "TASK_REGISTRY.json")
+            task_content = task_payload["content"]
+            self.assertIsInstance(task_content, dict)
+            tasks = task_content["tasks"]
+            self.assertIsInstance(tasks, list)
+            self.assertIsInstance(tasks[0], dict)
+            tasks[0]["status"] = "audit_passed"
+            tasks[0]["audit_refs"] = []
+            write_sidecar(root, "TASK_REGISTRY.json", task_payload)
+            json_out = Path(tmp) / "state-verify.json"
+
+            result = run_state_verify(root, "--strict", "--json-out", str(json_out))
+
+            self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+            report = json.loads(json_out.read_text(encoding="utf-8"))
+            self.assertFalse(
+                any(finding["rule_id"].startswith("SIDECAR_CHECKPOINT") for finding in report["findings"]),
+                report["findings"],
+            )
+
     def test_active_open_bootstrap_with_terminal_stop_fails(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             root = copy_p2_valid_workspace(tmp)
@@ -599,7 +784,7 @@ class StateVerifyCommandTests(unittest.TestCase):
             self.assertIsInstance(content, dict)
             content["action_type"] = "stop"
             content["action_semantic"] = "stop_terminal"
-            write_sidecar(root, "NEXT_ACTION.json", payload)
+            write_sidecar_raw(root, "NEXT_ACTION.json", payload)
 
             result = run_state_verify(root, "--strict")
 
@@ -628,6 +813,75 @@ class StateVerifyCommandTests(unittest.TestCase):
 
             self.assertEqual(result.returncode, 1, result.stdout + result.stderr)
             self.assertIn("BSR_TZ_PATH_CANONICAL_MISMATCH", result.stdout)
+
+    def test_project_completed_with_unresolved_blockers_fails_transition_authority(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = copy_valid_workspace_with_valid_tz(tmp)
+            project_state = load_sidecar(root, "PROJECT_STATE.json")
+            project_content = project_state["content"]
+            self.assertIsInstance(project_content, dict)
+            project_content.update(
+                {
+                    "current_phase": "completed",
+                    "project_status": "completed",
+                    "audit_status": "passed",
+                    "project_checkpoint_status": "passed",
+                    "active_blockers": ["OWNER-BLOCKER-001"],
+                    "checkpoint_blocked_by": [],
+                }
+            )
+            write_sidecar(root, "PROJECT_STATE.json", project_state)
+
+            current_gate = load_sidecar(root, "CURRENT_GATE.json")
+            gate_content = current_gate["content"]
+            self.assertIsInstance(gate_content, dict)
+            gate_content.update(
+                {
+                    "gate_type": "terminal",
+                    "status": "passed",
+                    "action_semantic": "stop_terminal",
+                    "required_next_role": "none",
+                    "blocking_status": "NONE",
+                }
+            )
+            write_sidecar(root, "CURRENT_GATE.json", current_gate)
+
+            next_action = load_sidecar(root, "NEXT_ACTION.json")
+            next_content = next_action["content"]
+            self.assertIsInstance(next_content, dict)
+            next_content.update(
+                {
+                    "action_type": "stop",
+                    "target_role": "none",
+                    "dependency_status": "completed",
+                    "blocked_by": [],
+                    "action_semantic": "stop_terminal",
+                    "checkpoint_policy": "no_checkpoint",
+                    "checkpoint_preflight_required": False,
+                    "checkpoint_receipt_required": False,
+                }
+            )
+            write_sidecar(root, "NEXT_ACTION.json", next_action)
+
+            task_registry = load_sidecar(root, "TASK_REGISTRY.json")
+            task_content = task_registry["content"]
+            self.assertIsInstance(task_content, dict)
+            tasks = task_content["tasks"]
+            self.assertIsInstance(tasks, list)
+            self.assertIsInstance(tasks[0], dict)
+            tasks[0]["status"] = "blocked"
+            write_sidecar(root, "TASK_REGISTRY.json", task_registry)
+            json_out = Path(tmp) / "state-verify.json"
+
+            result = run_state_verify(root, "--strict", "--json-out", str(json_out))
+
+            self.assertEqual(result.returncode, 1, result.stdout + result.stderr)
+            report = json.loads(json_out.read_text(encoding="utf-8"))
+            rule_ids = {finding["rule_id"] for finding in report["findings"]}
+            self.assertIn("PROJECT_COMPLETED_UNRESOLVED_TASKS", rule_ids)
+            self.assertIn("PROJECT_COMPLETED_STALE_BLOCKERS", rule_ids)
+            self.assertEqual(report["reconciliation"]["current_state"], "PROJECT_COMPLETED")
+            self.assertEqual(report["reconciliation"]["canonical_recommended_next_action"], "NO_NEXT_ACTION")
 
 
 if __name__ == "__main__":

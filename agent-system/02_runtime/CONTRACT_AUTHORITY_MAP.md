@@ -17,10 +17,11 @@ for the same runtime, artifact, bootstrap, or planner contract surface.
 | P5.6 | Historical package metadata, release validation docs, installed real-TZ workflow docs, and audit hardening evidence | Records real-TZ installed-orchestrator validation, safe install/intake operator guidance, source hygiene, clean install semantics, and CI E2E smoke coverage. | Documentation, metadata, test, and validation hardening only; does not add runtime semantics, daemon mode, live dispatch, checkpoint execution, product generation, or duplicate contract files. |
 | P57 | Package metadata `3.7.8`, this map, runtime authority documentation, and state render write-boundary documentation | Aligns active package/governance authority and removes runtime source-of-truth contradictions. | Documentation and metadata authority sync only; Runtime Schema `3.1.1` and Artifact Package Schema `1.1.0` are preserved. |
 | P58 | Package metadata `3.7.9`, active schema/template constants, and version-coherence validation | Aligns active package/governance pins across runtime manifests, artifact schemas, structured artifact templates, result/audit templates, and proposal/apply templates. | Metadata and template/schema sync only; Runtime Schema `3.1.1` and Artifact Package Schema `1.1.0` are preserved. |
+| S1.140 | Package metadata `3.8.0`, canonical enum registry, Runtime Schema `3.2.0`, and runtime role registry coherence | Aligns package/governance/runtime/schema metadata and makes enum drift testable from the ASO tool registry. | Supersedes the active P58 tuple while preserving Stage 1 governance boundaries and Artifact Package Schema `1.1.0`. |
 
 ## Runtime Schema Contract File Authority
 
-Runtime Schema `3.1.1` continues to use the packaged contract file:
+Runtime Schema `3.2.0` continues to use the packaged contract file:
 
 ```text
 agent-system/09_validators/schemas/runtime_state_3_1_0.contract.json
@@ -28,11 +29,11 @@ agent-system/09_validators/schemas/runtime_state_3_1_0.contract.json
 
 The filename is historical: the base JSON sidecar envelope was introduced for
 the P2/P3 Runtime State `3.1.0` boundary. The contract document itself now
-declares `contract_id: ASO_RUNTIME_STATE_SCHEMA_3_1_1` and
-`runtime_schema_version: 3.1.1`, and the ASO runtime contract helper exposes
-that same file as the active contract path for Runtime Schema `3.1.1`.
+declares `contract_id: ASO_RUNTIME_STATE_SCHEMA_3_2_0` and
+`runtime_schema_version: 3.2.0`, and the ASO runtime contract helper exposes
+that same file as the active contract path for Runtime Schema `3.2.0`.
 
-Do not add a second `runtime_state_3_1_1.contract.json` file unless a later
+Do not add a second `runtime_state_3_2_0.contract.json` file unless a later
 governed migration explicitly replaces this authority map. A duplicate file
 with equivalent envelope rules would create ambiguous authority. If a future
 runtime schema changes the envelope or sidecar contract semantics, the new
@@ -41,12 +42,12 @@ map in the same change.
 
 ## Current Version Tuple
 
-The active P58 tuple is:
+The active S1.140 tuple is:
 
 ```text
-package_version: 3.7.9
-governance_ruleset_version: 3.7.9
-runtime_schema_version: 3.1.1
+package_version: 3.8.0
+governance_ruleset_version: 3.8.0
+runtime_schema_version: 3.2.0
 artifact_package_schema_version: 1.1.0
 ```
 
@@ -54,5 +55,6 @@ This tuple is metadata and validation authority only. It does not authorize
 runtime mutation, profile-agent dispatch, daemon execution, checkpoint
 execution, publication, or workspace state migration.
 
-The active P58 tuple supersedes prior P57 package/governance baselines without
-changing Runtime Schema `3.1.1` or Artifact Package Schema `1.1.0`.
+The active S1.140 tuple supersedes the prior P58 package/governance baseline and
+advances Runtime Schema `3.2.0` without changing Artifact Package Schema
+`1.1.0`.

@@ -46,9 +46,9 @@ PROJECT_CHECKPOINT_STATUS: pending
 CHECKPOINT_ELIGIBILITY: eligible
 CHECKPOINT_BLOCKED_BY: NONE
 PUSH_ALLOWED: false
-PACKAGE_VERSION: 3.1.1
-GOVERNANCE_RULESET_VERSION: 3.1.1
-RUNTIME_SCHEMA_VERSION: 3.0.0
+PACKAGE_VERSION: 3.8.0
+GOVERNANCE_RULESET_VERSION: 3.8.0
+RUNTIME_SCHEMA_VERSION: 3.2.0
 """,
     "CURRENT_GATE.md": """# CURRENT_GATE
 
@@ -166,9 +166,9 @@ def write_package_fixture(root: Path) -> list[Path]:
 
 ## Active version constants
 
-CURRENT_PACKAGE_VERSION: 3.1.1
-CURRENT_GOVERNANCE_RULESET_VERSION: 3.1.1
-CURRENT_RUNTIME_SCHEMA_VERSION: 3.0.0
+CURRENT_PACKAGE_VERSION: 3.8.0
+CURRENT_GOVERNANCE_RULESET_VERSION: 3.8.0
+CURRENT_RUNTIME_SCHEMA_VERSION: 3.2.0
 """,
         "pyproject.toml": """[build-system]
 requires = ["setuptools>=68"]
@@ -176,7 +176,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "agent-system-orchestrator"
-version = "3.1.1"
+version = "3.8.0"
 
 [project.scripts]
 aso = "agent_system_orchestrator_aso.cli:main"
@@ -214,7 +214,7 @@ on:
             'if __name__ == "__main__":\n'
             "    sys.exit(main())\n"
         ),
-        "agent-system/tools/aso/agent_system_orchestrator_aso/__init__.py": '__version__ = "3.1.1"\n',
+        "agent-system/tools/aso/agent_system_orchestrator_aso/__init__.py": '__version__ = "3.8.0"\n',
         "agent-system/tools/aso/agent_system_orchestrator_aso/cli.py": "from .aso_tool.aso import main\n",
         "agent-system/tools/aso/agent_system_orchestrator_aso/aso_tool/__init__.py": "",
         "agent-system/tools/aso/agent_system_orchestrator_aso/aso_tool/aso.py": (

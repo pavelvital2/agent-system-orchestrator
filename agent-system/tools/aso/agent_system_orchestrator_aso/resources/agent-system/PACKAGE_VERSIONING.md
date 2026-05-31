@@ -19,9 +19,9 @@ RUNTIME_SCHEMA_VERSION:
 ## Active version constants
 
 ```text
-CURRENT_PACKAGE_VERSION: 3.7.9
-CURRENT_GOVERNANCE_RULESET_VERSION: 3.7.9
-CURRENT_RUNTIME_SCHEMA_VERSION: 3.1.1
+CURRENT_PACKAGE_VERSION: 3.8.0
+CURRENT_GOVERNANCE_RULESET_VERSION: 3.8.0
+CURRENT_RUNTIME_SCHEMA_VERSION: 3.2.0
 ARTIFACT_PACKAGE_SCHEMA_VERSION: 1.1.0
 ```
 
@@ -542,6 +542,22 @@ The remote CI evidence file records the selector for the final pushed HEAD.
 Committing post-push run identifiers would create a newer HEAD, so final
 GitHub Actions run details are selected and reported after push rather than
 committed back into release evidence.
+
+The ASO S1.140 enum/schema/version/role coherence hardening installs:
+
+```text
+CURRENT_PACKAGE_VERSION: 3.8.0
+CURRENT_GOVERNANCE_RULESET_VERSION: 3.8.0
+CURRENT_RUNTIME_SCHEMA_VERSION: 3.2.0
+ARTIFACT_PACKAGE_SCHEMA_VERSION: 1.1.0
+DESIGN_GAP_GOVERNANCE_SCHEMA_VERSION: 1.0.0
+```
+
+This Stage 1 patch aligns active runtime contracts, active schemas, packaged
+resources, active templates, enum registries, and role registry authority under
+the `3.8.0 / 3.2.0 / 1.1.0` tuple. Runtime Schema `3.2.0` is the current JSON
+sidecar schema. Runtime Schema `3.1.1` remains legacy-compatible migration
+input only; it is not an active output tuple.
 
 ## Version semantics
 

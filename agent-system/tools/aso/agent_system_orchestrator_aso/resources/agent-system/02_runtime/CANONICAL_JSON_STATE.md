@@ -13,17 +13,17 @@ agents authority to write runtime state.
 ## Runtime State P2 authority model
 
 `project-runtime/state/*.json` sidecars are the canonical
-machine-verifiable representation of Runtime Schema `3.1.1` runtime state.
+machine-verifiable representation of Runtime Schema `3.2.0` runtime state.
 Markdown runtime files remain supported as generated compatibility and
 human-readable render views.
 
-For Runtime Schema `3.1.1`:
+For Runtime Schema `3.2.0`:
 
 ```text
 1. If a valid JSON sidecar and its Markdown view both exist, validators should
    use the JSON sidecar as the structured input and verify parity with the
    Markdown view for governed fields.
-2. If a required JSON sidecar is missing, current Runtime Schema `3.1.1`
+2. If a required JSON sidecar is missing, current Runtime Schema `3.2.0`
    validation must report the missing canonical state instead of treating the
    Markdown view as authoritative.
 3. If JSON and Markdown conflict on governed fields, validators must fail
@@ -171,7 +171,17 @@ evidence_refs
 
 ### NEXT_ACTION
 
-`NEXT_ACTION` records the only governed next routing action.
+`NEXT_ACTION.json` is a rendered compatibility/cache view of the next routing
+action. Dispatch and checkpoint decisions must derive the expected action from
+the canonical inputs: `TASK_REGISTRY`, lifecycle events in
+`project-runtime/agents/instances.jsonl`, artifact receipts and accepted
+artifact records, audit results, `CURRENT_GATE`, correction records, and
+`ORCHESTRATOR_RUNTIME_CONTRACT.json`.
+
+`state verify --strict` must compare the stored `NEXT_ACTION.json` cache with
+the derived action and fail on mismatch. `state render --confirm-write` may
+refresh a structurally valid stale `NEXT_ACTION.json` cache before rendering
+Markdown compatibility views.
 
 Required governed fields include:
 
@@ -206,6 +216,23 @@ tasks
 Each task entry must identify the task, task packet, role, status, audit
 requirements, checkpoint requirements, requester return metadata, blockers,
 worker result references, and audit references.
+
+Task entries may also carry correction-resolution metadata:
+
+```text
+correction_of
+resolved_by
+superseded_by
+effective_audit_ref
+raw_status
+resolution_status
+effective_status
+```
+
+`raw_status` preserves the historical task state. `effective_status` is the
+computed state used by checkpoint and terminal eligibility. Failed, blocked, or
+audit-pending raw states stop blocking only when a valid resolution record or
+passing audit receipt explicitly resolves the failed audit reference.
 
 ### ACCEPTED_ARTIFACTS
 
@@ -245,7 +272,7 @@ validation_errors
 
 ## Migration compatibility
 
-Runtime Schema `3.1.1` validators should prefer JSON sidecars for structured
+Runtime Schema `3.2.0` validators should prefer JSON sidecars for structured
 checks and treat missing required sidecars as missing canonical runtime state.
 Historical workspaces without sidecars require governed migration or
 compatibility handling before current strict validation can pass.

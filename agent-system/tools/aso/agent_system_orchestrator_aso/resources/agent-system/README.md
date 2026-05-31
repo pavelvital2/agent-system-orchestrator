@@ -122,7 +122,7 @@ Product capability gates, MVP readiness, and final acceptance distinctions are
 documented in
 [PRODUCT_CAPABILITY_GATE_POLICY.md](09_validators/PRODUCT_CAPABILITY_GATE_POLICY.md).
 
-Runtime Schema `3.1.1` canonical JSON sidecars and generated Markdown
+Runtime Schema `3.2.0` canonical JSON sidecars and generated Markdown
 compatibility views are specified in
 [CANONICAL_JSON_STATE_PREPARATION.md](02_runtime/CANONICAL_JSON_STATE_PREPARATION.md)
 and [CANONICAL_JSON_STATE.md](02_runtime/CANONICAL_JSON_STATE.md).
@@ -163,10 +163,10 @@ dry-run proposals, while Project Factory commands may create generated
 projects only within explicit target paths and other mutating surfaces require
 explicit confirmation before bounded writes.
 
-This P58 schema/template version sync records the active package
-metadata as the governed `3.7.9` package/governance tuple with runtime schema
-`3.1.1` and artifact package schema `1.1.0`. It preserves the Project Factory
-P1 command boundary, Runtime Schema `3.1.1`, and Artifact Package Schema
+This S1.140 enum/schema/version coherence sync records the active package
+metadata as the governed `3.8.0` package/governance tuple with runtime schema
+`3.2.0` and artifact package schema `1.1.0`. It preserves the Project Factory
+P1 command boundary, Runtime Schema `3.2.0`, and Artifact Package Schema
 `1.1.0` while retaining the P5.4 planner Dispatchability Gate. `plan-next` may recommend
 `CREATE_AGENT` only after proving the current next action can dispatch a
 profile agent with a valid role, task id, task packet, task registry entry,
@@ -194,11 +194,11 @@ The orchestrator does not write profile-agent changes and does not check
 changes semantically; semantic verification is routed to tester and auditor
 agents with reasoning floors above medium.
 
-The Runtime Schema `3.1.1` contract is documented in
+The Runtime Schema `3.2.0` contract is documented in
 `agent-system/02_runtime/RUNTIME_STATE_P2_CONTRACT.md` and packaged as
 `agent-system/09_validators/schemas/runtime_state_3_1_0.contract.json`.
 The historical `3_1_0` filename remains the active base envelope contract for
-Runtime Schema `3.1.1`; no duplicate `3_1_1` contract file is authoritative.
+Runtime Schema `3.2.0`; no duplicate `3_1_1` contract file is authoritative.
 The P5-family authority chain and override map are documented in
 `agent-system/02_runtime/CONTRACT_AUTHORITY_MAP.md`. The contract defines the
 sidecar envelope, required and optional sidecars, allowed
@@ -335,12 +335,12 @@ forbidden document checks, and required document existence under `--root`.
 
 Runtime State P2 command surfaces are local and offline.
 `project-runtime/state/*.json` sidecars are canonical for Runtime Schema
-`3.1.1`. `NEXT_ACTION.json` is the rendered compatibility/cache view derived
+`3.2.0`. `NEXT_ACTION.json` is the rendered compatibility/cache view derived
 from task registry, lifecycle, artifact, audit, gate, correction, and
 runtime-contract inputs. Markdown runtime files are generated compatibility
 views, and report outputs are diagnostics generated from JSON, not canonical
-state sources. The active package version is `3.7.9` and the active runtime
-schema version is `3.1.1`.
+state sources. The active package version is `3.8.0` and the active runtime
+schema version is `3.2.0`.
 
 ```text
 python3 agent-system/tools/aso/aso.py validate-rules --root . --strict
@@ -351,7 +351,7 @@ python3 agent-system/tools/aso/aso.py state render --root /tmp/aso-state-demo --
 python3 agent-system/tools/aso/aso.py state verify --root /tmp/aso-state-demo --strict --json-out /tmp/aso-state-verify.json
 python3 agent-system/tools/aso/aso.py state render --root /tmp/aso-state-demo --format markdown --out /tmp/aso-state-render.md
 python3 agent-system/tools/aso/aso.py lifecycle terminate-agent --root /tmp/aso-state-demo --from-result project-runtime/results/worker/RESULT_TASK_ID_ATTEMPT_001.md --confirm-write
-python3 agent-system/tools/aso/aso.py state migrate --root agent-system/tests/fixtures/state/valid_workspace --to 3.1.1 --dry-run --json-out /tmp/aso-state-migrate-plan.json
+python3 agent-system/tools/aso/aso.py state migrate --root agent-system/tests/fixtures/state/valid_workspace --to 3.2.0 --dry-run --json-out /tmp/aso-state-migrate-plan.json
 python3 agent-system/tools/aso/aso.py plan-next --root agent-system/tests/fixtures/state/valid_workspace --strict --json-out /tmp/aso-stage2-plan.json
 python3 agent-system/tools/aso/aso.py dashboard --root agent-system/tests/fixtures/state/valid_workspace --out /tmp/aso-stage2-dashboard.html
 python3 agent-system/tools/aso/aso.py checkpoint-preflight --root . --mode package --strict --json-out /tmp/aso-stage2-checkpoint-preflight.json
@@ -373,7 +373,7 @@ output to `/tmp`, `project-runtime/reports`, or `project-runtime/rendered`.
 With `--confirm-write`, it refreshes the derived `NEXT_ACTION.json` cache when
 structurally valid and writes generated Markdown compatibility views for every
 canonical JSON sidecar. `aso state verify`
-validates Runtime Schema `3.1.1` envelopes, sidecar types, required fields,
+validates Runtime Schema `3.2.0` envelopes, sidecar types, required fields,
 schema alignment, task references, and compatibility diagnostics, then emits
 optional JSON evidence. `aso plan-next` recommends the next orchestrator action
 as a dry-run report only. `aso dashboard` renders escaped static HTML to
@@ -390,7 +390,7 @@ may use the canonical next action value `CREATE_AGENT` only for a dispatchable
 route and does not dispatch an agent.
 
 Safe Proposal / Apply P3 command surfaces are local and guarded. They run
-under the current package/governance `3.7.9` tuple with Runtime Schema `3.1.1`
+under the current package/governance `3.8.0` tuple with Runtime Schema `3.2.0`
 and preserve the P3 contract; they do not
 dispatch agents, do not commit or push, and do not publish runtime artifacts.
 Proposal commands default to dry-run. `--confirm-write` may write only proposal
@@ -481,7 +481,7 @@ uses the installed `.venv/bin/aso` command for package status, strict lint,
 strict doctor, and strict package-layout verification.
 
 The helper supports status, lint, doctor, package-layout verification, design
-validation, context pack validation, rule validation, Runtime Schema `3.1.1`
+validation, context pack validation, rule validation, Runtime Schema `3.2.0`
 state init/migrate/render/verify, dry-run next-action planning, static
 dashboard rendering, checkpoint eligibility preflight, archive verify
 inspection, P5 artifact package validation and classification, lifecycle
@@ -550,7 +550,7 @@ agents or execute checkpoints.
 
 Project Factory P1 supports local vendored creation, local reference creation,
 GitHub dry-run planning, confirmed GitHub publish, and a guided wizard. It
-remains available in package version `3.7.9`; existing P1/P0 generated-project
+remains available in package version `3.8.0`; existing P1/P0 generated-project
 lockfiles remain compatible when they satisfy the accepted publication-boundary
 and engine-mode rules.
 
@@ -603,7 +603,7 @@ python3 agent-system/tools/aso/aso.py wizard
 python3 agent-system/tools/aso/aso.py wizard --answers path/to/answers.json --dry-run --json-out /tmp/aso-wizard-plan.json
 ```
 
-Generated projects may initialize Runtime Schema `3.1.1` JSON sidecars under
+Generated projects may initialize Runtime Schema `3.2.0` JSON sidecars under
 their ignored local `project-runtime/state/` root. Those sidecars are local
 runtime state for the generated workspace and are not package or
 generated-project publication artifacts. Generated projects must not track or
@@ -796,9 +796,9 @@ agent-system/GOVERNANCE_CHANGELOG.md
 Current active tuple and package markers:
 
 ```text
-CURRENT_PACKAGE_VERSION: 3.7.9
-CURRENT_GOVERNANCE_RULESET_VERSION: 3.7.9
-CURRENT_RUNTIME_SCHEMA_VERSION: 3.1.1
+CURRENT_PACKAGE_VERSION: 3.8.0
+CURRENT_GOVERNANCE_RULESET_VERSION: 3.8.0
+CURRENT_RUNTIME_SCHEMA_VERSION: 3.2.0
 PROJECT_FACTORY_RELEASE_MARKER: project-factory-p1
 RUNTIME_STATE_RELEASE_MARKER: artifact-package-model-p5
 DESIGN_GAP_GOVERNANCE_SCHEMA_VERSION: 1.0.0

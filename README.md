@@ -21,9 +21,9 @@ commands are read-only diagnostics or dry-run proposals, while Project Factory
 commands may create generated projects only within explicit target paths and
 other mutating surfaces require explicit confirmation before bounded writes.
 
-This P58/P58F1 no-upgrade correction line records the active package
-metadata as the governed `3.7.9` package/governance tuple with runtime schema
-`3.1.1` and artifact package schema `1.1.0`. It preserves installed real-TZ
+This S1.140 enum/schema/version coherence line records the active package
+metadata as the governed `3.8.0` package/governance tuple with runtime schema
+`3.2.0` and artifact package schema `1.1.0`. It preserves installed real-TZ
 intake guidance, release validation evidence, clean install semantics, source
 hygiene, and filesystem/governance lifecycle E2E smoke coverage;
 the P5.4 planner Dispatchability Gate remains the active authority:
@@ -50,7 +50,7 @@ The Runtime Schema sidecar contract is documented in
 `agent-system/02_runtime/RUNTIME_STATE_P2_CONTRACT.md` and packaged as
 `agent-system/09_validators/schemas/runtime_state_3_1_0.contract.json`.
 The historical `3_1_0` filename remains the active base envelope contract for
-Runtime Schema `3.1.1`; no duplicate `3_1_1` contract file is authoritative.
+Runtime Schema `3.2.0`; no duplicate `3_2_0` contract file is authoritative.
 The P5-family authority chain and override map are documented in
 `agent-system/02_runtime/CONTRACT_AUTHORITY_MAP.md`. The contract defines
 required and optional sidecars, the P2 envelope, allowed
@@ -265,12 +265,12 @@ python3 agent-system/tools/aso/aso.py validate-context-pack agent-system/tests/f
 
 Runtime State P2 command surfaces formalize JSON sidecars under
 `project-runtime/state/`. `project-runtime/state/*.json` sidecars are canonical
-for Runtime Schema `3.1.1`; `NEXT_ACTION.json` is the rendered
+for Runtime Schema `3.2.0`; `NEXT_ACTION.json` is the rendered
 compatibility/cache view derived from task registry, lifecycle, artifact,
 audit, gate, correction, and runtime-contract inputs. Markdown runtime files
 are generated compatibility views and report outputs are diagnostics generated
-from JSON. The active package version is `3.7.9` and the active runtime schema
-version is `3.1.1`.
+from JSON. The active package version is `3.8.0` and the active runtime schema
+version is `3.2.0`.
 
 ```text
 python3 agent-system/tools/aso/aso.py validate-rules --root . --strict
@@ -283,7 +283,7 @@ python3 agent-system/tools/aso/aso.py state render --root /tmp/aso-state-demo --
 python3 agent-system/tools/aso/aso.py state verify --root /tmp/aso-state-demo --strict --json-out /tmp/aso-state-verify.json
 python3 agent-system/tools/aso/aso.py state render --root /tmp/aso-state-demo --format markdown --out /tmp/aso-state-render.md
 python3 agent-system/tools/aso/aso.py lifecycle terminate-agent --root /tmp/aso-state-demo --from-result project-runtime/results/worker/RESULT_TASK_ID_ATTEMPT_001.md --confirm-write
-python3 agent-system/tools/aso/aso.py state migrate --root agent-system/tests/fixtures/state/valid_workspace --to 3.1.1 --dry-run --json-out /tmp/aso-state-migrate-plan.json
+python3 agent-system/tools/aso/aso.py state migrate --root agent-system/tests/fixtures/state/valid_workspace --to 3.2.0 --dry-run --json-out /tmp/aso-state-migrate-plan.json
 python3 agent-system/tools/aso/aso.py plan-next --root agent-system/tests/fixtures/state/valid_workspace --strict --json-out /tmp/aso-stage2-plan.json
 python3 agent-system/tools/aso/aso.py dashboard --root agent-system/tests/fixtures/state/valid_workspace --out /tmp/aso-stage2-dashboard.html
 python3 agent-system/tools/aso/aso.py checkpoint-preflight --root . --mode package --strict --json-out /tmp/aso-stage2-checkpoint-preflight.json
@@ -332,7 +332,7 @@ python3 agent-system/tools/aso/aso.py design decision record --root /path/to/pro
 lifecycle stage.
 
 Safe Proposal / Apply P3 adds local guarded proposal and apply commands for
-Runtime Schema `3.1.1` state. Proposal commands do not dispatch agents, do not
+Runtime Schema `3.2.0` state. Proposal commands do not dispatch agents, do not
 write canonical state sidecars, and do not commit or push. Checkpoint proposal
 is checkpoint eligibility evidence only; it is not checkpoint execution.
 Confirmed apply requires `--confirm-apply`, re-runs guards, and may write only
@@ -438,7 +438,7 @@ python3 agent-system/tools/aso/aso.py wizard --answers path/to/answers.json --dr
 
 Generated projects contain `aso.lock`, `.gitignore`, a minimal README, and
 local ignored ASO working roots when needed. Local Project Factory creation may
-initialize Runtime Schema `3.1.1` sidecars under the generated project's
+initialize Runtime Schema `3.2.0` sidecars under the generated project's
 ignored `project-runtime/state/` root; those sidecars are local runtime state,
 not package publication artifacts. Vendored mode may copy safe `agent-system/`
 content. Reference mode records the external ASO engine in `aso.lock` and must
@@ -510,7 +510,7 @@ may report the canonical next action value `CREATE_AGENT` only for a
 dispatchable route; it is evidence only and does not dispatch an agent.
 
 The helper supports status, lint, doctor, package-layout verification, design
-validation, context pack validation, rule validation, Runtime Schema `3.1.1`
+validation, context pack validation, rule validation, Runtime Schema `3.2.0`
 state init/migrate/render/verify, dry-run next-action planning, static
 dashboard rendering, checkpoint eligibility preflight, archive verify
 inspection, P4 design governance, and Project Factory scoped generated-project

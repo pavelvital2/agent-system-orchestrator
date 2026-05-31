@@ -6,10 +6,14 @@ import re
 import subprocess
 import sys
 import tempfile
-import tomllib
 import unittest
 from importlib import util
 from pathlib import Path
+
+try:
+    import tomllib
+except ModuleNotFoundError:  # pragma: no cover - Python 3.10 fallback
+    import tomli as tomllib
 
 
 REPO_ROOT = Path(__file__).resolve().parents[4]
@@ -19,13 +23,9 @@ CLI = ASO_TOOL_ROOT / "aso.py"
 
 RUNTIME_CONTRACT = REPO_ROOT / "agent-system" / "02_runtime" / "ORCHESTRATOR_RUNTIME_CONTRACT.json"
 WRAPPER_INIT = REPO_ROOT / "agent-system" / "tools" / "aso" / "agent_system_orchestrator_aso" / "__init__.py"
+PACKAGED_RESOURCE_ROOT = ASO_TOOL_ROOT / "agent_system_orchestrator_aso" / "resources"
 PACKAGED_CROSS_LINK_RULES = (
-    ASO_TOOL_ROOT
-    / "agent_system_orchestrator_aso"
-    / "resources"
-    / "agent-system"
-    / "09_validators"
-    / "CROSS_LINK_VALIDATION_RULES.md"
+    PACKAGED_RESOURCE_ROOT / "agent-system" / "09_validators" / "CROSS_LINK_VALIDATION_RULES.md"
 )
 ACTIVE_SCHEMA_FILES = (
     "agent-system/09_validators/schemas/runtime_state_3_1_0.contract.json",
@@ -71,6 +71,17 @@ def _schema_const(schema: dict[str, object], *path: str) -> str:
     return current
 
 
+def _active_versioning_section(text: str) -> str:
+    match = re.search(
+        r"^## Active version constants\s*(?P<body>.*?)(?=^##\s+|\Z)",
+        text,
+        re.MULTILINE | re.DOTALL,
+    )
+    if match is None:
+        raise AssertionError("PACKAGE_VERSIONING.md must contain an Active version constants section")
+    return match.group("body")
+
+
 def _run_aso(*args: str) -> subprocess.CompletedProcess[str]:
     env = os.environ.copy()
     env["PYTHONDONTWRITEBYTECODE"] = "1"
@@ -113,13 +124,19 @@ class VersionCoherenceTests(unittest.TestCase):
     def test_package_metadata_matches_runtime_contract(self) -> None:
         pyproject = tomllib.loads((REPO_ROOT / "pyproject.toml").read_text(encoding="utf-8"))
         package_versioning = (REPO_ROOT / "agent-system" / "PACKAGE_VERSIONING.md").read_text(encoding="utf-8")
+        packaged_versioning = (PACKAGED_RESOURCE_ROOT / "agent-system" / "PACKAGE_VERSIONING.md").read_text(
+            encoding="utf-8"
+        )
         authority_map = (REPO_ROOT / "agent-system" / "02_runtime" / "CONTRACT_AUTHORITY_MAP.md").read_text(
             encoding="utf-8"
         )
+        root_readme = (REPO_ROOT / "README.md").read_text(encoding="utf-8")
+        agent_readme = (REPO_ROOT / "agent-system" / "README.md").read_text(encoding="utf-8")
         cross_link_rule_paths = (
             REPO_ROOT / "agent-system" / "09_validators" / "CROSS_LINK_VALIDATION_RULES.md",
             PACKAGED_CROSS_LINK_RULES,
         )
+        active_versioning = _active_versioning_section(package_versioning)
 
         self.assertEqual(pyproject["project"]["version"], self.package_version)
         spec = util.spec_from_file_location("agent_system_orchestrator_aso", WRAPPER_INIT)
@@ -128,8 +145,12 @@ class VersionCoherenceTests(unittest.TestCase):
         wrapper = util.module_from_spec(spec)
         spec.loader.exec_module(wrapper)
         self.assertEqual(wrapper.__version__, self.package_version)
-        self.assertIn(f"CURRENT_PACKAGE_VERSION: {self.package_version}", package_versioning)
-        self.assertIn(f"CURRENT_GOVERNANCE_RULESET_VERSION: {self.governance_version}", package_versioning)
+        self.assertIn(f"CURRENT_PACKAGE_VERSION: {self.package_version}", active_versioning)
+        self.assertIn(f"CURRENT_GOVERNANCE_RULESET_VERSION: {self.governance_version}", active_versioning)
+        self.assertIn(f"CURRENT_RUNTIME_SCHEMA_VERSION: {self.runtime_schema_version}", active_versioning)
+        self.assertIn(f"ARTIFACT_PACKAGE_SCHEMA_VERSION: {self.artifact_schema_version}", active_versioning)
+        packaged_active_versioning = _active_versioning_section(packaged_versioning)
+        self.assertEqual(packaged_active_versioning, active_versioning)
         self.assertIn(f"package_version: {self.package_version}", authority_map)
         self.assertIn(f"governance_ruleset_version: {self.governance_version}", authority_map)
         for path in cross_link_rule_paths:
@@ -139,10 +160,16 @@ class VersionCoherenceTests(unittest.TestCase):
                 self.assertIn(f"CURRENT_GOVERNANCE_RULESET_VERSION: {self.governance_version}", cross_link_rules)
                 self.assertNotIn("CURRENT_PACKAGE_VERSION: 3.7.8", cross_link_rules)
                 self.assertNotIn("CURRENT_GOVERNANCE_RULESET_VERSION: 3.7.8", cross_link_rules)
+                self.assertNotIn("CURRENT_PACKAGE_VERSION: 3.7.9", cross_link_rules)
+                self.assertNotIn("CURRENT_GOVERNANCE_RULESET_VERSION: 3.7.9", cross_link_rules)
+        self.assertIn(f"governed `{self.package_version}` package/governance tuple", root_readme)
+        self.assertIn(f"governed `{self.package_version}` package/governance tuple", agent_readme)
 
     def test_generated_state_and_lockfile_use_active_tuple_without_stale_output(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
+            (root / "project-input").mkdir()
+            (root / "project-input" / "TZ.md").write_text("# TZ\n\nVersion coherence.\n", encoding="utf-8")
 
             init = _run_aso(
                 "state",
@@ -153,6 +180,8 @@ class VersionCoherenceTests(unittest.TestCase):
                 "Version Coherence",
                 "--project-slug",
                 "version-coherence",
+                "--tz",
+                "project-input/TZ.md",
                 "--confirm-write",
                 "--deterministic-timestamps",
             )
@@ -217,9 +246,14 @@ class VersionCoherenceTests(unittest.TestCase):
                 if "governance_ruleset_version" in template:
                     self.assertEqual(template["governance_ruleset_version"], self.governance_version)
                 self.assertEqual(template["runtime_schema_version"], self.runtime_schema_version)
+                if "artifact_package_schema_version" in template:
+                    self.assertEqual(template["artifact_package_schema_version"], self.artifact_schema_version)
+            packaged_template = _load_json(PACKAGED_RESOURCE_ROOT / relpath)
+            with self.subTest(packaged_template=relpath):
+                self.assertEqual(packaged_template, template)
 
     def test_active_contracts_do_not_retain_stale_current_version_consts(self) -> None:
-        stale_version_pattern = re.compile(r'"const"\s*:\s*"(?:3\.7\.3|3\.7\.8)"')
+        stale_version_pattern = re.compile(r'"const"\s*:\s*"(?:3\.7\.3|3\.7\.8|3\.7\.9)"')
         for relpath in ACTIVE_SCHEMA_FILES:
             with self.subTest(schema=relpath):
                 text = (REPO_ROOT / relpath).read_text(encoding="utf-8")
@@ -230,14 +264,17 @@ class VersionCoherenceTests(unittest.TestCase):
                 text = (REPO_ROOT / relpath).read_text(encoding="utf-8")
                 self.assertNotIn('"package_version": "3.7.3"', text)
                 self.assertNotIn('"package_version": "3.7.8"', text)
+                self.assertNotIn('"package_version": "3.7.9"', text)
                 self.assertNotIn('"governance_ruleset_version": "3.7.3"', text)
                 self.assertNotIn('"governance_ruleset_version": "3.7.8"', text)
+                self.assertNotIn('"governance_ruleset_version": "3.7.9"', text)
 
     def test_lockfile_schema_marks_old_current_versions_as_legacy_compatible(self) -> None:
         schema = _load_json("agent-system/09_validators/schemas/aso_lock.schema.json")
         description = str(schema["description"])
 
-        self.assertIn("active P58 3.7.9/3.1.1", description)
+        self.assertIn("active S1.140 3.8.0/3.2.0", description)
+        self.assertIn("legacy-compatible P58 3.7.9/3.1.1", description)
         self.assertIn("legacy-compatible P57 3.7.8/3.1.1", description)
         self.assertIn("legacy-compatible P5.3 3.7.3/3.1.1", description)
 

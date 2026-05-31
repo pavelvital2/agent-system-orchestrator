@@ -3,7 +3,7 @@
 ## Purpose
 
 This document records the transition from Markdown runtime state to canonical
-JSON runtime state and defines the current Runtime Schema `3.1.1` authority.
+JSON runtime state and defines the current Runtime Schema `3.2.0` authority.
 
 It is a specification document. It does not add daemon mode, live dispatch,
 checkpoint execution, product generation, or profile-agent authority to mutate
@@ -19,7 +19,7 @@ agent-system/09_validators/STATE_SIDECAR_VALIDATION_RULES.md
 
 These package files define machine-verifiable sidecar shapes for current
 workspace state validation. `project-runtime/state/*.json` files are canonical
-for Runtime Schema `3.1.1`; Markdown files are generated compatibility views.
+for Runtime Schema `3.2.0`; Markdown files are generated compatibility views.
 
 The generated Markdown compatibility views are:
 
@@ -139,7 +139,7 @@ target contract, not files that this task creates under `project-runtime/`.
 
 `state.json` would be a future aggregate JSON object containing a
 machine-readable runtime state snapshot. It is not the current Runtime Schema
-`3.1.1` source of truth.
+`3.2.0` source of truth.
 
 Minimum future envelope:
 
@@ -271,7 +271,7 @@ views.CHECKPOINT_STATE     -> project-runtime/CHECKPOINT_STATE.md
 ## Validator expectations
 
 Current validators remain Markdown-view compatible while treating required
-Runtime Schema `3.1.1` JSON sidecars as canonical state.
+Runtime Schema `3.2.0` JSON sidecars as canonical state.
 
 Validators should apply checks in this order:
 
@@ -283,5 +283,5 @@ Validators should apply checks in this order:
 5. generated Markdown drift from canonical JSON.
 ```
 
-For Runtime Schema `3.1.1`, missing required `project-runtime/state/*.json`
+For Runtime Schema `3.2.0`, missing required `project-runtime/state/*.json`
 sidecars are missing canonical runtime state.

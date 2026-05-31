@@ -11,7 +11,7 @@ RUNTIME_SCHEMA_VERSION: 3.1.1
 ARTIFACT_PACKAGE_SCHEMA_VERSION: 1.1.0
 ```
 
-Runtime Schema `3.1.1` and Artifact Package Schema `1.1.0` are preserved.
+Runtime Schema `3.2.0` and Artifact Package Schema `1.1.0` are preserved.
 P5.4 changes the planner recommendation contract only; it does not redefine
 runtime sidecar envelopes, artifact package manifests, RESULT packages, or
 AUDIT_RESULT packages.

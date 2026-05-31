@@ -176,8 +176,8 @@ class StateInitCommandTests(unittest.TestCase):
             self.assertEqual(len(sidecars), 9)
             for path in sidecars:
                 payload = json.loads(path.read_text(encoding="utf-8"))
-                self.assertEqual(payload["schema_version"], "3.1.1")
-                self.assertEqual(payload["runtime_schema_version"], "3.1.1")
+                self.assertEqual(payload["schema_version"], "3.2.0")
+                self.assertEqual(payload["runtime_schema_version"], "3.2.0")
                 self.assertRegex(payload["updated_at"], RFC3339_UTC_PATTERN)
 
     def test_deterministic_timestamps_flag_uses_regression_timestamp(self) -> None:
