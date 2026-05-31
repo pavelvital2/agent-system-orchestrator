@@ -74,6 +74,18 @@ Runtime artifacts include:
 - generated status, lint, archive, and smoke reports
 ```
 
+Runtime artifacts are checkpoint evidence, but they are not package repository
+source files by default. The ASO-managed checkpoint evidence policy keeps
+root-level `project-runtime/`, `project-input/`, and `project-archive/`
+ignored in Git; commits accepted package changes and compact stable summaries;
+archives checkpoint receipts, worker/audit results, lifecycle events, artifact
+manifests, and generated reports as runtime-only evidence with sha256/size
+references; and excludes owner input, local environments, caches, build output,
+and secret-like files. If an owner-approved task explicitly requires committing
+an ignored-root checkpoint file, the exception must use the force-add manifest
+and hash policy in `POST_AUDIT_GIT_CHECKPOINT.md`; manual `git add -f` file
+selection is forbidden.
+
 Profile agents do not own `project-runtime/` writes unless a bounded task
 explicitly grants a narrow universal-governance correction scope. Normal
 runtime state updates remain orchestrator-owned.

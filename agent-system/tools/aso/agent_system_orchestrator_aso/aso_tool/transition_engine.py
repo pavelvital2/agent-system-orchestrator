@@ -1503,17 +1503,23 @@ def _resolved_audit_failure_partition(
             continue
         resolution = ""
         resolved_by = ""
+        resolved_order = -1
         for pass_item in pass_items:
-            resolution = _pass_resolves_audit_failure(
+            candidate_resolution = _pass_resolves_audit_failure(
                 pass_item,
                 item,
                 ref_order=ref_order,
                 resolution_context=resolution_context,
                 failed_task=task,
             )
-            if resolution:
-                resolved_by = _text(pass_item.get("ref"))
-                break
+            if not candidate_resolution:
+                continue
+            candidate_ref = _text(pass_item.get("ref"))
+            candidate_order = ref_order.get(candidate_ref, -1)
+            if candidate_order >= resolved_order:
+                resolution = candidate_resolution
+                resolved_by = candidate_ref
+                resolved_order = candidate_order
         if resolution:
             resolved_failures.append(
                 {
@@ -1582,7 +1588,7 @@ def _audit_pass_evidence_from_refs(
     )
     present = bool(passed_refs) and not invalid_refs and not unparsed_refs
     effective_pass_refs = list(passed_refs)
-    if resolution_context is not None and resolved_failures and not effective_pass_refs:
+    if resolution_context is not None and resolved_failures:
         for item in resolved_failures:
             resolved_by = _text(item.get("resolved_by_audit_ref"))
             if resolved_by:

@@ -638,6 +638,16 @@ packets, profile results, audit results, local scratch notes, command logs,
 Codex artifacts, or `project-runtime`/`project-archive` material as accepted
 package docs.
 
+Checkpoint evidence follows the ASO-managed policy in
+[POST_AUDIT_GIT_CHECKPOINT.md](02_runtime/POST_AUDIT_GIT_CHECKPOINT.md):
+accepted package/source files and compact stable summaries are the normal
+commit surface; runtime receipts, worker/audit results, lifecycle logs,
+artifact manifests, and generated reports remain ignored archive evidence with
+path/hash references. If an owner-approved task explicitly requires committing
+an ignored-root checkpoint file, the orchestrator must use the documented
+force-add manifest and pathspec receipt with sha256/size fields. Manual
+`git add -f` selection is forbidden.
+
 Accepted stable summaries may be added under package-controlled paths such as:
 
 ```text

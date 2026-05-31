@@ -31,22 +31,30 @@ from test_audit_correction_routing import (  # noqa: E402
 )
 
 
-def set_original_task_checkpoint_attempt(root: Path, audit_refs: list[str]) -> None:
+OLD_PASS_AUDIT_REF = f"project-runtime/results/audit/AUDIT_RESULT_{TASK_ID}_ATTEMPT_099.md"
+NEW_PASS_AUDIT_REF = f"project-runtime/results/audit/AUDIT_RESULT_{TASK_ID}_ATTEMPT_104.md"
+
+
+def set_original_task_checkpoint_attempt(
+    root: Path,
+    audit_refs: list[str],
+    *,
+    effective_audit_ref: str = PASS_003_AUDIT_REF,
+    resolved_by: list[str] | None = None,
+) -> None:
     configure_checkpoint_attempt(root, audit_refs)
     set_task(
         root,
         status="audit_passed",
         raw_status="failed",
-        resolved_by=[PASS_003_AUDIT_REF],
+        resolved_by=resolved_by or [effective_audit_ref],
         resolution_status="resolved",
         effective_status="audit_passed",
-        effective_audit_ref=PASS_003_AUDIT_REF,
+        effective_audit_ref=effective_audit_ref,
     )
 
 
-def write_valid_cross_task_resolution(root: Path) -> None:
-    write_audit_ref(root, FAIL_001_AUDIT_REF, audit_fail_result("SCOPE_A", "fail_original"))
-    write_audit_ref(root, PASS_003_AUDIT_REF, audit_pass_result([FAIL_001_AUDIT_REF]))
+def append_checkpoint_correction_task(root: Path, *, task_id: str, audit_ref: str) -> None:
     payload = load_sidecar(root, "TASK_REGISTRY.json")
     tasks = content(payload)["tasks"]
     if not isinstance(tasks, list) or not tasks or not isinstance(tasks[0], dict):
@@ -64,22 +72,32 @@ def write_valid_cross_task_resolution(root: Path) -> None:
         correction_task.pop(field, None)
     correction_task.update(
         {
-            "task_id": "TASK_CORRECTION_CHECKPOINT_001",
+            "task_id": task_id,
             "task_title": "Checkpoint correction",
             "task_kind": "correction",
             "status": "audit_passed",
-            "task_packet": "project-runtime/tasks/active/TASK_CORRECTION_CHECKPOINT_001.md",
-            "audit_refs": [PASS_003_AUDIT_REF],
+            "task_packet": f"project-runtime/tasks/active/{task_id}.md",
+            "audit_refs": [audit_ref],
             "result_refs": [],
             "correction_of": [TASK_ID, FAIL_001_AUDIT_REF],
             "correction_links": [TASK_ID, FAIL_001_AUDIT_REF],
             "resolution_status": "not_required",
             "effective_status": "audit_passed",
-            "effective_audit_ref": PASS_003_AUDIT_REF,
+            "effective_audit_ref": audit_ref,
         }
     )
     tasks.append(correction_task)
     write_sidecar(root, "TASK_REGISTRY.json", payload)
+
+
+def write_valid_cross_task_resolution(root: Path) -> None:
+    write_audit_ref(root, FAIL_001_AUDIT_REF, audit_fail_result("SCOPE_A", "fail_original"))
+    write_audit_ref(root, PASS_003_AUDIT_REF, audit_pass_result([FAIL_001_AUDIT_REF]))
+    append_checkpoint_correction_task(
+        root,
+        task_id="TASK_CORRECTION_CHECKPOINT_001",
+        audit_ref=PASS_003_AUDIT_REF,
+    )
 
 
 def append_unlinked_correction_pass(root: Path) -> None:
@@ -142,6 +160,69 @@ class CheckpointEvidenceSelectionTests(unittest.TestCase):
             self.assertEqual(evidence["unresolved_audit_failures"], [])
             self.assertEqual(evidence["resolved_audit_failures"][0]["ref"], FAIL_001_AUDIT_REF)
             self.assertEqual(evidence["resolved_audit_failures"][0]["resolved_by_audit_ref"], PASS_003_AUDIT_REF)
+
+    def test_checkpoint_prefers_resolution_pass_over_stale_direct_pass(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = copy_valid_workspace(tmp)
+            write_valid_cross_task_resolution(root)
+            write_audit_ref(root, OLD_PASS_AUDIT_REF, audit_pass_result([]))
+            set_original_task_checkpoint_attempt(root, [OLD_PASS_AUDIT_REF, FAIL_001_AUDIT_REF])
+            checkpoint_json = Path(tmp) / "checkpoint-latest-effective-pass.json"
+
+            result = run_aso(
+                root,
+                "checkpoint-preflight",
+                "--mode",
+                "workspace",
+                "--strict",
+                "--json-out",
+                str(checkpoint_json),
+            )
+
+            self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+            report = json.loads(checkpoint_json.read_text(encoding="utf-8"))
+            evidence = report["evidence"]["audit_pass_evidence"]
+            self.assertTrue(evidence["present"])
+            self.assertEqual(evidence["passed_audit_refs"][-1], PASS_003_AUDIT_REF)
+            self.assertEqual(evidence["effective_audit_ref"], PASS_003_AUDIT_REF)
+            self.assertEqual(evidence["resolved_audit_failures"][0]["ref"], FAIL_001_AUDIT_REF)
+
+    def test_checkpoint_prefers_newer_effective_correction_pass_in_chain(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = copy_valid_workspace(tmp)
+            write_valid_cross_task_resolution(root)
+            write_audit_ref(root, NEW_PASS_AUDIT_REF, audit_pass_result([FAIL_001_AUDIT_REF]))
+            append_checkpoint_correction_task(
+                root,
+                task_id="TASK_CORRECTION_CHECKPOINT_002",
+                audit_ref=NEW_PASS_AUDIT_REF,
+            )
+            set_original_task_checkpoint_attempt(
+                root,
+                [FAIL_001_AUDIT_REF],
+                effective_audit_ref=NEW_PASS_AUDIT_REF,
+                resolved_by=[PASS_003_AUDIT_REF, NEW_PASS_AUDIT_REF],
+            )
+            checkpoint_json = Path(tmp) / "checkpoint-newer-effective-pass.json"
+
+            result = run_aso(
+                root,
+                "checkpoint-preflight",
+                "--mode",
+                "workspace",
+                "--strict",
+                "--json-out",
+                str(checkpoint_json),
+            )
+
+            self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+            report = json.loads(checkpoint_json.read_text(encoding="utf-8"))
+            evidence = report["evidence"]["audit_pass_evidence"]
+            self.assertTrue(evidence["present"])
+            self.assertEqual(evidence["passed_audit_refs"][-1], NEW_PASS_AUDIT_REF)
+            self.assertEqual(evidence["effective_audit_ref"], NEW_PASS_AUDIT_REF)
+            self.assertEqual(evidence["resolved_audit_failures"][0]["resolved_by_audit_ref"], NEW_PASS_AUDIT_REF)
+            self.assertEqual(report["evidence"]["state_verify"]["summary"]["errors"], 0)
 
     def test_stale_failed_audit_is_not_suppressed_without_valid_resolution_link(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:

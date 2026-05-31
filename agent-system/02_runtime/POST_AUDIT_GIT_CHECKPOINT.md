@@ -150,6 +150,84 @@ non-dispatchable.
 When the accepted task creates new files, those untracked paths must be included
 in file-scope and secret checks before staging.
 
+## ASO-managed evidence Git policy
+
+Stage 1 does not add `aso checkpoint commit`. Without explicit owner
+acceptance for that command, checkpoint finalization uses this policy:
+
+- commit accepted package/source changes only from task-allowed package paths;
+- commit compact stable release or validation summaries under
+  `agent-system/11_release/` only when the task packet owns that evidence;
+- keep root-level `project-input/`, `project-runtime/`, and
+  `project-archive/` ignored and untracked in the package repository;
+- archive runtime receipts and artifacts locally with hashes instead of
+  requiring manual `git add -f`;
+- exclude owner input, local environments, caches, build output, logs that may
+  contain secrets, and secret-like files from staging, stdout, and archives.
+
+Runtime evidence under `project-runtime/` remains valid checkpoint evidence for
+preflight and audit routing, but it is not automatically package commit
+content. A clean package checkpoint is therefore a commit of accepted
+package-owned files plus any stable release summary, with runtime evidence
+referenced by path and hash in the RESULT, audit RESULT, checkpoint receipt, or
+release summary.
+
+### Runtime evidence disposition
+
+| Evidence class | Default disposition | Examples |
+|---|---|---|
+| Accepted package/source changes | committed when task-allowed and audited | `README.md`, `agent-system/**`, `.gitignore` |
+| Stable release/validation summary | committed when task-owned | `agent-system/11_release/**` |
+| Checkpoint receipts and preflight output | archived runtime-only | `project-runtime/checkpoints/**`, `project-runtime/receipts/checkpoints/**` |
+| Worker, audit, lifecycle, artifact, and report evidence | archived runtime-only | `project-runtime/results/**`, `project-runtime/agents/**`, `project-runtime/artifacts/**`, `project-runtime/reports/**` |
+| Owner input, local environments, caches, build output, and secret-like files | excluded | `project-input/**`, `.venv/**`, `.tox/**`, `dist/**`, `build/**`, `.env*`, `*.pem`, `*.key`, cookies |
+
+### Ignored-root force-add exception
+
+Manual `git add -f` selection is forbidden. If an owner-approved task packet
+explicitly requires committing a governed checkpoint file from an ignored root,
+the orchestrator must create an exact force-add manifest before staging
+anything.
+
+Required force-add manifest path:
+
+```text
+project-runtime/checkpoints/FORCE_ADD_MANIFEST_<TASK_ID>_<ATTEMPT_NO>.json
+```
+
+Required pathspec path:
+
+```text
+project-runtime/checkpoints/FORCE_ADD_PATHSPEC_<TASK_ID>_<ATTEMPT_NO>.nul
+```
+
+The manifest must contain:
+
+```text
+POLICY_ID: aso_managed_checkpoint_evidence_policy_v1
+TASK_ID
+AUDIT_REF
+CHECKPOINT_PREFLIGHT_REF
+OWNER_APPROVAL_REF
+COMMAND_ARGV
+FORCE_ADD_PATHS
+SHA256_BY_PATH
+SIZE_BY_PATH
+```
+
+The only permitted force-add command shape is:
+
+```text
+git add -f --pathspec-from-file=<FORCE_ADD_PATHSPEC> --pathspec-file-nul
+```
+
+`FORCE_ADD_PATHS` must be generated from accepted checkpoint state, not from a
+human-selected shell list. Each listed path must be workspace-relative, inside
+the approved ignored-root evidence set, audited, secret-scanned, and covered by
+the manifest hash and size fields. A checkpoint that lacks this manifest, uses
+a different force-add command shape, or includes a path not listed in the
+manifest is invalid and must route to correction.
+
 ## Allowed checkpoint commands
 
 The orchestrator may run only bounded Git commands needed for checkpointing,

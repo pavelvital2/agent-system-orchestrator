@@ -540,8 +540,11 @@ general package/runtime mutation, commit, or push authority.
 generated or owner-input roots. Working upgrade packages, runtime results,
 audit files, scratch notes, command logs, and local Codex artifacts from those
 roots must not be published as package documentation. After an accepted upgrade
-flow completes and the orchestrator-owned checkpoint is complete, remove local
-upgrade packages and verify:
+flow completes and the orchestrator-owned checkpoint is complete, root runtime
+evidence remains ignored/archive material unless an owner-approved task packet
+explicitly requires the force-add manifest policy from
+`agent-system/02_runtime/POST_AUDIT_GIT_CHECKPOINT.md`. Manual `git add -f`
+selection is not checkpoint policy. Remove local upgrade packages and verify:
 
 ```text
 git status --short project-input project-runtime project-archive .venv
