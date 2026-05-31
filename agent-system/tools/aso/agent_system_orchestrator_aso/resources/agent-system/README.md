@@ -198,7 +198,7 @@ The Runtime Schema `3.2.0` contract is documented in
 `agent-system/02_runtime/RUNTIME_STATE_P2_CONTRACT.md` and packaged as
 `agent-system/09_validators/schemas/runtime_state_3_1_0.contract.json`.
 The historical `3_1_0` filename remains the active base envelope contract for
-Runtime Schema `3.2.0`; no duplicate `3_1_1` contract file is authoritative.
+Runtime Schema `3.2.0`; no duplicate `3_2_0` contract file is authoritative.
 The P5-family authority chain and override map are documented in
 `agent-system/02_runtime/CONTRACT_AUTHORITY_MAP.md`. The contract defines the
 sidecar envelope, required and optional sidecars, allowed

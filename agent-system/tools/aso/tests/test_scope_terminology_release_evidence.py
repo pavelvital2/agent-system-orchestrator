@@ -8,6 +8,21 @@ from pathlib import Path
 REPO_ROOT = Path(__file__).resolve().parents[4]
 RUNTIME_SCHEMA_DIR = REPO_ROOT / "agent-system" / "09_validators" / "schemas"
 AUTHORITY_MAP = REPO_ROOT / "agent-system" / "02_runtime" / "CONTRACT_AUTHORITY_MAP.md"
+README_CONTRACT_SURFACES = {
+    "README.md": REPO_ROOT / "README.md",
+    "agent-system/README.md": REPO_ROOT / "agent-system" / "README.md",
+    "packaged resource agent-system/README.md": (
+        REPO_ROOT
+        / "agent-system"
+        / "tools"
+        / "aso"
+        / "agent_system_orchestrator_aso"
+        / "resources"
+        / "agent-system"
+        / "README.md"
+    ),
+}
+STALE_DUPLICATE_CONTRACT_MARKER = "no duplicate `3_1_" + "1` contract file is authoritative"
 P57_REMOTE_CI = (
     REPO_ROOT
     / "agent-system"
@@ -21,9 +36,30 @@ P58_REMOTE_CI = (
     / "ASO_P58_REAL_E2E_LIFECYCLE_HARDENING_V3_7_9_REMOTE_CI_EVIDENCE.md"
 )
 RELEASE_DOCS_DIR = REPO_ROOT / "agent-system" / "11_release"
+S1_180_RELEASE_EVIDENCE_FILES = {
+    "ASO_STAGE1_DEFECT_REMEDIATION_V3_8_0_RELEASE_NOTES.md": RELEASE_DOCS_DIR
+    / "ASO_STAGE1_DEFECT_REMEDIATION_V3_8_0_RELEASE_NOTES.md",
+    "VALIDATION_REPORT.md": RELEASE_DOCS_DIR / "VALIDATION_REPORT.md",
+    "REGRESSION_SUMMARY.md": RELEASE_DOCS_DIR / "REGRESSION_SUMMARY.md",
+    "REMOTE_CI_EVIDENCE.md": RELEASE_DOCS_DIR / "REMOTE_CI_EVIDENCE.md",
+    "STAGE2_READINESS_HANDOFF.md": RELEASE_DOCS_DIR / "STAGE2_READINESS_HANDOFF.md",
+}
+CURRENT_DUPLICATE_CONTRACT_WORDING = "no duplicate `3_2_0` contract file is authoritative"
+STALE_DUPLICATE_CONTRACT_WORDINGS = (
+    "duplicate `3_1_1` contract file is authoritative",
+    "duplicate contract filename as `3_1_1`",
+    "`3_1_1` duplicate-contract wording",
+    "`3_1_1` duplicate contract wording",
+)
 
 
 class ScopeTerminologyReleaseEvidenceTests(unittest.TestCase):
+    def assertNoStaleDuplicateContractWording(self, label: str, text: str) -> None:
+        normalized = re.sub(r"\s+", " ", text)
+        for wording in STALE_DUPLICATE_CONTRACT_WORDINGS:
+            with self.subTest(file=label, stale_wording=wording):
+                self.assertNotIn(wording, normalized)
+
     def test_e2e_scope_wording_is_filesystem_governance_not_product_generation(self) -> None:
         root_readme = (REPO_ROOT / "README.md").read_text(encoding="utf-8")
         install_readme = (REPO_ROOT / "README_INSTALL.md").read_text(encoding="utf-8")
@@ -52,7 +88,35 @@ class ScopeTerminologyReleaseEvidenceTests(unittest.TestCase):
         self.assertFalse((RUNTIME_SCHEMA_DIR / "runtime_state_3_2_0.contract.json").exists())
         self.assertIn("Runtime Schema `3.2.0` continues to use the packaged contract file", authority_map)
         self.assertIn("agent-system/09_validators/schemas/runtime_state_3_1_0.contract.json", authority_map)
-        self.assertIn("no duplicate `3_2_0` contract file is authoritative", (REPO_ROOT / "README.md").read_text(encoding="utf-8"))
+
+        for label, path in README_CONTRACT_SURFACES.items():
+            text = path.read_text(encoding="utf-8")
+            with self.subTest(file=label):
+                self.assertIn("Runtime Schema `3.2.0`", text)
+                self.assertIn("runtime_state_3_1_0.contract.json", text)
+                self.assertIn(CURRENT_DUPLICATE_CONTRACT_WORDING, text)
+                self.assertNotIn(STALE_DUPLICATE_CONTRACT_MARKER, text)
+                self.assertNoStaleDuplicateContractWording(label, text)
+
+    def test_s1_180_release_evidence_uses_current_duplicate_contract_wording(self) -> None:
+        self.assertEqual(len(S1_180_RELEASE_EVIDENCE_FILES), 5)
+
+        for label, path in S1_180_RELEASE_EVIDENCE_FILES.items():
+            with self.subTest(file=label):
+                self.assertTrue(path.is_file())
+                text = path.read_text(encoding="utf-8")
+                self.assertNoStaleDuplicateContractWording(label, text)
+
+        for label in (
+            "ASO_STAGE1_DEFECT_REMEDIATION_V3_8_0_RELEASE_NOTES.md",
+            "VALIDATION_REPORT.md",
+            "REGRESSION_SUMMARY.md",
+        ):
+            text = S1_180_RELEASE_EVIDENCE_FILES[label].read_text(encoding="utf-8")
+            normalized = re.sub(r"\s+", " ", text)
+            with self.subTest(current_wording=label):
+                self.assertIn("Runtime Schema `3.2.0`", normalized)
+                self.assertIn(CURRENT_DUPLICATE_CONTRACT_WORDING, normalized)
 
     def test_remote_ci_files_are_selectors_not_committed_final_run_evidence(self) -> None:
         root_readme = (REPO_ROOT / "README.md").read_text(encoding="utf-8")
@@ -122,6 +186,7 @@ class ScopeTerminologyReleaseEvidenceTests(unittest.TestCase):
 
         for path in release_docs:
             text = path.read_text(encoding="utf-8")
+            self.assertNoStaleDuplicateContractWording(path.name, text)
             for label, pattern in contradiction_patterns.items():
                 with self.subTest(file=path.name, contradiction=label):
                     self.assertNotRegex(text, pattern)
