@@ -12,6 +12,7 @@ from typing import Any, NamedTuple
 
 from .. import runtime_schema_contracts
 from ..timestamps import DETERMINISTIC_TIMESTAMP, utc_timestamp
+from . import state_render
 
 
 EXIT_OK = 0
@@ -332,6 +333,14 @@ def _build_plan(root: Path, sidecars: dict[str, dict[str, Any]], dry_run: bool, 
             "state_revision": payload["state_revision"],
         }
         for filename, payload in sorted(sidecars.items())
+    )
+    writes.extend(
+        {
+            "path": str(root / relpath),
+            "sidecar_type": relpath.removeprefix("project-runtime/").removesuffix(".md"),
+            "state_revision": "derived",
+        }
+        for relpath in state_render.materialized_view_relpaths()
     )
     return {
         "command": "state init",
@@ -672,9 +681,21 @@ def run(args: argparse.Namespace) -> int:
     wrote, write_detail = _write_sidecars(state_root, sidecars)
     if not wrote:
         return _fail(f"failed to write sidecars: {write_detail}", EXIT_WRITE_ERROR)
+    render_report, render_exit = state_render.materialize_compatibility_views(root)
+    if render_exit != state_render.EXIT_OK:
+        return _fail(
+            f"failed to materialize compatibility views: {render_report.get('findings', [])}",
+            EXIT_WRITE_ERROR,
+        )
     plan["dry_run"] = False
     plan["status"] = "written"
-    plan["write_result"] = f"{tz_detail}; {write_detail}"
+    plan["write_result"] = f"{tz_detail}; {write_detail}; materialized compatibility views"
+    plan["materialization"] = {
+        "legacy_views_written": render_report.get("summary", {}).get("legacy_views_written", 0),
+        "sidecar_views_written": render_report.get("summary", {}).get("sidecar_views_written", 0),
+        "views_changed": render_report.get("summary", {}).get("views_changed", 0),
+        "views_written": render_report.get("summary", {}).get("views_written", 0),
+    }
     if args.json_out and not _write_json(args.json_out, plan):
         return EXIT_WRITE_ERROR
     print(_json_bytes(plan), end="")

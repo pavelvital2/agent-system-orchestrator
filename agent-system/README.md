@@ -345,8 +345,10 @@ schema version is `3.2.0`.
 ```text
 python3 agent-system/tools/aso/aso.py validate-rules --root . --strict
 python3 agent-system/tools/aso/aso.py state --help
-python3 agent-system/tools/aso/aso.py state init --root /tmp/aso-state-demo --project-name "State Demo" --project-slug state-demo --profile generic --repo-url none --branch main --dry-run --json-out /tmp/aso-state-init-plan.json
-python3 agent-system/tools/aso/aso.py state init --root /tmp/aso-state-demo --project-name "State Demo" --project-slug state-demo --profile generic --repo-url none --branch main --confirm-write --json-out /tmp/aso-state-init-receipt.json
+mkdir -p /tmp/aso-state-demo/project-input
+cp /path/to/TZ_REAL.md /tmp/aso-state-demo/project-input/TZ_REAL.md
+python3 agent-system/tools/aso/aso.py state init --root /tmp/aso-state-demo --project-name "State Demo" --project-slug state-demo --profile generic --repo-url none --branch main --tz project-input/TZ_REAL.md --dry-run --json-out /tmp/aso-state-init-plan.json
+python3 agent-system/tools/aso/aso.py state init --root /tmp/aso-state-demo --project-name "State Demo" --project-slug state-demo --profile generic --repo-url none --branch main --tz project-input/TZ_REAL.md --confirm-write --json-out /tmp/aso-state-init-receipt.json
 python3 agent-system/tools/aso/aso.py state render --root /tmp/aso-state-demo --confirm-write
 python3 agent-system/tools/aso/aso.py state verify --root /tmp/aso-state-demo --strict --json-out /tmp/aso-state-verify.json
 python3 agent-system/tools/aso/aso.py state render --root /tmp/aso-state-demo --format markdown --out /tmp/aso-state-render.md
@@ -359,9 +361,15 @@ python3 agent-system/tools/aso/aso.py checkpoint-preflight --root . --mode packa
 
 `aso validate-rules` checks the packaged governance rule registry. `aso state
 init --dry-run` writes no files; confirmed initialization requires
-`--confirm-write` and writes only local ignored workspace state under
-`project-runtime/state`, derived `project-runtime/*.md` compatibility views,
-and the canonical `project-input` TZ path. Confirmed runtime writes use current UTC timestamps by default;
+`--tz` with a real workspace-local TZ document plus `--confirm-write`, and
+writes only local ignored workspace state under `project-runtime/state`,
+derived `project-runtime/*.md` compatibility views, and the canonical
+`project-input` TZ path. Confirmed `state init`, `intake bootstrap`, and
+`state render` materialize canonical sidecar views plus legacy operator views
+such as `GAP_REGISTER.md`, `AGENT_RESULTS_LOG.md`,
+`ORCHESTRATOR_EVENTS_LOG.md`, and `STATUS_SUMMARY.md`; those legacy views are
+not canonical state sidecars. Confirmed runtime writes use current UTC
+timestamps by default;
 `--deterministic-timestamps` on `state init` and `intake bootstrap` is reserved
 for tests, golden fixtures, and reproducible documentation captures. `aso state
 migrate --dry-run` emits a deterministic migration plan for compatible legacy
@@ -372,7 +380,7 @@ under allowed runtime report paths. Without
 output to `/tmp`, `project-runtime/reports`, or `project-runtime/rendered`.
 With `--confirm-write`, it refreshes the derived `NEXT_ACTION.json` cache when
 structurally valid and writes generated Markdown compatibility views for every
-canonical JSON sidecar. `aso state verify`
+canonical JSON sidecar plus the legacy operator compatibility views. `aso state verify`
 validates Runtime Schema `3.2.0` envelopes, sidecar types, required fields,
 schema alignment, task references, and compatibility diagnostics, then emits
 optional JSON evidence. `aso plan-next` recommends the next orchestrator action

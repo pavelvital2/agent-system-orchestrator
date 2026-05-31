@@ -150,5 +150,8 @@ PYTHONDONTWRITEBYTECODE=1 "$aso_bin" plan-next \
   --strict \
   --json-out "$work_dir/plan-next.json" \
   >/dev/null
+for view_name in PROJECT_STATE TASK_REGISTRY NEXT_ACTION CURRENT_GATE WORKSPACE_IDENTITY REPOSITORY_LOCK ACCEPTED_ARTIFACTS CHECKPOINT_STATE SCHEMA_MANIFEST GAP_REGISTER AGENT_RESULTS_LOG ORCHESTRATOR_EVENTS_LOG STATUS_SUMMARY; do
+  test -f "$workspace/project-runtime/$view_name.md"
+done
 
 echo "ASO installed CLI smoke: passed"

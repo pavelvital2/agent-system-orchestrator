@@ -2,11 +2,12 @@ from __future__ import annotations
 
 import shutil
 import subprocess
+import sys
 from pathlib import Path
 
 
 FORBIDDEN_ROOTS = ("project-input/", "project-runtime/", "project-archive/", ".venv/")
-ALLOWED_UNTRACKED_PATHS = ("MANIFEST.in",)
+ALLOWED_UNTRACKED_PATHS = ("MANIFEST.in", "agent-system/scripts/installed_cli_smoke.sh")
 ALLOWED_UNTRACKED_PREFIXES = (
     "agent-system/tools/aso/agent_system_orchestrator_aso/aso_tool/",
     "agent-system/tools/aso/agent_system_orchestrator_aso/resources/",
@@ -59,8 +60,23 @@ def create_current_source_snapshot(repo_root: Path, destination: Path) -> Path:
             _copy_file(repo_root, destination, relpath)
 
     subprocess.run(["git", "init", "-q"], cwd=destination, check=True)
+    subprocess.run(["git", "config", "gc.auto", "0"], cwd=destination, check=True)
+    subprocess.run(["git", "config", "maintenance.auto", "false"], cwd=destination, check=True)
     subprocess.run(["git", "config", "user.email", "aso-test@example.invalid"], cwd=destination, check=True)
     subprocess.run(["git", "config", "user.name", "ASO Test"], cwd=destination, check=True)
     subprocess.run(["git", "add", "."], cwd=destination, check=True)
     subprocess.run(["git", "commit", "-m", "current source snapshot"], cwd=destination, check=True, stdout=subprocess.DEVNULL)
     return destination
+
+
+def main(argv: list[str] | None = None) -> int:
+    args = list(sys.argv[1:] if argv is None else argv)
+    if len(args) != 2:
+        print("usage: current_source_snapshot.py REPO_ROOT DESTINATION", file=sys.stderr)
+        return 2
+    create_current_source_snapshot(Path(args[0]).resolve(), Path(args[1]).resolve())
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

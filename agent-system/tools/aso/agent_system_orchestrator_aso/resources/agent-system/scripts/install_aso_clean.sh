@@ -153,6 +153,14 @@ status_before="$(mktemp "${TMPDIR:-/tmp}/aso-clean-install-before.XXXXXX")"
 status_after="$(mktemp "${TMPDIR:-/tmp}/aso-clean-install-after.XXXXXX")"
 cleanup_paths=("$status_before" "$status_after")
 
+dirty_status="$(git -C "$source_root" status --short)"
+if [ -n "$dirty_status" ]; then
+  echo "install_aso_clean.sh: source worktree is dirty; refusing to archive HEAD" >&2
+  echo "install_aso_clean.sh: commit or snapshot the intended source before clean install verification" >&2
+  echo "$dirty_status" >&2
+  exit 1
+fi
+
 if [ -z "$source_copy" ]; then
   source_copy="$(mktemp -d "${TMPDIR:-/tmp}/aso-clean-install-src.XXXXXX")"
   cleanup_paths+=("$source_copy")
@@ -214,6 +222,21 @@ if [ "$verify_install" -eq 1 ]; then
 
   PYTHONDONTWRITEBYTECODE=1 "$venv_aso" --help >/dev/null
   PYTHONDONTWRITEBYTECODE=1 "$venv_aso" status --root "$source_root" --mode package >/dev/null
+  project_smoke_dir="$(mktemp -d "${TMPDIR:-/tmp}/aso-clean-install-project-smoke.XXXXXX")"
+  cleanup_paths+=("$project_smoke_dir")
+  PYTHONDONTWRITEBYTECODE=1 "$venv_aso" project create --local --target "$project_smoke_dir/project" --name "ASO Install Smoke" --slug "aso-install-smoke" >/dev/null
+  PYTHONDONTWRITEBYTECODE=1 "$venv_aso" project verify-clean --root "$project_smoke_dir/project" --strict >/dev/null
+  runtime_smoke="$project_smoke_dir/runtime-workspace"
+  mkdir -p "$runtime_smoke/project-input"
+  cat >"$runtime_smoke/project-input/TZ_REAL.md" <<'EOF'
+# TZ
+
+Build a clean-install Stage 1 command smoke workspace.
+EOF
+  PYTHONDONTWRITEBYTECODE=1 "$venv_aso" state init --root "$runtime_smoke" --tz project-input/TZ_REAL.md --confirm-write >/dev/null
+  PYTHONDONTWRITEBYTECODE=1 "$venv_aso" intake bootstrap --root "$runtime_smoke" --tz project-input/TZ_REAL.md --target-role requirements_analyst --confirm-write >/dev/null
+  PYTHONDONTWRITEBYTECODE=1 "$venv_aso" state verify --root "$runtime_smoke" --strict >/dev/null
+  PYTHONDONTWRITEBYTECODE=1 "$venv_aso" plan-next --root "$runtime_smoke" --strict >/dev/null
 fi
 
 git -C "$source_root" status --short --branch >"$status_after"

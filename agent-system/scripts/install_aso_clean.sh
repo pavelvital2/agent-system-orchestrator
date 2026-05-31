@@ -226,6 +226,17 @@ if [ "$verify_install" -eq 1 ]; then
   cleanup_paths+=("$project_smoke_dir")
   PYTHONDONTWRITEBYTECODE=1 "$venv_aso" project create --local --target "$project_smoke_dir/project" --name "ASO Install Smoke" --slug "aso-install-smoke" >/dev/null
   PYTHONDONTWRITEBYTECODE=1 "$venv_aso" project verify-clean --root "$project_smoke_dir/project" --strict >/dev/null
+  runtime_smoke="$project_smoke_dir/runtime-workspace"
+  mkdir -p "$runtime_smoke/project-input"
+  cat >"$runtime_smoke/project-input/TZ_REAL.md" <<'EOF'
+# TZ
+
+Build a clean-install Stage 1 command smoke workspace.
+EOF
+  PYTHONDONTWRITEBYTECODE=1 "$venv_aso" state init --root "$runtime_smoke" --tz project-input/TZ_REAL.md --confirm-write >/dev/null
+  PYTHONDONTWRITEBYTECODE=1 "$venv_aso" intake bootstrap --root "$runtime_smoke" --tz project-input/TZ_REAL.md --target-role requirements_analyst --confirm-write >/dev/null
+  PYTHONDONTWRITEBYTECODE=1 "$venv_aso" state verify --root "$runtime_smoke" --strict >/dev/null
+  PYTHONDONTWRITEBYTECODE=1 "$venv_aso" plan-next --root "$runtime_smoke" --strict >/dev/null
 fi
 
 git -C "$source_root" status --short --branch >"$status_after"

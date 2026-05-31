@@ -275,7 +275,12 @@ aso state migrate --root agent-system/tests/fixtures/state/valid_workspace --to 
 real workspace-local TZ document passed with `--tz` and `--confirm-write`, and
 writes only local ignored workspace files under `project-runtime/state/`,
 derived `project-runtime/*.md` compatibility views, and the canonical
-`project-input` TZ path. Confirmed runtime writes use current UTC timestamps by default;
+`project-input` TZ path. Confirmed `state init`, `intake bootstrap`, and
+`state render` materialize canonical sidecar views plus legacy operator views
+such as `GAP_REGISTER.md`, `AGENT_RESULTS_LOG.md`,
+`ORCHESTRATOR_EVENTS_LOG.md`, and `STATUS_SUMMARY.md`; those legacy views are
+not canonical state sidecars. Confirmed runtime writes use current UTC
+timestamps by default;
 `--deterministic-timestamps` is reserved for tests and fixtures.
 `aso state migrate --dry-run` emits a deterministic plan for compatible legacy
 sidecars; confirmed migration requires
@@ -284,7 +289,8 @@ receipts under allowed `project-runtime/` report paths. Without
 `--confirm-write`, `aso state render` is read-only except for explicit report
 output to `/tmp`, `project-runtime/reports`, or `project-runtime/rendered`.
 With `--confirm-write`, it writes Markdown compatibility views from canonical
-`project-runtime/state/*.json` sidecars. In strict workspace mode, an active/open bootstrap
+`project-runtime/state/*.json` sidecars plus legacy operator compatibility
+views. In strict workspace mode, an active/open bootstrap
 state with mandatory inputs must not be treated as terminal STOP-ready; an
 IANA timezone string such as `Europe/Moscow` is not a valid `TZ_PATH` value
 when `project-input/TZ.md` or another project TZ file should be referenced.

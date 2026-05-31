@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import shutil
 import subprocess
+import sys
 from pathlib import Path
 
 
@@ -66,3 +67,16 @@ def create_current_source_snapshot(repo_root: Path, destination: Path) -> Path:
     subprocess.run(["git", "add", "."], cwd=destination, check=True)
     subprocess.run(["git", "commit", "-m", "current source snapshot"], cwd=destination, check=True, stdout=subprocess.DEVNULL)
     return destination
+
+
+def main(argv: list[str] | None = None) -> int:
+    args = list(sys.argv[1:] if argv is None else argv)
+    if len(args) != 2:
+        print("usage: current_source_snapshot.py REPO_ROOT DESTINATION", file=sys.stderr)
+        return 2
+    create_current_source_snapshot(Path(args[0]).resolve(), Path(args[1]).resolve())
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

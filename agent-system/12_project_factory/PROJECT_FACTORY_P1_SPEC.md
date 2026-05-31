@@ -78,6 +78,9 @@ Required local generated-project commands:
 aso project create --local --engine-mode vendored
 aso project create --local --engine-mode reference
 aso project verify-clean
+aso state init --root PATH --tz project-input/TZ_REAL.md --confirm-write
+aso intake bootstrap --root PATH --tz project-input/TZ_REAL.md --target-role requirements_analyst --confirm-write
+aso plan-next --root PATH --strict
 ```
 
 Required GitHub planning and publish commands:

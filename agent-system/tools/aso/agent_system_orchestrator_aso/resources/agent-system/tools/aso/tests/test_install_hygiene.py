@@ -3,13 +3,24 @@ from __future__ import annotations
 import re
 import shutil
 import subprocess
+import sys
 import tempfile
 import unittest
+import uuid
 from pathlib import Path
+
+TESTS_DIR = Path(__file__).resolve().parent
+if str(TESTS_DIR) not in sys.path:
+    sys.path.insert(0, str(TESTS_DIR))
+
+from current_source_snapshot import create_current_source_snapshot
 
 
 REPO_ROOT = Path(__file__).resolve().parents[4]
+INSTALL_SH = REPO_ROOT / "install.sh"
+INSTALL_PS1 = REPO_ROOT / "install.ps1"
 INSTALL_SCRIPT = REPO_ROOT / "agent-system" / "scripts" / "install_aso_clean.sh"
+INSTALLED_CLI_SMOKE_SCRIPT = REPO_ROOT / "agent-system" / "scripts" / "installed_cli_smoke.sh"
 SOURCE_HYGIENE_SCRIPT = REPO_ROOT / "agent-system" / "scripts" / "source_hygiene.sh"
 INSTALLED_RESOURCE_TEST = REPO_ROOT / "agent-system" / "tools" / "aso" / "tests" / "test_installed_resource_lookup.py"
 
@@ -84,12 +95,13 @@ exit 1
         *extra_args: str,
     ) -> subprocess.CompletedProcess[str]:
         fake_python = self._fake_python_for_venv_creation(temp_dir)
+        source_snapshot = create_current_source_snapshot(REPO_ROOT, temp_dir / f"source-snapshot-{uuid.uuid4().hex}")
         return subprocess.run(
             [
                 "bash",
                 str(INSTALL_SCRIPT),
                 "--source",
-                str(REPO_ROOT),
+                str(source_snapshot),
                 "--venv",
                 str(venv),
                 "--python",
@@ -119,6 +131,46 @@ exit 1
         self.assertIn("git -C \"$source_root\" status --short --branch >\"$status_before\"", script)
         self.assertIn("git -C \"$source_root\" status --short --branch >\"$status_after\"", script)
         self.assertIn("diff -u \"$status_before\" \"$status_after\"", script)
+        self.assertIn("source worktree is dirty; refusing to archive HEAD", script)
+
+    def test_clean_installer_rejects_dirty_source_before_archiving_head(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir_name:
+            temp_dir = Path(temp_dir_name)
+            source = temp_dir / "source"
+            source.mkdir()
+            (source / "agent-system" / "tools" / "aso").mkdir(parents=True)
+            (source / "pyproject.toml").write_text("[project]\nname = \"fixture\"\n", encoding="utf-8")
+            (source / "agent-system" / "tools" / "aso" / "aso.py").write_text("print('fixture')\n", encoding="utf-8")
+            subprocess.run(["git", "init", "-q"], cwd=source, check=True)
+            subprocess.run(["git", "config", "user.email", "aso-test@example.invalid"], cwd=source, check=True)
+            subprocess.run(["git", "config", "user.name", "ASO Test"], cwd=source, check=True)
+            subprocess.run(["git", "add", "."], cwd=source, check=True)
+            subprocess.run(["git", "commit", "-m", "fixture"], cwd=source, check=True, stdout=subprocess.DEVNULL)
+            (source / "pyproject.toml").write_text("[project]\nname = \"dirty-fixture\"\n", encoding="utf-8")
+
+            result = subprocess.run(
+                [
+                    "bash",
+                    str(INSTALL_SCRIPT),
+                    "--source",
+                    str(source),
+                    "--venv",
+                    str(temp_dir / "venv"),
+                    "--python",
+                    str(self._fake_python_for_venv_creation(temp_dir)),
+                    "--skip-verify",
+                ],
+                cwd=REPO_ROOT,
+                check=False,
+                text=True,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+            )
+
+            self.assertNotEqual(result.returncode, 0, result.stdout)
+            self.assertIn("source worktree is dirty; refusing to archive HEAD", result.stderr)
+            self.assertIn("pyproject.toml", result.stderr)
+            self.assertFalse((temp_dir / "venv").exists())
 
     def test_clean_installer_requires_explicit_existing_venv_semantics(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir_name:
@@ -153,6 +205,42 @@ exit 1
 
         self.assertIn("\"$venv_aso\" --help", script)
         self.assertIn("\"$venv_aso\" status --root \"$source_root\" --mode package", script)
+        self.assertIn("\"$venv_aso\" project create --local --target", script)
+        self.assertIn("\"$venv_aso\" project verify-clean --root", script)
+        self.assertIn("\"$venv_aso\" state init --root \"$runtime_smoke\"", script)
+        self.assertIn("\"$venv_aso\" intake bootstrap --root \"$runtime_smoke\"", script)
+        self.assertIn("\"$venv_aso\" state verify --root \"$runtime_smoke\" --strict", script)
+        self.assertIn("\"$venv_aso\" plan-next --root \"$runtime_smoke\" --strict", script)
+
+    def test_editable_installers_verify_stage1_command_surface(self) -> None:
+        shell_script = INSTALL_SH.read_text(encoding="utf-8")
+        ps_script = INSTALL_PS1.read_text(encoding="utf-8")
+
+        for script in (shell_script, ps_script):
+            self.assertIn("project create --local", script)
+            self.assertIn("project verify-clean", script)
+            self.assertIn("state init", script)
+            self.assertIn("intake bootstrap", script)
+            self.assertIn("state verify", script)
+            self.assertIn("plan-next", script)
+
+    def test_installed_cli_smoke_covers_package_factory_and_state_paths(self) -> None:
+        script = INSTALLED_CLI_SMOKE_SCRIPT.read_text(encoding="utf-8")
+
+        self.assertIn("status --root \"$package_root\" --mode package", script)
+        self.assertIn("doctor --root \"$package_root\" --mode package --strict", script)
+        self.assertIn("package-layout verify --root \"$package_root\" --mode package --strict", script)
+        self.assertIn("--engine-mode reference", script)
+        self.assertIn("--engine-mode vendored", script)
+        self.assertIn("state init", script)
+        self.assertIn("intake bootstrap", script)
+        self.assertIn("state verify", script)
+        self.assertIn("plan-next", script)
+        self.assertIn("agent-system/00_start/ORCHESTRATOR_START.md", script)
+        self.assertIn("agent-system/ORCHESTRATOR_RUNTIME_CONTRACT.json", script)
+        self.assertIn("agent-system/tools/aso/aso.py", script)
+        self.assertIn("site-packages", script)
+        self.assertIn("build dist", script)
 
     def test_installed_resource_lookup_does_not_install_from_live_checkout(self) -> None:
         test_source = INSTALLED_RESOURCE_TEST.read_text(encoding="utf-8")

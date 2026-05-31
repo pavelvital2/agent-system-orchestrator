@@ -86,6 +86,14 @@ Generated projects must not track local upgrade package paths, including:
 project-input/aso_upgrade_project_factory_p0/**
 ```
 
+Local creation must leave bootstrap runtime state uninitialized until the owner
+adds a real workspace-local TZ document. A clean generated project may contain
+empty ignored `project-input/`, `project-runtime/`, and `project-archive/`
+directories plus `project-input/README.md`, but it must not contain a fake
+`project-input/TZ.md`, `project-runtime/state/`, derived
+`project-runtime/*.md` views, hidden secrets, or copied Python package roots
+such as `site-packages/`.
+
 Generated projects must not include nested repository metadata copied from the
 engine checkout:
 

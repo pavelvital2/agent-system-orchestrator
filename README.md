@@ -237,12 +237,13 @@ python3 agent-system/tools/aso/aso.py artifact reject --root /path/to/project --
 python3 agent-system/tools/aso/aso.py lifecycle terminate-agent --root /path/to/project --from-result project-runtime/results/worker/RESULT_TASK_ID_ATTEMPT_001.md --confirm-write
 ```
 
-Run `state render --confirm-write` after manual state materialization changes;
-it refreshes a structurally valid stale `NEXT_ACTION.json` cache from
-canonical routing inputs before rendering Markdown compatibility views.
-`intake bootstrap --confirm-write` synchronizes generated Markdown
-compatibility views for all canonical Runtime Schema sidecars from JSON
-sidecars before returning.
+`state init --confirm-write`, `intake bootstrap --confirm-write`, and
+`state render --confirm-write` materialize generated Markdown compatibility
+views from canonical JSON sidecars. The materialized set includes every
+canonical Runtime Schema sidecar view plus legacy operator views such as
+`GAP_REGISTER.md`, `AGENT_RESULTS_LOG.md`, `ORCHESTRATOR_EVENTS_LOG.md`, and
+`STATUS_SUMMARY.md`. `state render --confirm-write` also refreshes a
+structurally valid stale `NEXT_ACTION.json` cache from canonical routing inputs.
 After a profile-agent RESULT is recorded, the governed completion sequence is:
 
 ```text
@@ -293,7 +294,9 @@ python3 agent-system/tools/aso/aso.py checkpoint-preflight --root . --mode packa
 real workspace-local TZ document passed with `--tz` and `--confirm-write`, and
 writes only local ignored workspace state under `project-runtime/state`,
 derived `project-runtime/*.md` compatibility views, and the canonical
-`project-input` TZ path. Confirmed runtime writes use current UTC timestamps by default;
+`project-input` TZ path. The legacy operator views are materialized for
+compatibility and are not canonical state sidecars. Confirmed runtime writes
+use current UTC timestamps by default;
 `--deterministic-timestamps` is reserved for tests and fixtures. `aso state
 migrate --dry-run` emits a deterministic migration plan for compatible legacy
 sidecars; confirmed migration requires
@@ -303,7 +306,8 @@ migration receipts under allowed `project-runtime/` report paths. Without
 output to `/tmp` or workspace `project-runtime/reports` or
 `project-runtime/rendered` paths. With `--confirm-write`, it refreshes the
 derived `NEXT_ACTION.json` cache when structurally valid and writes generated
-Markdown compatibility views for every canonical JSON sidecar.
+Markdown compatibility views for every canonical JSON sidecar plus the legacy
+operator compatibility views.
 
 Corrected P4 design governance commands validate and route
 project-designer-authored artifacts. They do not interpret raw TZ content,

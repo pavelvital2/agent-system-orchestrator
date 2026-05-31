@@ -103,9 +103,17 @@ defines a deterministic derivation rule.
 9. Exclude repository metadata, local owner input, runtime state, archives,
    caches, logs, virtual environments, upgrade packages, and secret-like paths.
 10. Never copy the ASO engine repository `.git` history.
-11. Never require secrets, GitHub credentials, remote repository access, commit
+11. Never create a fake `project-input/TZ.md`, initialized
+    `project-runtime/state/`, or derived runtime Markdown views before the
+    owner supplies a real workspace-local TZ document.
+12. Document the Stage 1 bootstrap command path: add the real TZ file, run
+    `aso state init --tz project-input/TZ_REAL.md --confirm-write`, run
+    `aso intake bootstrap --target-role requirements_analyst --confirm-write`,
+    then use read-only `aso plan-next`, `aso status`, `aso lint`, and
+    `aso doctor` checks.
+13. Never require secrets, GitHub credentials, remote repository access, commit
     authority, push authority, or live automation authority in local mode.
-12. Print a deterministic summary of created files, engine mode, package
+14. Print a deterministic summary of created files, engine mode, package
     version, runtime schema, and next verification command.
 
 ## `aso project verify-clean`

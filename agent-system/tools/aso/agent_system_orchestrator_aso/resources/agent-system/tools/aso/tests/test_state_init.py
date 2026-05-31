@@ -63,7 +63,7 @@ class StateInitCommandTests(unittest.TestCase):
             plan = json.loads(result.stdout)
             self.assertTrue(plan["dry_run"])
             self.assertEqual(plan["status"], "planned")
-            self.assertEqual(len(plan["writes"]), 9)
+            self.assertEqual(len(plan["writes"]), 22)
             self.assertFalse((root / "project-runtime").exists())
 
     def test_confirm_write_without_real_tz_is_refused(self) -> None:
@@ -174,6 +174,22 @@ class StateInitCommandTests(unittest.TestCase):
             self.assertNotEqual(next_action["content"]["action_type"], "stop")
             sidecars = sorted((root / "project-runtime" / "state").glob("*.json"))
             self.assertEqual(len(sidecars), 9)
+            for name in (
+                "PROJECT_STATE.md",
+                "TASK_REGISTRY.md",
+                "NEXT_ACTION.md",
+                "CURRENT_GATE.md",
+                "WORKSPACE_IDENTITY.md",
+                "REPOSITORY_LOCK.md",
+                "ACCEPTED_ARTIFACTS.md",
+                "CHECKPOINT_STATE.md",
+                "SCHEMA_MANIFEST.md",
+                "GAP_REGISTER.md",
+                "AGENT_RESULTS_LOG.md",
+                "ORCHESTRATOR_EVENTS_LOG.md",
+                "STATUS_SUMMARY.md",
+            ):
+                self.assertTrue((root / "project-runtime" / name).is_file(), name)
             for path in sidecars:
                 payload = json.loads(path.read_text(encoding="utf-8"))
                 self.assertEqual(payload["schema_version"], "3.2.0")
@@ -273,7 +289,12 @@ class StateInitCommandTests(unittest.TestCase):
             receipt = json.loads(json_out.read_text(encoding="utf-8"))
             self.assertFalse(receipt["dry_run"])
             self.assertEqual(receipt["status"], "written")
-            self.assertEqual(receipt["write_result"], "existing TZ document preserved; wrote state sidecars")
+            self.assertEqual(
+                receipt["write_result"],
+                "existing TZ document preserved; wrote state sidecars; materialized compatibility views",
+            )
+            self.assertEqual(receipt["materialization"]["sidecar_views_written"], 9)
+            self.assertEqual(receipt["materialization"]["legacy_views_written"], 4)
             self.assertEqual(json.loads(init.stdout), receipt)
 
     def test_confirm_write_preserves_existing_tz_document(self) -> None:

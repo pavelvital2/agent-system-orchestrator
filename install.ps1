@@ -60,8 +60,21 @@ if (!$SkipVerify) {
     & $VenvAso project verify-clean --help | Out-Null
     $ProjectSmokeDir = Join-Path ([System.IO.Path]::GetTempPath()) ("aso-install-project-smoke-" + [System.Guid]::NewGuid().ToString("N"))
     try {
-        & $VenvAso project create --local --target (Join-Path $ProjectSmokeDir "project") --name "ASO Install Smoke" --slug "aso-install-smoke" | Out-Null
-        & $VenvAso project verify-clean --root (Join-Path $ProjectSmokeDir "project") --strict | Out-Null
+        $ProjectSmokeRoot = Join-Path $ProjectSmokeDir "project"
+        & $VenvAso project create --local --target $ProjectSmokeRoot --name "ASO Install Smoke" --slug "aso-install-smoke" | Out-Null
+        & $VenvAso project verify-clean --root $ProjectSmokeRoot --strict | Out-Null
+        $RuntimeSmokeRoot = Join-Path $ProjectSmokeDir "runtime-workspace"
+        $RuntimeInput = Join-Path $RuntimeSmokeRoot "project-input"
+        New-Item -ItemType Directory -Path $RuntimeInput | Out-Null
+        @"
+# TZ
+
+Build an installed Stage 1 command smoke workspace.
+"@ | Set-Content -Path (Join-Path $RuntimeInput "TZ_REAL.md") -Encoding UTF8
+        & $VenvAso state init --root $RuntimeSmokeRoot --tz project-input/TZ_REAL.md --confirm-write | Out-Null
+        & $VenvAso intake bootstrap --root $RuntimeSmokeRoot --tz project-input/TZ_REAL.md --target-role requirements_analyst --confirm-write | Out-Null
+        & $VenvAso state verify --root $RuntimeSmokeRoot --strict | Out-Null
+        & $VenvAso plan-next --root $RuntimeSmokeRoot --strict | Out-Null
     }
     finally {
         if (Test-Path $ProjectSmokeDir) {

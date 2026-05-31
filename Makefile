@@ -33,13 +33,15 @@ install-smoke:
 	set -e; \
 	tmp_dir="$$(mktemp -d)"; \
 	trap 'rm -rf "$$tmp_dir"' EXIT; \
-	PYTHONDONTWRITEBYTECODE=1 bash agent-system/scripts/install_aso_clean.sh --source . --venv "$$tmp_dir/venv" --python "$(PYTHON)"; \
-	PYTHONDONTWRITEBYTECODE=1 bash "$(INSTALLED_CLI_SMOKE)" --aso "$$tmp_dir/venv/bin/aso" --package-root . --work-dir "$$tmp_dir/clean-console"; \
+	current_src="$$tmp_dir/current-source"; \
+	PYTHONDONTWRITEBYTECODE=1 "$(PYTHON)" agent-system/tools/aso/tests/current_source_snapshot.py . "$$current_src"; \
+	PYTHONDONTWRITEBYTECODE=1 bash agent-system/scripts/install_aso_clean.sh --source "$$current_src" --venv "$$tmp_dir/venv" --python "$(PYTHON)"; \
+	PYTHONDONTWRITEBYTECODE=1 bash "$(INSTALLED_CLI_SMOKE)" --aso "$$tmp_dir/venv/bin/aso" --package-root "$$current_src" --work-dir "$$tmp_dir/clean-console"; \
 	PYTHONDONTWRITEBYTECODE=1 "$$tmp_dir/venv/bin/python" -c "import importlib.metadata as md, json, pathlib; import agent_system_orchestrator_aso, agent_system_orchestrator_aso.cli as cli; dist = md.distribution('agent-system-orchestrator'); direct_url = json.loads(dist.read_text('direct_url.json') or '{}'); source = pathlib.Path(agent_system_orchestrator_aso.__file__).resolve().as_posix(); assert direct_url.get('dir_info', {}).get('editable') is not True, direct_url; assert '/site-packages/agent_system_orchestrator_aso/__init__.py' in source, source; assert callable(cli.main), cli.main; print(source)"; \
 	build_src="$$tmp_dir/build-source"; \
 	dist_dir="$$tmp_dir/dist"; \
 	mkdir -p "$$build_src" "$$dist_dir"; \
-	git archive --format=tar HEAD | tar -x -C "$$build_src"; \
+	git -C "$$current_src" archive --format=tar HEAD | tar -x -C "$$build_src"; \
 	"$(PYTHON)" -m venv "$$tmp_dir/build-venv"; \
 	PYTHONDONTWRITEBYTECODE=1 "$$tmp_dir/build-venv/bin/python" -m pip install -U pip setuptools wheel build; \
 	PYTHONDONTWRITEBYTECODE=1 "$$tmp_dir/build-venv/bin/python" -m build "$$build_src" --outdir "$$dist_dir"; \
@@ -56,7 +58,9 @@ install-test-smoke:
 	set -e; \
 	tmp_dir="$$(mktemp -d)"; \
 	trap 'rm -rf "$$tmp_dir"' EXIT; \
-	PYTHONDONTWRITEBYTECODE=1 bash agent-system/scripts/install_aso_clean.sh --source . --venv "$$tmp_dir/venv" --python "$(PYTHON)" --with-test; \
+	current_src="$$tmp_dir/current-source"; \
+	PYTHONDONTWRITEBYTECODE=1 "$(PYTHON)" agent-system/tools/aso/tests/current_source_snapshot.py . "$$current_src"; \
+	PYTHONDONTWRITEBYTECODE=1 bash agent-system/scripts/install_aso_clean.sh --source "$$current_src" --venv "$$tmp_dir/venv" --python "$(PYTHON)" --with-test; \
 	PYTHONDONTWRITEBYTECODE=1 "$$tmp_dir/venv/bin/aso" --help >/dev/null; \
 	PYTHONDONTWRITEBYTECODE=1 "$$tmp_dir/venv/bin/aso" project create --local --target "$$tmp_dir/project" --name "ASO Install Smoke" --slug "aso-install-smoke" >/dev/null; \
 	PYTHONDONTWRITEBYTECODE=1 "$$tmp_dir/venv/bin/aso" project verify-clean --root "$$tmp_dir/project" --strict >/dev/null; \

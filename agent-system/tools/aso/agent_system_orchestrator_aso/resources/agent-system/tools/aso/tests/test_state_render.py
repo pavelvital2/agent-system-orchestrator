@@ -79,6 +79,11 @@ class StateRenderCommandTests(unittest.TestCase):
 
         self.assertEqual(len(init_sidecar_types), 9)
         self.assertEqual(set(state_render.MATERIALIZED_VIEW_TYPES), init_sidecar_types)
+        self.assertEqual(
+            set(state_render.LEGACY_COMPATIBILITY_VIEW_TYPES),
+            {"GAP_REGISTER", "AGENT_RESULTS_LOG", "ORCHESTRATOR_EVENTS_LOG", "STATUS_SUMMARY"},
+        )
+        self.assertEqual(len(state_render.materialized_view_relpaths()), 13)
         self.assertIn("CHECKPOINT_STATE", state_render.MATERIALIZED_VIEW_TYPES)
         self.assertIn("SCHEMA_MANIFEST", state_render.MATERIALIZED_VIEW_TYPES)
 
@@ -243,6 +248,8 @@ class StateRenderCommandTests(unittest.TestCase):
                 "project-input/TZ.md",
                 "--confirm-write",
             )
+            for path in (root / "project-runtime").glob("*.md"):
+                path.unlink()
             lint_json = Path(tmp) / "lint-before.json"
             before_lint = run_aso(
                 "lint",
@@ -270,6 +277,7 @@ class StateRenderCommandTests(unittest.TestCase):
             after_status = run_aso("status", "--root", str(root), "--mode", "workspace")
             after_lint = run_aso("lint", "--root", str(root), "--mode", "workspace", "--strict")
             after_doctor = run_aso("doctor", "--root", str(root), "--mode", "workspace", "--strict")
+            status_summary = (root / "project-runtime" / "STATUS_SUMMARY.md").read_text(encoding="utf-8")
 
         self.assertEqual(init.returncode, 0, init.stdout + init.stderr)
         self.assertEqual(before_lint.returncode, 3, before_lint.stdout + before_lint.stderr)
@@ -282,9 +290,15 @@ class StateRenderCommandTests(unittest.TestCase):
         self.assertEqual(first.returncode, 0, first.stdout + first.stderr)
         self.assertEqual(first_report["status"], "written")
         self.assertEqual(len(sidecar_names), 9)
-        self.assertEqual(first_report["summary"]["views_written"], 9)
+        self.assertEqual(first_report["summary"]["sidecar_views_written"], 9)
+        self.assertEqual(first_report["summary"]["legacy_views_written"], 4)
+        self.assertEqual(first_report["summary"]["views_written"], 13)
         self.assertEqual(sorted(item["sidecar_type"] for item in first_report["writes"]), sidecar_names)
         self.assertEqual(sorted(materialized_view_texts), sidecar_names)
+        self.assertEqual(
+            sorted(item["compatibility_view"] for item in first_report["legacy_compatibility_writes"]),
+            sorted(state_render.LEGACY_COMPATIBILITY_VIEW_TYPES),
+        )
         self.assertEqual(second.returncode, 0, second.stdout + second.stderr)
         self.assertEqual(first_text, second_text)
         self.assertTrue(first_text.startswith("DERIVED VIEW.\n"))
@@ -298,6 +312,9 @@ class StateRenderCommandTests(unittest.TestCase):
             self.assertIn("Canonical state is JSON sidecar.", view_text)
         self.assertIn("CHECKPOINT_STATUS: not_required", materialized_view_texts["CHECKPOINT_STATE"])
         self.assertIn("STATE_ROOT: project-runtime/state", materialized_view_texts["SCHEMA_MANIFEST"])
+        self.assertTrue(status_summary.startswith("DERIVED COMPATIBILITY VIEW.\n"))
+        self.assertIn("CURRENT_PHASE: bootstrap", status_summary)
+        self.assertIn("NEXT_ACTION: correction", status_summary)
         self.assertEqual(after_status.returncode, 0, after_status.stdout + after_status.stderr)
         self.assertEqual(after_lint.returncode, 0, after_lint.stdout + after_lint.stderr)
         self.assertEqual(after_doctor.returncode, 0, after_doctor.stdout + after_doctor.stderr)

@@ -937,20 +937,20 @@
       "size": 5064
     },
     "agent-system/12_project_factory/GENERATED_PROJECT_CLEAN_REPO_CONTRACT.md": {
-      "sha256": "4feac48175f82311d79ad103ca50be39b37d1e43f4ca9b380756ea1955e8ba71",
-      "size": 5294
+      "sha256": "35bed244a2d57b23222226e5711c664359e1c869ce92eba2b7966134f1aedb04",
+      "size": 5764
     },
     "agent-system/12_project_factory/GITHUB_PUBLISH_CONTRACT.md": {
       "sha256": "005af5d2078d85bbe8b8abd87b4afbfa4b34c6d0efddbed0c46af70b987f96c4",
       "size": 5276
     },
     "agent-system/12_project_factory/PROJECT_FACTORY_P0_SPEC.md": {
-      "sha256": "af3e1caae1a1ebc6ad5c93bde85f916e8b80daaeb811994ed694f3ca0340b6fd",
-      "size": 5900
+      "sha256": "cf412df81223725fc579d19d01d227a5229d7bac18db06f0019e80af09c75533",
+      "size": 6410
     },
     "agent-system/12_project_factory/PROJECT_FACTORY_P1_SPEC.md": {
-      "sha256": "6baf0ab79e1a4da622911f4cf628c4172f5af30ab14d3a335a784623de787e4c",
-      "size": 8903
+      "sha256": "562e35e5abda281d2c66a1481b0644eaeccd2de60ea617e170c14de9c01eaf5b",
+      "size": 9125
     },
     "agent-system/12_project_factory/REFERENCE_ENGINE_MODE_CONTRACT.md": {
       "sha256": "cf2b3010b71405965580cf731a04b647924bcefef79446b5a825c33833aa0e32",
@@ -969,8 +969,8 @@
       "size": 25565
     },
     "agent-system/README.md": {
-      "sha256": "c6ad82f02cebf0dd18ddcaef9d308aec356faadb2d57251b95e25de39843b61b",
-      "size": 42035
+      "sha256": "9ac6ea0913ba600bdf2c13c10d193c3df0aa3b2fd1f14f87743aaf3df5e7f401",
+      "size": 42589
     },
     "agent-system/scripts/checkpoint_preflight.sh": {
       "sha256": "2a09ca60456af7caa0d57648a329dffd52d718ce0df4a6a98f59ddf18db013bb",
@@ -981,8 +981,8 @@
       "size": 14418
     },
     "agent-system/scripts/install_aso_clean.sh": {
-      "sha256": "42fea9a2013db4984d1d5a910cf2714344e1e600a75a8d7fefaa8950944c46ae",
-      "size": 6456
+      "sha256": "d6ef14b7b506f940dfdffdb9a23138b7506983aba152f28433d826259c3fc447",
+      "size": 7907
     },
     "agent-system/scripts/run_governance_smoke_tests.py": {
       "sha256": "2d1420f88643a78cef9b039e1395fe9ebe3be9475cb38be10c11a79a1a5787ff",
@@ -1633,8 +1633,8 @@
       "size": 2004
     },
     "agent-system/tools/aso/agent_system_orchestrator_aso/aso_tool/commands/state_init.py": {
-      "sha256": "37091243e678aee2987760ec08db1aaa2a3b0ae2fadcfdd6c219e87597a89308",
-      "size": 27121
+      "sha256": "79465e150eb683d564e04b4f76bb1e816a2ae860b58f57121c6b08a853301fe1",
+      "size": 28149
     },
     "agent-system/tools/aso/agent_system_orchestrator_aso/aso_tool/commands/state_migrate.py": {
       "sha256": "43f372eec439fc841ecb1118376052e4d24da283d1c1a5ac103eef08d501da80",
@@ -1645,8 +1645,8 @@
       "size": 2685
     },
     "agent-system/tools/aso/agent_system_orchestrator_aso/aso_tool/commands/state_render.py": {
-      "sha256": "5ee919cf2a02fa396d88668a485bb3562116615ab91b3fe103af48ed71cd6350",
-      "size": 20238
+      "sha256": "5ae2cf7f91ce0504a5765d7ab9c83f371d0a1925d08a9283b488cab3dacffdca",
+      "size": 24793
     },
     "agent-system/tools/aso/agent_system_orchestrator_aso/aso_tool/commands/state_verify.py": {
       "sha256": "b11e2b560aba679f16ea438f2878877b2afef1d52838fd27185740ed1eb74f11",
@@ -1777,8 +1777,8 @@
       "size": 1
     },
     "agent-system/tools/aso/tests/current_source_snapshot.py": {
-      "sha256": "24ecded27817d658018a30b7b23a8d05823518f3c2c64de3b617e685a01bfe37",
-      "size": 2481
+      "sha256": "7d77e1878a8e515de98aceffac471f22104447fe501e95fd75858f21964a0c24",
+      "size": 3109
     },
     "agent-system/tools/aso/tests/fixtures/hotfix_p4_1/incident_001_workspace_root/README.md": {
       "sha256": "894f5eb86a23acfbca38b553afbf7b52dae8ef79e1c9cadcc85e1d5eb11ed250",
@@ -1872,6 +1872,10 @@
       "sha256": "a78c0359ae231f777c3cda741fcf541ac56f03c52564395e9f9521a5f56f6ae4",
       "size": 12635
     },
+    "agent-system/tools/aso/tests/test_bootstrap_materialization.py": {
+      "sha256": "2fd50b4b957691f5c33bbcb8239459d114d16fe9b2b7c1a6b1f754eae3d1043b",
+      "size": 8295
+    },
     "agent-system/tools/aso/tests/test_checkpoint.py": {
       "sha256": "72b8328a1cf96dbfbe76cffd19cdeb91089819f995b8348a6e7339bfc687d2e2",
       "size": 2052
@@ -1881,8 +1885,8 @@
       "size": 20777
     },
     "agent-system/tools/aso/tests/test_ci_governance.py": {
-      "sha256": "2a9905af051e9b42a63f841f234a66257dc4e05563db29af9b87574dd209cb30",
-      "size": 5933
+      "sha256": "1fe4f7244ce0ec36730b8f176890da173d6f948e339f8de826c0740a3960c884",
+      "size": 6037
     },
     "agent-system/tools/aso/tests/test_cli_mode_guard.py": {
       "sha256": "514366158b7e269ed8522d050d8fdbc797960894122796476198386b575b6842",
@@ -1929,8 +1933,8 @@
       "size": 1473
     },
     "agent-system/tools/aso/tests/test_install_hygiene.py": {
-      "sha256": "f80ca94f1624401555b241fca3dc2719b07b13d07f4f52d148f689467b196d48",
-      "size": 14049
+      "sha256": "6c93dbf0fb39edc3046932fd8afe04742ad0b373c702faa41a980542ae45076e",
+      "size": 18788
     },
     "agent-system/tools/aso/tests/test_installed_resource_lookup.py": {
       "sha256": "e92f46df52feffb8429e56c852869db0cd18d1d31807bc0c64f6b4ad971e00ae",
@@ -1981,8 +1985,8 @@
       "size": 3783
     },
     "agent-system/tools/aso/tests/test_packaging.py": {
-      "sha256": "d32bb1300278a65e71716f5e8ccc71145257a794beffbb8c8c52f9c453bc1edd",
-      "size": 10398
+      "sha256": "d14945397c3990ed1ff49c40d39ee61b5c88ac96c27e88902d575ea21e0db4e1",
+      "size": 10525
     },
     "agent-system/tools/aso/tests/test_plan_next.py": {
       "sha256": "f85a18048598defdde90dd055cff35aa2a649d577c14644a09c000e96d6aa20b",
@@ -2041,16 +2045,16 @@
       "size": 7758
     },
     "agent-system/tools/aso/tests/test_state_init.py": {
-      "sha256": "0b06624b8feb45cade51ac72151e227f2edb1284a627fc1ef981577453c05741",
-      "size": 15319
+      "sha256": "a77e4591736645dac12de49952bd956bd13caa27a66d74130cf9b436d5f74a33",
+      "size": 16190
     },
     "agent-system/tools/aso/tests/test_state_migrate.py": {
       "sha256": "1eb9dc2aa8fbe47dee3c888eb8d5bdd9e5d5a40da45ca862a768408c163a0671",
       "size": 6665
     },
     "agent-system/tools/aso/tests/test_state_render.py": {
-      "sha256": "71c7cccdf37323a85b14f75963220d02bb37bceaf61166d2c17461bc215ff244",
-      "size": 19589
+      "sha256": "9093c088a10933939b99a59147f50e71c8a33a1ff1997192214cfc29e56b54c4",
+      "size": 20639
     },
     "agent-system/tools/aso/tests/test_state_verify.py": {
       "sha256": "25bbb04455bf60ef2f453c120c38f079a5679ec21547806c38b9cd81084736ad",

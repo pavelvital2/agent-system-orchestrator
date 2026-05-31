@@ -17,6 +17,8 @@ from current_source_snapshot import create_current_source_snapshot
 
 
 REPO_ROOT = Path(__file__).resolve().parents[4]
+INSTALL_SH = REPO_ROOT / "install.sh"
+INSTALL_PS1 = REPO_ROOT / "install.ps1"
 INSTALL_SCRIPT = REPO_ROOT / "agent-system" / "scripts" / "install_aso_clean.sh"
 INSTALLED_CLI_SMOKE_SCRIPT = REPO_ROOT / "agent-system" / "scripts" / "installed_cli_smoke.sh"
 SOURCE_HYGIENE_SCRIPT = REPO_ROOT / "agent-system" / "scripts" / "source_hygiene.sh"
@@ -205,6 +207,22 @@ exit 1
         self.assertIn("\"$venv_aso\" status --root \"$source_root\" --mode package", script)
         self.assertIn("\"$venv_aso\" project create --local --target", script)
         self.assertIn("\"$venv_aso\" project verify-clean --root", script)
+        self.assertIn("\"$venv_aso\" state init --root \"$runtime_smoke\"", script)
+        self.assertIn("\"$venv_aso\" intake bootstrap --root \"$runtime_smoke\"", script)
+        self.assertIn("\"$venv_aso\" state verify --root \"$runtime_smoke\" --strict", script)
+        self.assertIn("\"$venv_aso\" plan-next --root \"$runtime_smoke\" --strict", script)
+
+    def test_editable_installers_verify_stage1_command_surface(self) -> None:
+        shell_script = INSTALL_SH.read_text(encoding="utf-8")
+        ps_script = INSTALL_PS1.read_text(encoding="utf-8")
+
+        for script in (shell_script, ps_script):
+            self.assertIn("project create --local", script)
+            self.assertIn("project verify-clean", script)
+            self.assertIn("state init", script)
+            self.assertIn("intake bootstrap", script)
+            self.assertIn("state verify", script)
+            self.assertIn("plan-next", script)
 
     def test_installed_cli_smoke_covers_package_factory_and_state_paths(self) -> None:
         script = INSTALLED_CLI_SMOKE_SCRIPT.read_text(encoding="utf-8")
