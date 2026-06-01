@@ -774,6 +774,23 @@ AGENT_TERMINATION_REQUIRED: false
                 agent_findings[0]["details"],
             )
 
+    def test_lint_agent_003_accepts_failed_profile_correction_termination(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            write_runtime(root)
+            result_path = root / "project-runtime" / "results" / "worker" / "RESULT_TASK_DEMO_001_ATTEMPT_001.md"
+            result_path.write_text(RESULT.replace("STATUS: pass", "STATUS: fail"), encoding="utf-8")
+            instances_path = root / "project-runtime" / "agents" / "instances.jsonl"
+            text = instances_path.read_text(encoding="utf-8")
+            instances_path.write_text(text.replace('"next_allowed_action":"audit_route"', '"next_allowed_action":"correction_required"'), encoding="utf-8")
+            json_out = root / "lint.json"
+
+            result = run_lint(root, "--json-out", str(json_out))
+            report = json.loads(json_out.read_text(encoding="utf-8"))
+
+            agent_findings = [item for item in report["findings"] if item["rule_id"] == "LINT_AGENT_003"]
+            self.assertEqual(agent_findings, [])
+
     def test_lint_errors_when_result_references_task_missing_from_registry(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)

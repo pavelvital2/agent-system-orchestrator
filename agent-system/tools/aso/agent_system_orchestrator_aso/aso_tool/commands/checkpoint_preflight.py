@@ -388,6 +388,8 @@ def _workspace_report(root: Path, strict: bool) -> tuple[dict[str, object], int]
         correction_route = correction_routing.from_audit_inspection(root, transition_evidence.get("audit_failure_evidence"))
     if not correction_route:
         correction_route = correction_routing.from_audit_inspection(root, audit_evidence.get("invalid_audit_results"))
+    if not correction_route:
+        correction_route = correction_routing.from_transition_evidence(root, transition_evidence)
     is_checkpoint_attempt = transition_evidence.get("canonical_recommended_next_action") == "CHECKPOINT_PREFLIGHT"
     checkpoint_eligibility = _as_text(project_state.get("checkpoint_eligibility"))
     checkpoint_eligibility_status = _as_text(project_state.get("checkpoint_eligibility_status"))
@@ -428,11 +430,16 @@ def _workspace_report(root: Path, strict: bool) -> tuple[dict[str, object], int]
         )
 
     if correction_route:
+        correction_message = (
+            "Checkpoint preflight is blocked because profile RESULT STATUS fail routes correction."
+            if correction_route.get("route_source") == "profile_result_fail"
+            else "Checkpoint preflight is blocked because AUDIT_RESULT STATUS fail routes correction."
+        )
         blocking_rules.append(
             _blocking_rule(
                 "GOV-AUDIT-FAIL-NO-CHECKPOINT",
-                "Checkpoint preflight is blocked because AUDIT_RESULT STATUS fail routes correction.",
-                str(correction_route.get("source_audit_result_ref", "NONE")),
+                correction_message,
+                str(correction_route.get("source_audit_result_ref") or correction_route.get("source_result_ref") or "NONE"),
                 recommendation="Route correction from the failed audit before checkpointing.",
             )
         )

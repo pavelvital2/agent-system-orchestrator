@@ -149,6 +149,76 @@ def build_audit_fail_route(
     return route
 
 
+def build_profile_fail_route(
+    *,
+    root: Path | None = None,
+    source_result_ref: str,
+    source_task_id: str,
+    source_role: str = "",
+    failed_checks: Iterable[str] = (),
+    route_source: str = "profile_result_fail",
+) -> dict[str, object]:
+    requested_task_id = "" if _is_none(source_task_id) else source_task_id
+    resolved_task_id = requested_task_id or "UNKNOWN"
+    resolved_failed_checks = _dedupe(failed_checks) or ["PROFILE_RESULT_STATUS_FAIL"]
+    resolved_target_role = source_role if not _is_none(source_role) else "orchestrator"
+    proposal_path = correction_proposal_path(resolved_task_id)
+    packet_ref = correction_task_packet_ref(resolved_task_id)
+    context_refs = _dedupe(
+        [
+            source_result_ref,
+            resolved_task_id,
+            "agent-system/02_runtime/ORCHESTRATOR_RUNTIME_CONTRACT.json",
+        ]
+    )
+    return {
+        "route": "CORRECTION_REQUIRED",
+        "route_source": route_source,
+        "severity": "error",
+        "task_id": resolved_task_id,
+        "source_result": source_result_ref or "NONE",
+        "source_result_ref": source_result_ref or "NONE",
+        "source_result_status": "fail",
+        "source_audit_result": "NONE",
+        "source_audit_result_ref": "NONE",
+        "source_audit_result_status": "NONE",
+        "source_result_refs": _dedupe([source_result_ref]),
+        "source_task_id": resolved_task_id,
+        "source_task_refs": _dedupe([resolved_task_id]),
+        "failed_checks": resolved_failed_checks,
+        "audit_findings": [],
+        "target_role": resolved_target_role,
+        "target_correction_role": resolved_target_role,
+        "routing_owner_role": "orchestrator",
+        "correction_task_packet_ref": packet_ref,
+        "correction_task_packet_path": packet_ref,
+        "correction_task_proposal_path": proposal_path,
+        "correction_task_packet_or_proposal_path": packet_ref,
+        "required_context_refs": context_refs,
+        "required_context_references": context_refs,
+        "diagnostic_rule_id": "NONE",
+        "routing_issue": "NONE",
+        "checkpoint_preflight_blocked": True,
+    }
+
+
+def from_parsed_profile_result(
+    *,
+    root: Path | None,
+    result_path: Path | str,
+    parsed: result_parser.ParsedResult,
+) -> dict[str, object]:
+    if parsed.result_type == "audit_result" or parsed.status not in {"fail", "blocked", "gap"}:
+        return {}
+    return build_profile_fail_route(
+        root=root,
+        source_result_ref=workspace_result_ref(root, result_path),
+        source_task_id=parsed.task_id,
+        source_role=parsed.role,
+        failed_checks=["PROFILE_RESULT_STATUS_FAIL"],
+    )
+
+
 def from_parsed_audit_result(
     *,
     root: Path | None,
@@ -260,6 +330,29 @@ def from_transition_evidence(root: Path, transition_evidence: Mapping[str, objec
             continue
         event_name = _text(item.get("event"))
         status = _text(item.get("status")).lower()
+        profile_failed = event_name in {"RESULT_RECEIVED", "AGENT_TERMINATED", "AUDIT_ROUTE_READY"} and status in {
+            "fail",
+            "blocked",
+            "gap",
+        }
+        if profile_failed:
+            result_ref = _text(item.get("result_ref"))
+            path = _workspace_ref_path(root, result_ref)
+            if path is not None and path.is_file():
+                try:
+                    parsed = result_parser.parse_result_file(path)
+                except (OSError, UnicodeError):
+                    parsed = None
+                if parsed is not None:
+                    route = from_parsed_profile_result(root=root, result_path=path, parsed=parsed)
+                    if route:
+                        return route
+            return build_profile_fail_route(
+                root=root,
+                source_result_ref=result_ref,
+                source_task_id=_text(item.get("task_id")),
+                source_role=_text(item.get("role") or item.get("agent_role")),
+            )
         failed = event_name == "AUDIT_RESULT_RECEIVED_FAIL" or (
             event_name == "AUDIT_RESULT_RECEIVED" and status == "fail"
         )

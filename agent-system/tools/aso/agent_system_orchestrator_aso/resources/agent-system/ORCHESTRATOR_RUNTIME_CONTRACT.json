@@ -1,8 +1,8 @@
 {
   "contract_version": "1.0.0",
-  "package_version": "3.7.9",
-  "governance_ruleset_version": "3.7.9",
-  "runtime_schema_version": "3.1.1",
+  "package_version": "3.8.0",
+  "governance_ruleset_version": "3.8.0",
+  "runtime_schema_version": "3.2.0",
   "artifact_package_schema_version": "1.1.0",
   "allowed_roles": [
     "requirements_analyst",
@@ -18,6 +18,34 @@
     "control",
     "release_manager"
   ],
+  "role_registry": {
+    "dispatchable_role_ids": [
+      "requirements_analyst",
+      "solution_architect",
+      "developer",
+      "tester",
+      "auditor",
+      "technical_writer"
+    ],
+    "legacy_lifecycle_system_role_ids": [
+      "designer",
+      "devops_setup_engineer",
+      "release_manager"
+    ],
+    "control_or_pseudo_role_ids": [
+      "orchestrator",
+      "project_owner",
+      "owner",
+      "control",
+      "none"
+    ],
+    "forbidden_dispatch_role_ids": [
+      "orchestrator",
+      "owner",
+      "control",
+      "release_manager"
+    ]
+  },
   "allowed_events": [
     "CREATE_AGENT_RECOMMENDED",
     "CREATE_AGENT_DISPATCHED",
@@ -86,11 +114,11 @@
       "ARTIFACT_ACCEPTED": "RESULT_ACCEPTED"
     },
     "RESULT_ACCEPTED": {
-      "AGENT_TERMINATED": "AGENT_TERMINATED",
-      "AUDIT_ROUTE_READY": "AUDIT_PENDING"
+      "AGENT_TERMINATED": "AGENT_TERMINATED"
     },
     "AGENT_TERMINATED": {
-      "AUDIT_ROUTE_READY": "AUDIT_PENDING"
+      "AUDIT_ROUTE_READY": "AGENT_TERMINATED",
+      "CREATE_AGENT_DISPATCHED": "AUDIT_PENDING"
     },
     "AUDIT_PENDING": {
       "AUDIT_RESULT_RECEIVED_PASS": "CHECKPOINT_ELIGIBLE",
@@ -136,7 +164,21 @@
       ],
       "event": "CREATE_AGENT_DISPATCHED",
       "same_task": true,
+      "except_target_roles": [
+        "auditor"
+      ],
       "reason": "duplicate dispatch forbidden after lifecycle progress"
+    },
+    {
+      "from_states": [
+        "CORRECTION_REQUIRED"
+      ],
+      "event": "CREATE_AGENT_DISPATCHED",
+      "same_task": true,
+      "target_roles": [
+        "auditor"
+      ],
+      "reason": "auditor dispatch is forbidden while correction is required"
     },
     {
       "from_states": [
@@ -509,6 +551,7 @@
     "runtime_contract_required_sections": [
       "allowed_roles",
       "forbidden_dispatch_roles",
+      "role_registry",
       "allowed_events",
       "event_aliases",
       "state_transitions",

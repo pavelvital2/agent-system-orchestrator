@@ -1297,7 +1297,52 @@ def _checkpoint_findings(root: Path, sidecars: dict[str, dict[str, object]]) -> 
     checkpoint_policy = next_action.get("checkpoint_policy")
     checkpoint_attempt = checkpoint_policy in {"local_only", "commit_and_push"} or next_action.get("checkpoint_receipt_required") is True
     if not checkpoint_attempt:
-        return []
+        findings: list[Finding] = []
+        registry = _task_registry(sidecars)
+        current_gate = _content(sidecars, "CURRENT_GATE")
+        active_task_ids = {
+            value
+            for value in (
+                next_action.get("task_id"),
+                current_gate.get("task_id"),
+            )
+            if isinstance(value, str) and not _is_none(value)
+        }
+        if len(registry) == 1:
+            active_task_ids.update(registry)
+        for candidate_task_id, candidate_task in registry.items():
+            if candidate_task_id not in active_task_ids:
+                continue
+            status = candidate_task.get("status")
+            if status not in {"audit_passed", "checkpoint_done", "completed"}:
+                continue
+            if not _truthy_ref_values(candidate_task.get("audit_refs")):
+                continue
+            audit_evidence = transition_engine.audit_pass_evidence_from_sidecars(
+                root,
+                sidecars,
+                task_id=candidate_task_id,
+            )
+            invalid_refs = audit_evidence["invalid_audit_results"]
+            unparsed_refs = audit_evidence["unparsed_audit_refs"]
+            if invalid_refs or unparsed_refs:
+                findings.append(
+                    _finding(
+                        "SIDECAR_CHECKPOINT_AUDIT_RESULT_INVALID",
+                        "Checkpoint audit evidence is not a passing AUDIT_RESULT",
+                        json.dumps(
+                            {
+                                "invalid_refs": invalid_refs,
+                                "unparsed_refs": unparsed_refs,
+                            },
+                            sort_keys=True,
+                        ),
+                        "project-runtime/state/TASK_REGISTRY.json",
+                        "content.tasks[].audit_refs",
+                        "Record an auditor AUDIT_RESULT with STATUS: pass for the task before a checkpoint action.",
+                    )
+                )
+        return findings
 
     task_id = next_action.get("task_id")
     if not isinstance(task_id, str) or _is_none(task_id):
@@ -1769,7 +1814,7 @@ def _optional_readiness_findings(missing_optional: list[str]) -> list[Finding]:
     return findings
 
 
-def _transition_engine_findings(sidecars: dict[str, dict[str, object]]) -> list[Finding]:
+def _transition_engine_findings(root: Path, sidecars: dict[str, dict[str, object]]) -> list[Finding]:
     try:
         contract = transition_engine.load_runtime_contract()
     except (OSError, transition_engine.RuntimeContractError) as exc:
@@ -1784,7 +1829,7 @@ def _transition_engine_findings(sidecars: dict[str, dict[str, object]]) -> list[
             )
         ]
 
-    decision = transition_engine.explain_next_action_from_sidecars(contract, sidecars)
+    decision = transition_engine.explain_next_action_from_sidecars(contract, sidecars, root=root)
     findings: list[Finding] = []
     for engine_finding in decision.findings:
         path = "project-runtime/state/NEXT_ACTION.json"
@@ -1926,7 +1971,7 @@ def _report(root: Path, strict: bool) -> tuple[dict[str, object], int]:
     findings.extend(_terminal_completion_findings(root, loaded_sidecars))
     reconciliation_enabled = current_p2_state or lifecycle_has_evidence
     if reconciliation_enabled:
-        findings.extend(_transition_engine_findings(loaded_sidecars))
+        findings.extend(_transition_engine_findings(root, loaded_sidecars))
     findings = sorted(findings, key=lambda item: (item.severity != "error", item.rule_id, item.path, item.field, item.details))
     summary = _summary(findings)
     status, exit_code = _status(summary, strict)

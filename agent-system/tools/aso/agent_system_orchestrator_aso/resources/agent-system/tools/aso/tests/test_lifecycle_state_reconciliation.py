@@ -8,6 +8,12 @@ import tempfile
 import unittest
 from pathlib import Path
 
+ASO_ROOT = Path(__file__).resolve().parents[1]
+if str(ASO_ROOT) not in sys.path:
+    sys.path.insert(0, str(ASO_ROOT))
+
+from agent_system_orchestrator_aso.aso_tool import dispatch_receipts
+
 
 CLI = Path(__file__).resolve().parents[1] / "aso.py"
 REPO_ROOT = Path(__file__).resolve().parents[4]
@@ -131,6 +137,36 @@ def result_received_event() -> dict[str, object]:
         "timestamp_utc": "2026-05-25T10:00:00Z",
         "created_by": "orchestrator",
         "reuse_allowed": False,
+    }
+
+
+def auditor_dispatch_receipt(root: Path) -> None:
+    receipt = dispatch_receipts.build_dispatch_receipt(
+        agent_instance_id=f"audit_{TASK_ID}_attempt_001",
+        task_id=TASK_ID,
+        role="auditor",
+        runner=dispatch_receipts.RUNNER_EXTERNAL_CODEX_CLI,
+        model="UNKNOWN",
+        reasoning_effort="high",
+        prompt_ref=TASK_PACKET,
+        handoff_ref="project-runtime/handoffs/audit.json",
+        started_at="2026-05-25T10:02:30Z",
+    )
+    path = dispatch_receipts.receipt_path(root, f"audit_{TASK_ID}_attempt_001")
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(json.dumps(receipt, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+
+
+def auditor_dispatched_event() -> dict[str, object]:
+    return {
+        "event": "agent_task_dispatched",
+        "event_type": "CREATE_AGENT_DISPATCHED",
+        "task_id": TASK_ID,
+        "agent_role": "auditor",
+        "role": "auditor",
+        "agent_instance_id": f"audit_{TASK_ID}_attempt_001",
+        "timestamp_utc": "2026-05-25T10:02:30Z",
+        "created_by": "orchestrator",
     }
 
 
@@ -271,7 +307,7 @@ def full_auditor_lifecycle_events(root: Path, audit_status: str) -> list[dict[st
 
 
 class LifecycleStateReconciliationTests(unittest.TestCase):
-    def test_result_received_makes_create_agent_next_action_stale(self) -> None:
+    def test_manual_result_received_log_without_sidecar_materialization_is_stale(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             root = copy_valid_workspace(tmp)
             make_tz_valid(root)
@@ -309,7 +345,43 @@ class LifecycleStateReconciliationTests(unittest.TestCase):
             self.assertIn("RUNTIME_NEXT_ACTION_STALE", status_rule_ids)
             self.assertEqual(status_report["summary"]["runtime_consistency"], "FAIL")
 
-    def test_agent_terminated_routes_auditor_from_transition_engine(self) -> None:
+    def test_confirmed_receive_result_materializes_accept_artifact_route(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = copy_valid_workspace(tmp)
+            make_tz_valid(root)
+            write_result(root)
+            receive = run_aso(
+                root,
+                "lifecycle",
+                "receive-result",
+                "--from-result",
+                RESULT_REF,
+                "--confirm-write",
+            )
+            verify_json = Path(tmp) / "state-verify.json"
+            plan_json = Path(tmp) / "plan-next.json"
+
+            verify = run_aso(root, "state", "verify", "--strict", "--json-out", str(verify_json))
+            plan = run_aso(root, "plan-next", "--strict", "--json-out", str(plan_json))
+
+            self.assertEqual(receive.returncode, 0, receive.stdout + receive.stderr)
+            receive_report = json.loads(receive.stdout)
+            self.assertEqual(receive_report["state_materialization"]["status"], "written")
+            receipt_ref = receive_report["state_materialization"]["receipt_ref"]
+            self.assertTrue((root / receipt_ref).is_file())
+            receipt = json.loads((root / receipt_ref).read_text(encoding="utf-8"))
+            self.assertEqual(receipt["receipt_type"], "STATE_RECONCILIATION_RECEIPT")
+            self.assertEqual(receipt["state_verify_after"]["status"], "passed")
+            self.assertEqual(verify.returncode, 0, verify.stdout + verify.stderr)
+            verify_report = json.loads(verify_json.read_text(encoding="utf-8"))
+            self.assertEqual(verify_report["status"], "passed")
+            self.assertEqual(plan.returncode, 0, plan.stdout + plan.stderr)
+            plan_report = json.loads(plan_json.read_text(encoding="utf-8"))
+            self.assertEqual(plan_report["recommended_next_action"], "ACCEPT_ARTIFACT")
+            self.assertEqual(plan_report["route_status"], "ready")
+            self.assertFalse(plan_report["fatal"])
+
+    def test_manual_agent_terminated_log_routes_auditor_but_remains_stale(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             root = copy_valid_workspace(tmp)
             make_tz_valid(root)
@@ -334,6 +406,149 @@ class LifecycleStateReconciliationTests(unittest.TestCase):
             self.assertEqual(report["target_role"], "auditor")
             self.assertEqual(report["evidence"]["transition_engine"]["current_state"], "AGENT_TERMINATED")
 
+    def test_profile_audit_route_ready_before_auditor_dispatch_routes_auditor(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = copy_valid_workspace(tmp)
+            make_tz_valid(root)
+            write_result(root)
+            artifact_ref, package_ref, receipt_ref = write_artifact_refs(root)
+            write_lifecycle_events(
+                root,
+                [
+                    result_received_event(),
+                    artifact_accepted_event(artifact_ref, package_ref, receipt_ref),
+                    agent_terminated_event(artifact_ref, receipt_ref),
+                    audit_route_ready_event(artifact_ref, receipt_ref),
+                ],
+            )
+            json_out = Path(tmp) / "plan-next.json"
+
+            result = run_aso(root, "plan-next", "--strict", "--json-out", str(json_out))
+
+            self.assertEqual(result.returncode, 1, result.stdout + result.stderr)
+            report = json.loads(json_out.read_text(encoding="utf-8"))
+            self.assertEqual(report["recommended_next_action"], "CREATE_AUDITOR")
+            self.assertNotEqual(report["recommended_next_action"], "WAIT_FOR_AUDIT_RESULT")
+            self.assertEqual(report["target_role"], "auditor")
+            lifecycle_events = report["evidence"]["transition_engine"]["inputs"]["sidecar_state_signals"]["lifecycle_events"]
+            self.assertEqual(lifecycle_events[-1]["event"], "AUDIT_ROUTE_READY")
+            self.assertFalse(lifecycle_events[-1]["applied_to_state"])
+            self.assertEqual(lifecycle_events[-1]["ignored_reason"], "profile_audit_route_ready_not_auditor_dispatch")
+
+    def test_profile_fail_with_stale_audit_route_ready_routes_correction(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = copy_valid_workspace(tmp)
+            make_tz_valid(root)
+            write_result(root, status="fail")
+            artifact_ref, package_ref, receipt_ref = write_artifact_refs(root)
+            received = result_received_event()
+            received["status"] = "fail"
+            received["result_status"] = "fail"
+            terminated = agent_terminated_event(artifact_ref, receipt_ref)
+            terminated["status"] = "fail"
+            terminated["result_status"] = "fail"
+            terminated["next_allowed_action"] = "correction_required"
+            stale_ready = audit_route_ready_event(artifact_ref, receipt_ref)
+            stale_ready["status"] = "fail"
+            stale_ready["result_status"] = "fail"
+            stale_ready["next_allowed_action"] = "correction_required"
+            write_lifecycle_events(
+                root,
+                [
+                    received,
+                    artifact_accepted_event(artifact_ref, package_ref, receipt_ref),
+                    terminated,
+                    stale_ready,
+                ],
+            )
+            json_out = Path(tmp) / "plan-next.json"
+
+            result = run_aso(root, "plan-next", "--strict", "--json-out", str(json_out))
+
+            self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+            report = json.loads(json_out.read_text(encoding="utf-8"))
+            self.assertEqual(report["recommended_next_action"], "CORRECTION_REQUIRED")
+            self.assertNotEqual(report["recommended_next_action"], "WAIT_FOR_AUDIT_RESULT")
+            self.assertEqual(report["correction_routing"]["route"], "CORRECTION_REQUIRED")
+            self.assertEqual(report["correction_routing"]["route_source"], "profile_result_fail")
+            self.assertEqual(report["evidence"]["transition_engine"]["current_state"], "CORRECTION_REQUIRED")
+
+    def test_profile_fail_ignores_same_task_auditor_dispatch(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = copy_valid_workspace(tmp)
+            make_tz_valid(root)
+            write_result(root, status="fail")
+            auditor_dispatch_receipt(root)
+            artifact_ref, package_ref, receipt_ref = write_artifact_refs(root)
+            received = result_received_event()
+            received["status"] = "fail"
+            received["result_status"] = "fail"
+            terminated = agent_terminated_event(artifact_ref, receipt_ref)
+            terminated["status"] = "fail"
+            terminated["result_status"] = "fail"
+            terminated["next_allowed_action"] = "correction_required"
+            write_lifecycle_events(
+                root,
+                [
+                    received,
+                    artifact_accepted_event(artifact_ref, package_ref, receipt_ref),
+                    terminated,
+                    auditor_dispatched_event(),
+                ],
+            )
+            json_out = Path(tmp) / "plan-next.json"
+
+            result = run_aso(root, "plan-next", "--strict", "--json-out", str(json_out))
+
+            self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+            report = json.loads(json_out.read_text(encoding="utf-8"))
+            self.assertEqual(report["recommended_next_action"], "CORRECTION_REQUIRED")
+            self.assertEqual(report["evidence"]["transition_engine"]["current_state"], "CORRECTION_REQUIRED")
+            lifecycle_events = report["evidence"]["transition_engine"]["inputs"]["sidecar_state_signals"]["lifecycle_events"]
+            self.assertEqual(lifecycle_events[-1]["event"], "CREATE_AGENT_DISPATCHED")
+            self.assertFalse(lifecycle_events[-1]["applied_to_state"])
+            self.assertEqual(lifecycle_events[-1]["ignored_reason"], "auditor_dispatch_blocked_by_correction_required")
+
+    def test_profile_pass_after_auditor_dispatch_waits_for_audit_result(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = copy_valid_workspace(tmp)
+            make_tz_valid(root)
+            write_result(root)
+            auditor_dispatch_receipt(root)
+            artifact_ref, package_ref, receipt_ref = write_artifact_refs(root)
+            write_lifecycle_events(
+                root,
+                [
+                    result_received_event(),
+                    artifact_accepted_event(artifact_ref, package_ref, receipt_ref),
+                    agent_terminated_event(artifact_ref, receipt_ref),
+                    audit_route_ready_event(artifact_ref, receipt_ref),
+                    auditor_dispatched_event(),
+                ],
+            )
+            render = run_aso(root, "state", "render", "--confirm-write")
+            task_payload = load_sidecar(root, "TASK_REGISTRY.json")
+            task_content = task_payload["content"]
+            self.assertIsInstance(task_content, dict)
+            tasks = task_content["tasks"]
+            self.assertIsInstance(tasks, list)
+            self.assertIsInstance(tasks[0], dict)
+            tasks[0]["status"] = "audit_pending"
+            write_sidecar(root, "TASK_REGISTRY.json", task_payload)
+            update_markdown_field(root, "TASK_REGISTRY.md", "STATUS", "audit_pending")
+            json_out = Path(tmp) / "plan-next.json"
+
+            result = run_aso(root, "plan-next", "--strict", "--json-out", str(json_out))
+
+            self.assertIn(render.returncode, {0, 1}, render.stdout + render.stderr)
+            self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+            report = json.loads(json_out.read_text(encoding="utf-8"))
+            self.assertEqual(report["recommended_next_action"], "WAIT_FOR_AUDIT_RESULT")
+            self.assertEqual(report["status"], "waiting")
+            self.assertEqual(report["route_status"], "waiting")
+            self.assertFalse(report["dispatchable"])
+            self.assertEqual(report["dispatchability"]["status"], "waiting")
+
     def test_audit_fail_lifecycle_routes_correction(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             root = copy_valid_workspace(tmp)
@@ -351,9 +566,10 @@ class LifecycleStateReconciliationTests(unittest.TestCase):
 
             result = run_aso(root, "plan-next", "--strict", "--json-out", str(json_out))
 
-            self.assertEqual(result.returncode, 1, result.stdout + result.stderr)
+            self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
             report = json.loads(json_out.read_text(encoding="utf-8"))
             self.assertEqual(report["recommended_next_action"], "CORRECTION_REQUIRED")
+            self.assertEqual(report["route_status"], "ready")
             self.assertEqual(report["evidence"]["transition_engine"]["current_state"], "CORRECTION_REQUIRED")
 
     def test_full_auditor_fail_lifecycle_keeps_correction_route_after_auditor_routing(self) -> None:
@@ -368,9 +584,10 @@ class LifecycleStateReconciliationTests(unittest.TestCase):
 
             result = run_aso(root, "plan-next", "--strict", "--json-out", str(json_out))
 
-            self.assertEqual(result.returncode, 1, result.stdout + result.stderr)
+            self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
             report = json.loads(json_out.read_text(encoding="utf-8"))
             self.assertEqual(report["recommended_next_action"], "CORRECTION_REQUIRED")
+            self.assertEqual(report["route_status"], "ready")
             self.assertNotEqual(report["recommended_next_action"], "WAIT_FOR_AUDIT_RESULT")
             transition = report["evidence"]["transition_engine"]
             self.assertEqual(transition["current_state"], "CORRECTION_REQUIRED")

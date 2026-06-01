@@ -7,6 +7,12 @@ import tempfile
 import unittest
 from pathlib import Path
 
+TESTS_DIR = Path(__file__).resolve().parent
+if str(TESTS_DIR) not in sys.path:
+    sys.path.insert(0, str(TESTS_DIR))
+
+from package_fixture_helpers import PYPROJECT_RESOURCE_DATA, write_minimal_package_resources, write_resource_manifest_in
+
 
 CLI = Path(__file__).resolve().parents[1] / "aso.py"
 
@@ -150,7 +156,7 @@ AGENT_TERMINATION_REQUIRED: true
 
 PACKAGE_README = """# Package
 
-Use the read-only ASO helper at `agent-system/tools/aso/aso.py`.
+Use the ASO helper at `agent-system/tools/aso/aso.py` for read-only diagnostics plus explicit confirmed writes.
 
 ```text
 python3 agent-system/tools/aso/aso.py status --root . --mode package
@@ -159,7 +165,7 @@ python3 agent-system/tools/aso/aso.py status --root /path/to/project --mode work
 python3 agent-system/tools/aso/aso.py lint --root /path/to/project --mode workspace --strict
 ```
 
-It does not provide mutation, dispatch, or checkpoint commands.
+It does not dispatch live agents, execute checkpoints, or run daemons.
 """
 
 
@@ -249,9 +255,12 @@ def write_package_fixture(root: Path, *, include_untracked_input: bool = False) 
             "[tool.setuptools.packages.find]\n"
             'where = ["agent-system/tools/aso"]\n'
             'include = ["agent_system_orchestrator_aso*"]\n'
-        ),
+        )
+        + PYPROJECT_RESOURCE_DATA,
         encoding="utf-8",
     )
+    write_minimal_package_resources(package)
+    write_resource_manifest_in(root)
     (root / ".gitignore").write_text(
         "/project-runtime/\n/project-input/\n/project-archive/\n",
         encoding="utf-8",
@@ -353,9 +362,19 @@ class LintCommandTests(unittest.TestCase):
     def test_lint_strict_reports_invalid_tz_path_from_state_sidecar(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
-            init = run_aso("state", "init", "--root", str(root), "--project-slug", "bad-tz", "--confirm-write")
             (root / "project-input").mkdir(exist_ok=True)
             (root / "project-input" / "TZ.md").write_text("# TZ\n\nTIMEZONE: Europe/Moscow\n", encoding="utf-8")
+            init = run_aso(
+                "state",
+                "init",
+                "--root",
+                str(root),
+                "--project-slug",
+                "bad-tz",
+                "--tz",
+                "project-input/TZ.md",
+                "--confirm-write",
+            )
             render = run_aso("state", "render", "--root", str(root), "--confirm-write")
             project_state = root / "project-runtime" / "state" / "PROJECT_STATE.json"
             payload = json.loads(project_state.read_text(encoding="utf-8"))
@@ -754,6 +773,23 @@ AGENT_TERMINATION_REQUIRED: false
                 "result_ref=project-runtime/results/worker/RESULT_TASK_OTHER_002_ATTEMPT_001.md",
                 agent_findings[0]["details"],
             )
+
+    def test_lint_agent_003_accepts_failed_profile_correction_termination(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            write_runtime(root)
+            result_path = root / "project-runtime" / "results" / "worker" / "RESULT_TASK_DEMO_001_ATTEMPT_001.md"
+            result_path.write_text(RESULT.replace("STATUS: pass", "STATUS: fail"), encoding="utf-8")
+            instances_path = root / "project-runtime" / "agents" / "instances.jsonl"
+            text = instances_path.read_text(encoding="utf-8")
+            instances_path.write_text(text.replace('"next_allowed_action":"audit_route"', '"next_allowed_action":"correction_required"'), encoding="utf-8")
+            json_out = root / "lint.json"
+
+            result = run_lint(root, "--json-out", str(json_out))
+            report = json.loads(json_out.read_text(encoding="utf-8"))
+
+            agent_findings = [item for item in report["findings"] if item["rule_id"] == "LINT_AGENT_003"]
+            self.assertEqual(agent_findings, [])
 
     def test_lint_errors_when_result_references_task_missing_from_registry(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:

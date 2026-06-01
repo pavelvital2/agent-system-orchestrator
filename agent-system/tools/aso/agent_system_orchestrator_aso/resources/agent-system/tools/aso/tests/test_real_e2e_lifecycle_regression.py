@@ -359,11 +359,13 @@ class RealE2ELifecycleRegressionTests(unittest.TestCase):
             plan_after_terminate = run_aso(workspace, "plan-next", "--strict", "--json-out", str(plan_after_terminate_json))
             self.assertEqual(plan_after_terminate.returncode, 0, plan_after_terminate.stdout + plan_after_terminate.stderr)
             terminate_plan = load_json(plan_after_terminate_json)
-            self.assertEqual(terminate_plan["recommended_next_action"], "WAIT_FOR_AUDIT_RESULT")
+            self.assertEqual(terminate_plan["recommended_next_action"], "CREATE_AUDITOR")
             self.assertEqual(terminate_plan["route_status"], "ready")
             self.assertEqual(terminate_plan["target_role"], "auditor")
+            self.assertTrue(terminate_plan["dispatchable"])
+            self.assertTrue(terminate_plan["dispatchability"]["dispatchable"])
             self.assertNotEqual(terminate_plan["recommended_next_action"], "CREATE_AGENT")
-            self.assertEqual(terminate_plan["evidence"]["transition_engine"]["current_state"], "AUDIT_PENDING")
+            self.assertEqual(terminate_plan["evidence"]["transition_engine"]["current_state"], "AGENT_TERMINATED")
 
             write_failed_audit_result(workspace)
             require_success(

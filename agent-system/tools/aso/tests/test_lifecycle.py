@@ -213,6 +213,77 @@ class LifecycleCommandTests(unittest.TestCase):
             self.assertEqual(event["next_allowed_action"], "audit_route")
             self.assertEqual(events[3]["previous_event_type"], "AGENT_TERMINATED")
 
+    def test_failed_profile_result_terminates_to_correction_without_audit_route_ready(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            failed_result = RESULT.replace("STATUS: pass", "STATUS: fail")
+            result_path = root / "project-runtime" / "results" / "worker" / "RESULT_TASK_DEMO_001_ATTEMPT_001.md"
+            result_path.parent.mkdir(parents=True)
+            result_path.write_text(failed_result, encoding="utf-8")
+            package_result_path = (
+                root
+                / "project-runtime"
+                / "artifacts"
+                / "candidates"
+                / "TASK_DEMO_001"
+                / "RESULT_TASK_DEMO_001_ATTEMPT_001.md"
+            )
+            package_result_path.parent.mkdir(parents=True)
+            package_result_path.write_text(failed_result, encoding="utf-8")
+            candidate = package_result_path.parent / "manifest.json"
+            candidate.write_text(
+                json.dumps(
+                    {
+                        "artifact_package_schema_version": "1.1.0",
+                        "artifact_type": "RESULT",
+                        "artifact_id": "RESULT_TASK_DEMO_001_ATTEMPT_001",
+                        "task_id": "TASK_DEMO_001",
+                        "role": "developer",
+                        "attempt_no": 1,
+                        "status": "fail",
+                        "main_document": "RESULT_TASK_DEMO_001_ATTEMPT_001.md",
+                        "structured_artifacts": "NONE",
+                        "evidence_refs": "NONE",
+                        "created_at": "2026-05-22T00:00:00Z",
+                        "producer": {
+                            "agent_instance_id": "agent_TASK_DEMO_001_attempt_001",
+                            "role": "developer",
+                        },
+                    }
+                ),
+                encoding="utf-8",
+            )
+
+            received = run_lifecycle(
+                root,
+                "receive-result",
+                "--from-result",
+                str(result_path),
+                "--confirm-write",
+            )
+            accepted = run_aso(
+                root,
+                "artifact",
+                "accept",
+                "--package",
+                "project-runtime/artifacts/candidates/TASK_DEMO_001/manifest.json",
+                "--confirm-write",
+                "--format",
+                "json",
+            )
+            terminated = run_lifecycle(root, "terminate-agent", "--from-result", str(result_path), "--confirm-write")
+
+            self.assertEqual(received.returncode, 0, received.stdout + received.stderr)
+            self.assertEqual(accepted.returncode, 0, accepted.stdout + accepted.stderr)
+            self.assertEqual(terminated.returncode, 0, terminated.stdout + terminated.stderr)
+            report = json.loads(terminated.stdout)
+            self.assertEqual(report["event"]["next_allowed_action"], "correction_required")
+            self.assertEqual(report["audit_route_ready_event"], {})
+            self.assertEqual(report["correction_routing"]["route"], "CORRECTION_REQUIRED")
+            self.assertEqual(report["correction_routing"]["route_source"], "profile_result_fail")
+            events = [json.loads(line) for line in (root / "project-runtime" / "agents" / "instances.jsonl").read_text(encoding="utf-8").splitlines()]
+            self.assertEqual([event["event_type"] for event in events], ["RESULT_RECEIVED", "ARTIFACT_ACCEPTED", "AGENT_TERMINATED"])
+
     def test_terminate_agent_requires_existing_result(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)

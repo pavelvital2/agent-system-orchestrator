@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-
 ORCHESTRATOR_RUNTIME_CONTRACT_JSON = r"""
 {
   "contract_version": "1.0.0",
@@ -120,11 +119,11 @@ ORCHESTRATOR_RUNTIME_CONTRACT_JSON = r"""
       "ARTIFACT_ACCEPTED": "RESULT_ACCEPTED"
     },
     "RESULT_ACCEPTED": {
-      "AGENT_TERMINATED": "AGENT_TERMINATED",
-      "AUDIT_ROUTE_READY": "AUDIT_PENDING"
+      "AGENT_TERMINATED": "AGENT_TERMINATED"
     },
     "AGENT_TERMINATED": {
-      "AUDIT_ROUTE_READY": "AUDIT_PENDING"
+      "AUDIT_ROUTE_READY": "AGENT_TERMINATED",
+      "CREATE_AGENT_DISPATCHED": "AUDIT_PENDING"
     },
     "AUDIT_PENDING": {
       "AUDIT_RESULT_RECEIVED_PASS": "CHECKPOINT_ELIGIBLE",
@@ -170,7 +169,21 @@ ORCHESTRATOR_RUNTIME_CONTRACT_JSON = r"""
       ],
       "event": "CREATE_AGENT_DISPATCHED",
       "same_task": true,
+      "except_target_roles": [
+        "auditor"
+      ],
       "reason": "duplicate dispatch forbidden after lifecycle progress"
+    },
+    {
+      "from_states": [
+        "CORRECTION_REQUIRED"
+      ],
+      "event": "CREATE_AGENT_DISPATCHED",
+      "same_task": true,
+      "target_roles": [
+        "auditor"
+      ],
+      "reason": "auditor dispatch is forbidden while correction is required"
     },
     {
       "from_states": [
@@ -1034,5 +1047,6 @@ ORCHESTRATOR_RUNTIME_CONTRACT_JSON = r"""
     }
   }
 }
-
 """
+
+ORIGIN = "packaged runtime contract fallback"

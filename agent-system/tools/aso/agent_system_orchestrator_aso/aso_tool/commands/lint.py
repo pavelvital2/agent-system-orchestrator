@@ -1259,6 +1259,8 @@ def _expected_termination_event_type(role: str) -> str:
 def _expected_next_allowed_action(role: str, status: str = "") -> str:
     if role == "auditor":
         return "correction_required" if status in {"fail", "blocked", "gap"} else "checkpoint_preflight"
+    if status in {"fail", "blocked", "gap"}:
+        return "correction_required"
     return "audit_route"
 
 

@@ -208,6 +208,26 @@ def _audit_fail_correction_route(
     return correction_routing.from_transition_evidence(root, transition_evidence)
 
 
+def _auditor_dispatch_exists(root: Path, task_id: str) -> bool:
+    if _is_none(task_id):
+        return False
+    dispatch_dir = root / "project-runtime" / "agents" / "dispatches"
+    if not dispatch_dir.is_dir():
+        return False
+    for path in dispatch_dir.glob("*.json"):
+        try:
+            payload = json.loads(path.read_text(encoding="utf-8"))
+        except (OSError, UnicodeError, json.JSONDecodeError):
+            continue
+        if not isinstance(payload, dict):
+            continue
+        if payload.get("task_id") != task_id or payload.get("role") != "auditor":
+            continue
+        if dispatch_receipts.validate_dispatch_receipt(payload).passed:
+            return True
+    return False
+
+
 def _correction_route_diagnostic_rule(
     rules: dict[str, dict[str, object]],
     correction_route: dict[str, object],
@@ -439,6 +459,8 @@ def _non_dispatch_status(action_type: str, recommended_next_action: str) -> str:
         return "stopped"
     if recommended_next_action == "STOP" or action_type == "stop":
         return "stopped"
+    if recommended_next_action == "WAIT_FOR_AUDIT_RESULT":
+        return "waiting"
     if recommended_next_action == "CORRECTION_REQUIRED" or action_type == "correction":
         return "correction_required"
     return "blocked"
@@ -477,6 +499,8 @@ def _task_packet_dispatch_valid(
     task_packet: str,
     task_id: str,
     target_role: str,
+    *,
+    audit_route_required: bool = False,
 ) -> tuple[bool, str]:
     fields, error = _read_task_packet_fields(root, task_packet)
     if error:
@@ -491,6 +515,8 @@ def _task_packet_dispatch_valid(
         return False, f"TARGET_ROLE={packet_role or 'NONE'} is not a profile execution role"
     target_role = _normalize_profile_role(target_role)
     packet_role = _normalize_profile_role(packet_role)
+    if target_role == "auditor" and audit_route_required:
+        return True, "profile task packet is a valid audit dispatch target"
     if packet_role != target_role:
         return False, f"TARGET_ROLE={fields.get('TARGET_ROLE', '') or 'NONE'} does not match normalized target_role={target_role}"
     if target_role == "auditor" and fields.get("TASK_KIND") != "audit":
@@ -568,6 +594,8 @@ def _task_registry_compatible(
     task_packet: str,
     target_role: str,
     packet_fields: dict[str, str],
+    *,
+    audit_route_required: bool = False,
 ) -> tuple[bool, str]:
     if not task:
         return False, f"TASK_REGISTRY has no entry for task_id={task_id or 'NONE'}"
@@ -586,6 +614,8 @@ def _task_registry_compatible(
         _normalize_profile_role(_as_text(task.get("owner_role"))),
     }
     target_role = _normalize_profile_role(target_role)
+    if target_role == "auditor" and audit_route_required:
+        return True, "registry entry is compatible with auditor dispatch for completed profile task"
     if target_role not in compatible_roles:
         return False, f"registry roles={sorted(role for role in compatible_roles if role)} do not include normalized target_role={target_role}"
     return True, "registry entry matches NEXT_ACTION and task packet"
@@ -612,6 +642,7 @@ def _current_gate_permits_dispatch(
     if (
         not _is_none(required_next_role)
         and required_next_role != target_role
+        and not (target_role == "auditor" and audit_route_required)
     ):
         return False, f"CURRENT_GATE.content.required_next_role={required_next_role} does not match target_role={target_role}"
     if target_role == "auditor" and not audit_route_required:
@@ -742,9 +773,16 @@ def can_dispatch_agent(
     packet_fields: dict[str, str] = {}
     packet_valid = False
     packet_valid_evidence = "task packet was not read because the path is absent"
+    audit_route_required = _is_checkpoint_attempt(next_action) or next_action.get("audit_route_required") is True
     if packet_exists:
         packet_fields, _ = _read_task_packet_fields(root, task_packet)
-        packet_valid, packet_valid_evidence = _task_packet_dispatch_valid(root, task_packet, task_id, target_role)
+        packet_valid, packet_valid_evidence = _task_packet_dispatch_valid(
+            root,
+            task_packet,
+            task_id,
+            target_role,
+            audit_route_required=audit_route_required,
+        )
     _gate_check(
         checks,
         reasons,
@@ -785,6 +823,7 @@ def can_dispatch_agent(
         task_packet,
         target_role,
         packet_fields,
+        audit_route_required=audit_route_required,
     )
     _gate_check(
         checks,
@@ -802,7 +841,7 @@ def can_dispatch_agent(
         task_id,
         task_packet,
         target_role,
-        _is_checkpoint_attempt(next_action),
+        audit_route_required,
     )
     _gate_check(
         checks,
@@ -1106,6 +1145,11 @@ def _plan(
 
     correction_route = _audit_fail_correction_route(root, audit_evidence, transition_evidence)
     if correction_route:
+        correction_reason = (
+            "Profile RESULT STATUS fail routes correction and blocks audit/checkpoint routing."
+            if correction_route.get("route_source") == "profile_result_fail"
+            else "AUDIT_RESULT STATUS fail routes correction and blocks checkpoint/finalization."
+        )
         recommended_next_action = "CORRECTION_REQUIRED"
         target_role = "orchestrator"
         action_type = "correction"
@@ -1120,9 +1164,9 @@ def _plan(
             "correction_required",
             reasons=[
                 _reason(
-                    "audit_result_status_fail",
-                    "AUDIT_RESULT STATUS fail routes correction and blocks checkpoint/finalization.",
-                    "TASK_REGISTRY.content.tasks[].audit_refs",
+                    str(correction_route.get("route_source") or "audit_result_status_fail"),
+                    correction_reason,
+                    "project-runtime/results",
                 )
             ],
         )
@@ -1130,8 +1174,8 @@ def _plan(
             _rule(
                 rules,
                 "GOV-AUDIT-FAIL-NO-CHECKPOINT",
-                "AUDIT_RESULT STATUS fail routes correction and blocks checkpoint/finalization.",
-                str(correction_route.get("source_audit_result_ref", "NONE")),
+                correction_reason,
+                str(correction_route.get("source_audit_result_ref") or correction_route.get("source_result_ref") or "NONE"),
             )
         )
         diagnostic_rule = _correction_route_diagnostic_rule(rules, correction_route)
@@ -1230,8 +1274,54 @@ def _plan(
             _as_text(derived_next_action.get("recommended_next_action"))
             or transition_engine.recommendation_from_next_action_content(routing_next_action)
         )
+        if recommended_next_action == "CREATE_AUDITOR" and target_role == "auditor":
+            routing_next_action["audit_route_required"] = True
+            blocking_rules = [
+                rule
+                for rule in blocking_rules
+                if not (
+                    rule.get("rule_id") == "GOV-CHECKPOINT-AUDIT-GATE"
+                    and "audit-pass evidence" in str(rule.get("message", ""))
+                )
+            ]
+        if recommended_next_action == "WAIT_FOR_AUDIT_RESULT" and target_role == "auditor":
+            if not _auditor_dispatch_exists(root, task_id):
+                recommended_next_action = "CREATE_AUDITOR"
+                action_type = "create_agent"
+                routing_next_action["recommended_next_action"] = "CREATE_AUDITOR"
+                routing_next_action["action_type"] = "create_agent"
+                routing_next_action["target_role"] = "auditor"
+                routing_next_action["audit_route_required"] = True
+                blocking_rules = [
+                    rule
+                    for rule in blocking_rules
+                    if not (
+                        rule.get("rule_id") == "GOV-CHECKPOINT-AUDIT-GATE"
+                        and "audit-pass evidence" in str(rule.get("message", ""))
+                    )
+                ]
+            else:
+                routing_next_action["recommended_next_action"] = "WAIT_FOR_AUDIT_RESULT"
         if recommended_next_action == "CORRECTION_REQUIRED":
             correction_route = _audit_fail_correction_route(root, audit_evidence, transition_evidence)
+            if audit_evidence["unparsed_audit_refs"]:
+                blocking_rules.append(
+                    _rule(
+                        rules,
+                        "GOV-CHECKPOINT-AUDIT-GATE",
+                        "AUDIT_RESULT evidence references are missing or unreadable.",
+                        json.dumps(audit_evidence["unparsed_audit_refs"], sort_keys=True),
+                    )
+                )
+            if audit_evidence["invalid_audit_results"]:
+                blocking_rules.append(
+                    _rule(
+                        rules,
+                        "GOV-CHECKPOINT-AUDIT-GATE",
+                        "Parsed AUDIT_RESULT evidence is not a pass for this task.",
+                        json.dumps(audit_evidence["invalid_audit_results"], sort_keys=True),
+                    )
+                )
         if recommended_next_action == "CHECKPOINT_PREFLIGHT":
             if audit_evidence["present"]:
                 dispatchability = _non_dispatchability(
@@ -1315,6 +1405,8 @@ def _plan(
             recommended_next_action = str(dispatchability["recommended_next_action"])
             target_role = str(dispatchability["target_role"])
         elif action_type == "create_agent":
+            if target_role == "auditor" and recommended_next_action == "CREATE_AUDITOR":
+                routing_next_action["audit_route_required"] = True
             dispatchability = can_dispatch_agent(
                 root,
                 action_type,
@@ -1379,6 +1471,24 @@ def _plan(
                 diagnostic_rule = _correction_route_diagnostic_rule(rules, correction_route)
                 if diagnostic_rule:
                     blocking_rules.append(diagnostic_rule)
+            elif audit_evidence.get("task_status") in {"completed", "checkpoint_done"}:
+                recommended_next_action = "CORRECTION_REQUIRED"
+                target_role = "orchestrator"
+                dispatchability = _non_dispatchability(
+                    "correction",
+                    target_role,
+                    task_id,
+                    "NONE",
+                    recommended_next_action,
+                    "correction_required",
+                    reasons=[
+                        _reason(
+                            "audit_pass_evidence_missing",
+                            "Terminal checkpoint states require audit-pass evidence before any checkpoint route.",
+                            "TASK_REGISTRY.content.tasks[].audit_refs",
+                        )
+                    ],
+                )
             else:
                 target_role = "auditor"
                 dispatchability = can_dispatch_agent(
@@ -1468,7 +1578,11 @@ def _plan(
     blocking_rules = _dedupe_rules(blocking_rules)
     if blocking_rules:
         status = "blocked"
+    elif recommended_next_action == "WAIT_FOR_AUDIT_RESULT":
+        status = "waiting"
     elif recommended_next_action == "CORRECTION_REQUIRED":
+        status = str(dispatchability["status"])
+    elif action_type == "route_result":
         status = str(dispatchability["status"])
     else:
         status = "ready"
@@ -1629,6 +1743,8 @@ def _route_exit_contract(report: dict[str, object], verify_exit_code: int) -> tu
         return "runtime_error", True, EXIT_RUNTIME_ERROR
     if _has_valid_correction_route(report):
         return "ready", False, EXIT_OK
+    if report.get("status") == "waiting":
+        return "waiting", False, EXIT_OK
     if report.get("status") == "ready":
         return "ready", False, EXIT_OK
     return "governance_blocked", False, EXIT_BLOCKED

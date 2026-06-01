@@ -975,13 +975,20 @@ def run_receive_result(args: argparse.Namespace) -> int:
     acceptance_events = _result_only_acceptance_events(event) if event else []
 
     correction_route = {}
-    if event and event.get("result_type") == "audit_result" and event.get("status") == "fail":
+    if event and event.get("status") == "fail":
         parsed = result_parser.parse_result_file(result_path)
-        correction_route = correction_routing.from_parsed_audit_result(
-            root=root,
-            result_path=result_path,
-            parsed=parsed,
-        )
+        if event.get("result_type") == "audit_result":
+            correction_route = correction_routing.from_parsed_audit_result(
+                root=root,
+                result_path=result_path,
+                parsed=parsed,
+            )
+        else:
+            correction_route = correction_routing.from_parsed_profile_result(
+                root=root,
+                result_path=result_path,
+                parsed=parsed,
+            )
 
     report = {
         "tool": "aso",
@@ -1043,18 +1050,26 @@ def run_terminate_agent(args: argparse.Namespace) -> int:
         event["artifact_ids"] = artifact_ids
         event["artifact_refs"] = artifact_refs
         event["artifact_receipt_refs"] = receipt_refs
-        if event.get("result_type") == "audit_result" and event.get("status") == "fail":
+        if event.get("status") == "fail":
             parsed = result_parser.parse_result_file(result_path)
-            correction_route = correction_routing.from_parsed_audit_result(
-                root=root,
-                result_path=result_path,
-                parsed=parsed,
-            )
+            if event.get("result_type") == "audit_result":
+                correction_route = correction_routing.from_parsed_audit_result(
+                    root=root,
+                    result_path=result_path,
+                    parsed=parsed,
+                )
+            else:
+                correction_route = correction_routing.from_parsed_profile_result(
+                    root=root,
+                    result_path=result_path,
+                    parsed=parsed,
+                )
         terminated_at = str(event["timestamp_utc"])
         ready_at = (
             datetime.fromisoformat(terminated_at.replace("Z", "+00:00")) + timedelta(seconds=1)
         ).replace(microsecond=0).isoformat().replace("+00:00", "Z")
-        if event.get("role") == "auditor" and event.get("status") == "fail":
+        next_allowed_action = _next_allowed_action(transition_report)
+        if next_allowed_action not in {"audit_route", "checkpoint_preflight"}:
             audit_ready_event = {}
         else:
             audit_ready_event = {

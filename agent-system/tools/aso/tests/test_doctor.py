@@ -447,6 +447,22 @@ PUSH_ALLOWED: false
             self.assertIn("project-input/TZ.md", by_rule["BSR_TZ_PATH_TIMEZONE_VALUE"]["recommendation"])
             self.assertIn("aso plan-next --root WORKSPACE --strict", by_rule["BSR_BOOTSTRAP_STOP_TERMINAL_INVALID"]["recommendation"])
 
+    def test_doctor_accepts_failed_profile_correction_termination(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            write_workspace(root)
+            result_path = root / "project-runtime" / "results" / "worker" / "RESULT_TASK_DEMO_001_ATTEMPT_001.md"
+            result_path.write_text(RESULT.replace("STATUS: pass", "STATUS: fail"), encoding="utf-8")
+            instances_path = root / "project-runtime" / "agents" / "instances.jsonl"
+            text = instances_path.read_text(encoding="utf-8")
+            instances_path.write_text(text.replace('"next_allowed_action":"audit_route"', '"next_allowed_action":"correction_required"'), encoding="utf-8")
+            json_out = root / "doctor.json"
+
+            result = run_doctor(root, "--mode", "workspace", "--strict", "--json-out", str(json_out))
+            report = json.loads(json_out.read_text(encoding="utf-8"))
+
+            self.assertNotIn("LINT_AGENT_003", {finding["rule_id"] for finding in report["findings"]})
+
     def test_package_doctor_rejects_workspace_root_with_mode_guard(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)

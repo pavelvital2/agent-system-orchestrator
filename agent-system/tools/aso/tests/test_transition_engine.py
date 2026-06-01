@@ -311,6 +311,82 @@ class TransitionEngineTests(unittest.TestCase):
         self.assertEqual(failed.next_state, "CORRECTION_REQUIRED")
         self.assertEqual(failed.next_action["recommended_next_action"], "CORRECTION_REQUIRED")
 
+    def test_failed_profile_result_received_routes_correction(self) -> None:
+        decision = transition_engine.derive_transition(
+            self.contract,
+            "AGENT_RUNNING",
+            {"event_type": "RESULT_RECEIVED", "status": "fail"},
+            target_role="developer",
+            task_id="TASK_001",
+        )
+
+        self.assertTrue(decision.allowed, decision.to_json())
+        self.assertEqual(decision.next_state, "CORRECTION_REQUIRED")
+        self.assertEqual(decision.next_action["recommended_next_action"], "CORRECTION_REQUIRED")
+
+    def test_audit_route_ready_does_not_enter_wait_without_auditor_dispatch(self) -> None:
+        decision = transition_engine.derive_transition(
+            self.contract,
+            "AGENT_TERMINATED",
+            {"event_type": "AUDIT_ROUTE_READY", "status": "pass"},
+            target_role="developer",
+            task_id="TASK_001",
+        )
+
+        self.assertTrue(decision.allowed, decision.to_json())
+        self.assertEqual(decision.next_state, "AGENT_TERMINATED")
+        self.assertEqual(decision.next_action["recommended_next_action"], "CREATE_AUDITOR")
+
+    def test_profile_failed_audit_route_ready_routes_correction(self) -> None:
+        decision = transition_engine.derive_transition(
+            self.contract,
+            "AGENT_TERMINATED",
+            {"event_type": "AUDIT_ROUTE_READY", "status": "fail"},
+            target_role="developer",
+            task_id="TASK_001",
+        )
+
+        self.assertTrue(decision.allowed, decision.to_json())
+        self.assertEqual(decision.next_state, "CORRECTION_REQUIRED")
+        self.assertEqual(decision.next_action["recommended_next_action"], "CORRECTION_REQUIRED")
+
+    def test_auditor_dispatch_from_profile_termination_enters_audit_pending(self) -> None:
+        decision = transition_engine.derive_transition(
+            self.contract,
+            "AGENT_TERMINATED",
+            "CREATE_AGENT_DISPATCHED",
+            target_role="auditor",
+            task_id="TASK_001",
+        )
+
+        self.assertTrue(decision.allowed, decision.to_json())
+        self.assertEqual(decision.next_state, "AUDIT_PENDING")
+        self.assertEqual(decision.next_action["recommended_next_action"], "WAIT_FOR_AUDIT_RESULT")
+
+    def test_duplicate_profile_dispatch_from_termination_remains_forbidden(self) -> None:
+        decision = transition_engine.derive_transition(
+            self.contract,
+            "AGENT_TERMINATED",
+            "CREATE_AGENT_DISPATCHED",
+            target_role="developer",
+            task_id="TASK_001",
+        )
+
+        self.assertFalse(decision.allowed)
+        self.assertIn("RUNTIME_TRANSITION_FORBIDDEN", {finding.rule_id for finding in decision.findings})
+
+    def test_auditor_dispatch_from_correction_required_is_forbidden(self) -> None:
+        decision = transition_engine.derive_transition(
+            self.contract,
+            "CORRECTION_REQUIRED",
+            "CREATE_AGENT_DISPATCHED",
+            target_role="auditor",
+            task_id="TASK_001",
+        )
+
+        self.assertFalse(decision.allowed)
+        self.assertIn("RUNTIME_TRANSITION_FORBIDDEN", {finding.rule_id for finding in decision.findings})
+
     def test_checkpoint_eligible_is_intermediate_and_completion_is_explicit(self) -> None:
         self.assertNotIn("CHECKPOINT_ELIGIBLE", self.contract["terminal_states"])
         self.assertIn("PROJECT_COMPLETED", self.contract["terminal_states"])
@@ -397,6 +473,49 @@ class TransitionEngineTests(unittest.TestCase):
         self.assertEqual(decision.current_state, "TASK_READY")
         self.assertEqual(decision.next_action["recommended_next_action"], "CREATE_AGENT")
         self.assertEqual(decision.inputs["stored_recommended_next_action"], "CREATE_AGENT")
+
+    def test_sidecar_checkpoint_states_without_audit_pass_route_correction(self) -> None:
+        for status in ("completed", "checkpoint_done"):
+            with self.subTest(status=status):
+                sidecars = _sidecars(
+                    {
+                        "action_type": "update_state",
+                        "target_role": "orchestrator",
+                        "checkpoint_policy": "local_only",
+                        "checkpoint_preflight_required": True,
+                        "checkpoint_receipt_required": True,
+                    }
+                )
+                sidecars["TASK_REGISTRY"]["content"]["tasks"][0].update(
+                    {"status": status, "audit_refs": []}
+                )
+
+                decision = transition_engine.explain_next_action_from_sidecars(self.contract, sidecars)
+
+                self.assertEqual(decision.current_state, "CORRECTION_REQUIRED")
+                self.assertEqual(decision.next_action["recommended_next_action"], "CORRECTION_REQUIRED")
+
+    def test_sidecar_audit_gate_without_dispatch_routes_auditor_creation(self) -> None:
+        sidecars = _sidecars(
+            {
+                "action_type": "route_result",
+                "target_role": "auditor",
+                "checkpoint_policy": "no_checkpoint",
+                "checkpoint_preflight_required": False,
+            }
+        )
+        sidecars["CURRENT_GATE"]["content"].update(
+            {
+                "gate_type": "audit",
+                "required_next_role": "auditor",
+            }
+        )
+
+        decision = transition_engine.explain_next_action_from_sidecars(self.contract, sidecars)
+
+        self.assertEqual(decision.current_state, "AGENT_TERMINATED")
+        self.assertEqual(decision.next_action["recommended_next_action"], "CREATE_AUDITOR")
+        self.assertNotEqual(decision.next_action["recommended_next_action"], "WAIT_FOR_AUDIT_RESULT")
 
     def test_routing_authority_report_exposes_validate_route_apply_layers(self) -> None:
         report = transition_engine.routing_authority_report(self.contract, _sidecars())

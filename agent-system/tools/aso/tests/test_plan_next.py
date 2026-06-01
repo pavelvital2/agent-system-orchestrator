@@ -1477,6 +1477,32 @@ class PlanNextCommandTests(unittest.TestCase):
             self.assertIn("GOV-CHECKPOINT-AUDIT-GATE", rule_ids)
             self.assertFalse(report["evidence"]["audit_pass_evidence"]["present"])
 
+    def test_internal_route_result_auditor_is_not_ready_non_dispatchable(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = copy_valid_workspace(tmp)
+            make_tz_valid(root)
+            set_next_action(
+                root,
+                action_type="route_result",
+                target_role="auditor",
+                dependency_status="pending",
+                checkpoint_policy="no_checkpoint",
+                checkpoint_preflight_required=False,
+                checkpoint_receipt_required=False,
+            )
+            json_out = Path(tmp) / "plan-next.json"
+
+            result = run_plan_next(root, "--strict", "--json-out", str(json_out))
+
+            self.assertEqual(result.returncode, 1, result.stdout + result.stderr)
+            report = json.loads(json_out.read_text(encoding="utf-8"))
+            self.assertEqual(report["status"], "blocked")
+            self.assertNotEqual(report["route_status"], "ready")
+            self.assertEqual(report["recommended_next_action"], "NONE")
+            self.assertEqual(report["target_role"], "auditor")
+            self.assertFalse(report["dispatchable"])
+            self.assertFalse(report["dispatchability"]["dispatchable"])
+
     def test_checkpoint_without_audit_pass_evidence_recommends_auditor_for_valid_audit_packet(self) -> None:
         packet = "project-runtime/tasks/active/TASK_FIXTURE_STATE_001.md"
         with tempfile.TemporaryDirectory() as tmp:
@@ -1499,18 +1525,16 @@ class PlanNextCommandTests(unittest.TestCase):
 
             result = run_plan_next(root, "--strict", "--json-out", str(json_out))
 
-            self.assertEqual(result.returncode, 1, result.stdout + result.stderr)
+            self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
             report = json.loads(json_out.read_text(encoding="utf-8"))
-            self.assertEqual(report["status"], "blocked")
-            self.assertEqual(report["recommended_next_action"], "WAIT_FOR_AUDIT_RESULT")
+            self.assertEqual(report["status"], "ready")
+            self.assertEqual(report["recommended_next_action"], "CREATE_AUDITOR")
             self.assertEqual(report["target_role"], "auditor")
-            self.assertFalse(report["dispatchability"]["dispatchable"])
-            self.assertEqual(report["dispatchability"]["recommended_next_action"], "WAIT_FOR_AUDIT_RESULT")
+            self.assertTrue(report["dispatchability"]["dispatchable"])
+            self.assertEqual(report["dispatchability"]["recommended_next_action"], "CREATE_AUDITOR")
             self.assertEqual(report["dispatchability"]["target_role"], "auditor")
-            reason_codes = {reason["reason_code"] for reason in report["dispatchability"]["reasons"]}
-            self.assertIn("action_type_not_dispatch_capable", reason_codes)
             rule_ids = {item["rule_id"] for item in report["blocking_rules"]}
-            self.assertIn("GOV-CHECKPOINT-AUDIT-GATE", rule_ids)
+            self.assertNotIn("GOV-CHECKPOINT-AUDIT-GATE", rule_ids)
             self.assertFalse(report["evidence"]["audit_pass_evidence"]["present"])
 
     def test_checkpoint_completed_or_checkpoint_done_without_audit_refs_is_blocked(self) -> None:

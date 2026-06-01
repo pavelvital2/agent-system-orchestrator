@@ -114,11 +114,11 @@
       "ARTIFACT_ACCEPTED": "RESULT_ACCEPTED"
     },
     "RESULT_ACCEPTED": {
-      "AGENT_TERMINATED": "AGENT_TERMINATED",
-      "AUDIT_ROUTE_READY": "AUDIT_PENDING"
+      "AGENT_TERMINATED": "AGENT_TERMINATED"
     },
     "AGENT_TERMINATED": {
-      "AUDIT_ROUTE_READY": "AUDIT_PENDING"
+      "AUDIT_ROUTE_READY": "AGENT_TERMINATED",
+      "CREATE_AGENT_DISPATCHED": "AUDIT_PENDING"
     },
     "AUDIT_PENDING": {
       "AUDIT_RESULT_RECEIVED_PASS": "CHECKPOINT_ELIGIBLE",
@@ -164,7 +164,21 @@
       ],
       "event": "CREATE_AGENT_DISPATCHED",
       "same_task": true,
+      "except_target_roles": [
+        "auditor"
+      ],
       "reason": "duplicate dispatch forbidden after lifecycle progress"
+    },
+    {
+      "from_states": [
+        "CORRECTION_REQUIRED"
+      ],
+      "event": "CREATE_AGENT_DISPATCHED",
+      "same_task": true,
+      "target_roles": [
+        "auditor"
+      ],
+      "reason": "auditor dispatch is forbidden while correction is required"
     },
     {
       "from_states": [

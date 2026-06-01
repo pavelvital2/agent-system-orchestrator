@@ -18,6 +18,94 @@ EXIT_IO_ERROR = 3
 
 BLOCKING_CHECKPOINT_ELIGIBILITY = {"blocked"}
 BLOCKING_CHECKPOINT_ELIGIBILITY_STATUS = {"blocked", "ineligible"}
+CHECKPOINT_EVIDENCE_POLICY_ID = "aso_managed_checkpoint_evidence_policy_v1"
+
+
+def _checkpoint_evidence_policy() -> dict[str, object]:
+    return {
+        "policy_id": CHECKPOINT_EVIDENCE_POLICY_ID,
+        "stage1_checkpoint_commit_command": "not_available_without_owner_acceptance",
+        "default_git_strategy": (
+            "commit accepted package/source changes and stable release summaries; "
+            "keep root project-input, project-runtime, and project-archive ignored"
+        ),
+        "committed": [
+            {
+                "category": "accepted_package_state",
+                "paths": [
+                    "README.md",
+                    "agent-system/**",
+                    ".gitignore",
+                ],
+                "rule": "Only paths allowed by the task packet and package source hygiene may be committed.",
+            },
+            {
+                "category": "stable_release_or_validation_summary",
+                "paths": ["agent-system/11_release/**"],
+                "rule": "Commit compact, non-secret summaries when a task explicitly owns release evidence.",
+            },
+        ],
+        "archived_runtime_only": [
+            {
+                "category": "checkpoint_receipts_and_preflight_outputs",
+                "paths": [
+                    "project-runtime/checkpoints/**",
+                    "project-runtime/receipts/checkpoints/**",
+                ],
+                "rule": "Archive locally with sha256/size evidence unless an owner-approved force-add receipt exists.",
+            },
+            {
+                "category": "result_and_audit_evidence",
+                "paths": [
+                    "project-runtime/results/**",
+                    "project-runtime/agents/**",
+                    "project-runtime/artifacts/**",
+                    "project-runtime/reports/**",
+                ],
+                "rule": "Runtime evidence remains local/archive material and is referenced by compact summaries.",
+            },
+        ],
+        "excluded": [
+            {
+                "category": "owner_input_and_local_state",
+                "paths": ["project-input/**", ".venv/**", ".tox/**", "dist/**", "build/**"],
+                "rule": "Never commit owner input, local environments, build output, or generated caches as checkpoint evidence.",
+            },
+            {
+                "category": "secret_bearing_material",
+                "paths": ["*.pem", "*.key", "*.crt", "*.p12", "*.pfx", "*.cookie", "cookies.json", ".env", ".env.*"],
+                "rule": "Secret-like material is excluded from staging, receipts, stdout, and archives.",
+            },
+        ],
+        "ignored_root_force_add_policy": {
+            "allowed_only_when": (
+                "an owner-approved task packet explicitly requires committing a governed checkpoint file "
+                "from an ignored root"
+            ),
+            "manual_git_add_f_forbidden": True,
+            "requires_receipt": True,
+            "receipt_ref_template": "project-runtime/checkpoints/FORCE_ADD_MANIFEST_<TASK_ID>_<ATTEMPT_NO>.json",
+            "pathspec_ref_template": "project-runtime/checkpoints/FORCE_ADD_PATHSPEC_<TASK_ID>_<ATTEMPT_NO>.nul",
+            "required_receipt_fields": [
+                "policy_id",
+                "task_id",
+                "audit_ref",
+                "checkpoint_preflight_ref",
+                "owner_approval_ref",
+                "command_argv",
+                "force_add_paths",
+                "sha256_by_path",
+                "size_by_path",
+            ],
+            "command_argv_template": [
+                "git",
+                "add",
+                "-f",
+                "--pathspec-from-file=<FORCE_ADD_PATHSPEC>",
+                "--pathspec-file-nul",
+            ],
+        },
+    }
 
 
 def _is_none(value: object) -> bool:
@@ -191,6 +279,7 @@ def _package_report(root: Path, strict: bool) -> tuple[dict[str, object], int]:
             "generated_roots": inspection.generated_roots,
             "git_tracked_generated_files": inspection.git_tracked_generated_files,
             "git": git_evidence,
+            "checkpoint_evidence_policy": _checkpoint_evidence_policy(),
             "script_integration": {
                 "checkpoint_preflight_sh_invoked": False,
                 "reason": "Python package-mode checks are read-only and do not invoke the shell preflight.",
@@ -299,6 +388,8 @@ def _workspace_report(root: Path, strict: bool) -> tuple[dict[str, object], int]
         correction_route = correction_routing.from_audit_inspection(root, transition_evidence.get("audit_failure_evidence"))
     if not correction_route:
         correction_route = correction_routing.from_audit_inspection(root, audit_evidence.get("invalid_audit_results"))
+    if not correction_route:
+        correction_route = correction_routing.from_transition_evidence(root, transition_evidence)
     is_checkpoint_attempt = transition_evidence.get("canonical_recommended_next_action") == "CHECKPOINT_PREFLIGHT"
     checkpoint_eligibility = _as_text(project_state.get("checkpoint_eligibility"))
     checkpoint_eligibility_status = _as_text(project_state.get("checkpoint_eligibility_status"))
@@ -339,11 +430,16 @@ def _workspace_report(root: Path, strict: bool) -> tuple[dict[str, object], int]
         )
 
     if correction_route:
+        correction_message = (
+            "Checkpoint preflight is blocked because profile RESULT STATUS fail routes correction."
+            if correction_route.get("route_source") == "profile_result_fail"
+            else "Checkpoint preflight is blocked because AUDIT_RESULT STATUS fail routes correction."
+        )
         blocking_rules.append(
             _blocking_rule(
                 "GOV-AUDIT-FAIL-NO-CHECKPOINT",
-                "Checkpoint preflight is blocked because AUDIT_RESULT STATUS fail routes correction.",
-                str(correction_route.get("source_audit_result_ref", "NONE")),
+                correction_message,
+                str(correction_route.get("source_audit_result_ref") or correction_route.get("source_result_ref") or "NONE"),
                 recommendation="Route correction from the failed audit before checkpointing.",
             )
         )
@@ -472,6 +568,7 @@ def _workspace_report(root: Path, strict: bool) -> tuple[dict[str, object], int]
             "audit_pass_evidence": audit_evidence,
             "correction_routing": correction_route,
             "transition_engine": transition_evidence,
+            "checkpoint_evidence_policy": _checkpoint_evidence_policy(),
             "script_integration": {
                 "checkpoint_preflight_sh_invoked": False,
                 "reason": "Workspace mode reads state sidecars directly and does not invoke the shell preflight.",

@@ -121,8 +121,8 @@
       "size": 4580
     },
     "agent-system/02_runtime/ORCHESTRATOR_RUNTIME_CONTRACT.json": {
-      "sha256": "a75712628aa2a2a845f4dfeab503338c15498489d1a949ef123094626d0fe013",
-      "size": 35163
+      "sha256": "9d8b85256a2fad873d25961d75f4d7f55c47a37c669f801d981ee456180acbbf",
+      "size": 35500
     },
     "agent-system/02_runtime/ORCHESTRATOR_RUNTIME_LOOP.md": {
       "sha256": "ceb54eb0491d8ad4a7e7c46842d7ba9d018657b199c4320e7b24679bd6c63483",
@@ -961,8 +961,8 @@
       "size": 136754
     },
     "agent-system/ORCHESTRATOR_RUNTIME_CONTRACT.json": {
-      "sha256": "4883a3615fff45781d0889043ec5117d8cd841ad444915ac340c712ffd754f67",
-      "size": 34565
+      "sha256": "9d8b85256a2fad873d25961d75f4d7f55c47a37c669f801d981ee456180acbbf",
+      "size": 35500
     },
     "agent-system/PACKAGE_VERSIONING.md": {
       "sha256": "fc793de4ad939fb93ba74e919c11ef01490d6a38f0414192b8e6cf815e574660",
@@ -1537,8 +1537,8 @@
       "size": 40559
     },
     "agent-system/tools/aso/agent_system_orchestrator_aso/aso_tool/commands/checkpoint_preflight.py": {
-      "sha256": "fe6786e75c1898d651075ddc0d95f8ac43f5ff622b6465c0d017cd532257aa5f",
-      "size": 21161
+      "sha256": "7ff0d5bb4ae0c8faf103897a2f4fa72f1c1c6ef948776e07d2c33ba9fae537c6",
+      "size": 25556
     },
     "agent-system/tools/aso/agent_system_orchestrator_aso/aso_tool/commands/context_pack_build.py": {
       "sha256": "b3645009324690fa0eb97c9a20e643f5ce0accbec9f5ff96cd0dba652aeaeb75",
@@ -1573,12 +1573,12 @@
       "size": 15605
     },
     "agent-system/tools/aso/agent_system_orchestrator_aso/aso_tool/commands/lifecycle.py": {
-      "sha256": "2f3a9977e54ab56228b554d19a1ae6f2ebec17837007b85ad8d5a05aadd0c206",
-      "size": 52177
+      "sha256": "e0da455737e6b8803d037e249538be18ab87c2415f622b4ed9d6656d08ff22da",
+      "size": 52743
     },
     "agent-system/tools/aso/agent_system_orchestrator_aso/aso_tool/commands/lint.py": {
-      "sha256": "42085540de49cff203e6ca4fddb21e4a132c8a0efc53803368e2da8acd216eac",
-      "size": 68917
+      "sha256": "3b438539592911431c89ca82f96962517adfa607ed78bba02a6a18711cde96ac",
+      "size": 68999
     },
     "agent-system/tools/aso/agent_system_orchestrator_aso/aso_tool/commands/mode_guard.py": {
       "sha256": "6cc7f2ec87b9c6942f0fb50fe5f2361f399430bf3dac005fea8694056237e374",
@@ -1605,8 +1605,8 @@
       "size": 754
     },
     "agent-system/tools/aso/agent_system_orchestrator_aso/aso_tool/commands/plan_next.py": {
-      "sha256": "7b02ee7c7b868bd39b2721f03cc458d404bbde7f670767f16526954854d1a00d",
-      "size": 65741
+      "sha256": "d975d62ec893099e63b0b4d237f99e725afe8d3e9a8c0c6433b4473f9883bdad",
+      "size": 71056
     },
     "agent-system/tools/aso/agent_system_orchestrator_aso/aso_tool/commands/project.py": {
       "sha256": "8e199b6c034e2cac90b52df54a6e2aa1fcd7ba09318323aa654abce9c9ec56e9",
@@ -1649,8 +1649,8 @@
       "size": 24793
     },
     "agent-system/tools/aso/agent_system_orchestrator_aso/aso_tool/commands/state_verify.py": {
-      "sha256": "b11e2b560aba679f16ea438f2878877b2afef1d52838fd27185740ed1eb74f11",
-      "size": 84799
+      "sha256": "da742840bf8316d881eb02e6dc07cb41ef87c3205d74c125185aa705081e8ea3",
+      "size": 86850
     },
     "agent-system/tools/aso/agent_system_orchestrator_aso/aso_tool/commands/status.py": {
       "sha256": "3dec7da54b202b594b915ae5aa48a235b68609c749d1c49d5c2800e38ed4312a",
@@ -1673,8 +1673,8 @@
       "size": 9633
     },
     "agent-system/tools/aso/agent_system_orchestrator_aso/aso_tool/correction_routing.py": {
-      "sha256": "8b1b36227a93b6acff249d6cc825034ecd7bb880c30676ec84616f0717adf0ca",
-      "size": 11364
+      "sha256": "5677f33144aa602ffa6bb64a8b8d32109be047cc114dd0a39663e2e66ab2bd78",
+      "size": 15057
     },
     "agent-system/tools/aso/agent_system_orchestrator_aso/aso_tool/dispatch_receipts.py": {
       "sha256": "d39d66a4139183c253d5729a7c8d12c00a7c0388dc4a757b7c0805e512d83ee7",
@@ -1737,8 +1737,8 @@
       "size": 36781
     },
     "agent-system/tools/aso/agent_system_orchestrator_aso/aso_tool/runtime_contract_fallback.py": {
-      "sha256": "8772ca76a908949002e96f17fa157eb2c645efa36fcfef69b1c8c31fc98fd1ae",
-      "size": 35316
+      "sha256": "4d28ef587616bc89f354351afb0c795b2c6c60141eb739403423ec77e64d6229",
+      "size": 35698
     },
     "agent-system/tools/aso/agent_system_orchestrator_aso/aso_tool/runtime_schema_contracts.py": {
       "sha256": "8c83e96b759d6424e177ad26f629cd32ad78cf654c8da5dc3b238c5ba7c9adde",
@@ -1749,16 +1749,16 @@
       "size": 20143
     },
     "agent-system/tools/aso/agent_system_orchestrator_aso/aso_tool/state_materialization.py": {
-      "sha256": "dfb9f4384243fcc449c579e56b7860a66ff9dd2435651f96f5b74a2c63f39e0a",
-      "size": 54758
+      "sha256": "d87447aac00bddadb710015dee365c840d5ca951a074c4411fd3ed4c8b463348",
+      "size": 54886
     },
     "agent-system/tools/aso/agent_system_orchestrator_aso/aso_tool/timestamps.py": {
       "sha256": "9899dd7c5293a98bc995727237270cb93cf1b66803bab906803d781a20747c5f",
       "size": 393
     },
     "agent-system/tools/aso/agent_system_orchestrator_aso/aso_tool/transition_engine.py": {
-      "sha256": "70698cb358a3803635bef48e18909a6a7c5647c69ed98535d798003eb75151c1",
-      "size": 132547
+      "sha256": "3adf0e2d4bda5eef504f643ae0fce43da2d3ac3d0adb18e18f0e4f79490220cd",
+      "size": 136365
     },
     "agent-system/tools/aso/agent_system_orchestrator_aso/cli.py": {
       "sha256": "b04aad461cb9882463e3818ab753a7ec30d2108bb07823b0ca75dcdc36823e3d",
@@ -1921,8 +1921,8 @@
       "size": 24297
     },
     "agent-system/tools/aso/tests/test_doctor.py": {
-      "sha256": "17d9cab98c8f36f448b6a3ebd48f2200e3c3fc3c7783b4a2f537491867b00501",
-      "size": 17673
+      "sha256": "10e5625948ee8d33eae54e185a13da61b4745a80bc7bbf3462bebc1bd2a2a5b8",
+      "size": 18708
     },
     "agent-system/tools/aso/tests/test_incident_fixture.py": {
       "sha256": "a416e729e32bb343674973ca5f5332f343a008fa6400fc56d76d97372b48b487",
@@ -1945,16 +1945,16 @@
       "size": 12827
     },
     "agent-system/tools/aso/tests/test_lifecycle.py": {
-      "sha256": "f0cc87195fb436cbb3ba3f1ea788e734b5210f2351daf38b31e5216849e8a4b1",
-      "size": 7943
+      "sha256": "f5d6dbf75a3fdc1cdc9a6b5ddcc3379aa948ec24e49ae8c42d1cd808a1cb1370",
+      "size": 18784
     },
     "agent-system/tools/aso/tests/test_lifecycle_state_reconciliation.py": {
-      "sha256": "785bc2c93d98812db91f16d12557ddb17964e8785e08115a8f368ebe0b67f023",
-      "size": 18319
+      "sha256": "fc8e34ce043bc74223841f43fa4c45fd793de87c78a55b7b6fe724a271382cf9",
+      "size": 29439
     },
     "agent-system/tools/aso/tests/test_lint.py": {
-      "sha256": "32ed94d9a235a123edb256e6158ba2446f04d83bdbdad425e1fbd283e5898b89",
-      "size": 32219
+      "sha256": "f1451615f5ec1908af32969228c9e30cab437bb2d3d955b9040a86d0bf383b31",
+      "size": 33874
     },
     "agent-system/tools/aso/tests/test_lockfile.py": {
       "sha256": "11a80239b23d118a19eba0d72d89b6872d27cc376e1fd01546916290e13143db",
@@ -1989,8 +1989,8 @@
       "size": 10525
     },
     "agent-system/tools/aso/tests/test_plan_next.py": {
-      "sha256": "f85a18048598defdde90dd055cff35aa2a649d577c14644a09c000e96d6aa20b",
-      "size": 51494
+      "sha256": "77a3035a04a5878ac48f7288386eb54d83bca0ed56a8b24805e0cc2e7cdf2324",
+      "size": 77401
     },
     "agent-system/tools/aso/tests/test_project.py": {
       "sha256": "1b7235d98685b58260e1eb1bcbee290f903825b8684ce0b22ce90a56037636fe",
@@ -2013,8 +2013,8 @@
       "size": 9765
     },
     "agent-system/tools/aso/tests/test_real_e2e_lifecycle_regression.py": {
-      "sha256": "05fe62c2cdaafdf42c34086109dae4ae3bade397fc8961e4f8d3f5e23b36c02f",
-      "size": 17235
+      "sha256": "0e918e86f9970e6b97c4f50c0fb107813332f47e9063f99f242e2b2c05359ac3",
+      "size": 17370
     },
     "agent-system/tools/aso/tests/test_real_tz_e2e_smoke.py": {
       "sha256": "fd511ff79d4cc5a803c12ddba42ec68b4f56122375980c66f0c300b8ddbec745",
@@ -2065,8 +2065,8 @@
       "size": 10281
     },
     "agent-system/tools/aso/tests/test_transition_engine.py": {
-      "sha256": "d96fb4c79a593c4ff0e7720ffdb95b8a79010ef8bbbe2bad5471ed5bd1fe36dd",
-      "size": 7787
+      "sha256": "7be7f238c88fe8a238f4f8ad05f0c2a57430f41b27736d40077f3fb286a292d9",
+      "size": 30506
     },
     "agent-system/tools/aso/tests/test_validate_context_pack.py": {
       "sha256": "0b63bb4e5f562ec7d13071d0fa80f6f649812b2145819ac93946a9478e99bd9e",

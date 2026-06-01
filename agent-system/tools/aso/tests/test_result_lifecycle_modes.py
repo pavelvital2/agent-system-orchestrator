@@ -195,8 +195,10 @@ class ResultLifecycleModeTests(unittest.TestCase):
             self.assertEqual(after_artifacts, before_artifacts)
             self.assertEqual(plan.returncode, 0, plan.stdout + plan.stderr)
             plan_report = json.loads(plan_json.read_text(encoding="utf-8"))
-            self.assertEqual(plan_report["recommended_next_action"], "WAIT_FOR_AUDIT_RESULT")
-            self.assertEqual(plan_report["evidence"]["transition_engine"]["current_state"], "AUDIT_PENDING")
+            self.assertEqual(plan_report["recommended_next_action"], "CREATE_AUDITOR")
+            self.assertTrue(plan_report["dispatchable"])
+            self.assertTrue(plan_report["dispatchability"]["dispatchable"])
+            self.assertEqual(plan_report["evidence"]["transition_engine"]["current_state"], "AGENT_TERMINATED")
 
     def test_artifact_package_profile_result_still_requires_artifact_acceptance(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:

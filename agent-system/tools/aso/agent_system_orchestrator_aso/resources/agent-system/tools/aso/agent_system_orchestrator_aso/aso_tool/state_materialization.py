@@ -169,6 +169,8 @@ def _event_name(event: Mapping[str, Any]) -> str:
         "AGENT_TERMINATED": "AGENT_TERMINATED",
         "auditor_agent_terminated": "AGENT_TERMINATED",
         "AUDITOR_AGENT_TERMINATED": "AGENT_TERMINATED",
+        "agent_task_dispatched": "CREATE_AGENT_DISPATCHED",
+        "CREATE_AGENT_DISPATCHED": "CREATE_AGENT_DISPATCHED",
         "audit_route_ready": "AUDIT_ROUTE_READY",
         "AUDIT_ROUTE_READY": "AUDIT_ROUTE_READY",
     }
@@ -604,7 +606,7 @@ def _materialize_task_registry(payload: dict[str, Any], events: list[dict[str, A
                 if accepted_files != task.get("accepted_files"):
                     task["accepted_files"] = accepted_files
                     changed = True
-        elif event_name == "AUDIT_ROUTE_READY" and role != "auditor":
+        elif event_name == "CREATE_AGENT_DISPATCHED" and role == "auditor":
             if task.get("status") != "audit_pending":
                 task["status"] = "audit_pending"
                 changed = True
